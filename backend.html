@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="backend.css">
+    <title>Pure Reactions</title>
+  </head>
+  <body>
+    <header>
+      <h1>Pure Reactions</h1>
+    </header>
+    <div class="website-inner-container">
+      <div id="player-original"></div>
+      <div>
+          <button id="startReaction">Start Reaction</button>
+          <button id="startVideo" disabled>Start Video</button>
+          <button id="stopVideo" disabled>Stop Video</button>
+          <button id="finishReaction" disabled>Finish Reaction</button>
+      </div>
+      <div id="seek-bar-container">
+        <input type="range" id="seek-bar" min="0" max="100" step="0.01">
+        <div>Current Time: <span id="current-time">0:00</span></div>
+      </div>
+    </div>
+    <footer>
+      <p>&copy; 2023 Pure Reactions</p>
+    </footer>
+  </body>
+  <script src="backend.js"></script>
+</html>

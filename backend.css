@@ -1,0 +1,29 @@
+body {
+    text-align: center;
+    font-family: Arial, sans-serif;
+}
+
+iframe {
+    width: 100%;
+    height: 70vh;
+}
+
+button {
+    margin: 10px;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+#seek-bar {
+    width: 800px;
+}
+
+#seek-bar-container {
+    display: none;
+}
