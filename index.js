@@ -58,7 +58,7 @@ var playerOptions = {
 function onYouTubeIframeAPIReady() {
     playerReaction = new YT.Player('player-reaction', {
         // videoId: '2fjff_9P9to',
-        videoId: 'd7gU6ZIpoCM',
+        videoId: 'IugAahnCR8M',
         playerVars: playerOptions,
         events: {
         'onReady': onPlayerReady,
@@ -67,7 +67,7 @@ function onYouTubeIframeAPIReady() {
     });
     playerOriginal = new YT.Player('player-original', {
         // videoId: 'wTLWTAG2DPU',
-        videoId: 'sTtmpFIaFqc',
+        videoId: '6Cl91XNnk2U',
         playerVars: playerOptions,
         events: {
         'onReady': onPlayerReady,
