@@ -38,7 +38,7 @@ var playerOriginal;
 
 function onYouTubeIframeAPIReady() {
     playerOriginal = new YT.Player('player-original', {
-        videoId: '9-jP9P-KXyc',
+        videoId: '6Cl91XNnk2U',
         playerVars: playerOptions,
         events: {
         'onReady': onPlayerReady,
