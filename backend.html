@@ -1,3 +1,8 @@
+<script type="module" src="firebase.js"></script>
+<script type="module" src="firebase_get_reactions.js"></script>
+<script type="module" src="firebase_initilise_reaction.js"></script>
+<script type="module" src="firebase_update_reaction.js"></script>
+
 <!DOCTYPE html>
 <html>
   <head>
@@ -11,6 +16,13 @@
       <h1>Pure Reactions</h1>
     </header>
     <div class="website-inner-container">
+      <div>
+        <form id="videoIdInputForm">
+          <label for="videoId">Enter the video id:</label>
+          <input type="text" id="videoIdInput" name="videoId" required disabled>
+          <button type="button" onclick="loadYoutubePlayer()">Submit</button>
+        </form>
+      </div>
       <div id="player-original"></div>
       <div>
           <button id="startReaction">Start Reaction</button>

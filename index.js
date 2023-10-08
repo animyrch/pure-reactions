@@ -7,8 +7,8 @@ firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
 var startButtonHandler = document.getElementById('players-start');
 startButtonHandler.addEventListener("click", () => {
-    for (const secondsInfo of Object.keys(playerConfigs)) {
-        const configsForSecond = playerConfigs[secondsInfo]
+    for (const secondsInfo of Object.keys(window.playerConfigs)) {
+        const configsForSecond = window.playerConfigs[secondsInfo]
         console.log(secondsInfo);
         for (let configIterator = 0; configIterator < configsForSecond.length; configIterator++) {
             const configElement = configsForSecond[configIterator];
@@ -55,10 +55,16 @@ var playerOptions = {
     'modestbranding': 1,
     'rel': 0
 };
-function onYouTubeIframeAPIReady() {
+
+const setUpVideos = (doc) => {
+    const obtainedData = doc.data();
+    console.log(obtainedData);
+    console.log(obtainedData["reaction-configs"]);
+    window.playerConfigs = obtainedData["reaction-configs"];
+    console.log(window.playerConfigs);
     playerReaction = new YT.Player('player-reaction', {
         // videoId: '2fjff_9P9to',
-        videoId: 'IugAahnCR8M',
+        videoId: obtainedData['reaction-video-id'],
         playerVars: playerOptions,
         events: {
         'onReady': onPlayerReady,
@@ -67,13 +73,17 @@ function onYouTubeIframeAPIReady() {
     });
     playerOriginal = new YT.Player('player-original', {
         // videoId: 'wTLWTAG2DPU',
-        videoId: '6Cl91XNnk2U',
+        videoId: obtainedData['original-video-id'],
         playerVars: playerOptions,
         events: {
         'onReady': onPlayerReady,
         'onStateChange': onPlayerStateChange
         }
     });
+};
+
+function onYouTubeIframeAPIReady() {
+    window.getReactions(setUpVideos);
 }
 
 // 4. The API will call this function when the video player is ready.
@@ -99,7 +109,6 @@ function stopOriginalVideo() {
     playerOriginal.stopVideo();
 }
 function startReactionVideo() {
-    console.log('attemptiong to start reaction');
     playerReaction.playVideo();
 }
 function startOriginalVideo() {
