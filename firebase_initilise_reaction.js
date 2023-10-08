@@ -5,7 +5,8 @@ const createReactionDocument = (originalVideoId) => {
     const reactionsCollection = collection(firestore, 'reactions');
     const dataToAdd = {
         "original-video-id": originalVideoId,
-        "reactor-id": 1
+        "reactor-id": 1,
+        "reaction-configs": {}
     };
     addDoc(reactionsCollection, dataToAdd)
         .then((documentRef) => {

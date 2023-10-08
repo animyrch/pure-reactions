@@ -7,14 +7,14 @@ firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
 var startButtonHandler = document.getElementById('players-start');
 startButtonHandler.addEventListener("click", () => {
+    setTimeoutHandler(0, [1]);
+    console.log(window.playerConfigs);
     for (const secondsInfo of Object.keys(window.playerConfigs)) {
         const configsForSecond = window.playerConfigs[secondsInfo]
         console.log(secondsInfo);
-        for (let configIterator = 0; configIterator < configsForSecond.length; configIterator++) {
-            const configElement = configsForSecond[configIterator];
-            console.log(configElement);
-            setTimeoutHandler(secondsInfo, configElement);
-        }
+        const configElement = configsForSecond[0];
+        console.log(configElement);
+        setTimeoutHandler(secondsInfo, configElement);
     }
 });
 
@@ -23,9 +23,9 @@ function setTimeoutHandler (secondsInfo, configElement) {
     const extraConfigData = configElement[1];
     const timeoutInMiliseconds = secondsInfo * 1000;
     console.log(activeConfigName);
+    console.log(timeoutInMiliseconds);
     switch (activeConfigName) {
         case CONFIG_OPTIONS.START_VIDEO_REACTION:
-            console.log('hit start reaction', timeoutInMiliseconds);
             setTimeout(startReactionVideo, timeoutInMiliseconds);
             break;
         case CONFIG_OPTIONS.SET_VOLUME_ORIGINAL:
