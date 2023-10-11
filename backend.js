@@ -71,8 +71,11 @@ function onPlayerStateChange(event) {
         updateSeekBar();
     }
 }
-
-function logElapsedTime(actionCode, timeCode) {
+const getCurrentTimeForOriginalVideo = () => {
+    const seekTime = (seekBar.value / 100) * playerOriginal.getDuration();
+    return seekTime.toFixed(2);
+};
+function logElapsedTime(actionCode) {
     if (startTime) {
         const currentTime = new Date().getTime();
         const elapsedTime = (currentTime - startTime) / 1000; // Convert to seconds
@@ -82,9 +85,7 @@ function logElapsedTime(actionCode, timeCode) {
             0: []
         };
         reactionConfigs[configKey][0].push(actionCode);
-        if(timeCode) {
-            reactionConfigs[configKey][0].push(timeCode);
-        }
+        reactionConfigs[configKey][0].push(getCurrentTimeForOriginalVideo());
         window.updateFirebaseDocument({
             "reaction-configs": reactionConfigs
         });
@@ -138,6 +139,7 @@ function pauseOriginalVideo() {
 
 
 let seekBar = document.getElementById("seek-bar");
+seekBar.value = 0;
 let currentTimeDisplay = document.getElementById("current-time");
 // Function to update the seek bar and current time display
 function updateSeekBar() {
@@ -175,6 +177,5 @@ seekBar.addEventListener("mousedown", () => {
 seekBar.addEventListener("mouseup", () => {
     isDragging = false;
     console.log("dragging stopped");
-    const seekTime = (seekBar.value / 100) * playerOriginal.getDuration();
-    logElapsedTime(CONFIG_OPTIONS.SEEK_TO_ORIGINAL, seekTime.toFixed(2));
+    logElapsedTime(CONFIG_OPTIONS.SEEK_TO_ORIGINAL);
 });
