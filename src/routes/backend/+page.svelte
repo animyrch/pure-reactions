@@ -1,14 +1,14 @@
 <!-- src/Backend.svelte -->
 <script>
+    import Recorder from '$lib/components/Recorder.svelte';
 	import { onMount } from 'svelte';
-	import { firebaseConfig } from '../../firebaseConfig';
-	import { COLLECTION_NAME } from '../../constants/firebase';
+	import { COLLECTION_NAME, FIREBASE_CONFIG } from '$lib/constants/firebase';
 
 	import { initializeApp } from 'firebase/app';
 	import { getFirestore, collection, doc, addDoc, updateDoc } from 'firebase/firestore/lite';
 
 	// Initialize Firebase
-	const app = initializeApp(firebaseConfig);
+	const app = initializeApp(FIREBASE_CONFIG);
 	const db = getFirestore(app);
 
   const reactionConfigs = {};
@@ -268,6 +268,7 @@ const updateFirebaseDocument = (dataToUpdate) => {
         <button id="stopVideo" disabled>Stop Video</button>
         <button id="finishReaction" disabled>Finish Reaction</button>
     </div>
+    <Recorder />
     <div id="seek-bar-container">
       <input type="range" id="seek-bar" min="0" max="100" step="0.01">
       <div>Current Time: <span id="current-time">0:00</span></div>

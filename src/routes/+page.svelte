@@ -1,13 +1,12 @@
 <!-- src/App.svelte -->
 <script>
 	import { onMount } from 'svelte';
-	import { firebaseConfig } from '../firebaseConfig';
 	import { initializeApp } from 'firebase/app';
 	import { getFirestore, collection, getDocs } from 'firebase/firestore/lite';
-	import { COLLECTION_NAME } from '../constants/firebase';
+	import { COLLECTION_NAME, FIREBASE_CONFIG } from '$lib/constants/firebase';
 	
 	// Initialize Firebase
-	const app = initializeApp(firebaseConfig);
+	const app = initializeApp(FIREBASE_CONFIG);
 	const db = getFirestore(app);
 
 	const getReactions = (callback) => {

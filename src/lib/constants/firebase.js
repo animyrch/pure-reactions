@@ -1,4 +1,5 @@
-export const firebaseConfig = {
+export const COLLECTION_NAME = "reactions-test";
+export const FIREBASE_CONFIG = {
     apiKey: "AIzaSyBqsnKIBnbRJqkpyOynZGLySf28AuqmOiE",
     authDomain: "pure-reactions.firebaseapp.com",
     projectId: "pure-reactions",
