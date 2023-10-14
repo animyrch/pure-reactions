@@ -15,6 +15,9 @@
   let timer;
   let startTime;
 
+  let startRecording = false;
+  let stopRecording = false;
+
   let playerOriginal;
   const playerOptions = {
       'autoplay': 0,
@@ -128,6 +131,14 @@ const updateFirebaseDocument = (dataToUpdate) => {
 
   let seekBar;
   let currentTimeDisplay;
+
+
+  let showRecorder = false;
+
+  const toggleRecorder = () => {
+    showRecorder = !showRecorder;
+  };
+
 	onMount(async () => {
     seekBar = document.getElementById("seek-bar");
     seekBar.value = 0;
@@ -138,12 +149,12 @@ const updateFirebaseDocument = (dataToUpdate) => {
     // Function to update the seek bar and current time display
 
 
-
     // Load the YouTube API
-		const tag = document.createElement('script');
-		tag.src = 'https://www.youtube.com/iframe_api';
-		const firstScriptTag = document.getElementsByTagName('script')[0];
-		firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    const firstScriptTag = document.getElementsByTagName('div')[0];
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
 
     const startReactionBtn = document.getElementById("startReaction");
     const startVideoBtn = document.getElementById("startVideo");
@@ -164,6 +175,9 @@ const updateFirebaseDocument = (dataToUpdate) => {
 
     startReactionBtn.addEventListener("click", () => {
       createReactionDocument(window.originalVideoIdForReaction);
+      if (showRecorder) {
+        startRecording = true;
+      }
       console.log("Started the reaction");
       startReactionBtn.disabled = true;
       startVideoBtn.disabled = false;
@@ -194,6 +208,9 @@ const updateFirebaseDocument = (dataToUpdate) => {
 
     finishReactionBtn.addEventListener("click", () => {
         console.log("Finished the reaction");
+        if (showRecorder) {
+            stopRecording = true;
+        }
         startReactionBtn.disabled = true;
         startVideoBtn.disabled = true;
         stopVideoBtn.disabled = true;
@@ -251,6 +268,10 @@ const updateFirebaseDocument = (dataToUpdate) => {
     #seek-bar-container {
         display: none;
     }
+
+    .video-items-container {
+        display: flex;
+    }
   </style>
   
   <div class="website-inner-container">
@@ -261,14 +282,28 @@ const updateFirebaseDocument = (dataToUpdate) => {
         <button type="button" on:click={loadYoutubePlayer}>Submit</button>
       </form>
     </div>
-    <div id="player-original"></div>
+    <label>
+        <input type="checkbox" bind:checked={showRecorder} />
+        Show Recorder
+    </label>
+    <div class="video-items-container">
+        {#if showRecorder}
+            <div class="video-item" id="player-original">
+            </div>
+            <div class="video-item">
+                <Recorder {startRecording} {stopRecording}  />
+            </div>
+        {:else}
+            <div id="player-original">
+            </div>
+        {/if}
+    </div>
     <div>
         <button id="startReaction">Start Reaction</button>
         <button id="startVideo" disabled>Start Video</button>
         <button id="stopVideo" disabled>Stop Video</button>
         <button id="finishReaction" disabled>Finish Reaction</button>
     </div>
-    <Recorder />
     <div id="seek-bar-container">
       <input type="range" id="seek-bar" min="0" max="100" step="0.01">
       <div>Current Time: <span id="current-time">0:00</span></div>

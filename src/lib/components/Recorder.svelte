@@ -4,7 +4,26 @@
   let recordedChunks = [];
   let videoElement;
 
-  const startRecording = async () => {
+  export let startRecording;
+  export let stopRecording;
+
+  const stopRecordingProcess = () => {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop();
+      mediaStream.getTracks().forEach((track) => track.stop());
+    }
+  };
+
+  $: if (startRecording) {
+    startRecording = false;
+    startRecordingProcess();
+  }
+  $: if (stopRecording) {
+    stopRecording = true;
+    stopRecordingProcess();
+  }
+
+  const startRecordingProcess = async () => {
     try {
       mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       mediaRecorder = new MediaRecorder(mediaStream);
@@ -30,7 +49,6 @@
 
         // Append the download link to the document
         document.body.appendChild(downloadLink);
-
         // Unmute the audio
         videoElement.muted = false;
       };
@@ -38,27 +56,24 @@
       // Set the live video feed as the source of the video element
       videoElement.srcObject = mediaStream;
 
+      // Start the recording
       // Mute the audio during recording
       videoElement.muted = true;
-
-      // Start the recording
       mediaRecorder.start();
     } catch (error) {
       console.error('Error accessing media devices:', error);
     }
   };
-
-  const stopRecording = () => {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-      mediaRecorder.stop();
-      mediaStream.getTracks().forEach((track) => track.stop());
-    }
-  };
 </script>
 
-<div>
-  <button on:click={startRecording}>Start Recording</button>
-  <button on:click={stopRecording}>Stop Recording</button>
-</div>
+<style>
+  .recorder-container{
+    width: 100px;
+  }
+</style>
 
-<video bind:this={videoElement} controls autoplay />
+<div>
+  <div class="recorder-container">
+    <video bind:this={videoElement} controls autoplay width="300" />
+  </div>
+</div>
