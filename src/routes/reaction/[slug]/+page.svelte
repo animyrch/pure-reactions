@@ -43,13 +43,6 @@
     // 4. The API will call this function when the video player is ready.
     function onPlayerReady(event) {
       console.log('player ready');
-      // event.target.playVideo();
-    }
-    function onPlayerStateChange(event) {
-      if (event.data == YT.PlayerState.PLAYING) {
-        // setTimeout(stopVideo, 6000);
-        // done = true;
-      }
     }
     const startVideos = () => {
         setTimeoutHandler(0, [1]);
@@ -74,8 +67,6 @@
         if (originalVideoClicked && reactionVideoClicked) {
           startVideos();
         }
-        // setTimeout(stopVideo, 6000);
-        // done = true;
       }
     }
     function onStateChangeReaction(event) {
@@ -87,8 +78,6 @@
         if (originalVideoClicked && reactionVideoClicked) {
           startVideos();
         }
-        // setTimeout(stopVideo, 6000);
-        // done = true;
       }
     }
   
@@ -135,24 +124,13 @@
       }
     }
 
-    const getReactions = async (callback) => {
-      const app = initializeApp(FIREBASE_CONFIG);
-      const db = getFirestore(app);
-      const docRef = doc(db, COLLECTION_NAME, data.slug);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        callback(docSnap);
-        console.log("Document data:", docSnap.data());
-      } else {
-        console.log("No such document!");
-      }
-    };
-    
     const setUpVideos = (doc) => {
+      if (!doc) {
+        return;
+      }
       const obtainedData = doc.data();
       window.playerConfigs = obtainedData["reaction-configs"];
       playerReaction = new YT.Player('player-reaction', {
-        // videoId: '2fjff_9P9to',
         videoId: obtainedData['reaction-video-id'],
         playerVars: playerOptions,
         events: {
@@ -161,29 +139,34 @@
         }
       });
       playerOriginal = new YT.Player('player-original', {
-        // videoId: 'wTLWTAG2DPU',
         videoId: obtainedData['original-video-id'],
         playerVars: playerOptions,
         events: {
-        'onReady': onPlayerReady,
-        'onStateChange': onStateChangeOriginal
+          'onReady': onPlayerReady,
+          'onStateChange': onStateChangeOriginal
         }
       });
     };
 
+    const getReactions = async () => {
+      const app = initializeApp(FIREBASE_CONFIG);
+      const db = getFirestore(app);
+      const docRef = doc(db, COLLECTION_NAME, data.slug);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        console.log("Document data:", docSnap.data());
+        return docSnap;
+      } else {
+        console.log("No such document!");
+      }
+    };
+
+    const buildInterface = async () => {
+      const originalAndReactionVideos = await getReactions();
+      setUpVideos(originalAndReactionVideos);
+    };
+    
     onMount(async () => {    
-      var startButtonHandler = document.getElementById('players-start');
-      // startButtonHandler.addEventListener("click", () => {
-      //   setTimeoutHandler(0, [1]);
-      //   console.log(window.playerConfigs);
-      //   for (const secondsInfo of Object.keys(window.playerConfigs)) {
-      //     const configsForSecond = window.playerConfigs[secondsInfo]
-      //     console.log(secondsInfo);
-      //     const configElement = configsForSecond[0];
-      //     console.log(configElement);
-      //     setTimeoutHandler(secondsInfo, configElement);
-      //   }
-      // });
       // Check if the YouTube API is already loaded
     if (typeof YT === 'undefined' || typeof YT.Player === 'undefined') {
       // If not loaded, start loading the YouTube API
@@ -193,12 +176,12 @@
       window.onYouTubeIframeAPIReady = async () => {
         console.log('YouTube IFrame API is ready');
         // Now, you can proceed to getReactions and set up videos
-        await getReactions(setUpVideos);
+        await buildInterface();
       };
     } else {
       // If the YouTube API is already loaded, you can proceed directly
       console.log('YouTube IFrame API is already loaded');
-      await getReactions(setUpVideos);
+      await buildInterface();
     }
       
     });
@@ -258,9 +241,5 @@
     <div class="video-container">
     <div id="player-original"></div>
     <div id="player-reaction"></div>
-    </div>
-  
-    <div id="players-start" class="center-button">
-    <button>Start Watching</button>
     </div>
   </div>
