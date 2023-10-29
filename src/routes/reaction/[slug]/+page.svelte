@@ -170,10 +170,10 @@
         currentSecondsForOriginal += 0.1;
       }
       if (!uncompressedData.get(currentIndex)) {
-        // uncompressedData.set(currentIndex + '', {
-        //   state: currentStateForOriginal,
-        //   time: currentSecondsForOriginal.toFixed(1)
-        // });
+        uncompressedData.set(currentIndex + '', {
+          state: currentStateForOriginal,
+          time: currentSecondsForOriginal.toFixed(1)
+        });
       } else {
         console.log('found already set')
         currentStateForOriginal = uncompressedData.get(currentIndex)?.state;
