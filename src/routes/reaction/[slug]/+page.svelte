@@ -152,42 +152,54 @@
   function setVolumeForOriginalVideo(volume) {
     playerOriginal.setVolume(volume);
   }
-
   const unpackReactionConfigs = (compressedData) => {
     const sortedData = Object.fromEntries(
         Object.entries(compressedData).sort(([a], [b]) => Number(a) - Number(b))
       );
     const uncompressedData = new Map();
-    let currentStateForOriginal = YT.PlayerState.UNSTARTED;
-    let currentSecondsForOriginal = 0;
-    let elementsProcessed = 0;
     for(const element of Object.entries(sortedData)) {
-      uncompressedData.set(parseFloat(element[0]), element[1]);
+      uncompressedData.set(parseFloat(element[0]) - 1.5 + '', {
+        state: element[1].state,
+        time: element[1].time
+      });
     }
-    for (let index = 0; elementsProcessed < Object.entries(compressedData).length; index++) {
-      const currentIndex = index / 10;
-      if (currentStateForOriginal === YT.PlayerState.PLAYING) {
-        currentSecondsForOriginal += 0.1;
-      }
-      if (!uncompressedData.get(currentIndex)) {
-        // uncompressedData.set(currentIndex + '', {
-        //   state: currentStateForOriginal,
-        //   time: currentSecondsForOriginal.toFixed(1)
-        // });
-      } else {
-        console.log('found already set')
-        currentStateForOriginal = uncompressedData.get(currentIndex)?.state;
-        currentSecondsForOriginal = +uncompressedData.get(currentIndex)?.time + 1.5;
-        uncompressedData.set(currentIndex + '', {
-          state: currentStateForOriginal,
-          time: currentSecondsForOriginal
-        });
-        elementsProcessed++;
-      }
-    }
-
     return uncompressedData;
   };
+  // const unpackReactionConfigs = (compressedData) => {
+  //   const sortedData = Object.fromEntries(
+  //       Object.entries(compressedData).sort(([a], [b]) => Number(a) - Number(b))
+  //     );
+  //   const uncompressedData = new Map();
+  //   let currentStateForOriginal = YT.PlayerState.UNSTARTED;
+  //   let currentSecondsForOriginal = 0;
+  //   let elementsProcessed = 0;
+  //   for(const element of Object.entries(sortedData)) {
+  //     uncompressedData.set(parseFloat(element[0]), element[1]);
+  //   }
+  //   for (let index = 0; elementsProcessed < Object.entries(compressedData).length; index++) {
+  //     const currentIndex = index / 10;
+  //     if (currentStateForOriginal === YT.PlayerState.PLAYING) {
+  //       currentSecondsForOriginal += 0.1;
+  //     }
+  //     if (!uncompressedData.get(currentIndex)) {
+  //       uncompressedData.set(currentIndex + '', {
+  //         state: currentStateForOriginal,
+  //         time: currentSecondsForOriginal.toFixed(1)
+  //       });
+  //     } else {
+  //       console.log('found already set')
+  //       currentStateForOriginal = uncompressedData.get(currentIndex)?.state;
+  //       currentSecondsForOriginal = +uncompressedData.get(currentIndex)?.time + 1.5;
+  //       uncompressedData.set(currentIndex + '', {
+  //         state: currentStateForOriginal,
+  //         time: currentSecondsForOriginal
+  //       });
+  //       elementsProcessed++;
+  //     }
+  //   }
+
+  //   return uncompressedData;
+  // };
 
   const setUpVideos = (doc) => {
     if (!doc) {
