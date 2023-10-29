@@ -57,35 +57,35 @@
     let originalPlayerState = YT.PlayerState.UNSTARTED;
     let reactionPlayerState = YT.PlayerState.UNSTARTED;
     // Use setInterval to periodically get the current time
-    // const pollInterval = setInterval(() => {
-    //   if (
-    //     playerReaction && playerOriginal
-    //   ) {
-    //     const reactionVideoNewState = playerReaction.getPlayerState();
-    //     if (reactionPlayerState !== reactionVideoNewState) {
-    //       handleStateChangeInReactionVideo(reactionPlayerState, reactionVideoNewState);
-    //       reactionPlayerState = reactionVideoNewState;
-    //     }
-    //   }
-    //   if (
-    //     playerReaction
-    //   ) {
-    //     const reactionCurrentTime = playerReaction.getCurrentTime().toFixed(1);
-    //     const originalVideoInfo = window.playerConfigs.get(reactionCurrentTime + '');
-    //     const originalPlayerNewState = originalVideoInfo?.state;
-    //     const originalPlayerTime = originalVideoInfo?.time;
-    //     if (
-    //       originalPlayerTime !== undefined &&
-    //       originalPlayerNewState !== undefined &&
-    //       originalPlayerNewState !== originalPlayerState
-    //     ) {
-    //       handleStateChangeInOriginalVideo(originalPlayerState, originalPlayerNewState, originalPlayerTime);
-    //     }
-    //     if (originalPlayerNewState !== undefined) {
-    //       originalPlayerState = originalPlayerNewState;
-    //     }
-    //   }
-    // }, interval);
+    const pollInterval = setInterval(() => {
+      if (
+        playerReaction && playerOriginal
+      ) {
+        const reactionVideoNewState = playerReaction.getPlayerState();
+        if (reactionPlayerState !== reactionVideoNewState) {
+          handleStateChangeInReactionVideo(reactionPlayerState, reactionVideoNewState);
+          reactionPlayerState = reactionVideoNewState;
+        }
+      }
+      if (
+        playerReaction
+      ) {
+        const reactionCurrentTime = playerReaction.getCurrentTime().toFixed(1);
+        const originalVideoInfo = window.playerConfigs.get(reactionCurrentTime + '');
+        const originalPlayerNewState = originalVideoInfo?.state;
+        const originalPlayerTime = originalVideoInfo?.time;
+        if (
+          originalPlayerTime !== undefined &&
+          originalPlayerNewState !== undefined &&
+          originalPlayerNewState !== originalPlayerState
+        ) {
+          handleStateChangeInOriginalVideo(originalPlayerState, originalPlayerNewState, originalPlayerTime);
+        }
+        if (originalPlayerNewState !== undefined) {
+          originalPlayerState = originalPlayerNewState;
+        }
+      }
+    }, interval);
   }
   const handleStateChangeInOriginalVideo = (originalPlayerState, originalPlayerNewState, originalPlayerTime) => {
     if (originalPlayerState !== originalPlayerNewState) {
