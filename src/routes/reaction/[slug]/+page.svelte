@@ -44,26 +44,92 @@
     console.log("player ready");
   }
   const startVideos = () => {
-    setTimeoutHandler(0, [1]);
-    console.log(window.playerConfigs);
-    for (const secondsInfo of Object.keys(window.playerConfigs)) {
-      const configsForSecond = window.playerConfigs[secondsInfo];
-      console.log(secondsInfo);
-      const configElement = configsForSecond[0];
-      console.log(configElement);
-      setTimeoutHandler(secondsInfo, configElement);
-    }
+    bothVideosStarted = true;
+    startReactionVideo();
+    timeInformationReaction();
   };
 
   let originalVideoClicked;
   let reactionVideoClicked;
+  let bothVideosStarted;
+  function pollVideoCurrentTime() {
+    const interval = 100; // Polling interval in milliseconds (adjust as needed)
+    let originalPlayerState = YT.PlayerState.UNSTARTED;
+    let reactionPlayerState = YT.PlayerState.UNSTARTED;
+    // Use setInterval to periodically get the current time
+    const pollInterval = setInterval(() => {
+      if (
+        playerReaction && playerOriginal
+      ) {
+        const reactionVideoNewState = playerReaction.getPlayerState();
+        if (reactionPlayerState !== reactionVideoNewState) {
+          handleStateChangeInReactionVideo(reactionPlayerState, reactionVideoNewState);
+          reactionPlayerState = reactionVideoNewState;
+        }
+      }
+      if (
+        playerReaction
+      ) {
+        const reactionCurrentTime = playerReaction.getCurrentTime().toFixed(1);
+        const originalVideoInfo = window.playerConfigs.get(reactionCurrentTime + '');
+        const originalPlayerNewState = originalVideoInfo?.state;
+        const originalPlayerTime = originalVideoInfo?.time;
+        if (
+          originalPlayerTime !== undefined &&
+          originalPlayerNewState !== undefined &&
+          originalPlayerNewState !== originalPlayerState
+        ) {
+          handleStateChangeInOriginalVideo(originalPlayerState, originalPlayerNewState, originalPlayerTime);
+        }
+        if (originalPlayerNewState !== undefined) {
+          originalPlayerState = originalPlayerNewState;
+        }
+      }
+    }, interval);
+  }
+  const handleStateChangeInOriginalVideo = (originalPlayerState, originalPlayerNewState, originalPlayerTime) => {
+    if (originalPlayerState !== originalPlayerNewState) {
+      console.log(originalPlayerState, originalPlayerNewState);
+      if (originalPlayerNewState === YT.PlayerState.PLAYING) {
+        goToSecondsInOriginalVideo(originalPlayerTime);
+        startOriginalVideo();
+      } else if (
+        originalPlayerNewState === YT.PlayerState.PAUSED ||
+        originalPlayerNewState === YT.PlayerState.BUFFERING
+      ) {
+        pauseOriginalVideo();
+      }
+    }
+  };
+  const handleStateChangeInReactionVideo = (reactionPlayerState, reactionVideoNewState) => {
+    if (
+      reactionPlayerState !== YT.PlayerState.PAUSED && reactionPlayerState !== YT.PlayerState.BUFFERING &&
+      (reactionVideoNewState === YT.PlayerState.PAUSED || reactionVideoNewState === YT.PlayerState.BUFFERING)
+    ) {
+      pauseOriginalVideo();
+    }
+    if (
+      reactionPlayerState === YT.PlayerState.BUFFERING &&
+      reactionVideoNewState === YT.PlayerState.PLAYING
+    ) {
+      const reactionCurrentTime = playerReaction.getCurrentTime().toFixed(1);
+      const originalVideoInfo = window.playerConfigs.get(reactionCurrentTime + '');
+      originalVideoInfo?.time && goToSecondsInOriginalVideo(originalVideoInfo?.time);
+      if (originalVideoInfo?.state === YT.PlayerState.PLAYING) {
+        startOriginalVideo();
+      }
+    }
+  }
+
+
   function onStateChangeOriginal(event) {
     if (event.data == YT.PlayerState.PLAYING) {
+      // timeInformationOriginal();
       if (!originalVideoClicked) {
         pauseOriginalVideo();
         originalVideoClicked = true;
       }
-      if (originalVideoClicked && reactionVideoClicked) {
+      if (!bothVideosStarted && originalVideoClicked && reactionVideoClicked) {
         startVideos();
       }
     }
@@ -74,67 +140,62 @@
         pauseReactionVideo();
         reactionVideoClicked = true;
       }
-      if (originalVideoClicked && reactionVideoClicked) {
+      if (!bothVideosStarted && originalVideoClicked && reactionVideoClicked) {
         startVideos();
       }
     }
   }
 
   function goToSecondsInOriginalVideo(seconds) {
-    return function () {
-      playerOriginal.seekTo(seconds);
-    };
+    playerOriginal.seekTo(seconds);
   }
   function setVolumeForOriginalVideo(volume) {
     playerOriginal.setVolume(volume);
   }
-  var CONFIG_OPTIONS = {
-    START_VIDEO_REACTION: 1,
-    START_VIDEO_ORIGINAL: 2,
-    SET_VOLUME_REACTION: 3,
-    SET_VOLUME_ORIGINAL: 4,
-    PAUSE_VIDEO_ORIGINAL: 5,
-    SEEK_TO_ORIGINAL: 6,
-  };
-  function setTimeoutHandler(secondsInfo, configElement) {
-    const activeConfigName = configElement[0];
-    const extraConfigData = configElement[1];
-    const timeoutInMiliseconds = secondsInfo * 1000;
-    console.log(activeConfigName);
-    console.log(timeoutInMiliseconds);
-    switch (activeConfigName) {
-      case CONFIG_OPTIONS.START_VIDEO_REACTION:
-        setTimeout(startReactionVideo, timeoutInMiliseconds);
-        break;
-      case CONFIG_OPTIONS.SET_VOLUME_ORIGINAL:
-        setTimeout(
-          setVolumeForOriginalVideo(extraConfigData),
-          timeoutInMiliseconds
-        );
-        break;
-      case CONFIG_OPTIONS.START_VIDEO_ORIGINAL:
-        setTimeout(startOriginalVideo, timeoutInMiliseconds);
-        break;
-      case CONFIG_OPTIONS.PAUSE_VIDEO_ORIGINAL:
-        setTimeout(pauseOriginalVideo, timeoutInMiliseconds);
-        break;
-      case CONFIG_OPTIONS.SEEK_TO_ORIGINAL:
-        setTimeout(
-          goToSecondsInOriginalVideo(extraConfigData),
-          timeoutInMiliseconds
-        );
-        break;
-      default:
-        break;
+
+  const unpackReactionConfigs = (compressedData) => {
+    const sortedData = Object.fromEntries(
+        Object.entries(compressedData).sort(([a], [b]) => Number(a) - Number(b))
+      );
+    const uncompressedData = new Map();
+    let currentStateForOriginal = YT.PlayerState.UNSTARTED;
+    let currentSecondsForOriginal = 0;
+    let elementsProcessed = 0;
+    for(const element of Object.entries(sortedData)) {
+      uncompressedData.set(parseFloat(element[0]), element[1]);
     }
-  }
+    for (let index = 0; elementsProcessed < Object.entries(compressedData).length; index++) {
+      const currentIndex = index / 10;
+      if (currentStateForOriginal === YT.PlayerState.PLAYING) {
+        currentSecondsForOriginal += 0.1;
+      }
+      if (!uncompressedData.get(currentIndex)) {
+        uncompressedData.set(currentIndex + '', {
+          state: currentStateForOriginal,
+          time: currentSecondsForOriginal.toFixed(1)
+        });
+      } else {
+        console.log('found already set')
+        currentStateForOriginal = uncompressedData.get(currentIndex)?.state;
+        currentSecondsForOriginal = +uncompressedData.get(currentIndex)?.time + 1.5;
+        uncompressedData.set(currentIndex + '', {
+          state: currentStateForOriginal,
+          time: currentSecondsForOriginal
+        });
+        elementsProcessed++;
+      }
+    }
+
+    return uncompressedData;
+  };
 
   const setUpVideos = (doc) => {
     if (!doc) {
       return;
     }
     const obtainedData = doc.data();
-    window.playerConfigs = obtainedData["reaction-configs"];
+    window.playerConfigs = unpackReactionConfigs(obtainedData["reaction-configs"]);
+    console.log(window.playerConfigs);
     playerReaction = new YT.Player("player-reaction", {
       videoId: obtainedData["reaction-video-id"],
       playerVars: playerOptions,
@@ -166,6 +227,12 @@
     }
   };
 
+  function timeInformationOriginal() {
+    pollVideoCurrentTime('original', playerOriginal);
+  }
+  function timeInformationReaction() {
+    pollVideoCurrentTime();
+  }
   const buildInterface = async () => {
     const originalAndReactionVideos = await getReactions();
     setUpVideos(originalAndReactionVideos);

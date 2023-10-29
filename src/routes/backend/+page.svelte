@@ -2,22 +2,9 @@
 <script>
     import Recorder from "$lib/components/Recorder.svelte";
     import { onMount } from "svelte";
-    import { COLLECTION_NAME, FIREBASE_CONFIG } from "$lib/constants/firebase";
+    import { createReactionDocument, updateFirebaseDocument } from "$lib/helpers/firebase";
 
-    import { initializeApp } from "firebase/app";
-    import {
-        getFirestore,
-        collection,
-        doc,
-        addDoc,
-        updateDoc,
-    } from "firebase/firestore/lite";
-
-    // Initialize Firebase
-    const app = initializeApp(FIREBASE_CONFIG);
-    const db = getFirestore(app);
-
-    const reactionConfigs = {};
+    const reactionConfigs = new Map();
     let timer;
     let startTime;
 
@@ -57,6 +44,26 @@
         // event.target.playVideo();
     }
     function onPlayerStateChange(event) {
+        const currentTime = playerOriginal.getCurrentTime();
+        logElapsedTime(getCurrentTimeForOriginalVideo(), event.data);
+        if (event.data == YT.PlayerState.UNSTARTED) {
+            console.log('YT.PlayerState.UNSTARTED');
+        }
+        if (event.data == YT.PlayerState.ENDED) {
+            console.log('YT.PlayerState.ENDED');
+        }
+        if (event.data == YT.PlayerState.PLAYING) {
+            console.log('YT.PlayerState.PLAYING');
+        }
+        if (event.data == YT.PlayerState.PAUSED) {
+            console.log('YT.PlayerState.PAUSED');
+        }
+        if (event.data == YT.PlayerState.BUFFERING) {
+            console.log('YT.PlayerState.BUFFERING');
+        }
+        if (event.data == YT.PlayerState.CUED) {
+            console.log('YT.PlayerState.CUED');
+        }
         if (event.data == YT.PlayerState.PLAYING) {
             updateSeekBar();
         }
@@ -65,52 +72,20 @@
         const seekTime = (seekBar.value / 100) * playerOriginal.getDuration();
         return seekTime.toFixed(2);
     };
-    function logElapsedTime(actionCode) {
+    function logElapsedTime(originalVideoTime, stateCode) {
         if (startTime) {
             const currentTime = new Date().getTime();
             const elapsedTime = (currentTime - startTime) / 1000; // Convert to seconds
-            console.log("Timer: " + elapsedTime.toFixed(2) + " seconds");
-            const configKey = elapsedTime.toFixed(2).toString();
-            reactionConfigs[configKey] = {
-                0: [],
-            };
-            reactionConfigs[configKey][0].push(actionCode);
-            reactionConfigs[configKey][0].push(
-                getCurrentTimeForOriginalVideo()
-            );
+            console.log("reaction Timer: " + elapsedTime.toFixed(3) + " seconds");
+            console.log("original video timer: " + getCurrentTimeForOriginalVideo());
+            const reactionVideoTime = elapsedTime.toFixed(1).toString();
+            reactionConfigs.set(reactionVideoTime, { time: originalVideoTime, state: stateCode });
+            const mapToObj = Object.fromEntries(reactionConfigs); // Convert the Map to an object
             updateFirebaseDocument({
-                "reaction-configs": reactionConfigs,
+                "reaction-configs": mapToObj,
             });
         }
     }
-
-    const createReactionDocument = (originalVideoId) => {
-        const reactionsCollection = collection(db, COLLECTION_NAME);
-        const dataToAdd = {
-            "original-video-id": originalVideoId,
-            "reactor-id": 1,
-            "reaction-configs": {},
-        };
-        addDoc(reactionsCollection, dataToAdd)
-            .then((documentRef) => {
-                // documentRef.id contains the auto-generated document ID
-                console.log("Document added with ID:", documentRef.id);
-                window.currentReactionDocumentId = documentRef.id;
-            })
-            .catch((error) => {
-                console.error("Error adding document:", error);
-            });
-    };
-
-    const updateFirebaseDocument = (dataToUpdate) => {
-        const reactionsCollection = collection(db, COLLECTION_NAME);
-        const documentRef = doc(
-            reactionsCollection,
-            window.currentReactionDocumentId
-        );
-
-        updateDoc(documentRef, dataToUpdate);
-    };
 
     function startOriginalVideo() {
         playerOriginal.playVideo();
@@ -189,7 +164,6 @@
         startVideoBtn.addEventListener("click", () => {
             console.log("Started the video");
             startOriginalVideo();
-            logElapsedTime(CONFIG_OPTIONS.START_VIDEO_ORIGINAL);
             startVideoBtn.disabled = true;
             stopVideoBtn.disabled = false;
             seekBarContainer.style.display = "block";
@@ -198,7 +172,6 @@
         stopVideoBtn.addEventListener("click", () => {
             console.log("Stopped the video");
             pauseOriginalVideo();
-            logElapsedTime(CONFIG_OPTIONS.PAUSE_VIDEO_ORIGINAL);
             stopVideoBtn.disabled = true;
             startVideoBtn.disabled = false;
         });
@@ -230,7 +203,6 @@
 
         seekBar.addEventListener("mouseup", () => {
             console.log("dragging stopped");
-            logElapsedTime(CONFIG_OPTIONS.SEEK_TO_ORIGINAL);
         });
     });
 </script>
