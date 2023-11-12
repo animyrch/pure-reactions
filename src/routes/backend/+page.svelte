@@ -5,6 +5,7 @@
     import { createReactionDocument, updateFirebaseDocument } from "$lib/helpers/firebase";
 
     const reactionConfigs = new Map();
+    const volumeConfigs = new Map();
     let timer;
     let startTime;
 
@@ -45,7 +46,7 @@
     }
     function onPlayerStateChange(event) {
         const currentTime = playerOriginal.getCurrentTime();
-        logElapsedTime(getCurrentTimeForOriginalVideo(), event.data);
+        logStateChange(getCurrentTimeForOriginalVideo(), event.data);
         if (event.data == YT.PlayerState.UNSTARTED) {
             console.log('YT.PlayerState.UNSTARTED');
         }
@@ -72,17 +73,28 @@
         const seekTime = (seekBar.value / 100) * playerOriginal.getDuration();
         return seekTime.toFixed(2);
     };
-    function logElapsedTime(originalVideoTime, stateCode) {
+    function logStateChange(originalVideoTime, stateCode) {
         if (startTime) {
             const currentTime = new Date().getTime();
             const elapsedTime = (currentTime - startTime) / 1000; // Convert to seconds
-            console.log("reaction Timer: " + elapsedTime.toFixed(3) + " seconds");
-            console.log("original video timer: " + getCurrentTimeForOriginalVideo());
             const reactionVideoTime = elapsedTime.toFixed(1).toString();
             reactionConfigs.set(reactionVideoTime, { time: originalVideoTime, state: stateCode });
-            const mapToObj = Object.fromEntries(reactionConfigs); // Convert the Map to an object
+            const reactionConfigsObject = Object.fromEntries(reactionConfigs); // Convert the Map to an object
             updateFirebaseDocument({
-                "reaction-configs": mapToObj,
+                "reaction-configs": reactionConfigsObject
+            });
+        }
+    }
+
+    function logVolumeChange(newVolume) {
+        if (startTime) {
+            const currentTime = new Date().getTime();
+            const elapsedTime = (currentTime - startTime) / 1000; // Convert to seconds
+            const reactionVideoTime = elapsedTime.toFixed(1).toString();
+            volumeConfigs.set(reactionVideoTime, { volume: newVolume });
+            const volumeConfigsObject = Object.fromEntries(volumeConfigs);
+            updateFirebaseDocument({
+                "volume-configs": volumeConfigsObject
             });
         }
     }
@@ -111,10 +123,33 @@
         return minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
     }
 
+    let soundLevel = 100; // Initial sound level, adjust as needed
+
+    // Add an event listener to update the YouTube player's volume
+    $: {
+        // Calculate the volume based on the soundLevel (0-100)
+        const volume = soundLevel / 100;
+        
+        // Set the volume for the YouTube player
+        if (playerOriginal) {
+            setVolumeForOriginalVideo(volume * 100); // YouTube API uses a volume range of 0-100
+        }
+    }
+    function setVolumeForOriginalVideo(volume) {
+        if (playerOriginal && typeof playerOriginal.setVolume === 'function') {
+            playerOriginal.setVolume(volume);
+            console.log('new sound set');
+        } else {
+            console.error('Player not ready or setVolume method not available.');
+        }
+    }
+
+
     let seekBar;
     let currentTimeDisplay;
 
     let showRecorder = false;
+    let isFocusReactOn = false;
 
     onMount(async () => {
         seekBar = document.getElementById("seek-bar");
@@ -133,9 +168,11 @@
 
         const startReactionBtn = document.getElementById("startReaction");
         const startVideoBtn = document.getElementById("startVideo");
+        const focusReactBtn = document.getElementById("focusReact");
         const stopVideoBtn = document.getElementById("stopVideo");
         const finishReactionBtn = document.getElementById("finishReaction");
         const seekBarContainer = document.getElementById("seek-bar-container");
+        const volumeBarContainer = document.getElementById("volume-bar-container");
         const CONFIG_OPTIONS = {
             START_VIDEO_REACTION: 1,
             START_VIDEO_ORIGINAL: 2,
@@ -166,13 +203,22 @@
             startOriginalVideo();
             startVideoBtn.disabled = true;
             stopVideoBtn.disabled = false;
+            focusReactBtn.disabled = false;
             seekBarContainer.style.display = "block";
+            volumeBarContainer.style.display = "block";
+        });
+
+        focusReactBtn.addEventListener("click", () => {
+            isFocusReactOn = !isFocusReactOn;
+            const soundLevel = isFocusReactOn ? 20 : 100;
+            logVolumeChange(soundLevel);
         });
 
         stopVideoBtn.addEventListener("click", () => {
             console.log("Stopped the video");
             pauseOriginalVideo();
             stopVideoBtn.disabled = true;
+            focusReactBtn.disabled = true;
             startVideoBtn.disabled = false;
         });
 
@@ -184,6 +230,7 @@
             startReactionBtn.disabled = true;
             startVideoBtn.disabled = true;
             stopVideoBtn.disabled = true;
+            focusReactBtn.disabled = true;
             finishReactionBtn.disabled = true;
             clearInterval(timer);
             console.log(reactionConfigs);
@@ -225,19 +272,33 @@
         <input type="checkbox" bind:checked={showRecorder} />
         Show Recorder
     </label>
-    <div class="video-items-container">
-        {#if showRecorder}
-            <div class="video-item" id="player-original" />
-            <div class="video-item">
-                <Recorder {startRecording} {stopRecording} />
-            </div>
-        {:else}
-            <div id="player-original" />
-        {/if}
+    <div class="flex-container">
+        <div id="volume-bar-container">
+            <input
+                type="range"
+                id="sound-control"
+                min="0"
+                max="100"
+                step="1"
+                bind:value={soundLevel}
+                class="vertical-slider"
+            />
+        </div>
+        <div class="video-items-container">
+            {#if showRecorder}
+                <div class="video-item" id="player-original" />
+                <div class="video-item">
+                    <Recorder {startRecording} {stopRecording} />
+                </div>
+            {:else}
+                <div id="player-original" />
+            {/if}
+        </div>
     </div>
     <div>
         <button id="startReaction">Start Reaction</button>
         <button id="startVideo" disabled>Start Video</button>
+        <button id="focusReact" class:active={isFocusReactOn} disabled>Focus React</button>
         <button id="stopVideo" disabled>Stop Video</button>
         <button id="finishReaction" disabled>Finish Reaction</button>
     </div>
@@ -274,11 +335,26 @@
         width: 800px;
     }
 
-    #seek-bar-container {
+    #seek-bar-container, #volume-bar-container {
         display: none;
     }
 
     .video-items-container {
         display: flex;
     }
+    #sound-control {
+        transform: rotate(270deg);
+        height: 150px; /* Adjust the height as needed */
+        width: 150px;  /* Adjust the width as needed */
+    }
+    .flex-container {
+        display: flex;
+    }
+
+    #focusReact.active {
+        background-color: rgb(230, 20, 20) !important;
+        color: white;
+    }
+
+
 </style>

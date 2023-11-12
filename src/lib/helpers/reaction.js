@@ -1,0 +1,29 @@
+const getClosestSmallerKey = (timedConfigs, searchKey) => {
+    const keys = Object.keys(timedConfigs).map(Number);
+    // Filter keys to keep only those smaller than the input
+    const smallerKeys = keys.filter(currentKey => currentKey < searchKey);
+
+    // Find the closest smaller key
+    return smallerKeys.reduce((prev, curr) => (curr > prev ? curr : prev), -Infinity);
+};
+
+export const getCurrentVolumeFromVolumeConfigs = (currentTime, volumeConfigs) => {
+    const DEFAULT_VOLUME_LEVEL = 100;
+    const closestSmallerTimeCode = getClosestSmallerKey(volumeConfigs, currentTime);
+    // If there are smaller volumes, return the volume for the closest smaller key
+    // Otherwise, return a default value of 100
+    return closestSmallerTimeCode !== -Infinity ? volumeConfigs[closestSmallerTimeCode.toFixed(1)].volume : DEFAULT_VOLUME_LEVEL;
+};
+
+export const getCurrentStateFromStateConfigs = (currentTime, stateConfigs) => {
+    const DEFAULT_STATE_CONFIG = {
+        state: -1,
+        time: "0.00",
+        closestSmallerTimeCode: 0.00
+    };
+    const closestSmallerTimeCode = getClosestSmallerKey(stateConfigs, currentTime);
+    return closestSmallerTimeCode !== -Infinity ? {
+        ...stateConfigs[closestSmallerTimeCode.toFixed(1)],
+        closestSmallerTimeCode: closestSmallerTimeCode
+     } : DEFAULT_STATE_CONFIG;
+};

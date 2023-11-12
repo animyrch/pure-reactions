@@ -3,6 +3,7 @@
   import { initializeApp } from "firebase/app";
   import { getFirestore, doc, getDoc } from "firebase/firestore/lite";
   import { COLLECTION_NAME, FIREBASE_CONFIG } from "$lib/constants/firebase";
+  import { getCurrentVolumeFromVolumeConfigs, getCurrentStateFromStateConfigs } from "$lib/helpers/reaction";
 
   export let data; // Access the data passed from the server in props
   // Initialize Firebase
@@ -18,6 +19,10 @@
     modestbranding: 1,
     rel: 0,
   };
+  let currentStateOriginalVideo = -1;
+  var currentVolumeOriginalVideo = 100;
+  var changingVolume = false;
+  var changingState = false;
 
   // Function to start the YouTube IFrame API loading
   function loadYouTubeAPI() {
@@ -39,6 +44,25 @@
   function pauseReactionVideo() {
     playerReaction.pauseVideo();
   }
+  function handleOriginalVideoVolume(reactionCurrentTime) {
+    const originalVideoNewVolume = getCurrentVolumeFromVolumeConfigs(reactionCurrentTime, window.volumeConfigs);
+    if (!changingVolume && currentVolumeOriginalVideo !== originalVideoNewVolume) {
+      changingVolume = true;
+      setVolumeForOriginalVideo(originalVideoNewVolume);
+      currentVolumeOriginalVideo = originalVideoNewVolume;
+      changingVolume = false;
+    }
+  }
+
+  function handleOriginalVideoState(reactionCurrentTime) {
+    const originalVideoNewStateConfig = getCurrentStateFromStateConfigs(reactionCurrentTime, window.playerConfigs);
+    if (!changingState && originalVideoNewStateConfig.state !== currentStateOriginalVideo) {
+      changingState = true;
+      handleStateChangeInOriginalVideo(currentStateOriginalVideo, originalVideoNewStateConfig.state, originalVideoNewStateConfig.time);
+      currentStateOriginalVideo = originalVideoNewStateConfig.state;
+      changingState = false;
+    }
+  }
   // 4. The API will call this function when the video player is ready.
   function onPlayerReady(event) {
     console.log("player ready");
@@ -54,7 +78,6 @@
   let bothVideosStarted;
   function pollVideoCurrentTime() {
     const interval = 100; // Polling interval in milliseconds (adjust as needed)
-    let originalPlayerState = YT.PlayerState.UNSTARTED;
     let reactionPlayerState = YT.PlayerState.UNSTARTED;
     // Use setInterval to periodically get the current time
     const pollInterval = setInterval(() => {
@@ -71,25 +94,13 @@
         playerReaction
       ) {
         const reactionCurrentTime = playerReaction.getCurrentTime().toFixed(1);
-        const originalVideoInfo = window.playerConfigs.get(reactionCurrentTime + '');
-        const originalPlayerNewState = originalVideoInfo?.state;
-        const originalPlayerTime = originalVideoInfo?.time;
-        if (
-          originalPlayerTime !== undefined &&
-          originalPlayerNewState !== undefined &&
-          originalPlayerNewState !== originalPlayerState
-        ) {
-          handleStateChangeInOriginalVideo(originalPlayerState, originalPlayerNewState, originalPlayerTime);
-        }
-        if (originalPlayerNewState !== undefined) {
-          originalPlayerState = originalPlayerNewState;
-        }
+        handleOriginalVideoVolume(reactionCurrentTime);
+        handleOriginalVideoState(reactionCurrentTime);
       }
     }, interval);
   }
   const handleStateChangeInOriginalVideo = (originalPlayerState, originalPlayerNewState, originalPlayerTime) => {
     if (originalPlayerState !== originalPlayerNewState) {
-      console.log(originalPlayerState, originalPlayerNewState);
       if (originalPlayerNewState === YT.PlayerState.PLAYING) {
         goToSecondsInOriginalVideo(originalPlayerTime);
         startOriginalVideo();
@@ -113,9 +124,10 @@
       reactionVideoNewState === YT.PlayerState.PLAYING
     ) {
       const reactionCurrentTime = playerReaction.getCurrentTime().toFixed(1);
-      const originalVideoInfo = window.playerConfigs.get(reactionCurrentTime + '');
-      originalVideoInfo?.time && goToSecondsInOriginalVideo(originalVideoInfo?.time);
-      if (originalVideoInfo?.state === YT.PlayerState.PLAYING) {
+      const closetSmallerConfig = getCurrentStateFromStateConfigs(reactionCurrentTime, window.playerConfigs);
+      const calculatedTimeForOriginalVideo = (reactionCurrentTime - closetSmallerConfig.closestSmallerTimeCode) + parseFloat(closetSmallerConfig.time)
+      goToSecondsInOriginalVideo(calculatedTimeForOriginalVideo);
+      if (closetSmallerConfig.state === YT.PlayerState.PLAYING) {
         startOriginalVideo();
       }
     }
@@ -153,49 +165,13 @@
     playerOriginal.setVolume(volume);
   }
 
-  const unpackReactionConfigs = (compressedData) => {
-    const sortedData = Object.fromEntries(
-        Object.entries(compressedData).sort(([a], [b]) => Number(a) - Number(b))
-      );
-    const uncompressedData = new Map();
-    let currentStateForOriginal = YT.PlayerState.UNSTARTED;
-    let currentSecondsForOriginal = 0;
-    let elementsProcessed = 0;
-    for(const element of Object.entries(sortedData)) {
-      uncompressedData.set(parseFloat(element[0]), element[1]);
-    }
-    for (let index = 0; elementsProcessed < Object.entries(compressedData).length; index++) {
-      const currentIndex = index / 10;
-      if (currentStateForOriginal === YT.PlayerState.PLAYING) {
-        currentSecondsForOriginal += 0.1;
-      }
-      if (!uncompressedData.get(currentIndex)) {
-        uncompressedData.set(currentIndex + '', {
-          state: currentStateForOriginal,
-          time: currentSecondsForOriginal.toFixed(1)
-        });
-      } else {
-        console.log('found already set')
-        currentStateForOriginal = uncompressedData.get(currentIndex)?.state;
-        currentSecondsForOriginal = +uncompressedData.get(currentIndex)?.time + 1.5;
-        uncompressedData.set(currentIndex + '', {
-          state: currentStateForOriginal,
-          time: currentSecondsForOriginal
-        });
-        elementsProcessed++;
-      }
-    }
-
-    return uncompressedData;
-  };
-
   const setUpVideos = (doc) => {
     if (!doc) {
       return;
     }
     const obtainedData = doc.data();
-    window.playerConfigs = unpackReactionConfigs(obtainedData["reaction-configs"]);
-    console.log(window.playerConfigs);
+    window.playerConfigs = obtainedData["reaction-configs"];
+    window.volumeConfigs = obtainedData["volume-configs"];
     playerReaction = new YT.Player("player-reaction", {
       videoId: obtainedData["reaction-video-id"],
       playerVars: playerOptions,
