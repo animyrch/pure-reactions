@@ -28,7 +28,7 @@
   function loadYouTubeAPI() {
     const tag = document.createElement("script");
     tag.src = "https://www.youtube.com/iframe_api";
-    const firstScriptTag = document.getElementsByTagName("script")[0];
+    const firstScriptTag = document.getElementsByTagName("div")[0];
     firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
   }
 
@@ -218,9 +218,7 @@
     // Check if the YouTube API is already loaded
     if (typeof YT === "undefined" || typeof YT.Player === "undefined") {
       // If not loaded, start loading the YouTube API
-      document.addEventListener("DOMContentLoaded", function () {
-        loadYouTubeAPI();
-      });
+      loadYouTubeAPI();
 
       // Set up a listener for the YouTube IFrame API ready event
       window.onYouTubeIframeAPIReady = async () => {
