@@ -218,7 +218,9 @@
     // Check if the YouTube API is already loaded
     if (typeof YT === "undefined" || typeof YT.Player === "undefined") {
       // If not loaded, start loading the YouTube API
-      loadYouTubeAPI();
+      document.addEventListener("DOMContentLoaded", function () {
+        loadYouTubeAPI();
+      });
 
       // Set up a listener for the YouTube IFrame API ready event
       window.onYouTubeIframeAPIReady = async () => {
