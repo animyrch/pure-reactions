@@ -1,4 +1,7 @@
 const getClosestSmallerKey = (timedConfigs, searchKey) => {
+    if (!timedConfigs) {
+        return -Infinity;
+    }
     const keys = Object.keys(timedConfigs).map(Number);
     // Filter keys to keep only those smaller than the input
     const smallerKeys = keys.filter(currentKey => currentKey < searchKey);
