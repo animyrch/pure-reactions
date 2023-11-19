@@ -17,7 +17,11 @@
     controls: 1,
     disablekb: 1,
     modestbranding: 1,
-    rel: 0,
+    rel: 0
+  };
+  var iframeOptionDefault = {
+      width: '100%',
+      height: '100%'
   };
   let currentStateOriginalVideo = -1;
   var currentVolumeOriginalVideo = 100;
@@ -175,6 +179,7 @@
     playerReaction = new YT.Player("player-reaction", {
       videoId: obtainedData["reaction-video-id"],
       playerVars: playerOptions,
+      ...iframeOptionDefault,
       events: {
         onReady: onPlayerReady,
         onStateChange: onStateChangeReaction,
@@ -183,6 +188,7 @@
     playerOriginal = new YT.Player("player-original", {
       videoId: obtainedData["original-video-id"],
       playerVars: playerOptions,
+      ...iframeOptionDefault,
       events: {
         onReady: onPlayerReady,
         onStateChange: onStateChangeOriginal,
@@ -235,56 +241,36 @@
 </script>
 
 <div class="website-inner-container">
-  {data.slug}
-  <div id="player" />
-  <div class="video-container">
-    <div id="player-original" />
-    <div id="player-reaction" />
-  </div>
+  <div class="videos-container" />
+    <div id="player-original" class="video" />
+    <div id="player-reaction" class="video" />
 </div>
 
 <style>
-  /* Style for video container */
-  .video-container {
-    display: flex;
-    justify-content: space-between;
-    gap: 5rem;
+  .website-inner-container {
+    margin: 0;
     width: 100%;
   }
 
-  .website-inner-container {
-    margin: 5rem;
+  .videos-container {
+    display: flex;
+    flex-direction: column;
+    width: 100vw;
   }
 
   /* Style for individual video iframes */
   .video {
-    flex: 0 0 48%; /* Adjust width as needed */
-    margin-right: 2%;
+    object-fit: contain;
+    width: 100%;
+    height: calc(100vw * 0.56);
   }
-
-  /* Style for centered button */
-  .center-button {
-    margin-top: 20px;
-    text-align: center;
-  }
-
-  /* Style for the button */
-  button {
-    padding: 10px 20px;
-    background-color: #007bff;
-    color: #fff;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 16px;
-  }
-
-  /* Hover effect for the button */
-  button:hover {
-    background-color: #0056b3;
-  }
-
-  #player-original {
-    width: 100wv;
+  @media screen and (min-width: 600px) {
+    .videos-container {
+      flex-direction: row;
+    }
+    .video {
+      width: 49%;
+      height: calc((100vw * 0.56) / 2);
+    }
   }
 </style>
