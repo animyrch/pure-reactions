@@ -3,7 +3,10 @@
     import Recorder from "$lib/components/Recorder.svelte";
     import { onMount } from "svelte";
     import { createReactionDocument, updateFirebaseDocument } from "$lib/helpers/firebase";
-
+    import { user, redirectURL } from '../../store.js'
+    import { goto } from '$app/navigation';
+    import { browser } from '$app/environment';
+    
     const reactionConfigs = new Map();
     const volumeConfigs = new Map();
     let timer;
@@ -252,61 +255,78 @@
             console.log("dragging stopped");
         });
     });
+    function handlePrivateRoute() {
+        // redirectURL.setRedirectURL(location.href)
+        if (browser) {
+            goto('/');
+        }
+
+        // Swal.fire({
+        // title: 'You are not authenticated',
+        // text: 'Please log in or sign up to view this page',
+        // type: 'error',
+        // allowOutsideClick: false,
+        // confirmButtonText: 'Will do!',
+        // })
+        console.log('we qre here');
+    }
 </script>
 
-<div class="website-inner-container">
-    <div>
-        <form id="videoIdInputForm">
-            <label for="videoId">Enter the video id:</label>
-            <input
-                type="text"
-                id="videoIdInput"
-                name="videoId"
-                required
-                disabled
-            />
-            <button type="button" on:click={loadYoutubePlayer}>Submit</button>
-        </form>
-    </div>
-    <label>
-        <input type="checkbox" bind:checked={showRecorder} />
-        Show Recorder
-    </label>
-    <div class="flex-container">
-        <div id="volume-bar-container">
-            <input
-                type="range"
-                id="sound-control"
-                min="0"
-                max="100"
-                step="1"
-                bind:value={soundLevel}
-                class="vertical-slider"
-            />
+{#if $user && $user.username}
+    <div class="website-inner-container">
+        <div>
+            <form id="videoIdInputForm">
+                <label for="videoId">Enter the video id:</label>
+                <input
+                    type="text"
+                    id="videoIdInput"
+                    name="videoId"
+                    required
+                    disabled
+                />
+                <button type="button" on:click={loadYoutubePlayer}>Submit</button>
+            </form>
         </div>
-        <div class="video-items-container">
-            {#if showRecorder}
-                <div class="video-item" id="player-original" />
-                <div class="video-item">
-                    <Recorder {startRecording} {stopRecording} />
-                </div>
-            {:else}
-                <div id="player-original" />
-            {/if}
+        <label>
+            <input type="checkbox" bind:checked={showRecorder} />
+            Show Recorder
+        </label>
+        <div class="flex-container">
+            <div id="volume-bar-container">
+                <input
+                    type="range"
+                    id="sound-control"
+                    min="0"
+                    max="100"
+                    step="1"
+                    bind:value={soundLevel}
+                    class="vertical-slider"
+                />
+            </div>
+            <div class="video-items-container">
+                {#if showRecorder}
+                    <div class="video-item" id="player-original" />
+                    <div class="video-item">
+                        <Recorder {startRecording} {stopRecording} />
+                    </div>
+                {:else}
+                    <div id="player-original" />
+                {/if}
+            </div>
+        </div>
+        <div>
+            <button id="startReaction">Start Reaction</button>
+            <button id="startVideo" disabled>Start Video</button>
+            <button id="focusReact" class:active={isFocusReactOn} disabled>Focus React</button>
+            <button id="stopVideo" disabled>Stop Video</button>
+            <button id="finishReaction" disabled>Finish Reaction</button>
+        </div>
+        <div id="seek-bar-container">
+            <input type="range" id="seek-bar" min="0" max="100" step="0.01" />
+            <div>Current Time: <span id="current-time">0:00</span></div>
         </div>
     </div>
-    <div>
-        <button id="startReaction">Start Reaction</button>
-        <button id="startVideo" disabled>Start Video</button>
-        <button id="focusReact" class:active={isFocusReactOn} disabled>Focus React</button>
-        <button id="stopVideo" disabled>Stop Video</button>
-        <button id="finishReaction" disabled>Finish Reaction</button>
-    </div>
-    <div id="seek-bar-container">
-        <input type="range" id="seek-bar" min="0" max="100" step="0.01" />
-        <div>Current Time: <span id="current-time">0:00</span></div>
-    </div>
-</div>
+{:else}{handlePrivateRoute()}{/if}
 
 <style>
     body {

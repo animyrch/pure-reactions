@@ -6,6 +6,9 @@
 {#if data.isLoggedIn}
   <div class="center">
     <p>Hello {data.username}</p>
+    <div>
+      <button on:click={() => data.handleUserAction('logout')}>Log Out</button>
+    </div>
   </div>
 {:else}
   <div class="center">

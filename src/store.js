@@ -1,8 +1,9 @@
 import { writable } from 'svelte/store'
+import { browser } from '$app/environment';
 
 function createUser() {
   let localUser;
-  if (localStorage) {
+  if (browser) {
     localUser = JSON.parse(localStorage.getItem('gotrue.user'))
   }
 
@@ -15,6 +16,7 @@ function createUser() {
       expires_at: localUser.token.expires_at,
       refresh_token: localUser.token.refresh_token,
       token_type: localUser.token.token_type,
+      id: localUser.id
     }
   }
   const { subscribe, set } = writable(u)
@@ -29,6 +31,7 @@ function createUser() {
         expires_at: user.token.expires_at,
         refresh_token: user.token.refresh_token,
         token_type: user.token.token_type,
+        id: user.id
       }
       set(currentUser)
     },
@@ -51,5 +54,5 @@ function createRedirectURL() {
   }
 }
 
-export const user = createUser
+export const user = createUser()
 export const redirectURL = createRedirectURL()
