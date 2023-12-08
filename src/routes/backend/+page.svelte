@@ -3,7 +3,7 @@
     import Recorder from "$lib/components/Recorder.svelte";
     import { onMount } from "svelte";
     import { createReactionDocument, updateFirebaseDocument } from "$lib/helpers/firebase";
-    import { user, redirectURL } from '../../store.js'
+    import { user } from '../../store.js'
     import { goto } from '$app/navigation';
     import { browser } from '$app/environment';
     
@@ -282,7 +282,6 @@
                     id="videoIdInput"
                     name="videoId"
                     required
-                    disabled
                 />
                 <button type="button" on:click={loadYoutubePlayer}>Submit</button>
             </form>
