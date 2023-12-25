@@ -1,41 +1,41 @@
 /** @type {import('./$types').PageLoad} */
-import netlifyIdentity from 'netlify-identity-widget';
 import { browser } from '$app/environment';
-import { user } from '../store.js'
-import { goto } from '$app/navigation';
+import { checkUserSignInStatusWrapper, signOutWrapper, signInWithEmailAndPasswordWrapper } from '$lib/helpers/firebase.js';
+import { createUserWithEmailAndPasswordWrapper } from '../lib/helpers/firebase.js';
 
-let username;
-let userId;
+let displayName;
+let userEmail;
+let isLoggedIn;
 
-export function load() {
-    if (browser) {
-        netlifyIdentity.init();
+export async function load() {
+    if (browser && !!window) {
+        // auth actions worked here
+        const user = await checkUserSignInStatusWrapper();
+        console.log(user);
+        userEmail = user?.email;
+        displayName = user?.displayName;
+        isLoggedIn = user?.emailVerified;
     }
 
-    user.subscribe((value) => {
-        // Update the local variable when the user store changes
-        username = value?.username;
-        userId = value?.id;
-    });
-
-    const handleUserAction = (action) => {
-        if (action === 'login' || action === 'signup') {
-            netlifyIdentity.open(action);
-            netlifyIdentity.on('login', u => {
-                user.login(u);
-                location.reload();
-            });
+    const handleUserAction = async (action, { detail } = {}) => {
+        const email = detail && detail.email;
+        const password = detail && detail.password;
+        if (action === 'login') {
+            await signInWithEmailAndPasswordWrapper(email, password);
+            location.reload();
+        }
+        if (action === 'signup' && email && password) {
+            await createUserWithEmailAndPasswordWrapper(email, password);
         }
         if (action === 'logout') {
-            goto('/');
-            user.logout();
-            netlifyIdentity.logout();
+            await signOutWrapper();
             location.reload();
         }
     };
     return {
         handleUserAction,
-        isLoggedIn: !!userId,
-        username
+        isLoggedIn,
+        displayName,
+        userEmail
     };
 }

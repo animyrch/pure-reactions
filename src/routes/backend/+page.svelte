@@ -3,12 +3,12 @@
     import Recorder from "$lib/components/Recorder.svelte";
     import { onMount } from "svelte";
     import { createReactionDocument, updateFirebaseDocument } from "$lib/helpers/firebase";
-    import { user } from '../../store.js'
     import { goto } from '$app/navigation';
     import { browser } from '$app/environment';
     
     const reactionConfigs = new Map();
     const volumeConfigs = new Map();
+    let isUserSet = false;
     let timer;
     let startTime;
 
@@ -86,6 +86,13 @@
             updateFirebaseDocument({
                 "reaction-configs": reactionConfigsObject
             });
+            if (!isUserSet) {
+                isUserSet = true;
+                // console.log($user.id);
+                updateFirebaseDocument({
+                    "reactor-id": '$user.id'
+                });
+            }
         }
     }
 
@@ -268,11 +275,12 @@
         // allowOutsideClick: false,
         // confirmButtonText: 'Will do!',
         // })
-        console.log('we qre here');
     }
+
+	export let data;
 </script>
 
-{#if $user && $user.username}
+{#if data.isLoggedIn}
     <div class="website-inner-container">
         <div>
             <form id="videoIdInputForm">
