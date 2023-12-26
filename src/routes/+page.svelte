@@ -2,33 +2,14 @@
 
 <script>
 	import { onMount } from 'svelte';
-	import { initializeApp } from 'firebase/app';
-	import { getFirestore, collection, getDocs } from 'firebase/firestore/lite';
-	import { COLLECTION_NAME, FIREBASE_CONFIG } from '$lib/constants/firebase';
-	// Initialize Firebase
-	const app = initializeApp(FIREBASE_CONFIG);
-	const db = getFirestore(app);
-	let documentData = [];
+	import { getAllReactions } from '$lib/helpers/firebase';
 
-	const getReactions = (callback) => {
-		const reactionsCollection = collection(db, COLLECTION_NAME);
-		
-		getDocs(reactionsCollection)
-		.then((querySnapshot) => {
-			documentData = querySnapshot.docs.map((doc) => ({
-				id: doc.id,
-				data: doc.data()
-			}));
-			querySnapshot.docs.map(doc => console.log(doc.data()));
-		})
-		.catch((error) => {
-			console.error('Error getting documents: ', error);
-		});
-	};
+	// Initialize Firebase
+	let documentData = [];
 
 	// Call getReactions when the component is mounted
 	onMount(() => {
-		getReactions();
+		documentData = getAllReactions();
 	});
 </script>
 		

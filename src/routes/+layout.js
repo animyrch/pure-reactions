@@ -6,6 +6,7 @@ import { createUserWithEmailAndPasswordWrapper } from '../lib/helpers/firebase.j
 let displayName;
 let userEmail;
 let isLoggedIn;
+let userId;
 
 export async function load() {
     if (browser && !!window) {
@@ -15,6 +16,7 @@ export async function load() {
         userEmail = user?.email;
         displayName = user?.displayName;
         isLoggedIn = user?.emailVerified;
+        userId = user?.uid;
     }
 
     const handleUserAction = async (action, { detail } = {}) => {
@@ -36,6 +38,7 @@ export async function load() {
         handleUserAction,
         isLoggedIn,
         displayName,
-        userEmail
+        userEmail,
+        userId
     };
 }

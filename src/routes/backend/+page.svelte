@@ -2,10 +2,13 @@
 <script>
     import Recorder from "$lib/components/Recorder.svelte";
     import { onMount } from "svelte";
-    import { createReactionDocument, updateFirebaseDocument } from "$lib/helpers/firebase";
+    import {
+        createReactionDocument,
+        updateFirebaseDocument
+    } from "$lib/helpers/firebase";
     import { goto } from '$app/navigation';
     import { browser } from '$app/environment';
-    
+
     const reactionConfigs = new Map();
     const volumeConfigs = new Map();
     let isUserSet = false;
@@ -88,9 +91,9 @@
             });
             if (!isUserSet) {
                 isUserSet = true;
-                // console.log($user.id);
+                console.log(data.userId, 'data.userId');
                 updateFirebaseDocument({
-                    "reactor-id": '$user.id'
+                    "reactor-id": data.userId
                 });
             }
         }
@@ -183,15 +186,6 @@
         const finishReactionBtn = document.getElementById("finishReaction");
         const seekBarContainer = document.getElementById("seek-bar-container");
         const volumeBarContainer = document.getElementById("volume-bar-container");
-        const CONFIG_OPTIONS = {
-            START_VIDEO_REACTION: 1,
-            START_VIDEO_ORIGINAL: 2,
-            SET_VOLUME_REACTION: 3,
-            SET_VOLUME_ORIGINAL: 4,
-            PAUSE_VIDEO_ORIGINAL: 5,
-            SEEK_TO_ORIGINAL: 6,
-        };
-
         const videoIdInput = document.getElementById("videoIdInput");
 
         startReactionBtn.addEventListener("click", () => {

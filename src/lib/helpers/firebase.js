@@ -5,6 +5,7 @@ import {
     doc,
     addDoc,
     updateDoc,
+    getDocs
 } from "firebase/firestore/lite";
 import {
     getAuth,
@@ -13,7 +14,6 @@ import {
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
     updateProfile,
-    updateEmail,
     updatePassword,
     sendEmailVerification,
     reauthenticateWithCredential,
@@ -52,6 +52,21 @@ export const updateFirebaseDocument = (dataToUpdate) => {
     );
 
     updateDoc(documentRef, dataToUpdate);
+};
+
+export const getAllReactions = async () => {
+    let reactions = [];
+    try {
+        const reactionsCollection = collection(db, COLLECTION_NAME);
+        const querySnapshot = await getDocs(reactionsCollection);
+        reactions = querySnapshot.docs.map((doc) => ({
+            id: doc.id,
+            data: doc.data()
+        }));
+    } catch (error) {
+        console.error('Error getting documents: ', error);
+    }
+    return reactions;
 };
 
 export const createUserWithEmailAndPasswordWrapper = async (email, password) => {
