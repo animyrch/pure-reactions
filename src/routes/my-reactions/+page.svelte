@@ -2,7 +2,8 @@
 	import { onMount } from 'svelte';
 	import { getFilteredReactions } from '$lib/helpers/firebase';
     import ReactionsList from '$lib/components/ReactionsList.svelte';
-
+    import { handlePrivateRoute } from '$lib/helpers/routing';
+    
 	// Initialize Firebase
 	let reactions = [];
 
@@ -16,6 +17,8 @@
     export let data;
 </script>
 
-<div>
-	<ReactionsList {reactions}/>
-</div>
+{#if data.isLoggedIn}
+    <div>
+        <ReactionsList {reactions}/>
+    </div>
+{:else}{handlePrivateRoute()}{/if}

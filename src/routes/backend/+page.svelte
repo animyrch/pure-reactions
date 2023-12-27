@@ -6,8 +6,7 @@
         createReactionDocument,
         updateFirebaseDocument
     } from "$lib/helpers/firebase";
-    import { goto } from '$app/navigation';
-    import { browser } from '$app/environment';
+    import { handlePrivateRoute } from '$lib/helpers/routing';
 
     const reactionConfigs = new Map();
     const volumeConfigs = new Map();
@@ -256,20 +255,6 @@
             console.log("dragging stopped");
         });
     });
-    function handlePrivateRoute() {
-        // redirectURL.setRedirectURL(location.href)
-        if (browser) {
-            goto('/');
-        }
-
-        // Swal.fire({
-        // title: 'You are not authenticated',
-        // text: 'Please log in or sign up to view this page',
-        // type: 'error',
-        // allowOutsideClick: false,
-        // confirmButtonText: 'Will do!',
-        // })
-    }
 
 	export let data;
 </script>
