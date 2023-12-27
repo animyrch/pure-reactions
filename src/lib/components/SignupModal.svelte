@@ -50,7 +50,6 @@
 
     <label for="password">Password:</label>
     <input type="password" id="password" bind:value={password} />
-        {showModal}
     <button on:click={handleSignup}>Sign Up</button>
     </div>
 </div>

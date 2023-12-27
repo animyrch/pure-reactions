@@ -1,8 +1,6 @@
-<!-- src/App.svelte -->
-
 <script>
 	import { onMount } from 'svelte';
-	import { getAllReactions } from '$lib/helpers/firebase';
+	import { getFilteredReactions } from '$lib/helpers/firebase';
     import ReactionsList from '$lib/components/ReactionsList.svelte';
 
 	// Initialize Firebase
@@ -10,10 +8,14 @@
 
 	// Call getReactions when the component is mounted
 	onMount(async () => {
-		reactions = await getAllReactions();
+		reactions = await getFilteredReactions({
+            userId: data.userId
+        });
 	});
+
+    export let data;
 </script>
-		
+
 <div>
 	<ReactionsList {reactions}/>
 </div>

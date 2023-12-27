@@ -5,7 +5,9 @@ import {
     doc,
     addDoc,
     updateDoc,
-    getDocs
+    getDocs,
+    query,
+    where
 } from "firebase/firestore/lite";
 import {
     getAuth,
@@ -67,6 +69,24 @@ export const getAllReactions = async () => {
         console.error('Error getting documents: ', error);
     }
     return reactions;
+};
+
+export const getFilteredReactions = async ({
+    userId
+}) => {
+    let reactions = [];
+    try {
+        const reactionsCollection = collection(db, COLLECTION_NAME);
+        const queryRef = query(reactionsCollection, where("reactor-id", "==", userId));
+        const querySnapshot = await getDocs(queryRef);
+        reactions = querySnapshot.docs.map((doc) => ({
+            id: doc.id,
+            data: doc.data()
+        }));
+        return reactions;
+    } catch (error) {
+        console.error('Error getting filtered documents: ', error);
+    }
 };
 
 export const createUserWithEmailAndPasswordWrapper = async (email, password) => {
