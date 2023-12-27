@@ -8,8 +8,8 @@
 	let documentData = [];
 
 	// Call getReactions when the component is mounted
-	onMount(() => {
-		documentData = getAllReactions();
+	onMount(async () => {
+		documentData = await getAllReactions();
 	});
 </script>
 		

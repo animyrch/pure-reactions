@@ -83,7 +83,7 @@
         if (startTime) {
             const currentTime = new Date().getTime();
             const elapsedTime = (currentTime - startTime) / 1000; // Convert to seconds
-            const reactionVideoTime = elapsedTime.toFixed(1).toString();
+            const reactionVideoTime = (elapsedTime.toFixed(1) - 1).toString();
             reactionConfigs.set(reactionVideoTime, { time: originalVideoTime, state: stateCode });
             const reactionConfigsObject = Object.fromEntries(reactionConfigs); // Convert the Map to an object
             updateFirebaseDocument({
@@ -103,7 +103,7 @@
         if (startTime) {
             const currentTime = new Date().getTime();
             const elapsedTime = (currentTime - startTime) / 1000; // Convert to seconds
-            const reactionVideoTime = elapsedTime.toFixed(1).toString();
+            const reactionVideoTime = (elapsedTime.toFixed(1) - 1).toString();
             volumeConfigs.set(reactionVideoTime, { volume: newVolume });
             const volumeConfigsObject = Object.fromEntries(volumeConfigs);
             updateFirebaseDocument({
