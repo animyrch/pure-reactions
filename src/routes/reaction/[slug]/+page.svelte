@@ -1,12 +1,15 @@
 <script>
   import { onMount } from "svelte";
-  import { initializeApp } from "firebase/app";
-  import { getFirestore, doc, getDoc } from "firebase/firestore/lite";
-  import { COLLECTION_NAME, FIREBASE_CONFIG } from "$lib/constants/firebase";
-  import { getCurrentVolumeFromVolumeConfigs, getCurrentStateFromStateConfigs } from "$lib/helpers/reaction";
+  import {
+    getCurrentVolumeFromVolumeConfigs,
+    getCurrentStateFromStateConfigs
+  } from "$lib/helpers/reaction";
+  import {
+    getReaction,
+    updateFirebaseDocument
+  } from '$lib/helpers/firebase';
 
   export let data; // Access the data passed from the server in props
-  // Initialize Firebase
 
   // 3. This function creates an <iframe> (and YouTube player)
   //    after the API code downloads.
@@ -27,6 +30,8 @@
   var currentVolumeOriginalVideo = 100;
   var changingVolume = false;
   var changingState = false;
+  let isReactionMissing = false;
+  let reactionVideoIdInput = '';
 
   // Function to start the YouTube IFrame API loading
   function loadYouTubeAPI() {
@@ -140,7 +145,6 @@
 
   function onStateChangeOriginal(event) {
     if (event.data == YT.PlayerState.PLAYING) {
-      // timeInformationOriginal();
       if (!originalVideoClicked) {
         pauseOriginalVideo();
         originalVideoClicked = true;
@@ -174,17 +178,20 @@
       return;
     }
     const obtainedData = doc.data();
+    isReactionMissing = !obtainedData["reaction-video-id"];
     window.playerConfigs = obtainedData["reaction-configs"];
     window.volumeConfigs = obtainedData["volume-configs"];
-    playerReaction = new YT.Player("player-reaction", {
-      videoId: obtainedData["reaction-video-id"],
-      playerVars: playerOptions,
-      ...iframeOptionDefault,
-      events: {
-        onReady: onPlayerReady,
-        onStateChange: onStateChangeReaction,
-      },
-    });
+    if (!isReactionMissing) {
+      playerReaction = new YT.Player("player-reaction", {
+        videoId: obtainedData["reaction-video-id"],
+        playerVars: playerOptions,
+        ...iframeOptionDefault,
+        events: {
+          onReady: onPlayerReady,
+          onStateChange: onStateChangeReaction,
+        },
+      });
+    }
     playerOriginal = new YT.Player("player-original", {
       videoId: obtainedData["original-video-id"],
       playerVars: playerOptions,
@@ -196,29 +203,22 @@
     });
   };
 
-  const getReactions = async () => {
-    const app = initializeApp(FIREBASE_CONFIG);
-    const db = getFirestore(app);
-    const docRef = doc(db, COLLECTION_NAME, data.slug);
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      console.log("Document data:", docSnap.data());
-      return docSnap;
-    } else {
-      console.log("No such document!");
-    }
-  };
 
-  function timeInformationOriginal() {
-    pollVideoCurrentTime('original', playerOriginal);
-  }
   function timeInformationReaction() {
     pollVideoCurrentTime();
   }
   const buildInterface = async () => {
-    const originalAndReactionVideos = await getReactions();
+    window.currentReactionDocumentId = data.slug;
+    const originalAndReactionVideos = await getReaction(data.slug);
     setUpVideos(originalAndReactionVideos);
   };
+
+  const setReactionVideoId = async () => {
+    await updateFirebaseDocument({
+        "reaction-video-id": reactionVideoIdInput
+    });
+    location.reload();
+  }
 
   onMount(async () => {
     // Check if the YouTube API is already loaded
@@ -229,7 +229,7 @@
       // Set up a listener for the YouTube IFrame API ready event
       window.onYouTubeIframeAPIReady = async () => {
         console.log("YouTube IFrame API is ready");
-        // Now, you can proceed to getReactions and set up videos
+        // Now, you can proceed to getReaction and set up videos
         await buildInterface();
       };
     } else {
@@ -241,9 +241,21 @@
 </script>
 
 <div class="website-inner-container">
-  <div class="videos-container" />
+  {#if isReactionMissing}
+  <p>Warning: The reaction video id is missing. This reaction page won't be listed on the home page until the reaction video url is added below :</p>
+  {/if}
+  <div class="videos-container">
     <div id="player-original" class="video" />
-    <div id="player-reaction" class="video" />
+    {#if !isReactionMissing}
+      <div id="player-reaction" class="video" />
+    {:else}
+      <label>
+        Reaction Video ID:
+        <input bind:value={reactionVideoIdInput} />
+      </label>
+      <button class="submit-button" on:click={setReactionVideoId}>Set Reaction Video Id</button>
+    {/if}
+  </div>
 </div>
 
 <style>
@@ -263,6 +275,9 @@
     object-fit: contain;
     width: 100%;
     height: calc(100vw * 0.56);
+  }
+  .submit-button {
+    height: 2rem;
   }
   @media screen and (min-width: 600px) {
     .videos-container {

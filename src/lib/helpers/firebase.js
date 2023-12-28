@@ -5,6 +5,7 @@ import {
     doc,
     addDoc,
     updateDoc,
+    getDoc,
     getDocs,
     query,
     where
@@ -29,11 +30,12 @@ const app = initializeApp(FIREBASE_CONFIG);
 const db = getFirestore(app);
 export const auth = getAuth(app);
 
-export const createReactionDocument = (originalVideoId) => {
+export const createReactionDocument = (originalVideoId, userId) => {
     const reactionsCollection = collection(db, COLLECTION_NAME);
     const dataToAdd = {
         "original-video-id": originalVideoId,
         "reaction-configs": {},
+        "reactor-id": userId
     };
     addDoc(reactionsCollection, dataToAdd)
         .then((documentRef) => {
@@ -46,14 +48,17 @@ export const createReactionDocument = (originalVideoId) => {
         });
 };
 
-export const updateFirebaseDocument = (dataToUpdate) => {
-    const reactionsCollection = collection(db, COLLECTION_NAME);
-    const documentRef = doc(
-        reactionsCollection,
-        window.currentReactionDocumentId
-    );
-
-    updateDoc(documentRef, dataToUpdate);
+export const updateFirebaseDocument = async (dataToUpdate) => {
+    try {
+        const reactionsCollection = collection(db, COLLECTION_NAME);
+        const documentRef = doc(
+            reactionsCollection,
+            window.currentReactionDocumentId
+        );
+        await updateDoc(documentRef, dataToUpdate);
+    } catch (error) {
+        console.error('Error updating document: ', error);
+    }
 };
 
 export const getAllReactions = async () => {
@@ -86,6 +91,21 @@ export const getFilteredReactions = async ({
         return reactions;
     } catch (error) {
         console.error('Error getting filtered documents: ', error);
+    }
+};
+
+export const getReaction = async (reactionId) => {
+    try {
+        const docRef = doc(db, COLLECTION_NAME, reactionId);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          console.log("Document data:", docSnap.data());
+          return docSnap;
+        } else {
+          console.log("No such document!");
+        }
+    } catch (error) {
+        console.error('Error getting reaction: ', error);
     }
 };
 

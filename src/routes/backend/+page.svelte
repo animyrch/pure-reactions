@@ -88,13 +88,6 @@
             updateFirebaseDocument({
                 "reaction-configs": reactionConfigsObject
             });
-            if (!isUserSet) {
-                isUserSet = true;
-                console.log(data.userId, 'data.userId');
-                updateFirebaseDocument({
-                    "reactor-id": data.userId
-                });
-            }
         }
     }
 
@@ -188,7 +181,7 @@
         const videoIdInput = document.getElementById("videoIdInput");
 
         startReactionBtn.addEventListener("click", () => {
-            createReactionDocument(window.originalVideoIdForReaction);
+            createReactionDocument(window.originalVideoIdForReaction, data.userId);
             if (showRecorder) {
                 startRecording = true;
             }
