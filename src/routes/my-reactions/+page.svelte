@@ -1,6 +1,6 @@
 <script>
 	import { onMount } from 'svelte';
-	import { getFilteredReactions } from '$lib/helpers/firebase';
+	import { getUserReactions } from '$lib/helpers/firebase';
     import ReactionsList from '$lib/components/ReactionsList.svelte';
     import { handlePrivateRoute } from '$lib/helpers/routing';
     
@@ -9,9 +9,7 @@
 
 	// Call getReactions when the component is mounted
 	onMount(async () => {
-		reactions = await getFilteredReactions({
-            userId: data.userId
-        });
+		reactions = await getUserReactions(data.userId);
 	});
 
     export let data;

@@ -65,21 +65,25 @@ export const getAllReactions = async () => {
     let reactions = [];
     try {
         const reactionsCollection = collection(db, COLLECTION_NAME);
-        const querySnapshot = await getDocs(reactionsCollection);
+        const querySnapshot = await getDocs(
+            query(reactionsCollection, where('reaction-video-id', 'not-in', ['']))
+        );
         reactions = querySnapshot.docs.map((doc) => ({
             id: doc.id,
             data: doc.data()
         }));
+        console.log(reactions);
     } catch (error) {
         console.error('Error getting documents: ', error);
     }
     return reactions;
 };
 
-export const getFilteredReactions = async ({
-    userId
-}) => {
+export const getUserReactions = async (userId) => {
     let reactions = [];
+    if (!userId) {
+        return reactions;
+    }
     try {
         const reactionsCollection = collection(db, COLLECTION_NAME);
         const queryRef = query(reactionsCollection, where("reactor-id", "==", userId));
