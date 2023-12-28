@@ -32,6 +32,10 @@
   var changingState = false;
   let isReactionMissing = false;
   let reactionVideoIdInput = '';
+  let isEditModeOn = false;
+  let canShowEditModeButton = false;
+  let canShowCloseEditModeButton = false;
+  let introBufferTime = 0;
 
   // Function to start the YouTube IFrame API loading
   function loadYouTubeAPI() {
@@ -179,6 +183,8 @@
     }
     const obtainedData = doc.data();
     isReactionMissing = !obtainedData["reaction-video-id"];
+    const isUsersOwnVideo = obtainedData["reactor-id"] === data.userId
+    canShowEditModeButton = isUsersOwnVideo;
     window.playerConfigs = obtainedData["reaction-configs"];
     window.volumeConfigs = obtainedData["volume-configs"];
     if (!isReactionMissing) {
@@ -220,6 +226,32 @@
     location.reload();
   }
 
+  const enterEditMode = () => {
+    canShowCloseEditModeButton = true;
+    isEditModeOn = true;
+    canShowEditModeButton = false;
+  };
+
+  const closeEditMode = () => {
+    canShowEditModeButton = true;
+    canShowCloseEditModeButton = false;
+  }
+
+  const setIntroBufferTime = () => {
+    if (window.playerConfigs && introBufferTime !== '0' && introBufferTime !== 0) {
+      const currentConfigs = window.playerConfigs;
+      Object.keys(currentConfigs).forEach(async (timeCode) => {
+        const updatedTime = parseFloat(timeCode) + parseFloat(introBufferTime);
+        currentConfigs[updatedTime.toFixed(1)] = currentConfigs[timeCode];
+        delete currentConfigs[timeCode];
+      });
+      updateFirebaseDocument({
+        "reaction-configs": currentConfigs
+      });
+      location.reload();
+    }
+  }
+
   onMount(async () => {
     // Check if the YouTube API is already loaded
     if (typeof YT === "undefined" || typeof YT.Player === "undefined") {
@@ -246,14 +278,28 @@
   {/if}
   <div class="videos-container">
     <div id="player-original" class="video" />
-    {#if !isReactionMissing}
-      <div id="player-reaction" class="video" />
-    {:else}
+    {#if isReactionMissing || isEditModeOn}
       <label>
         Reaction Video ID:
         <input bind:value={reactionVideoIdInput} />
       </label>
       <button class="submit-button" on:click={setReactionVideoId}>Set Reaction Video Id</button>
+    {/if}
+    {#if !isReactionMissing}
+      <div id="player-reaction" class="video" />
+    {/if}
+    {#if canShowEditModeButton}
+      <button class="submit-button" on:click={enterEditMode}>Edit Reaction</button>
+    {/if}
+    {#if canShowCloseEditModeButton}
+      <button class="submit-button" on:click={closeEditMode}>Finish Editing</button>
+    {/if}
+    {#if isEditModeOn}
+      <label>
+        Set buffer time for intro:
+        <input bind:value={introBufferTime} />
+      </label>
+      <button class="submit-button" on:click={setIntroBufferTime}>Modify reaction times</button>
     {/if}
   </div>
 </div>
