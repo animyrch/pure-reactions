@@ -12,7 +12,6 @@
 
     const reactionConfigs = new Map();
     const volumeConfigs = new Map();
-    let isUserSet = false;
     let timer;
     let startTime;
 
@@ -52,7 +51,6 @@
     // 4. The API will call this function when the video player is ready.
     function onPlayerReady(event) {
         console.log("player ready");
-        // event.target.playVideo();
     }
     function onPlayerStateChange(event) {
         const currentTime = playerOriginal.getCurrentTime();
