@@ -31,7 +31,10 @@
     function loadYoutubePlayer() {
         const videoId = extractYouTubeVideoId(videoIdInput.value);
         window.originalVideoIdForReaction = videoId;
-
+        
+        if (playerOriginal) {
+            playerOriginal.destroy();
+        }
         playerOriginal = new YT.Player("player-original", {
             videoId: window.originalVideoIdForReaction,
             playerVars: playerOptions,
