@@ -30,3 +30,10 @@ export const getCurrentStateFromStateConfigs = (currentTime, stateConfigs) => {
         closestSmallerTimeCode: closestSmallerTimeCode
      } : DEFAULT_STATE_CONFIG;
 };
+
+export const getCompensatedReactionTime = (originalSeconds) => {
+    const compensatedTime = originalSeconds - 1;
+    const truncatedTime = compensatedTime.toFixed(1);
+    const timeAdjustedForDatabaseKey = truncatedTime.toString();
+    return timeAdjustedForDatabaseKey;
+};

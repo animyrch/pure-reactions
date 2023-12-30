@@ -8,7 +8,9 @@ import {
     getDoc,
     getDocs,
     query,
-    where
+    where,
+    serverTimestamp,
+    orderBy
 } from "firebase/firestore/lite";
 import {
     getAuth,
@@ -33,9 +35,10 @@ export const auth = getAuth(app);
 export const createReactionDocument = (originalVideoId, userId) => {
     const reactionsCollection = collection(db, COLLECTION_NAME);
     const dataToAdd = {
-        "original-video-id": originalVideoId,
-        "reaction-configs": {},
-        "reactor-id": userId
+        "originalVideoId": originalVideoId,
+        "reactionConfigs": {},
+        "reactorId": userId,
+        "createdAt": serverTimestamp()
     };
     addDoc(reactionsCollection, dataToAdd)
         .then((documentRef) => {
@@ -66,7 +69,12 @@ export const getAllReactions = async () => {
     try {
         const reactionsCollection = collection(db, COLLECTION_NAME);
         const querySnapshot = await getDocs(
-            query(reactionsCollection, where('reaction-video-id', 'not-in', ['']))
+            query(reactionsCollection,
+                // orderBy('reactionVideoId', 'desc'),
+                where('reactionVideoId', '!=', ''),
+                orderBy('reactionVideoId', 'desc'),
+                orderBy('createdAt', 'desc')
+            )
         );
         reactions = querySnapshot.docs.map((doc) => ({
             id: doc.id,
@@ -86,7 +94,10 @@ export const getUserReactions = async (userId) => {
     }
     try {
         const reactionsCollection = collection(db, COLLECTION_NAME);
-        const queryRef = query(reactionsCollection, where("reactor-id", "==", userId));
+        const queryRef = query(reactionsCollection,
+            where("reactorId", "==", userId),
+            orderBy('createdAt', 'desc')
+        );
         const querySnapshot = await getDocs(queryRef);
         reactions = querySnapshot.docs.map((doc) => ({
             id: doc.id,

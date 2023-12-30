@@ -7,6 +7,8 @@
         updateFirebaseDocument
     } from "$lib/helpers/firebase";
     import { handlePrivateRoute } from '$lib/helpers/routing';
+    import { extractYouTubeVideoId } from '$lib/helpers/youtube';
+    import { getCompensatedReactionTime } from '$lib/helpers/reaction';
 
     const reactionConfigs = new Map();
     const volumeConfigs = new Map();
@@ -27,7 +29,7 @@
         rel: 0,
     };
     function loadYoutubePlayer() {
-        const videoId = videoIdInput.value;
+        const videoId = extractYouTubeVideoId(videoIdInput.value);
         window.originalVideoIdForReaction = videoId;
 
         playerOriginal = new YT.Player("player-original", {
@@ -82,11 +84,11 @@
         if (startTime) {
             const currentTime = new Date().getTime();
             const elapsedTime = (currentTime - startTime) / 1000; // Convert to seconds
-            const reactionVideoTime = (elapsedTime.toFixed(1) - 1).toString();
+            const reactionVideoTime = getCompensatedReactionTime(elapsedTime)
             reactionConfigs.set(reactionVideoTime, { time: originalVideoTime, state: stateCode });
             const reactionConfigsObject = Object.fromEntries(reactionConfigs); // Convert the Map to an object
             updateFirebaseDocument({
-                "reaction-configs": reactionConfigsObject
+                "reactionConfigs": reactionConfigsObject
             });
         }
     }
@@ -95,11 +97,11 @@
         if (startTime) {
             const currentTime = new Date().getTime();
             const elapsedTime = (currentTime - startTime) / 1000; // Convert to seconds
-            const reactionVideoTime = (elapsedTime.toFixed(1) - 1).toString();
+            const reactionVideoTime = getCompensatedReactionTime(elapsedTime)
             volumeConfigs.set(reactionVideoTime, { volume: newVolume });
             const volumeConfigsObject = Object.fromEntries(volumeConfigs);
             updateFirebaseDocument({
-                "volume-configs": volumeConfigsObject
+                "volumeConfigs": volumeConfigsObject
             });
         }
     }

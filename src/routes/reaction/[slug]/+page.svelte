@@ -8,6 +8,8 @@
     getReaction,
     updateFirebaseDocument
   } from '$lib/helpers/firebase';
+  import VideoContainer from "$lib/components/VideoContainer.svelte";
+  import { extractYouTubeVideoId } from '$lib/helpers/youtube';
 
   export let data; // Access the data passed from the server in props
 
@@ -36,6 +38,8 @@
   let canShowEditModeButton = false;
   let canShowCloseEditModeButton = false;
   let introBufferTime = 0;
+  let originalVideoId;
+  let reactionVideoId;
 
   // Function to start the YouTube IFrame API loading
   function loadYouTubeAPI() {
@@ -182,14 +186,16 @@
       return;
     }
     const obtainedData = doc.data();
-    isReactionMissing = !obtainedData["reaction-video-id"];
-    const isUsersOwnVideo = obtainedData["reactor-id"] === data.userId
+    isReactionMissing = !obtainedData["reactionVideoId"];
+    const isUsersOwnVideo = obtainedData["reactorId"] === data.userId
     canShowEditModeButton = isUsersOwnVideo;
-    window.playerConfigs = obtainedData["reaction-configs"];
-    window.volumeConfigs = obtainedData["volume-configs"];
+    window.playerConfigs = obtainedData["reactionConfigs"];
+    window.volumeConfigs = obtainedData["volumeConfigs"];
+    originalVideoId = obtainedData["originalVideoId"];
+    reactionVideoId = obtainedData["reactionVideoId"];
     if (!isReactionMissing) {
       playerReaction = new YT.Player("player-reaction", {
-        videoId: obtainedData["reaction-video-id"],
+        videoId: reactionVideoId,
         playerVars: playerOptions,
         ...iframeOptionDefault,
         events: {
@@ -199,7 +205,7 @@
       });
     }
     playerOriginal = new YT.Player("player-original", {
-      videoId: obtainedData["original-video-id"],
+      videoId: originalVideoId,
       playerVars: playerOptions,
       ...iframeOptionDefault,
       events: {
@@ -221,7 +227,7 @@
 
   const setReactionVideoId = async () => {
     await updateFirebaseDocument({
-        "reaction-video-id": reactionVideoIdInput
+        "reactionVideoId": extractYouTubeVideoId(reactionVideoIdInput)
     });
     location.reload();
   }
@@ -233,9 +239,10 @@
   };
 
   const closeEditMode = () => {
+    isEditModeOn = false;
     canShowEditModeButton = true;
     canShowCloseEditModeButton = false;
-  }
+  };
 
   const setIntroBufferTime = () => {
     if (window.playerConfigs && introBufferTime !== '0' && introBufferTime !== 0) {
@@ -246,7 +253,7 @@
         delete currentConfigs[timeCode];
       });
       updateFirebaseDocument({
-        "reaction-configs": currentConfigs
+        "reactionConfigs": currentConfigs
       });
       location.reload();
     }
@@ -277,7 +284,9 @@
   <p>Warning: The reaction video id is missing. This reaction page won't be listed on the home page until the reaction video url is added below :</p>
   {/if}
   <div class="videos-container">
-    <div id="player-original" class="video" />
+    <VideoContainer videoId={originalVideoId}>
+      <div id="player-original" class="video"/>
+    </VideoContainer>
     {#if isReactionMissing || isEditModeOn}
       <label>
         Reaction Video ID:
@@ -286,7 +295,9 @@
       <button class="submit-button" on:click={setReactionVideoId}>Set Reaction Video Id</button>
     {/if}
     {#if !isReactionMissing}
-      <div id="player-reaction" class="video" />
+      <VideoContainer videoId={reactionVideoId}>
+        <div id="player-reaction" class="video"/>
+      </VideoContainer>
     {/if}
     {#if canShowEditModeButton}
       <button class="submit-button" on:click={enterEditMode}>Edit Reaction</button>
@@ -330,7 +341,7 @@
       flex-direction: row;
     }
     .video {
-      width: 49%;
+      /* width: 49%; */
       height: calc((100vw * 0.56) / 2);
     }
   }
