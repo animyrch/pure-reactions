@@ -14,6 +14,7 @@
     const volumeConfigs = new Map();
     let timer;
     let startTime;
+    let videoIdInput;
 
     let startRecording = false;
     let stopRecording = false;
@@ -28,7 +29,7 @@
         rel: 0,
     };
     function loadYoutubePlayer() {
-        const videoId = extractYouTubeVideoId(videoIdInput.value);
+        const videoId = extractYouTubeVideoId(videoIdInput);
         window.originalVideoIdForReaction = videoId;
         
         if (playerOriginal) {
@@ -45,7 +46,10 @@
     }
 
     function displayVideoIdInput() {
-        videoIdInput.disabled = false;
+        const videoIdInputDOM = document.getElementById("videoIdInput");
+        if (videoIdInputDOM) {
+            videoIdInputDOM.disabled = false;
+        }
     }
 
     // 4. The API will call this function when the video player is ready.
@@ -161,7 +165,25 @@
 
     onMount(async () => {
         seekBar = document.getElementById("seek-bar");
-        seekBar.value = 0;
+        if (seekBar) {
+            seekBar.value = 0;
+
+            // Event listener for when the user interacts with the seek bar
+            seekBar.addEventListener("input", () => {
+                const seekTime =
+                    (seekBar.value / 100) * playerOriginal.getDuration();
+                playerOriginal.seekTo(parseFloat(seekTime), true);
+            });
+
+            // // Event listener for when the user starts dragging the seek bar
+            seekBar.addEventListener("mousedown", () => {
+                console.log("dragging started");
+            });
+
+            seekBar.addEventListener("mouseup", () => {
+                console.log("dragging stopped");
+            });
+        }
         window.onYouTubeIframeAPIReady = () => {
             displayVideoIdInput();
         };
@@ -181,75 +203,68 @@
         const finishReactionBtn = document.getElementById("finishReaction");
         const seekBarContainer = document.getElementById("seek-bar-container");
         const volumeBarContainer = document.getElementById("volume-bar-container");
-        const videoIdInput = document.getElementById("videoIdInput");
 
-        startReactionBtn.addEventListener("click", () => {
-            createReactionDocument(window.originalVideoIdForReaction, data.userId);
-            if (showRecorder) {
-                startRecording = true;
-            }
-            console.log("Started the reaction");
-            startReactionBtn.disabled = true;
-            startVideoBtn.disabled = false;
-            finishReactionBtn.disabled = false;
+        if (startReactionBtn) {
+            startReactionBtn.addEventListener("click", () => {
+                createReactionDocument(window.originalVideoIdForReaction, data.userId);
+                if (showRecorder) {
+                    startRecording = true;
+                }
+                console.log("Started the reaction");
+                startReactionBtn.disabled = true;
+                startVideoBtn.disabled = false;
+                finishReactionBtn.disabled = false;
 
-            // Start the timer
-            startTime = new Date().getTime();
-        });
+                // Start the timer
+                startTime = new Date().getTime();
+            });
+        }
 
-        startVideoBtn.addEventListener("click", () => {
-            console.log("Started the video");
-            startOriginalVideo();
-            startVideoBtn.disabled = true;
-            stopVideoBtn.disabled = false;
-            focusReactBtn.disabled = false;
-            seekBarContainer.style.display = "block";
-            volumeBarContainer.style.display = "block";
-        });
+        if (startVideoBtn) {
+            startVideoBtn.addEventListener("click", () => {
+                console.log("Started the video");
+                startOriginalVideo();
+                startVideoBtn.disabled = true;
+                stopVideoBtn.disabled = false;
+                focusReactBtn.disabled = false;
+                seekBarContainer.style.display = "block";
+                volumeBarContainer.style.display = "block";
+            });
+        }
 
-        focusReactBtn.addEventListener("click", () => {
+        if (focusReactBtn) {
+            focusReactBtn.addEventListener("click", () => {
             isFocusReactOn = !isFocusReactOn;
             const soundLevel = isFocusReactOn ? 20 : 100;
             logVolumeChange(soundLevel);
         });
+        }
 
-        stopVideoBtn.addEventListener("click", () => {
-            console.log("Stopped the video");
-            pauseOriginalVideo();
-            stopVideoBtn.disabled = true;
-            focusReactBtn.disabled = true;
-            startVideoBtn.disabled = false;
-        });
+        if (stopVideoBtn) {
+            stopVideoBtn.addEventListener("click", () => {
+                console.log("Stopped the video");
+                pauseOriginalVideo();
+                stopVideoBtn.disabled = true;
+                focusReactBtn.disabled = true;
+                startVideoBtn.disabled = false;
+            });
+        }
 
-        finishReactionBtn.addEventListener("click", () => {
-            console.log("Finished the reaction");
-            if (showRecorder) {
-                stopRecording = true;
-            }
-            startReactionBtn.disabled = true;
-            startVideoBtn.disabled = true;
-            stopVideoBtn.disabled = true;
-            focusReactBtn.disabled = true;
-            finishReactionBtn.disabled = true;
-            clearInterval(timer);
-            console.log(reactionConfigs);
-        });
-
-        // Event listener for when the user interacts with the seek bar
-        seekBar.addEventListener("input", () => {
-            const seekTime =
-                (seekBar.value / 100) * playerOriginal.getDuration();
-            playerOriginal.seekTo(parseFloat(seekTime), true);
-        });
-
-        // // Event listener for when the user starts dragging the seek bar
-        seekBar.addEventListener("mousedown", () => {
-            console.log("dragging started");
-        });
-
-        seekBar.addEventListener("mouseup", () => {
-            console.log("dragging stopped");
-        });
+        if (finishReactionBtn) {
+            finishReactionBtn.addEventListener("click", () => {
+                console.log("Finished the reaction");
+                if (showRecorder) {
+                    stopRecording = true;
+                }
+                startReactionBtn.disabled = true;
+                startVideoBtn.disabled = true;
+                stopVideoBtn.disabled = true;
+                focusReactBtn.disabled = true;
+                finishReactionBtn.disabled = true;
+                clearInterval(timer);
+                console.log(reactionConfigs);
+            });
+        }
     });
 
 	export let data;
@@ -265,6 +280,7 @@
                     id="videoIdInput"
                     name="videoId"
                     required
+                    bind:value={videoIdInput}
                 />
                 <button type="button" on:click={loadYoutubePlayer}>Submit</button>
             </form>

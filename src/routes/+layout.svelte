@@ -3,6 +3,10 @@
   import { goto } from '$app/navigation';
   import SignupModal from '$lib/components/SignupModal.svelte';
   import SignInModal from '$lib/components/SignInModal.svelte';
+  import { toasts } from '$lib/stores/toast';
+  import Toast from '$lib/components/Toasts/Toast.svelte';
+
+  $: currentToasts = $toasts; // Access the store value
 
   let showModal = false;
   let showSignInModal = false;
@@ -13,6 +17,10 @@
 <header>
   <h1><a href="/">Pure Reactions</a></h1>
 </header>
+
+{#each currentToasts as toast (toast.id)}
+  <Toast {toast} key={toast.id} />
+{/each}
 
 <div class="app-container">
 
@@ -55,6 +63,7 @@
 </footer>
 
 <style>
+  @import '../app.pcss';
   .account-status {
     padding: 10px;
     width: 100%;

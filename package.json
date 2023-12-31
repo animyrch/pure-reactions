@@ -1,22 +1,31 @@
 {
-	"name": "my-app",
-	"version": "0.0.1",
-	"private": true,
-	"scripts": {
-		"dev": "vite dev",
-		"build": "vite build",
-		"preview": "vite preview"
-	},
-	"devDependencies": {
-		"@sveltejs/adapter-auto": "^2.0.0",
-		"@sveltejs/adapter-netlify": "^1.0.0-next.88",
-		"@sveltejs/kit": "^1.20.4",
-		"svelte": "^4.0.5",
-		"vite": "^4.4.2"
-	},
-	"type": "module",
-	"dependencies": {
-		"firebase": "^10.4.0",
-		"netlify-identity-widget": "^1.9.2"
-	}
+  "name": "my-app",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-auto": "^2.0.0",
+    "@sveltejs/adapter-netlify": "^1.0.0-next.88",
+    "@sveltejs/kit": "^1.20.4",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.32",
+    "postcss-load-config": "^5.0.2",
+    "svelte": "^4.0.5",
+    "tailwindcss": "^3.3.6",
+    "vite": "^4.4.2"
+  },
+  "type": "module",
+  "dependencies": {
+    "@popperjs/core": "^2.11.8",
+    "@svelteuidev/core": "^0.15.4",
+    "firebase": "^10.4.0",
+    "flowbite": "^2.2.1",
+    "flowbite-svelte": "^0.44.21",
+    "netlify-identity-widget": "^1.9.2",
+    "tailwind-merge": "^2.2.0"
+  }
 }
