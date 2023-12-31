@@ -7,6 +7,7 @@
         updateFirebaseDocument
     } from "$lib/helpers/firebase";
     import { handlePrivateRoute } from '$lib/helpers/routing';
+    import { isMobileDevice } from '$lib/helpers/system';
     import { extractYouTubeVideoId } from '$lib/helpers/youtube';
     import { getCompensatedReactionTime } from '$lib/helpers/reaction';
 
@@ -164,6 +165,9 @@
     let isFocusReactOn = false;
 
     onMount(async () => {
+        if (isMobileDevice()) {
+            handlePrivateRoute();
+        }
         seekBar = document.getElementById("seek-bar");
         if (seekBar) {
             seekBar.value = 0;

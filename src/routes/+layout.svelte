@@ -48,7 +48,7 @@
   
   <nav>
     <a href="/">Home</a>
-    <a href="/backend">Create a reaction</a>
+    <a class="hidden lg:inline" href="/backend">Create a reaction</a>
     <a href="/my-reactions">My reactions</a>
   </nav>
   
