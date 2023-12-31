@@ -26,6 +26,7 @@ import {
     verifyBeforeUpdateEmail
 } from "firebase/auth";
 import { COLLECTION_NAME, FIREBASE_CONFIG } from "$lib/constants/firebase";
+import { showToast } from '$lib/stores/toast';
 
 // Initialize Firebase
 const app = initializeApp(FIREBASE_CONFIG);
@@ -134,22 +135,27 @@ export const createUserWithEmailAndPasswordWrapper = async (email, password) => 
     } catch (error) {
         const errorCode = error.code;
         const errorMessage = error.message;
+        showToast(errorCode);
         console.log('errorCode', errorCode);
         console.log('errorMessage', errorMessage);
     }
 };
 
 export const signInWithEmailAndPasswordWrapper = async (email, password) => {
+    let successful = false;
     try {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
         console.log('user', user);
+        successful = true;
     } catch (error) {
         const errorCode = error.code;
         const errorMessage = error.message;
+        showToast(errorCode);
         console.log('errorCode', errorCode);
         console.log('errorMessage', errorMessage);
     }
+    return successful;
 };
 
 export const checkUserSignInStatusWrapper = () => {

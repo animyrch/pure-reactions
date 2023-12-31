@@ -308,7 +308,9 @@
                         <Recorder {startRecording} {stopRecording} />
                     </div>
                 {:else}
-                    <div id="player-original" />
+                    <div class="video-item">
+                        <div id="player-original" />
+                    </div>
                 {/if}
             </div>
         </div>
@@ -359,6 +361,14 @@
 
     .video-items-container {
         display: flex;
+        flex-direction: column;
+        width: 100vw;
+    }
+
+    .video-item {
+        object-fit: contain;
+        width: 100%;
+        height: calc(100vw * 0.56);
     }
     #sound-control {
         transform: rotate(270deg);

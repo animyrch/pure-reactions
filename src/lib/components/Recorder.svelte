@@ -68,12 +68,12 @@
 
 <style>
   .recorder-container{
-    width: 100px;
+    width: 100%;
   }
 </style>
 
 <div>
   <div class="recorder-container">
-    <video bind:this={videoElement} controls autoplay width="300" />
+    <video bind:this={videoElement} controls autoplay width="100%" />
   </div>
 </div>

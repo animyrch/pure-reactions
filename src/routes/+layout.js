@@ -23,8 +23,10 @@ export async function load() {
         const email = detail && detail.email;
         const password = detail && detail.password;
         if (action === 'login') {
-            await signInWithEmailAndPasswordWrapper(email, password);
-            location.reload();
+            const successful = await signInWithEmailAndPasswordWrapper(email, password);
+            if (successful) {
+                location.reload();
+            }
         }
         if (action === 'signup' && email && password) {
             await createUserWithEmailAndPasswordWrapper(email, password);
