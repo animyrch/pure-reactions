@@ -39,9 +39,12 @@
         </div>
     </a>
     <div>
-        <p>{reactionVideoTitle || originalVideoTitle}</p>
+        <div class="flex justify-between">
+            <p>{reactionVideoTitle || originalVideoTitle}</p>
+        </div>
         <p>{reactionVideoAuthor || originalVideoAuthor}</p>
     </div>
+    <hr class="h-px my-8 bg-gray-200 border-0 dark:bg-gray-700">
 </div>
 
 <style>

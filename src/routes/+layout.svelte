@@ -5,11 +5,9 @@
   import { isMobileDevice } from '$lib/helpers/system';
   import MobileMenu from '$lib/components/Navigation/MobileMenu.svelte';
   import { onNavigate } from '$app/navigation';
+  import TopNavigation from '$lib/components/Navigation/TopNavigation.svelte';
+
   $: currentToasts = $toasts; // Access the store value
-
-  // let showModal = false;
-  // let showSignInModal = false;
-
 
   onNavigate((navigation) => {
     if (!document.startViewTransition) return;
@@ -23,20 +21,15 @@
   });
 </script>
 
-<header>
-  <h1><a href="/">Pure Reactions</a></h1>
+<header class="w-full">
+  <TopNavigation />
 </header>
 
 {#each currentToasts as toast (toast.id)}
   <Toast {toast} key={toast.id} />
 {/each}
 
-<div class="app-container">  
-  <nav>
-    <a href="/">Home</a>
-    <a class="hidden lg:inline" href="/backend">Create a reaction</a>
-    <a href="/my-reactions">My reactions</a>
-  </nav>
+<div class="app-container">
   
   <slot></slot>
 
@@ -44,9 +37,6 @@
     <MobileMenu />
   {/if}
 </div>
-<!-- 
-<SignupModal {showModal} on:signup={(signupData => data.handleUserAction('signup', signupData))} />
-<SignInModal {showSignInModal} on:signin={(signInData => data.handleUserAction('login', signInData))} /> -->
 
 <footer class="mb-12">
   <p>&copy; 2023 Pure Reactions</p>
@@ -56,6 +46,7 @@
   @import '../app.pcss';
   .app-container {
     padding-bottom: 2rem;
+    min-height: 800px;
   }
   .account-status {
     padding: 10px;
