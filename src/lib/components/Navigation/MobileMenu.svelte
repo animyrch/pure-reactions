@@ -1,7 +1,7 @@
 <script>
     import Avatar from '$lib/components/Avatar.svelte';
     import { currentPath } from '$lib/stores/route';
-    import ReactionsSorting from '$lib/components/navigation/ReactionsSorting.svelte';
+    import ReactionsSorting from '$lib/components/Navigation/ReactionsSorting.svelte';
     import MobileMenuOption from './MobileMenuOption.svelte';
 
 </script>
