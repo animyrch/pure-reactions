@@ -2,6 +2,9 @@
 import { browser } from '$app/environment';
 import { checkUserSignInStatusWrapper, signOutWrapper, signInWithEmailAndPasswordWrapper } from '$lib/helpers/firebase.js';
 import { createUserWithEmailAndPasswordWrapper } from '../lib/helpers/firebase.js';
+import { showToast } from '$lib/stores/toast';
+import { goToRoute } from '$lib/helpers/routing';
+import { TOASTS } from '$lib/constants/toasts';
 
 let displayName;
 let userEmail;
@@ -19,21 +22,26 @@ export async function load() {
         userId = user?.uid;
     }
 
-    const handleUserAction = async (action, { detail } = {}) => {
-        const email = detail && detail.email;
-        const password = detail && detail.password;
+    const handleUserAction = async (action, details = {}) => {
+        const email = details.email;
+        const password = details.password;
         if (action === 'login') {
             const successful = await signInWithEmailAndPasswordWrapper(email, password);
             if (successful) {
-                location.reload();
+                goToRoute('/');
             }
         }
+        console.log(action, email, password, action === 'signup' && email && password)
         if (action === 'signup' && email && password) {
-            await createUserWithEmailAndPasswordWrapper(email, password);
+            const successful = await createUserWithEmailAndPasswordWrapper(email, password);
+            if (successful) {
+                goToRoute('/');
+                showToast('Success! Check your email to confirm your account.', TOASTS.SUCCESS, 10000);
+            }
         }
         if (action === 'logout') {
             await signOutWrapper();
-            location.reload();
+            goToRoute('/');
         }
     };
     return {

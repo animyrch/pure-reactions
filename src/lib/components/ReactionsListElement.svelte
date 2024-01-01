@@ -59,7 +59,7 @@
         object-fit: contain;
         width: 50%;
         position: absolute;
-        z-index: 10;
+        z-index: 2;
         top: 0;
     }
 </style>

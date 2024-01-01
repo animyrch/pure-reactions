@@ -266,7 +266,6 @@
                 focusReactBtn.disabled = true;
                 finishReactionBtn.disabled = true;
                 clearInterval(timer);
-                console.log(reactionConfigs);
             });
         }
     });

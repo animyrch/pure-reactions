@@ -43,8 +43,6 @@ export const createReactionDocument = (originalVideoId, userId) => {
     };
     addDoc(reactionsCollection, dataToAdd)
         .then((documentRef) => {
-            // documentRef.id contains the auto-generated document ID
-            console.log("Document added with ID:", documentRef.id);
             window.currentReactionDocumentId = documentRef.id;
         })
         .catch((error) => {
@@ -81,7 +79,6 @@ export const getAllReactions = async () => {
             id: doc.id,
             data: doc.data()
         }));
-        console.log(reactions);
     } catch (error) {
         console.error('Error getting documents: ', error);
     }
@@ -115,7 +112,6 @@ export const getReaction = async (reactionId) => {
         const docRef = doc(db, COLLECTION_NAME, reactionId);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
-          console.log("Document data:", docSnap.data());
           return docSnap;
         } else {
           console.log("No such document!");
@@ -126,19 +122,20 @@ export const getReaction = async (reactionId) => {
 };
 
 export const createUserWithEmailAndPasswordWrapper = async (email, password) => {
+    let successful = false;
     try {
         const userCreds = await createUserWithEmailAndPassword(auth, email, password)
         sendEmailVerification(userCreds.user, {
             url: window.location.href
         });
-        console.log('Verification email sent.');
+        successful = true;
     } catch (error) {
         const errorCode = error.code;
         const errorMessage = error.message;
         showToast(errorCode);
-        console.log('errorCode', errorCode);
         console.log('errorMessage', errorMessage);
     }
+    return successful;
 };
 
 export const signInWithEmailAndPasswordWrapper = async (email, password) => {
@@ -146,13 +143,11 @@ export const signInWithEmailAndPasswordWrapper = async (email, password) => {
     try {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
-        console.log('user', user);
         successful = true;
     } catch (error) {
         const errorCode = error.code;
         const errorMessage = error.message;
         showToast(errorCode);
-        console.log('errorCode', errorCode);
         console.log('errorMessage', errorMessage);
     }
     return successful;
@@ -182,7 +177,6 @@ export const checkUserSignInStatusWrapper = () => {
 export const signOutWrapper = async () => {
     try {
         await signOut(auth);
-        console.log('User signed out');
     } catch (error) {
         console.error('Sign-out error:', error);
     }
@@ -223,13 +217,8 @@ export async function updatePasswordHelper(user, newPassword) {
 
 export const reauthenticateUserHelper = async (user) => {
     try {
-        // Prompt the user to re-enter their password
         const password = prompt('Please enter your password to continue:');
-        console.log(auth);
-        // const credential = auth.EmailAuthProvider.credential(user.email, password);
         const credential = EmailAuthProvider.credential(user.email, password);
-        // Reauthenticate the user
-        console.log(credential, 'credential');
         await reauthenticateWithCredential(auth.currentUser, credential);
     } catch (error) {
         console.error('Error reauthenticating user:', error.message);

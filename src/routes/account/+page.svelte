@@ -7,6 +7,11 @@
         updatePasswordHelper,
         reauthenticateUserHelper
     } from '$lib/helpers/firebase';
+    import { handlePrivateRoute } from '$lib/helpers/routing';
+    import { TOASTS } from '$lib/constants/toasts';
+    import { showToast } from '$lib/stores/toast';
+
+    export let data;
 
     let user;
     let newName = '';
@@ -17,31 +22,29 @@
       // Ensure the user is signed in
       user = auth.currentUser;
       if (!user) {
-        // Redirect or handle unauthenticated access as needed
-        console.warn('User not signed in. Redirecting to login page.');
-        window.location.href = '/'; // Redirect to your login page
+        handlePrivateRoute();
       }
   
       // Fetch user details
-      newName = user.displayName || '';
-      newEmail = user.email || '';
+      newName = user?.displayName || '';
+      newEmail = user?.email || '';
     });
   
     const updateDisplayName = async () => {
       await updateDisplayNameHelper(user, newName);
-      console.log('Profile updated successfully');
+      showToast('Profile updated successfully', TOASTS.SUCCESS);
       location.reload();
     };
   
     const setNewEmail = async () => {
       await updateEmailHelper(user, newEmail);
-      console.log('Email updated successfully');
+      showToast('Email updated successfully', TOASTS.SUCCESS);
       location.reload();
     };
   
     const setNewPassword = async () => {
       await updatePasswordHelper(user, newPassword);
-      console.log('Password updated successfully');
+      showToast('Password updated successfully', TOASTS.SUCCESS);
       location.reload();
     };
 
@@ -97,5 +100,7 @@
       </label>
       <button on:click={updatePassword}>Update Password</button>
     </section>
+
+    <button on:click={() => data.handleUserAction('logout')}>Log Out</button>
   </main>
   

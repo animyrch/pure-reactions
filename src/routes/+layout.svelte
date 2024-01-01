@@ -1,17 +1,26 @@
 <script>
 	/** @type {import('./$types').PageData} */
-  import { goto } from '$app/navigation';
-  import SignupModal from '$lib/components/SignupModal.svelte';
-  import SignInModal from '$lib/components/SignInModal.svelte';
   import { toasts } from '$lib/stores/toast';
   import Toast from '$lib/components/Toasts/Toast.svelte';
-
+  import { isMobileDevice } from '$lib/helpers/system';
+  import MobileMenu from '$lib/components/Navigation/MobileMenu.svelte';
+  import { onNavigate } from '$app/navigation';
   $: currentToasts = $toasts; // Access the store value
 
-  let showModal = false;
-  let showSignInModal = false;
+  // let showModal = false;
+  // let showSignInModal = false;
 
-	export let data;
+
+  onNavigate((navigation) => {
+    if (!document.startViewTransition) return;
+
+    return new Promise((resolve) => {
+      document.startViewTransition(async () => {
+        resolve();
+        await navigation.complete;
+      });
+    });
+  });
 </script>
 
 <header>
@@ -22,30 +31,7 @@
   <Toast {toast} key={toast.id} />
 {/each}
 
-<div class="app-container">
-
-  <div class="account-status">
-    {#if data.isLoggedIn}
-      <div>
-        <p>Hello {data.displayName || data.userEmail}</p>
-        <div>
-          <button on:click={() => goto('/account')}>My Account</button>
-          <button on:click={() => data.handleUserAction('logout')}>Log Out</button>
-        </div>
-      </div>
-    {:else}
-      <div>
-        <p>You are not logged in.</p>
-        <div>
-          <!-- <button on:click={() => data.handleUserAction('login')}>Log In</button> -->
-          <button on:click={() => showSignInModal = true}>Login</button>
-          <!-- <button on:click={() => data.handleUserAction('signup')}>Sign up</button> -->
-          <button on:click={() => showModal = true}>Signup</button>
-        </div>
-      </div>
-    {/if}
-  </div>
-  
+<div class="app-container">  
   <nav>
     <a href="/">Home</a>
     <a class="hidden lg:inline" href="/backend">Create a reaction</a>
@@ -54,16 +40,23 @@
   
   <slot></slot>
 
+  {#if isMobileDevice()}
+    <MobileMenu />
+  {/if}
 </div>
-
+<!-- 
 <SignupModal {showModal} on:signup={(signupData => data.handleUserAction('signup', signupData))} />
-<SignInModal {showSignInModal} on:signin={(signInData => data.handleUserAction('login', signInData))} />
-<footer>
+<SignInModal {showSignInModal} on:signin={(signInData => data.handleUserAction('login', signInData))} /> -->
+
+<footer class="mb-12">
   <p>&copy; 2023 Pure Reactions</p>
 </footer>
 
 <style>
   @import '../app.pcss';
+  .app-container {
+    padding-bottom: 2rem;
+  }
   .account-status {
     padding: 10px;
     width: 100%;
