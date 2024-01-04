@@ -15,11 +15,14 @@
       addBookmark
     } from '$lib/helpers/firebase';
   import {
-    currentUser
+    currentUser,
+    isLoggedIn
   } from '$lib/stores/user';
 
   export let data; // Access the data passed from the server in props
 
+  $currentUser;
+  
   // 3. This function creates an <iframe> (and YouTube player)
   //    after the API code downloads.
   var playerReaction;
@@ -294,12 +297,12 @@
   {#if isReactionMissing}
   <p>Warning: The reaction video id is missing. This reaction page won't be listed on the home page until the reaction video url is added below :</p>
   {/if}
-  {#if $currentUser?.emailVerified}
-    <div
+  {#if $isLoggedIn}
+    <button
       on:click={onBookmarkReactionBinome}
     >
       <Bookmark />
-    </div>
+    </button>
   {/if}
   <div class="videos-container">
     <VideoContainer videoId={originalVideoId}>

@@ -10,6 +10,7 @@
     import { isMobileDevice } from '$lib/helpers/system';
     import { extractYouTubeVideoId } from '$lib/helpers/youtube';
     import { getCompensatedReactionTime } from '$lib/helpers/reaction';
+    import { isLoggedIn } from '$lib/stores/user';
 
     const reactionConfigs = new Map();
     const volumeConfigs = new Map();
@@ -273,7 +274,7 @@
 	export let data;
 </script>
 
-{#if data.isLoggedIn}
+{#if $isLoggedIn}
     <div class="website-inner-container">
         <div>
             <form id="videoIdInputForm">

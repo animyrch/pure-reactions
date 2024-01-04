@@ -3,6 +3,7 @@
 	import { getUserReactions } from '$lib/helpers/firebase';
     import ReactionsList from '$lib/components/ReactionsList.svelte';
     import { handlePrivateRoute } from '$lib/helpers/routing';
+    import { isLoggedIn } from '$lib/stores/user';
     
 	// Initialize Firebase
 	let reactions = [];
@@ -15,7 +16,7 @@
     export let data;
 </script>
 
-{#if data.isLoggedIn}
+{#if $isLoggedIn}
     <div>
         <ReactionsList {reactions}/>
     </div>

@@ -9,7 +9,6 @@ import { currentUser } from '$lib/stores/user';
 
 let displayName;
 let userEmail;
-let isLoggedIn;
 let userId;
 
 export async function load() {
@@ -19,7 +18,6 @@ export async function load() {
         currentUser.set(user);
         userEmail = user?.email;
         displayName = user?.displayName;
-        isLoggedIn = user?.emailVerified;
         userId = user?.uid;
     }
 
@@ -30,6 +28,8 @@ export async function load() {
             const successful = await signInWithEmailAndPasswordWrapper(email, password);
             if (successful) {
                 goToRoute('/');
+                const user = await checkUserSignInStatusWrapper();
+                currentUser.set(user);
             }
         }
         console.log(action, email, password, action === 'signup' && email && password)
@@ -38,16 +38,18 @@ export async function load() {
             if (successful) {
                 goToRoute('/');
                 showToast('Success! Check your email to confirm your account.', TOASTS.SUCCESS, 10000);
+                const user = await checkUserSignInStatusWrapper();
+                currentUser.set(user);
             }
         }
         if (action === 'logout') {
             await signOutWrapper();
+            currentUser.set({});
             goToRoute('/');
         }
     };
     return {
         handleUserAction,
-        isLoggedIn,
         displayName,
         userEmail,
         userId
