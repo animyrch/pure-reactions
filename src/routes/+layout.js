@@ -5,6 +5,7 @@ import { createUserWithEmailAndPasswordWrapper } from '../lib/helpers/firebase.j
 import { showToast } from '$lib/stores/toast';
 import { goToRoute } from '$lib/helpers/routing';
 import { TOASTS } from '$lib/constants/toasts';
+import { currentUser } from '$lib/stores/user';
 
 let displayName;
 let userEmail;
@@ -15,7 +16,7 @@ export async function load() {
     if (browser && !!window) {
         // auth actions worked here
         const user = await checkUserSignInStatusWrapper();
-        console.log(user);
+        currentUser.set(user);
         userEmail = user?.email;
         displayName = user?.displayName;
         isLoggedIn = user?.emailVerified;

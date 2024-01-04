@@ -3,11 +3,21 @@
       getBasicVideoDetailsWithEmbedApi,
       getAuthorFromAuthorUrl
     } from '$lib/helpers/youtube';
-    import { beforeUpdate } from 'svelte';
+    import { beforeUpdate, onMount } from 'svelte';
+    import DownTriangle from '$lib/icons/DownTriangle.svelte';
+    import UpTriangle from '$lib/icons/UpTriangle.svelte';
+    import { isMobileDevice } from '$lib/helpers/system';
+    import EmptyBell from '$lib/icons/EmptyBell.svelte';
+
     export let videoId;
 
     let videoTitle;
     let videoCreator;
+    let shouldHideVideoDetails;
+    
+    onMount(async () => {
+      shouldHideVideoDetails = !!isMobileDevice();
+    });
 
     beforeUpdate(async () => {
       if (videoId) {
@@ -16,17 +26,37 @@
         videoCreator = getAuthorFromAuthorUrl(videoDetails.author_url);
       }
     });
+
+    const toggleVideoDetailsButton = () => {
+      shouldHideVideoDetails = !shouldHideVideoDetails;
+    };
 </script>
 
 <div class="video-container">
     <slot />
-    <div>
+    <button>
+      {#if shouldHideVideoDetails}
+        <div on:click={toggleVideoDetailsButton}>
+          <DownTriangle />
+        </div>
+      {/if}
+      {#if !shouldHideVideoDetails}
+      <div on:click={toggleVideoDetailsButton}>
+        <UpTriangle />
+      </div>
+      {/if}
+    </button>
+    {#if !shouldHideVideoDetails}
       {#if videoTitle}
         <p>{videoTitle}</p>
       {/if}
       {#if videoCreator}
-        <p>{videoCreator}</p>
+        <div class="flex gap-2 m-1">
+          <EmptyBell /><p>{videoCreator}</p>
+        </div>
       {/if}
+    {/if}
+    <div>
   </div>
 </div>
 

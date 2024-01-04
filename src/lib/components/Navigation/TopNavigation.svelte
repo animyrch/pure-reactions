@@ -39,13 +39,15 @@
       </div>
       <input type="text" id="search-navbar" class="block w-full p-2 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="Search...">
     </div>
-    <button
-      on:click={() => goToRoute('/login')}
-      type="button"
-      class="mx-1 text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
-    >
-      Login
-    </button>
+    {#if !isMobileDevice()}
+      <button
+        on:click={() => goToRoute('/backend')}
+        type="button"
+        class="mx-1 text-white bg-pink-700 hover:bg-gray-900 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+      >
+        React
+      </button>
+    {/if}
     <button
       on:click={toggleMobileTopMenu}
       data-collapse-toggle="navbar-search"

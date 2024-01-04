@@ -1,4 +1,5 @@
-export const COLLECTION_NAME = "reactions-test";
+export const COLLECTION_REACTION_BINOMES = "reactions-test";
+export const COLLECTION_USER_BOOKMARKS = "userbookmarks-test";
 export const FIREBASE_CONFIG = {
     apiKey: "AIzaSyBqsnKIBnbRJqkpyOynZGLySf28AuqmOiE",
     authDomain: "pure-reactions.firebaseapp.com",

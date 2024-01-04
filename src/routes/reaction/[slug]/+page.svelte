@@ -10,6 +10,13 @@
   } from '$lib/helpers/firebase';
   import VideoContainer from "$lib/components/VideoContainer.svelte";
   import { extractYouTubeVideoId } from '$lib/helpers/youtube';
+  import Bookmark from "$lib/icons/Bookmark.svelte";
+  import {
+      addBookmark
+    } from '$lib/helpers/firebase';
+  import {
+    currentUser
+  } from '$lib/stores/user';
 
   export let data; // Access the data passed from the server in props
 
@@ -259,6 +266,10 @@
     }
   }
 
+  const onBookmarkReactionBinome = () => {
+    addBookmark($currentUser.uid, data.slug);
+  };
+
   onMount(async () => {
     // Check if the YouTube API is already loaded
     if (typeof YT === "undefined" || typeof YT.Player === "undefined") {
@@ -282,6 +293,13 @@
 <div class="website-inner-container">
   {#if isReactionMissing}
   <p>Warning: The reaction video id is missing. This reaction page won't be listed on the home page until the reaction video url is added below :</p>
+  {/if}
+  {#if $currentUser?.emailVerified}
+    <div
+      on:click={onBookmarkReactionBinome}
+    >
+      <Bookmark />
+    </div>
   {/if}
   <div class="videos-container">
     <VideoContainer videoId={originalVideoId}>

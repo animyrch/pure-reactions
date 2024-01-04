@@ -25,7 +25,11 @@ import {
     EmailAuthProvider,
     verifyBeforeUpdateEmail
 } from "firebase/auth";
-import { COLLECTION_NAME, FIREBASE_CONFIG } from "$lib/constants/firebase";
+import {
+    COLLECTION_REACTION_BINOMES,
+    COLLECTION_USER_BOOKMARKS,
+    FIREBASE_CONFIG
+} from "$lib/constants/firebase";
 import { showToast } from '$lib/stores/toast';
 
 // Initialize Firebase
@@ -34,7 +38,8 @@ const db = getFirestore(app);
 export const auth = getAuth(app);
 
 export const createReactionDocument = (originalVideoId, userId) => {
-    const reactionsCollection = collection(db, COLLECTION_NAME);
+    console.log(originalVideoId, userId);
+    const reactionsCollection = collection(db, COLLECTION_REACTION_BINOMES);
     const dataToAdd = {
         "originalVideoId": originalVideoId,
         "reactionConfigs": {},
@@ -52,7 +57,7 @@ export const createReactionDocument = (originalVideoId, userId) => {
 
 export const updateFirebaseDocument = async (dataToUpdate) => {
     try {
-        const reactionsCollection = collection(db, COLLECTION_NAME);
+        const reactionsCollection = collection(db, COLLECTION_REACTION_BINOMES);
         const documentRef = doc(
             reactionsCollection,
             window.currentReactionDocumentId
@@ -66,7 +71,7 @@ export const updateFirebaseDocument = async (dataToUpdate) => {
 export const getAllReactions = async () => {
     let reactions = [];
     try {
-        const reactionsCollection = collection(db, COLLECTION_NAME);
+        const reactionsCollection = collection(db, COLLECTION_REACTION_BINOMES);
         const querySnapshot = await getDocs(
             query(reactionsCollection,
                 // orderBy('reactionVideoId', 'desc'),
@@ -91,7 +96,7 @@ export const getUserReactions = async (userId) => {
         return reactions;
     }
     try {
-        const reactionsCollection = collection(db, COLLECTION_NAME);
+        const reactionsCollection = collection(db, COLLECTION_REACTION_BINOMES);
         const queryRef = query(reactionsCollection,
             where("reactorId", "==", userId),
             orderBy('createdAt', 'desc')
@@ -109,7 +114,7 @@ export const getUserReactions = async (userId) => {
 
 export const getReaction = async (reactionId) => {
     try {
-        const docRef = doc(db, COLLECTION_NAME, reactionId);
+        const docRef = doc(db, COLLECTION_REACTION_BINOMES, reactionId);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           return docSnap;
@@ -224,4 +229,9 @@ export const reauthenticateUserHelper = async (user) => {
         console.error('Error reauthenticating user:', error.message);
         throw error;
     }
+};
+
+export const addBookmark = async (userId, reactionBinomeId) => {
+    let userBookmarks = [];
+    console.log('addBookmark', userId, reactionBinomeId);
 };

@@ -39,7 +39,7 @@
         </div>
     </a>
     <div>
-        <div class="flex justify-between">
+        <div class="flex gap-2">
             <p>{reactionVideoTitle || originalVideoTitle}</p>
         </div>
         <p>{reactionVideoAuthor || originalVideoAuthor}</p>
