@@ -21,7 +21,7 @@
     getBasicVideoDetailsWithEmbedApi,
     getAuthorFromAuthorUrl
   } from '$lib/helpers/youtube';
-  
+
   export let data; // Access the data passed from the server in props
 
   $currentUser;
@@ -338,14 +338,11 @@
         />
       </div>
       <div>
-        <div
-        >
-          <FollowManagement
-            {reactionCreator}
-            {reactorId}
-            follows={$userExtraDataStore.userExtraData?.follows}
-          />
-        </div>
+        <FollowManagement
+          {reactionCreator}
+          {reactorId}
+          follows={$userExtraDataStore.userExtraData?.follows}
+        />
       </div>
     {/if}
   </div>
