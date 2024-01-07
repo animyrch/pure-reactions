@@ -202,7 +202,6 @@
       return;
     }
     otherReactions = [];
-    console.log('runnig set up videos', obtainedData);
     isReactionMissing = !obtainedData["reactionVideoId"];
     reactorId = obtainedData["reactorId"];
     const isUsersOwnVideo = reactorId === data.userId
@@ -238,13 +237,11 @@
       },
     });
     getReactionsToOriginalVideo(originalVideoId, reactionVideoId).then(reactions => {
-      console.log('other reactions', reactions);
       otherReactions = reactions;
     });
 
     if (reactionVideoId) {
       getBasicVideoDetailsWithEmbedApi(reactionVideoId).then(videoDetails => {
-        console.log('details fetched');
         reactionCreator = getAuthorFromAuthorUrl(videoDetails.author_url);
       });
     }
@@ -320,7 +317,6 @@
     }
   });
   onDestroy(() => {
-    // Unsubscribe when the component is destroyed
     unsubscribe();
   });
 </script>
@@ -382,7 +378,7 @@
   <div class="w-auto max-w-96">
     {#each otherReactions as reaction, index (index)}
       <div key={reaction.id}>
-        <ReactionsListElement {reaction}  />
+        <ReactionsListElement {reaction} />
       </div>
     {/each}
   </div>

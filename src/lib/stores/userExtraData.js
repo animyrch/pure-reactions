@@ -17,9 +17,7 @@ const createUserExtraDataStore = () => {
     subscribe,
     fetchUserData: async (userId) => {
       try {
-        console.log('loading user extra data');
         const userExtraDataFetched = await getUserExtraData(userId);
-        console.log('loaded', userExtraDataFetched);
         set({
             userExtraData: userExtraDataFetched,
         });
@@ -42,7 +40,6 @@ const createUserExtraDataStore = () => {
             } else {
                 console.log("Bookmark already exists for this user");
             }
-            console.log(userExtraData, 'sub');
         } catch (error) {
             console.error("Error adding user bookmarks: ", error);
         }
@@ -62,7 +59,6 @@ const createUserExtraDataStore = () => {
             } else {
                 console.log("Bookmark does not exist for this user");
             }
-            console.log(userExtraData, 'sub');
         } catch (error) {
             console.error("Error removing user bookmarks: ", error);
         }
@@ -101,7 +97,6 @@ const createUserExtraDataStore = () => {
             } else {
                 console.log("Follow does not exist for this user");
             }
-            console.log(userExtraData, 'sub');
         } catch (error) {
             console.error("Error removing user follows: ", error);
         }

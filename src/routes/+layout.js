@@ -19,7 +19,7 @@ export async function load() {
         userEmail = user?.email;
         displayName = user?.displayName;
         userId = user?.uid;
-        userExtraDataStore.fetchUserData(userId);
+        await userExtraDataStore.fetchUserData(userId);
     }
 
     const handleUserAction = async (action, details = {}) => {
@@ -33,7 +33,6 @@ export async function load() {
                 currentUser.set(user);
             }
         }
-        console.log(action, email, password, action === 'signup' && email && password)
         if (action === 'signup' && email && password) {
             const successful = await createUserWithEmailAndPasswordWrapper(email, password);
             if (successful) {

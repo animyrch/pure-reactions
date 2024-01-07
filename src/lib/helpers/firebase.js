@@ -32,6 +32,7 @@ import {
     FIREBASE_CONFIG
 } from "$lib/constants/firebase";
 import { showToast } from '$lib/stores/toast';
+import { SORTINGS } from '$lib/constants/sortings';
 
 // Initialize Firebase
 const app = initializeApp(FIREBASE_CONFIG);
@@ -39,7 +40,6 @@ const db = getFirestore(app);
 export const auth = getAuth(app);
 
 export const createReactionDocument = (originalVideoId, userId) => {
-    console.log(originalVideoId, userId);
     const reactionsCollection = collection(db, COLLECTION_REACTION_BINOMES);
     const dataToAdd = {
         "originalVideoId": originalVideoId,
@@ -69,18 +69,22 @@ export const updateFirebaseDocument = async (dataToUpdate) => {
     }
 };
 
-export const getAllReactions = async () => {
+export const getAllReactions = async (sortBy, follows) => {
+    console.log('getAllReactions sort', sortBy);
     let reactions = [];
     try {
         const reactionsCollection = collection(db, COLLECTION_REACTION_BINOMES);
-        const querySnapshot = await getDocs(
-            query(reactionsCollection,
-                // orderBy('reactionVideoId', 'desc'),
-                where('reactionVideoId', '!=', ''),
-                orderBy('reactionVideoId', 'desc'),
-                orderBy('createdAt', 'desc')
-            )
+        let baseQuery = query(reactionsCollection,
+            where('reactionVideoId', '!=', ''),
+            orderBy('reactionVideoId', 'desc'),
+            orderBy('createdAt', 'desc')
         );
+        console.log(sortBy, SORTINGS.FOLLOWING, follows, sortBy === SORTINGS.FOLLOWING && follows && follows.length);
+        if (sortBy === SORTINGS.FOLLOWING && follows && follows.length) {
+            baseQuery = query(baseQuery, where('reactorId', 'in', follows));
+        }
+        console.log(baseQuery);
+        const querySnapshot = await getDocs(baseQuery);
         reactions = querySnapshot.docs.map((doc) => ({
             id: doc.id,
             data: doc.data()
@@ -337,7 +341,6 @@ export const removeFollowWrapper = async (userId, reactorId) => {
 };
 
 export const getUserExtraData = async (userId) => {
-    console.log('userdata id', userId);
     if (!userId) {
         return {};
     }
@@ -349,10 +352,8 @@ export const getUserExtraData = async (userId) => {
         );
         const userExtraDataSnapshot = await getDoc(userExtraDataRef);
         if (userExtraDataSnapshot.exists()) {
-            console.log('userdata found',userExtraDataSnapshot );
             return userExtraDataSnapshot.data();
           } else {
-            console.log("userdata not found");
             return {};
           }
     } catch (error) {

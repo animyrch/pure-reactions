@@ -1,9 +1,11 @@
 <script>
     import ReactionSortingOption from "$lib/components/Navigation/ReactionSortingOption.svelte";
     import { SORTINGS } from '$lib/constants/sortings';
-    let currentSelection = SORTINGS.NEW;
+	import { page } from '$app/stores';
+    import { goToRoute } from "$lib/helpers/routing";
+
     const setSorting = (newSorting) => {
-        currentSelection = newSorting;
+        goToRoute('?sortBy=' + newSorting);
     }
 </script>
 
@@ -11,7 +13,7 @@
     <div class="grid max-w-xs grid-cols-2 gap-1 p-1 mx-auto my-2 bg-gray-100 rounded-lg dark:bg-gray-600" role="group">
         <ReactionSortingOption
             on:change={() => setSorting(SORTINGS.NEW)}
-            isSelected={currentSelection === SORTINGS.NEW}
+            isSelected={$page.url.searchParams.get('sortBy') !== SORTINGS.FOLLOWING}
             sortText="New"
         />
         <!-- <button type="button" class="px-5 py-1.5 text-xs font-medium rounded-lg">
@@ -19,7 +21,7 @@
         </button> -->
         <ReactionSortingOption
             on:change={() => setSorting(SORTINGS.FOLLOWING)}
-            isSelected={currentSelection === SORTINGS.FOLLOWING}
+            isSelected={$page.url.searchParams.get('sortBy') === SORTINGS.FOLLOWING}
             sortText="Following"
         />
     </div>

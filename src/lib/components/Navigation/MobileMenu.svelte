@@ -1,16 +1,11 @@
 <script>
     import Avatar from '$lib/components/Avatar.svelte';
-    import { currentPath } from '$lib/stores/route';
-    import ReactionsSorting from '$lib/components/Navigation/ReactionsSorting.svelte';
-    import MobileMenuOption from './MobileMenuOption.svelte';
+    import MobileMenuOption from '$lib/components/Navigation/MobileMenuOption.svelte';
     import Bookmark from '$lib/icons/Bookmark.svelte';
 
 </script>
 
 <div class="fixed bottom-0 z-50 w-full -translate-x-1/2 bg-white border-t border-gray-200 left-1/2 dark:bg-gray-700 dark:border-gray-600">
-    {#if $currentPath === '/'}
-        <ReactionsSorting />
-    {/if}
     <div class="grid h-full max-w-lg grid-cols-4 mx-auto">
         <MobileMenuOption
             targetUrl="/"
