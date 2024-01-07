@@ -21,8 +21,7 @@
     getBasicVideoDetailsWithEmbedApi,
     getAuthorFromAuthorUrl
   } from '$lib/helpers/youtube';
-  import EmptyBell from '$lib/icons/EmptyBell.svelte';
-  import ReactionAction from "$lib/components/ReactionAction.svelte";
+  
   export let data; // Access the data passed from the server in props
 
   $currentUser;
@@ -324,14 +323,6 @@
     // Unsubscribe when the component is destroyed
     unsubscribe();
   });
-
-  const onFollowReactor = () => {
-        userExtraDataStore.addFollow($userExtraDataStore.userExtraData, $currentUser.uid, reactorId);
-    };
-
-    const onUnfollowReactor = () => {
-        userExtraDataStore.removeFollow($userExtraDataStore.userExtraData, $currentUser.uid, reactorId);
-    };
 </script>
 
 <div class="website-inner-container">
@@ -349,21 +340,11 @@
       <div>
         <div
         >
-          {#if $userExtraDataStore.userExtraData?.follows?.includes(reactorId)}
-            <FollowManagement
-              on:change={onUnfollowReactor}
-              {reactionCreator}
-            />
-          {:else}
-            {#if reactionCreator}
-            <ReactionAction
-                buttonText={`Follow the reactions of ${reactionCreator}`}
-                on:change={onFollowReactor}
-            >
-              <EmptyBell />
-            </ReactionAction>
-            {/if}
-          {/if}
+          <FollowManagement
+            {reactionCreator}
+            {reactorId}
+            follows={$userExtraDataStore.userExtraData?.follows}
+          />
         </div>
       </div>
     {/if}
