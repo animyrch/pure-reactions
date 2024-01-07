@@ -7,7 +7,6 @@
     import DownTriangle from '$lib/icons/DownTriangle.svelte';
     import UpTriangle from '$lib/icons/UpTriangle.svelte';
     import { isMobileDevice } from '$lib/helpers/system';
-    import EmptyBell from '$lib/icons/EmptyBell.svelte';
 
     export let videoId;
 
@@ -36,14 +35,14 @@
     <slot />
     <button>
       {#if shouldHideVideoDetails}
-        <div on:click={toggleVideoDetailsButton}>
+        <button on:click={toggleVideoDetailsButton}>
           <DownTriangle />
-        </div>
+        </button>
       {/if}
       {#if !shouldHideVideoDetails}
-      <div on:click={toggleVideoDetailsButton}>
+      <button on:click={toggleVideoDetailsButton}>
         <UpTriangle />
-      </div>
+      </button>
       {/if}
     </button>
     {#if !shouldHideVideoDetails}
@@ -52,7 +51,7 @@
       {/if}
       {#if videoCreator}
         <div class="flex gap-2 m-1">
-          <EmptyBell /><p>{videoCreator}</p>
+          <p>{videoCreator}</p>
         </div>
       {/if}
     {/if}

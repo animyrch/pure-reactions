@@ -5,6 +5,7 @@ import {
     doc,
     addDoc,
     updateDoc,
+    setDoc,
     getDoc,
     getDocs,
     query,
@@ -27,7 +28,7 @@ import {
 } from "firebase/auth";
 import {
     COLLECTION_REACTION_BINOMES,
-    COLLECTION_USER_BOOKMARKS,
+    COLLECTION_USER_DATA,
     FIREBASE_CONFIG
 } from "$lib/constants/firebase";
 import { showToast } from '$lib/stores/toast';
@@ -112,12 +113,40 @@ export const getUserReactions = async (userId) => {
     }
 };
 
+export const getReactionsToOriginalVideo = async (originalVideoId, exceptReactionVideoId) => {
+    let reactions = [];
+    if (!originalVideoId) {
+        return reactions;
+    }
+    try {
+        const reactionsCollection = collection(db, COLLECTION_REACTION_BINOMES);
+        const queryRef = query(reactionsCollection,
+            where("originalVideoId", "==", originalVideoId),
+            where("reactionVideoId", "!=", exceptReactionVideoId),
+            orderBy('reactionVideoId', 'desc'),
+            orderBy('createdAt', 'desc')
+        );
+        const querySnapshot = await getDocs(queryRef);
+        reactions = querySnapshot.docs.map((doc) => ({
+            id: doc.id,
+            data: doc.data()
+        }));
+        return reactions;
+    } catch (error) {
+        console.error('Error getting filtered documents: ', error);
+    }
+};
+
 export const getReaction = async (reactionId) => {
     try {
         const docRef = doc(db, COLLECTION_REACTION_BINOMES, reactionId);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
-          return docSnap;
+            const data = docSnap.data();
+            return {
+                    ...data,
+                    id: docSnap.id
+                };
         } else {
           console.log("No such document!");
         }
@@ -231,7 +260,102 @@ export const reauthenticateUserHelper = async (user) => {
     }
 };
 
-export const addBookmark = async (userId, reactionBinomeId) => {
-    let userBookmarks = [];
-    console.log('addBookmark', userId, reactionBinomeId);
+export const addBookmarkWrapper = async (userId, reactionBinomeId) => {
+    try {
+        const userExtraData = await getUserExtraData(userId);
+        const userBookmarks = userExtraData.bookmarks ? [...userExtraData.bookmarks] : [];
+        if (!userBookmarks.includes(reactionBinomeId)) {
+            userBookmarks.push(reactionBinomeId);
+        }
+        const userExtraDataCollection = collection(db, COLLECTION_USER_DATA);
+        const userExtraDataRef = doc(userExtraDataCollection, userId);
+        await setDoc(userExtraDataRef, {
+            ...userExtraData,
+            bookmarks: userBookmarks
+        });
+        console.log("User bookmarks saved successfully");
+    } catch (error) {
+        console.error("Error setting user bookmarks: ", error);
+    }
+};
+
+export const removeBookmarkWrapper = async (userId, reactionBinomeId) => {
+    try {
+        const userExtraData = await getUserExtraData(userId);
+        let userBookmarks = [...userExtraData.bookmarks];
+        if (userBookmarks.includes(reactionBinomeId)) {
+            userBookmarks = userBookmarks.filter(currentReactionBinomeId => currentReactionBinomeId !== reactionBinomeId);
+        }
+        const userExtraDataCollection = collection(db, COLLECTION_USER_DATA);
+        const userExtraDataRef = doc(userExtraDataCollection, userId);
+        await setDoc(userExtraDataRef, {
+            ...userExtraData,
+            bookmarks: userBookmarks
+        });
+        console.log("User bookmarks saved successfully");
+    } catch (error) {
+        console.error("Error removing user bookmarks: ", error);
+    }
+};
+
+export const addFollowWrapper = async (userId, reactorId) => {
+    try {
+        const userExtraData = await getUserExtraData(userId);
+        const userFollows = userExtraData.follows ? [...userExtraData.follows] : [];
+        if (!userFollows.includes(reactorId) && userId !== reactorId) {
+            userFollows.push(reactorId);
+        }
+        const userExtraDataCollection = collection(db, COLLECTION_USER_DATA);
+        const userExtraDataRef = doc(userExtraDataCollection, userId);
+        await setDoc(userExtraDataRef, {
+            ...userExtraData,
+            follows: userFollows
+        });
+        console.log("User follows saved successfully");
+    } catch (error) {
+        console.error("Error setting user follows: ", error);
+    }
+};
+
+export const removeFollowWrapper = async (userId, reactorId) => {
+    try {
+        const userExtraData = await getUserExtraData(userId);
+        let userFollows = [...userExtraData.follows];
+        if (userFollows.includes(reactorId)) {
+            userFollows = userFollows.filter(currentReactorId => currentReactorId !== reactorId);
+        }
+        const userExtraDataCollection = collection(db, COLLECTION_USER_DATA);
+        const userExtraDataRef = doc(userExtraDataCollection, userId);
+        await setDoc(userExtraDataRef, {
+            ...userExtraData,
+            follows: userFollows
+        });
+        console.log("User follow removed successfully");
+    } catch (error) {
+        console.error("Error removing user follows: ", error);
+    }
+};
+
+export const getUserExtraData = async (userId) => {
+    console.log('userdata id', userId);
+    if (!userId) {
+        return {};
+    }
+    try {
+        const userExtraDataCollection = collection(db, COLLECTION_USER_DATA);
+        const userExtraDataRef = doc(
+            userExtraDataCollection,
+            userId
+        );
+        const userExtraDataSnapshot = await getDoc(userExtraDataRef);
+        if (userExtraDataSnapshot.exists()) {
+            console.log('userdata found',userExtraDataSnapshot );
+            return userExtraDataSnapshot.data();
+          } else {
+            console.log("userdata not found");
+            return {};
+          }
+    } catch (error) {
+        console.error("Error getting userdata: ", error);
+    }
 };

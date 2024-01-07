@@ -1,24 +1,28 @@
 <script>
-  import { onMount } from "svelte";
+  import { onMount, onDestroy } from "svelte";
   import {
     getCurrentVolumeFromVolumeConfigs,
     getCurrentStateFromStateConfigs
   } from "$lib/helpers/reaction";
   import {
     getReaction,
-    updateFirebaseDocument
+    updateFirebaseDocument,
+    getReactionsToOriginalVideo
   } from '$lib/helpers/firebase';
   import VideoContainer from "$lib/components/VideoContainer.svelte";
   import { extractYouTubeVideoId } from '$lib/helpers/youtube';
-  import Bookmark from "$lib/icons/Bookmark.svelte";
+  import { currentUser } from '$lib/stores/user';
+  import { userExtraDataStore } from '$lib/stores/userExtraData';
+  import ReactionsListElement from "$lib/components/ReactionsListElement.svelte";
+  import FollowManagement from "$lib/components/FollowManagement.svelte";
+  import { page } from '$app/stores'; // Import the page store
+  import BookmarkManagement from "$lib/components/BookmarkManagement.svelte";
   import {
-      addBookmark
-    } from '$lib/helpers/firebase';
-  import {
-    currentUser,
-    isLoggedIn
-  } from '$lib/stores/user';
-
+    getBasicVideoDetailsWithEmbedApi,
+    getAuthorFromAuthorUrl
+  } from '$lib/helpers/youtube';
+  import EmptyBell from '$lib/icons/EmptyBell.svelte';
+  import ReactionAction from "$lib/components/ReactionAction.svelte";
   export let data; // Access the data passed from the server in props
 
   $currentUser;
@@ -50,7 +54,10 @@
   let introBufferTime = 0;
   let originalVideoId;
   let reactionVideoId;
-
+  let reactorId;
+  let otherReactions = [];
+  let pageSlug = data.slug;
+  let reactionCreator;
   // Function to start the YouTube IFrame API loading
   function loadYouTubeAPI() {
     const tag = document.createElement("script");
@@ -191,18 +198,26 @@
     playerOriginal.setVolume(volume);
   }
 
-  const setUpVideos = (doc) => {
-    if (!doc) {
+  const setUpVideos = (obtainedData) => {
+    if (!obtainedData) {
       return;
     }
-    const obtainedData = doc.data();
+    otherReactions = [];
+    console.log('runnig set up videos', obtainedData);
     isReactionMissing = !obtainedData["reactionVideoId"];
-    const isUsersOwnVideo = obtainedData["reactorId"] === data.userId
+    reactorId = obtainedData["reactorId"];
+    const isUsersOwnVideo = reactorId === data.userId
     canShowEditModeButton = isUsersOwnVideo;
     window.playerConfigs = obtainedData["reactionConfigs"];
     window.volumeConfigs = obtainedData["volumeConfigs"];
     originalVideoId = obtainedData["originalVideoId"];
     reactionVideoId = obtainedData["reactionVideoId"];
+    if (playerOriginal) {
+      playerOriginal.destroy();
+    }
+    if (playerReaction) {
+      playerReaction.destroy();
+    }
     if (!isReactionMissing) {
       playerReaction = new YT.Player("player-reaction", {
         videoId: reactionVideoId,
@@ -223,15 +238,26 @@
         onStateChange: onStateChangeOriginal,
       },
     });
+    getReactionsToOriginalVideo(originalVideoId, reactionVideoId).then(reactions => {
+      console.log('other reactions', reactions);
+      otherReactions = reactions;
+    });
+
+    if (reactionVideoId) {
+      getBasicVideoDetailsWithEmbedApi(reactionVideoId).then(videoDetails => {
+        console.log('details fetched');
+        reactionCreator = getAuthorFromAuthorUrl(videoDetails.author_url);
+      });
+    }
   };
 
 
   function timeInformationReaction() {
     pollVideoCurrentTime();
   }
-  const buildInterface = async () => {
-    window.currentReactionDocumentId = data.slug;
-    const originalAndReactionVideos = await getReaction(data.slug);
+  const buildInterface = async (slug) => {
+    window.currentReactionDocumentId = slug;
+    const originalAndReactionVideos = await getReaction(slug);
     setUpVideos(originalAndReactionVideos);
   };
 
@@ -269,10 +295,6 @@
     }
   }
 
-  const onBookmarkReactionBinome = () => {
-    addBookmark($currentUser.uid, data.slug);
-  };
-
   onMount(async () => {
     // Check if the YouTube API is already loaded
     if (typeof YT === "undefined" || typeof YT.Player === "undefined") {
@@ -283,27 +305,69 @@
       window.onYouTubeIframeAPIReady = async () => {
         console.log("YouTube IFrame API is ready");
         // Now, you can proceed to getReaction and set up videos
-        await buildInterface();
+        await buildInterface(pageSlug);
       };
     } else {
       // If the YouTube API is already loaded, you can proceed directly
       console.log("YouTube IFrame API is already loaded");
-      await buildInterface();
+      await buildInterface(pageSlug);
     }
   });
+  // Subscribe to changes in the route using the page store
+  const unsubscribe = page.subscribe(async ({ params }) => {
+    if (params.slug !== pageSlug) {
+      pageSlug = params.slug;
+      await buildInterface(pageSlug);
+    }
+  });
+  onDestroy(() => {
+    // Unsubscribe when the component is destroyed
+    unsubscribe();
+  });
+
+  const onFollowReactor = () => {
+        userExtraDataStore.addFollow($userExtraDataStore.userExtraData, $currentUser.uid, reactorId);
+    };
+
+    const onUnfollowReactor = () => {
+        userExtraDataStore.removeFollow($userExtraDataStore.userExtraData, $currentUser.uid, reactorId);
+    };
 </script>
 
 <div class="website-inner-container">
   {#if isReactionMissing}
   <p>Warning: The reaction video id is missing. This reaction page won't be listed on the home page until the reaction video url is added below :</p>
   {/if}
-  {#if $isLoggedIn}
-    <button
-      on:click={onBookmarkReactionBinome}
-    >
-      <Bookmark />
-    </button>
-  {/if}
+  <div class="text-right mx-2">
+    {#if $userExtraDataStore.userExtraData !== null}
+      <div>
+        <BookmarkManagement
+          bookmarks={$userExtraDataStore.userExtraData?.bookmarks}
+          slug={pageSlug}
+        />
+      </div>
+      <div>
+        <div
+        >
+          {#if $userExtraDataStore.userExtraData?.follows?.includes(reactorId)}
+            <FollowManagement
+              on:change={onUnfollowReactor}
+              {reactionCreator}
+            />
+          {:else}
+            {#if reactionCreator}
+            <ReactionAction
+                buttonText={`Follow the reactions of ${reactionCreator}`}
+                on:change={onFollowReactor}
+            >
+              <EmptyBell />
+            </ReactionAction>
+            {/if}
+          {/if}
+        </div>
+      </div>
+    {/if}
+  </div>
   <div class="videos-container">
     <VideoContainer videoId={originalVideoId}>
       <div id="player-original" class="video"/>
@@ -333,6 +397,16 @@
       </label>
       <button class="submit-button" on:click={setIntroBufferTime}>Modify reaction times</button>
     {/if}
+  </div>
+  <div class="text-center">
+    <p>Other reactions to the same video</p>
+  </div>
+  <div class="w-auto max-w-96">
+    {#each otherReactions as reaction, index (index)}
+      <div key={reaction.id}>
+        <ReactionsListElement {reaction}  />
+      </div>
+    {/each}
   </div>
 </div>
 

@@ -6,7 +6,7 @@ import { showToast } from '$lib/stores/toast';
 import { goToRoute } from '$lib/helpers/routing';
 import { TOASTS } from '$lib/constants/toasts';
 import { currentUser } from '$lib/stores/user';
-
+import { userExtraDataStore } from '$lib/stores/userExtraData';
 let displayName;
 let userEmail;
 let userId;
@@ -19,6 +19,7 @@ export async function load() {
         userEmail = user?.email;
         displayName = user?.displayName;
         userId = user?.uid;
+        userExtraDataStore.fetchUserData(userId);
     }
 
     const handleUserAction = async (action, details = {}) => {
