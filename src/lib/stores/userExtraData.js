@@ -7,6 +7,7 @@ import {
     addFollowWrapper,
     removeFollowWrapper
 } from '$lib/helpers/firebase';
+import { handlePrivateRoute } from '$lib/helpers/routing';
 
 const createUserExtraDataStore = () => {
   const { subscribe, set } = writable({
@@ -26,6 +27,10 @@ const createUserExtraDataStore = () => {
       }
     },
     addBookmark: async (userExtraData, userId, reactionBinomeId) => {
+        if (!userId) {
+            handlePrivateRoute();
+            return;
+        }
         try {
             const userBookmarks = userExtraData?.bookmarks ? [...userExtraData.bookmarks] : [];
             if (!userBookmarks.includes(reactionBinomeId)) {
@@ -45,6 +50,10 @@ const createUserExtraDataStore = () => {
         }
     },
     removeBookmark: async (userExtraData, userId, reactionBinomeId) => {
+        if (!userId) {
+            handlePrivateRoute();
+            return;
+        }
         try {
             let userBookmarks = userExtraData?.bookmarks ? [...userExtraData.bookmarks] : [];
             if (userBookmarks.includes(reactionBinomeId)) {
@@ -64,6 +73,10 @@ const createUserExtraDataStore = () => {
         }
     },
     addFollow: async (userExtraData, userId, reactorId) => {
+        if (!userId) {
+            handlePrivateRoute();
+            return;
+        }
         try {
             const userFollows = userExtraData?.follows ? [...userExtraData.follows] : [];
             if (!userFollows.includes(reactorId) && userId !== reactorId) {
@@ -83,6 +96,10 @@ const createUserExtraDataStore = () => {
         }
     },
     removeFollow: async (userExtraData, userId, reactorId) => {
+        if (!userId) {
+            handlePrivateRoute();
+            return;
+        }
         try {
             let userFollows = userExtraData?.follows ? [...userExtraData.follows] : [];
             if (userFollows.includes(reactorId)) {

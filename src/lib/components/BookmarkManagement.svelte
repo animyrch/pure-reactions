@@ -8,11 +8,11 @@
     export let slug;
 
     const onBookmarkReactionBinome = () => {
-        userExtraDataStore.addBookmark($userExtraDataStore.userExtraData, $currentUser.uid, slug);
+        userExtraDataStore.addBookmark($userExtraDataStore.userExtraData, $currentUser?.uid, slug);
     };
 
     const onUnbookmarkReactionBinome = () => {
-        userExtraDataStore.removeBookmark($userExtraDataStore.userExtraData, $currentUser.uid, slug);
+        userExtraDataStore.removeBookmark($userExtraDataStore.userExtraData, $currentUser?.uid, slug);
     };
 </script>
 

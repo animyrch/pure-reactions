@@ -6,7 +6,7 @@ import { currentPath } from '$lib/stores/route';
 export function handlePrivateRoute() {
     if (browser) {
         goToRoute('/login');
-        showToast('You need to login to access this page!');
+        showToast('You need to login to do this action!');
     }
 }
 

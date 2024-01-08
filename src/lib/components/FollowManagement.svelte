@@ -13,11 +13,11 @@
     let placement;
 
     const onFollowReactor = () => {
-            userExtraDataStore.addFollow($userExtraDataStore.userExtraData, $currentUser.uid, reactorId);
+            userExtraDataStore.addFollow($userExtraDataStore.userExtraData, $currentUser?.uid, reactorId);
         };
 
     const onUnfollowReactor = () => {
-        userExtraDataStore.removeFollow($userExtraDataStore.userExtraData, $currentUser.uid, reactorId);
+        userExtraDataStore.removeFollow($userExtraDataStore.userExtraData, $currentUser?.uid, reactorId);
     };
 </script>
 
