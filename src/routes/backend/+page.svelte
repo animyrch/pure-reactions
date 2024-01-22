@@ -8,15 +8,26 @@
     } from "$lib/helpers/firebase";
     import { handlePrivateRoute } from '$lib/helpers/routing';
     import { isMobileDevice } from '$lib/helpers/system';
-    import { extractYouTubeVideoId } from '$lib/helpers/youtube';
     import { getCompensatedReactionTime } from '$lib/helpers/reaction';
     import { isLoggedIn } from '$lib/stores/user';
+    import { page } from '$app/stores';
+    import { ButtonGroup, Button, Progressbar } from 'flowbite-svelte';
+    import {
+        BullhornSolid,
+        PauseSolid,
+        PlaySolid,
+        VideoSolid,
+        DownloadSolid
+    } from 'flowbite-svelte-icons';
+    import { sineOut } from 'svelte/easing';
+          
+	export let data;
 
+    let progress = 0;
     const reactionConfigs = new Map();
     const volumeConfigs = new Map();
     let timer;
     let startTime;
-    let videoIdInput;
 
     let startRecording = false;
     let stopRecording = false;
@@ -30,15 +41,23 @@
         enablejsapi: 1,
         rel: 0,
     };
+    const originalVideoId = $page.url.searchParams.get('id');
+    const showRecorder = $page.url.searchParams.get('record');
+
+    const BUTTON_GROUP_STATES = {
+        INITIAL: 'initial',
+        READY: 'ready',
+        RECORDING: 'recording',
+        PAUSED: 'paused',
+        FINALISED: 'finalised'
+    }
+
+    let currentButtonGroupState = BUTTON_GROUP_STATES.INITIAL;
+
     function loadYoutubePlayer() {
-        const videoId = extractYouTubeVideoId(videoIdInput);
-        window.originalVideoIdForReaction = videoId;
-        
-        if (playerOriginal) {
-            playerOriginal.destroy();
-        }
+        console.log(originalVideoId, 'originalVideoId');
         playerOriginal = new YT.Player("player-original", {
-            videoId: window.originalVideoIdForReaction,
+            videoId: originalVideoId,
             playerVars: playerOptions,
             events: {
                 onReady: onPlayerReady,
@@ -46,14 +65,6 @@
             },
         });
     }
-
-    function displayVideoIdInput() {
-        const videoIdInputDOM = document.getElementById("videoIdInput");
-        if (videoIdInputDOM) {
-            videoIdInputDOM.disabled = false;
-        }
-    }
-
     // 4. The API will call this function when the video player is ready.
     function onPlayerReady(event) {
         console.log("player ready");
@@ -84,7 +95,7 @@
         }
     }
     const getCurrentTimeForOriginalVideo = () => {
-        const seekTime = (seekBar.value / 100) * playerOriginal.getDuration();
+        const seekTime = (progress / 100) * playerOriginal.getDuration();
         return seekTime.toFixed(2);
     };
     function logStateChange(originalVideoTime, stateCode) {
@@ -123,8 +134,8 @@
         const duration = playerOriginal.getDuration();
         const currentTime = playerOriginal.getCurrentTime();
 
-        seekBar.value = (currentTime / duration) * 100;
-        currentTimeDisplay.textContent =
+        progress = (currentTime / duration) * 100;
+        currentTimeDisplay =
             formatTime(currentTime) + " / " + formatTime(duration);
 
         requestAnimationFrame(updateSeekBar);
@@ -160,40 +171,61 @@
 
 
     let seekBar;
-    let currentTimeDisplay;
-
-    let showRecorder = false;
+    let currentTimeDisplay = "0:00 / 0:00";
     let isFocusReactOn = false;
+
+    const onClickStartReaction = () => {
+        createReactionDocument(originalVideoId, data.userId);
+        if (showRecorder) {
+            startRecording = true;
+        }
+        currentButtonGroupState = BUTTON_GROUP_STATES.READY;
+
+        // Start the timer
+        startTime = new Date().getTime();
+    };
+
+    const onClickStartVideo = () => {
+        startOriginalVideo();
+        currentButtonGroupState = BUTTON_GROUP_STATES.RECORDING;
+    };
+
+    const onClickFocusReact = () => {
+        isFocusReactOn = !isFocusReactOn;
+        const soundLevel = isFocusReactOn ? 20 : 100;
+        logVolumeChange(soundLevel);
+    };
+
+    const onClickStopVideo = () => {
+        pauseOriginalVideo();
+        currentButtonGroupState = BUTTON_GROUP_STATES.READY;
+    };
+
+    const onClickFinishReaction = () => {
+        if (showRecorder) {
+            stopRecording = true;
+        }
+        currentButtonGroupState = BUTTON_GROUP_STATES.FINALISED;
+        clearInterval(timer);
+    };
+    const onClickProgress = (event) => {
+        const progressBar = event.currentTarget;
+        const clickX = event.clientX - progressBar.getBoundingClientRect().left;
+        const progressBarWidth = progressBar.clientWidth;
+
+        // Calculate the relative position (percentage) where the user clicked
+        const clickPercentage = (clickX / progressBarWidth) * 100;
+        // Update the progress value based on the click position
+        progress = clickPercentage;
+
+        const seekTime = (progress / 100) * playerOriginal.getDuration();
+        playerOriginal.seekTo(parseFloat(seekTime), true);
+    };
 
     onMount(async () => {
         if (isMobileDevice()) {
             handlePrivateRoute();
         }
-        seekBar = document.getElementById("seek-bar");
-        if (seekBar) {
-            seekBar.value = 0;
-
-            // Event listener for when the user interacts with the seek bar
-            seekBar.addEventListener("input", () => {
-                const seekTime =
-                    (seekBar.value / 100) * playerOriginal.getDuration();
-                playerOriginal.seekTo(parseFloat(seekTime), true);
-            });
-
-            // // Event listener for when the user starts dragging the seek bar
-            seekBar.addEventListener("mousedown", () => {
-                console.log("dragging started");
-            });
-
-            seekBar.addEventListener("mouseup", () => {
-                console.log("dragging stopped");
-            });
-        }
-        window.onYouTubeIframeAPIReady = () => {
-            displayVideoIdInput();
-        };
-        currentTimeDisplay = document.getElementById("current-time");
-        // Function to update the seek bar and current time display
 
         // Load the YouTube API
         const tag = document.createElement("script");
@@ -201,192 +233,90 @@
         const firstScriptTag = document.getElementsByTagName("div")[0];
         firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
-        const startReactionBtn = document.getElementById("startReaction");
-        const startVideoBtn = document.getElementById("startVideo");
-        const focusReactBtn = document.getElementById("focusReact");
-        const stopVideoBtn = document.getElementById("stopVideo");
-        const finishReactionBtn = document.getElementById("finishReaction");
-        const seekBarContainer = document.getElementById("seek-bar-container");
-        const volumeBarContainer = document.getElementById("volume-bar-container");
-
-        if (startReactionBtn) {
-            startReactionBtn.addEventListener("click", () => {
-                createReactionDocument(window.originalVideoIdForReaction, data.userId);
-                if (showRecorder) {
-                    startRecording = true;
-                }
-                console.log("Started the reaction");
-                startReactionBtn.disabled = true;
-                startVideoBtn.disabled = false;
-                finishReactionBtn.disabled = false;
-
-                // Start the timer
-                startTime = new Date().getTime();
-            });
-        }
-
-        if (startVideoBtn) {
-            startVideoBtn.addEventListener("click", () => {
-                console.log("Started the video");
-                startOriginalVideo();
-                startVideoBtn.disabled = true;
-                stopVideoBtn.disabled = false;
-                focusReactBtn.disabled = false;
-                seekBarContainer.style.display = "block";
-                volumeBarContainer.style.display = "block";
-            });
-        }
-
-        if (focusReactBtn) {
-            focusReactBtn.addEventListener("click", () => {
-            isFocusReactOn = !isFocusReactOn;
-            const soundLevel = isFocusReactOn ? 20 : 100;
-            logVolumeChange(soundLevel);
-        });
-        }
-
-        if (stopVideoBtn) {
-            stopVideoBtn.addEventListener("click", () => {
-                console.log("Stopped the video");
-                pauseOriginalVideo();
-                stopVideoBtn.disabled = true;
-                focusReactBtn.disabled = true;
-                startVideoBtn.disabled = false;
-            });
-        }
-
-        if (finishReactionBtn) {
-            finishReactionBtn.addEventListener("click", () => {
-                console.log("Finished the reaction");
-                if (showRecorder) {
-                    stopRecording = true;
-                }
-                startReactionBtn.disabled = true;
-                startVideoBtn.disabled = true;
-                stopVideoBtn.disabled = true;
-                focusReactBtn.disabled = true;
-                finishReactionBtn.disabled = true;
-                clearInterval(timer);
-            });
-        }
+        setTimeout(() => {
+            // Check if the YouTube API is already loaded
+            loadYoutubePlayer();
+        }, 1000);
     });
-
-	export let data;
 </script>
 
 {#if $isLoggedIn}
     <div class="website-inner-container">
-        <div>
-            <form id="videoIdInputForm">
-                <label for="videoId">Enter the video id:</label>
-                <input
-                    type="text"
-                    id="videoIdInput"
-                    name="videoId"
-                    required
-                    bind:value={videoIdInput}
-                />
-                <button type="button" on:click={loadYoutubePlayer}>Submit</button>
-            </form>
-        </div>
-        <label>
-            <input type="checkbox" bind:checked={showRecorder} />
-            Show Recorder
-        </label>
-        <div class="flex-container">
-            <div id="volume-bar-container">
-                <input
-                    type="range"
-                    id="sound-control"
-                    min="0"
-                    max="100"
-                    step="1"
-                    bind:value={soundLevel}
-                    class="vertical-slider"
-                />
+        <div class="flex">
+            <div class="original-video-container w-4/5 h-svh">
+                <div id="player-original" class="w-full h-2/3"/>
+                <button
+                    class="new-seekbar w-full h-24" 
+                    on:click={onClickProgress}
+                >
+                    {currentTimeDisplay}
+                    <Progressbar
+                        {progress}
+                        animate
+                        precision={2}
+                        tweenDuration={400}
+                        easing={sineOut}
+                        size="h-2"
+                        labelInsideClass="hidden"
+                        class="mb-8"
+                    />
+                </button>   
+                <div class="reaction-buttons text-center m-2 h-24">
+                    <ButtonGroup>
+                        <Button
+                            disabled={currentButtonGroupState !== BUTTON_GROUP_STATES.INITIAL}
+                            on:click={onClickStartReaction}
+                            outline color="dark"
+                        >
+                          <VideoSolid class="w-3 h-3 me-2" />
+                          Start Reaction
+                        </Button>
+                        <Button
+                            disabled={currentButtonGroupState !== BUTTON_GROUP_STATES.READY}
+                            on:click={onClickStartVideo}
+                            outline color="dark"
+                        >
+                          <PlaySolid class="w-3 h-3 me-2" />
+                          Start Video
+                        </Button>
+                        <Button
+                            disabled={currentButtonGroupState !== BUTTON_GROUP_STATES.RECORDING}
+                            on:click={onClickFocusReact}
+                            outline={!isFocusReactOn}
+                            color={isFocusReactOn ? "red" : "dark"}
+                        >
+                          <BullhornSolid class="w-3 h-3 me-2" />
+                          Focus React
+                        </Button>
+                        <Button
+                            disabled={currentButtonGroupState !== BUTTON_GROUP_STATES.RECORDING}
+                            on:click={onClickStopVideo}
+                            outline color="dark"
+                        >
+                          <PauseSolid class="w-3 h-3 me-2" />
+                          Stop Video
+                        </Button>
+                        <Button
+                            disabled={currentButtonGroupState === BUTTON_GROUP_STATES.INITIAL || currentButtonGroupState === BUTTON_GROUP_STATES.FINALISED}
+                            on:click={onClickFinishReaction}
+                            outline color="dark"
+                        >
+                          <DownloadSolid class="w-3 h-3 me-2" />
+                          Finish Reaction
+                        </Button>
+                      </ButtonGroup>
+                </div>
             </div>
-            <div class="video-items-container">
+            <div class="tools-container w-1/5">
                 {#if showRecorder}
-                    <div class="video-item" id="player-original" />
-                    <div class="video-item">
-                        <Recorder {startRecording} {stopRecording} />
-                    </div>
-                {:else}
-                    <div class="video-item">
-                        <div id="player-original" />
+                    <div>
+                        <Recorder
+                            {startRecording}
+                            {stopRecording}
+                        />
                     </div>
                 {/if}
             </div>
         </div>
-        <div>
-            <button id="startReaction">Start Reaction</button>
-            <button id="startVideo" disabled>Start Video</button>
-            <button id="focusReact" class:active={isFocusReactOn} disabled>Focus React</button>
-            <button id="stopVideo" disabled>Stop Video</button>
-            <button id="finishReaction" disabled>Finish Reaction</button>
-        </div>
-        <div id="seek-bar-container">
-            <input type="range" id="seek-bar" min="0" max="100" step="0.01" />
-            <div>Current Time: <span id="current-time">0:00</span></div>
-        </div>
     </div>
 {:else}{handlePrivateRoute()}{/if}
-
-<style>
-    body {
-        text-align: center;
-        font-family: Arial, sans-serif;
-    }
-
-    iframe {
-        width: 100%;
-        height: 70vh;
-    }
-
-    button {
-        margin: 10px;
-        padding: 10px 20px;
-        font-size: 16px;
-        cursor: pointer;
-    }
-
-    button:disabled {
-        background-color: #ccc;
-        cursor: not-allowed;
-    }
-
-    #seek-bar {
-        width: 800px;
-    }
-
-    #seek-bar-container, #volume-bar-container {
-        display: none;
-    }
-
-    .video-items-container {
-        display: flex;
-        flex-direction: column;
-        width: 100vw;
-    }
-
-    .video-item {
-        object-fit: contain;
-        width: 100%;
-        height: calc(100vw * 0.56);
-    }
-    #sound-control {
-        transform: rotate(270deg);
-        height: 150px; /* Adjust the height as needed */
-        width: 150px;  /* Adjust the width as needed */
-    }
-    .flex-container {
-        display: flex;
-    }
-
-    #focusReact.active {
-        background-color: rgb(230, 20, 20) !important;
-        color: white;
-    }
-
-
-</style>

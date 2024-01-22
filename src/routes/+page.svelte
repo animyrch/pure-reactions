@@ -13,7 +13,7 @@
 
 	$: {
 		const queryParamsSize = $page.url.searchParams.size;
-			loadReactions();
+		loadReactions();
 	}
 
 	const loadReactions = async () => {
