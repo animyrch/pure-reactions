@@ -15,21 +15,21 @@
   import { userExtraDataStore } from '$lib/stores/userExtraData';
   import ReactionsListElement from "$lib/components/ReactionsListElement.svelte";
   import FollowManagement from "$lib/components/FollowManagement.svelte";
-  import { page } from '$app/stores'; // Import the page store
+  import { page } from '$app/stores';
   import BookmarkManagement from "$lib/components/BookmarkManagement.svelte";
   import {
     getBasicVideoDetailsWithEmbedApi,
     getAuthorFromAuthorUrl
   } from '$lib/helpers/youtube';
+  import { GradientButton } from 'flowbite-svelte';
 
-  export let data; // Access the data passed from the server in props
+  export let data;
 
   $currentUser;
   
-  // 3. This function creates an <iframe> (and YouTube player)
-  //    after the API code downloads.
   var playerReaction;
   var playerOriginal;
+  let isPublished;
   var playerOptions = {
     autoplay: 0,
     controls: 1,
@@ -49,6 +49,7 @@
   let reactionVideoIdInput = '';
   let isEditModeOn = false;
   let canShowEditModeButton = false;
+  let isUsersOwnVideo = false;
   let canShowCloseEditModeButton = false;
   let introBufferTime = 0;
   let originalVideoId;
@@ -202,9 +203,10 @@
       return;
     }
     otherReactions = [];
+    isPublished = obtainedData.isPublished;
     isReactionMissing = !obtainedData["reactionVideoId"];
     reactorId = obtainedData["reactorId"];
-    const isUsersOwnVideo = reactorId === data.userId
+    isUsersOwnVideo = reactorId === data.userId
     canShowEditModeButton = isUsersOwnVideo;
     window.playerConfigs = obtainedData["reactionConfigs"];
     window.volumeConfigs = obtainedData["volumeConfigs"];
@@ -253,8 +255,8 @@
   }
   const buildInterface = async (slug) => {
     window.currentReactionDocumentId = slug;
-    const originalAndReactionVideos = await getReaction(slug);
-    setUpVideos(originalAndReactionVideos);
+    const pureReaction = await getReaction(slug);
+    setUpVideos(pureReaction);
   };
 
   const setReactionVideoId = async () => {
@@ -263,6 +265,13 @@
     });
     location.reload();
   }
+
+  const setIsPublished = async () => {
+    await updateFirebaseDocument({
+        "isPublished": true
+    });
+    location.reload();
+  };
 
   const enterEditMode = () => {
     canShowCloseEditModeButton = true;
@@ -323,10 +332,38 @@
 
 <div class="website-inner-container">
   {#if isReactionMissing}
-  <p>Warning: The reaction video id is missing. This reaction page won't be listed on the home page until the reaction video url is added below :</p>
+    <p>Warning: The reaction video id is missing. This reaction page won't be listed on the home page until the reaction video url is added below :</p>
   {/if}
-  <div class="text-right mx-2">
-    {#if $userExtraDataStore.userExtraData !== null}
+  {#if isUsersOwnVideo}
+    <div class="text-left m-2">
+    {#if canShowEditModeButton}
+      <GradientButton
+        on:click={enterEditMode}
+        color="pinkToOrange"
+      >
+        Edit Reaction
+      </GradientButton>
+    {/if}
+    {#if canShowCloseEditModeButton}
+      <GradientButton
+        on:click={closeEditMode}
+        color="pinkToOrange"
+      >
+        Finish Editing
+      </GradientButton>
+    {/if}
+    {#if !isPublished}
+      <GradientButton
+        on:click={setIsPublished}
+        color="pinkToOrange"
+      >
+        Publish
+      </GradientButton>
+    {/if}
+    </div>
+  {/if}
+  {#if $userExtraDataStore.userExtraData !== null && !isUsersOwnVideo}
+  <div class="text-right m-2">
       <div>
         <BookmarkManagement
           bookmarks={$userExtraDataStore.userExtraData?.bookmarks}
@@ -340,8 +377,8 @@
           follows={$userExtraDataStore.userExtraData?.follows}
         />
       </div>
-    {/if}
-  </div>
+    </div>
+  {/if}
   <div class="videos-container">
     <VideoContainer videoId={originalVideoId}>
       <div id="player-original" class="video"/>
@@ -357,12 +394,6 @@
       <VideoContainer videoId={reactionVideoId}>
         <div id="player-reaction" class="video"/>
       </VideoContainer>
-    {/if}
-    {#if canShowEditModeButton}
-      <button class="submit-button" on:click={enterEditMode}>Edit Reaction</button>
-    {/if}
-    {#if canShowCloseEditModeButton}
-      <button class="submit-button" on:click={closeEditMode}>Finish Editing</button>
     {/if}
     {#if isEditModeOn}
       <label>

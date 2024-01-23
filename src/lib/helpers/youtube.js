@@ -15,7 +15,7 @@ export const getBasicVideoDetailsWithEmbedApi = async (videoId) => {
 };
 
 export const getAuthorFromAuthorUrl = (authorUrl) => {
-  return authorUrl.replace(YOUTUBE_URL, '');
+  return authorUrl && authorUrl.replace(YOUTUBE_URL, '');
 };
 
 /**

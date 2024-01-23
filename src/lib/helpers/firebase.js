@@ -70,20 +70,18 @@ export const updateFirebaseDocument = async (dataToUpdate) => {
 };
 
 export const getAllReactions = async (sortBy, follows) => {
-    console.log('getAllReactions sort', sortBy);
     let reactions = [];
     try {
         const reactionsCollection = collection(db, COLLECTION_REACTION_BINOMES);
         let baseQuery = query(reactionsCollection,
             where('reactionVideoId', '!=', ''),
+            where('isPublished', '==', true),
             orderBy('reactionVideoId', 'desc'),
             orderBy('createdAt', 'desc')
         );
-        console.log(sortBy, SORTINGS.FOLLOWING, follows, sortBy === SORTINGS.FOLLOWING && follows && follows.length);
         if (sortBy === SORTINGS.FOLLOWING && follows && follows.length) {
             baseQuery = query(baseQuery, where('reactorId', 'in', follows));
         }
-        console.log(baseQuery);
         const querySnapshot = await getDocs(baseQuery);
         reactions = querySnapshot.docs.map((doc) => ({
             id: doc.id,

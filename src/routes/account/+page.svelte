@@ -10,6 +10,8 @@
     import { handlePrivateRoute } from '$lib/helpers/routing';
     import { TOASTS } from '$lib/constants/toasts';
     import { showToast } from '$lib/stores/toast';
+    import { GradientButton } from 'flowbite-svelte';
+    import { goToRoute } from "$lib/helpers/routing";
 
     export let data;
 
@@ -74,6 +76,7 @@
   <main>
     <h1>My Account</h1>
   
+    
     <section>
       <h2>Update Profile</h2>
       <label>
@@ -100,7 +103,12 @@
       </label>
       <button on:click={updatePassword}>Update Password</button>
     </section>
-
+    <GradientButton
+      on:click={() => goToRoute('/my-reactions')}
+      color="pinkToOrange"
+    >
+      See your Pure Reactions
+    </GradientButton>
     <button on:click={() => data.handleUserAction('logout')}>Log Out</button>
   </main>
   
