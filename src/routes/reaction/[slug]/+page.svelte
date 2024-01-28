@@ -17,12 +17,9 @@
   import FollowManagement from "$lib/components/FollowManagement.svelte";
   import { page } from '$app/stores';
   import BookmarkManagement from "$lib/components/BookmarkManagement.svelte";
-  import {
-    getBasicVideoDetailsWithEmbedApi,
-    getAuthorFromAuthorUrl
-  } from '$lib/helpers/youtube';
   import { GradientButton, Input, Label, Button } from 'flowbite-svelte';
-
+  import { downloadBasicVideoDetails } from '$lib/helpers/youtube';
+  
   export let data;
 
   $currentUser;
@@ -57,7 +54,10 @@
   let reactorId;
   let otherReactions = [];
   let pageSlug = data.slug;
-  let reactionCreator;
+  let reactionVideoAuthor;
+  let reactionVideoTitle;
+  let originalVideoAuthor;
+  let originalVideoTitle;
 
   function loadYouTubeAPI() {
     const tag = document.createElement("script");
@@ -212,6 +212,12 @@
     window.volumeConfigs = obtainedData["volumeConfigs"];
     originalVideoId = obtainedData["originalVideoId"];
     reactionVideoId = obtainedData["reactionVideoId"];
+    reactionVideoAuthor = obtainedData?.reactionVideoAuthor;
+    reactionVideoTitle = obtainedData?.reactionVideoTitle;
+    originalVideoAuthor = obtainedData?.originalVideoAuthor;
+    originalVideoTitle = obtainedData?.originalVideoTitle;
+
+    originalVideoTitle
     if (playerOriginal) {
       playerOriginal.destroy();
     }
@@ -243,12 +249,6 @@
         otherReactions = reactions;
       });
     }
-
-    if (reactionVideoId) {
-      getBasicVideoDetailsWithEmbedApi(reactionVideoId).then(videoDetails => {
-        reactionCreator = getAuthorFromAuthorUrl(videoDetails.author_url);
-      });
-    }
   };
 
 
@@ -261,12 +261,20 @@
     setUpVideos(pureReaction);
   };
 
+  const getBasicDetailsReaction = async () => {
+      const { videoAuthor, videoTitle } = await downloadBasicVideoDetails(reactionVideoId);
+      reactionVideoAuthor = videoAuthor;
+      reactionVideoTitle = videoTitle;
+  };
   const setReactionVideoId = async () => {
+    reactionVideoId = extractYouTubeVideoId(reactionVideoId);
+    await getBasicDetailsReaction();
     await updateFirebaseDocument({
-        "reactionVideoId": extractYouTubeVideoId(reactionVideoId)
+      reactionVideoId,
+      reactionVideoAuthor,
+      reactionVideoTitle
     });
-    location.reload();
-  }
+  };
 
   const setIsPublished = async () => {
     await updateFirebaseDocument({
@@ -386,7 +394,7 @@
       </div>
       <div>
         <FollowManagement
-          {reactionCreator}
+          reactionCreator={reactionVideoAuthor}
           {reactorId}
           follows={$userExtraDataStore.userExtraData?.follows}
         />
@@ -394,11 +402,17 @@
     </div>
   {/if}
   <div class="videos-container">
-    <VideoContainer videoId={originalVideoId}>
+    <VideoContainer
+      videoAuthor={originalVideoAuthor}
+      videoTitle={originalVideoTitle}
+    >
       <div id="player-original" class="video"/>
     </VideoContainer>
     {#if !isReactionMissing}
-      <VideoContainer videoId={reactionVideoId}>
+      <VideoContainer
+        videoAuthor={reactionVideoAuthor}
+        videoTitle={reactionVideoTitle}
+      >
         <div id="player-reaction" class="video"/>
       </VideoContainer>
     {/if}

@@ -1,4 +1,3 @@
-<!-- src/Backend.svelte -->
 <script>
     import Recorder from "$lib/components/Recorder.svelte";
     import { onMount } from "svelte";
@@ -20,19 +19,16 @@
         DownloadSolid
     } from 'flowbite-svelte-icons';
     import { sineOut } from 'svelte/easing';
-          
+    import { downloadBasicVideoDetails } from '$lib/helpers/youtube';
+    import { goToRoute } from "$lib/helpers/routing";
+
 	export let data;
 
-    let progress = 0;
     const reactionConfigs = new Map();
     const volumeConfigs = new Map();
-    let timer;
-    let startTime;
-
-    let startRecording = false;
-    let stopRecording = false;
-
-    let playerOriginal;
+    const originalVideoId = $page.url.searchParams.get('id');
+    const showRecorder = $page.url.searchParams.get('record');
+    
     const playerOptions = {
         autoplay: 0,
         controls: 0,
@@ -41,17 +37,20 @@
         enablejsapi: 1,
         rel: 0,
     };
-    const originalVideoId = $page.url.searchParams.get('id');
-    const showRecorder = $page.url.searchParams.get('record');
-
     const BUTTON_GROUP_STATES = {
         INITIAL: 'initial',
         READY: 'ready',
         RECORDING: 'recording',
         PAUSED: 'paused',
         FINALISED: 'finalised'
-    }
+    };
 
+    let timer;
+    let startTime;
+    let playerOriginal;
+    let progress = 0;
+    let startRecording = false;
+    let stopRecording = false;
     let currentButtonGroupState = BUTTON_GROUP_STATES.INITIAL;
 
     function loadYoutubePlayer() {
@@ -148,16 +147,12 @@
         return minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
     }
 
-    let soundLevel = 100; // Initial sound level, adjust as needed
+    let soundLevel = 100;
 
-    // Add an event listener to update the YouTube player's volume
     $: {
-        // Calculate the volume based on the soundLevel (0-100)
         const volume = soundLevel / 100;
-        
-        // Set the volume for the YouTube player
         if (playerOriginal) {
-            setVolumeForOriginalVideo(volume * 100); // YouTube API uses a volume range of 0-100
+            setVolumeForOriginalVideo(volume * 100);
         }
     }
     function setVolumeForOriginalVideo(volume) {
@@ -169,19 +164,21 @@
         }
     }
 
-
-    let seekBar;
     let currentTimeDisplay = "0:00 / 0:00";
     let isFocusReactOn = false;
 
     const onClickStartReaction = () => {
-        createReactionDocument(originalVideoId, data.userId);
+        createReactionDocument({
+            originalVideoId,
+            userId: data.userId,
+            originalVideoAuthor,
+            originalVideoTitle
+        });
         if (showRecorder) {
             startRecording = true;
         }
         currentButtonGroupState = BUTTON_GROUP_STATES.READY;
 
-        // Start the timer
         startTime = new Date().getTime();
     };
 
@@ -207,15 +204,15 @@
         }
         currentButtonGroupState = BUTTON_GROUP_STATES.FINALISED;
         clearInterval(timer);
+        goToRoute(`/reaction/${window.currentReactionDocumentId}`);
     };
+
     const onClickProgress = (event) => {
         const progressBar = event.currentTarget;
         const clickX = event.clientX - progressBar.getBoundingClientRect().left;
         const progressBarWidth = progressBar.clientWidth;
 
-        // Calculate the relative position (percentage) where the user clicked
         const clickPercentage = (clickX / progressBarWidth) * 100;
-        // Update the progress value based on the click position
         progress = clickPercentage;
 
         const seekTime = (progress / 100) * playerOriginal.getDuration();
@@ -226,18 +223,25 @@
         if (isMobileDevice()) {
             handlePrivateRoute();
         }
-
-        // Load the YouTube API
         const tag = document.createElement("script");
         tag.src = "https://www.youtube.com/iframe_api";
         const firstScriptTag = document.getElementsByTagName("div")[0];
         firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
         setTimeout(() => {
-            // Check if the YouTube API is already loaded
             loadYoutubePlayer();
         }, 1000);
+
+        await getBasicDetailsOriginal();
     });
+
+    let originalVideoAuthor;
+    let originalVideoTitle;
+    const getBasicDetailsOriginal = async () => {
+        const { videoAuthor, videoTitle } = await downloadBasicVideoDetails(originalVideoId);
+        originalVideoAuthor = videoAuthor;
+        originalVideoTitle = videoTitle;
+    };
 </script>
 
 {#if $isLoggedIn}
@@ -260,7 +264,9 @@
                         labelInsideClass="hidden"
                         class="mb-8"
                     />
-                </button>   
+                </button>
+                {originalVideoAuthor}
+                {originalVideoTitle}
                 <div class="reaction-buttons text-center m-2 h-24">
                     <ButtonGroup>
                         <Button

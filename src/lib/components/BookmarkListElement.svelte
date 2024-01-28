@@ -1,9 +1,5 @@
 <script>
     import { onMount } from "svelte";
-    import {
-        getBasicVideoDetailsWithEmbedApi,
-        getAuthorFromAuthorUrl
-    } from '$lib/helpers/youtube';
     import { getReaction } from '$lib/helpers/firebase';
     import ReactionThumbnail from "$lib/components/ReactionThumbnail.svelte";
     
@@ -22,22 +18,14 @@
         reactionPageId = reaction?.id;
         reactionVideoId = reaction?.reactionVideoId;
         originalVideoId = reaction?.originalVideoId;
+        reactionVideoAuthor = reaction?.reactionVideoAuthor;
+        reactionVideoTitle = reaction?.reactionVideoTitle;
+        originalVideoAuthor = reaction?.originalVideoAuthor;
+        originalVideoTitle = reaction?.originalVideoTitle;
     };
 
     onMount(async () => {
         await loadReaction(reactionBinomeId);
-        if (reactionVideoId) {
-            getBasicVideoDetailsWithEmbedApi(reactionVideoId).then(reactionVideoDetails => {
-                reactionVideoAuthor = getAuthorFromAuthorUrl(reactionVideoDetails?.author_url);
-                reactionVideoTitle = reactionVideoDetails?.title;
-            });
-        }
-        if (originalVideoId) {
-            getBasicVideoDetailsWithEmbedApi(originalVideoId).then(originalVideoDetails => {
-                originalVideoAuthor = getAuthorFromAuthorUrl(originalVideoDetails?.author_url);
-                originalVideoTitle = originalVideoDetails?.title;
-            });
-        }
     });
 </script>
 

@@ -1,29 +1,16 @@
 <script>
-    import {
-      getBasicVideoDetailsWithEmbedApi,
-      getAuthorFromAuthorUrl
-    } from '$lib/helpers/youtube';
-    import { beforeUpdate, onMount } from 'svelte';
+    import { onMount } from 'svelte';
     import DownTriangle from '$lib/icons/DownTriangle.svelte';
     import UpTriangle from '$lib/icons/UpTriangle.svelte';
     import { isMobileDevice } from '$lib/helpers/system';
 
-    export let videoId;
+    export let videoAuthor;
+    export let videoTitle;
 
-    let videoTitle;
-    let videoCreator;
     let shouldHideVideoDetails;
     
     onMount(async () => {
       shouldHideVideoDetails = !!isMobileDevice();
-    });
-
-    beforeUpdate(async () => {
-      if (videoId) {
-        const videoDetails = await getBasicVideoDetailsWithEmbedApi(videoId);
-        videoTitle = videoDetails.title;
-        videoCreator = getAuthorFromAuthorUrl(videoDetails.author_url);
-      }
     });
 
     const toggleVideoDetailsButton = () => {
@@ -49,9 +36,9 @@
       {#if videoTitle}
         <p>{videoTitle}</p>
       {/if}
-      {#if videoCreator}
+      {#if videoAuthor}
         <div class="flex gap-2 m-1">
-          <p>{videoCreator}</p>
+          <p>{videoAuthor}</p>
         </div>
       {/if}
     {/if}

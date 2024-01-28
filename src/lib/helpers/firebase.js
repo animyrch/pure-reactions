@@ -39,10 +39,17 @@ const app = initializeApp(FIREBASE_CONFIG);
 const db = getFirestore(app);
 export const auth = getAuth(app);
 
-export const createReactionDocument = (originalVideoId, userId) => {
+export const createReactionDocument = ({
+    originalVideoId,
+    userId,
+    originalVideoAuthor,
+    originalVideoTitle
+}) => {
     const reactionsCollection = collection(db, COLLECTION_REACTION_BINOMES);
     const dataToAdd = {
         "originalVideoId": originalVideoId,
+        "originalVideoAuthor": originalVideoAuthor,
+        "originalVideoTitle": originalVideoTitle,
         "reactionConfigs": {},
         "reactorId": userId,
         "createdAt": serverTimestamp()

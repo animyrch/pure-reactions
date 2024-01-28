@@ -4,7 +4,7 @@ import {
   YOUTUBE_URL
 } from '$lib/constants/youtube';
 
-export const getBasicVideoDetailsWithEmbedApi = async (videoId) => {
+const getBasicVideoDetailsWithEmbedApi = async (videoId) => {
     try {
         const response = await fetch(basicVideoDetailsUrl.replace(videoIdPlaceholder, videoId));
         const data = await response.json();
@@ -12,6 +12,14 @@ export const getBasicVideoDetailsWithEmbedApi = async (videoId) => {
       } catch (error) {
         console.error('Error fetching data:', error.message);
       }
+};
+
+export const downloadBasicVideoDetails = async (videoId) => {
+  const videoDetails = await getBasicVideoDetailsWithEmbedApi(videoId);
+  return {
+    videoAuthor: getAuthorFromAuthorUrl(videoDetails?.author_url),
+    videoTitle: videoDetails?.title
+  };
 };
 
 export const getAuthorFromAuthorUrl = (authorUrl) => {
