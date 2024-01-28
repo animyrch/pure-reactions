@@ -17,7 +17,7 @@
   <a href="/" class="flex items-center space-x-3 rtl:space-x-reverse">
     <enhanced:img src='$lib/public/pure-reactions.svg' class="h-8" alt="Pure Reactions" />
   </a>
-  <div class="flex md:order-2">
+  <div class="flex md:order-2 gap-1">
     <button
       on:click={toggleMobileTopMenu}
       type="button"

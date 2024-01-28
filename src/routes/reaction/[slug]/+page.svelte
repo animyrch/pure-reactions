@@ -21,7 +21,7 @@
     getBasicVideoDetailsWithEmbedApi,
     getAuthorFromAuthorUrl
   } from '$lib/helpers/youtube';
-  import { GradientButton } from 'flowbite-svelte';
+  import { GradientButton, Input, Label, Button } from 'flowbite-svelte';
 
   export let data;
 
@@ -46,7 +46,6 @@
   var changingVolume = false;
   var changingState = false;
   let isReactionMissing = false;
-  let reactionVideoIdInput = '';
   let isEditModeOn = false;
   let canShowEditModeButton = false;
   let isUsersOwnVideo = false;
@@ -238,9 +237,11 @@
         onStateChange: onStateChangeOriginal,
       },
     });
-    getReactionsToOriginalVideo(originalVideoId, reactionVideoId).then(reactions => {
-      otherReactions = reactions;
-    });
+    if (originalVideoId && reactionVideoId) {
+      getReactionsToOriginalVideo(originalVideoId, reactionVideoId).then(reactions => {
+        otherReactions = reactions;
+      });
+    }
 
     if (reactionVideoId) {
       getBasicVideoDetailsWithEmbedApi(reactionVideoId).then(videoDetails => {
@@ -261,7 +262,7 @@
 
   const setReactionVideoId = async () => {
     await updateFirebaseDocument({
-        "reactionVideoId": extractYouTubeVideoId(reactionVideoIdInput)
+        "reactionVideoId": extractYouTubeVideoId(reactionVideoId)
     });
     location.reload();
   }
@@ -269,6 +270,12 @@
   const setIsPublished = async () => {
     await updateFirebaseDocument({
         "isPublished": true
+    });
+    location.reload();
+  };
+  const setIsUnpublished = async () => {
+    await updateFirebaseDocument({
+        "isPublished": false
     });
     location.reload();
   };
@@ -296,9 +303,13 @@
       updateFirebaseDocument({
         "reactionConfigs": currentConfigs
       });
-      location.reload();
     }
   }
+
+  const editActionEntryPoint = async (callback) => {
+    await callback();
+    await setIsUnpublished();
+  };
 
   onMount(async () => {
     // Check if the YouTube API is already loaded
@@ -352,12 +363,20 @@
         Finish Editing
       </GradientButton>
     {/if}
-    {#if !isPublished}
+    {#if !isPublished && !isReactionMissing}
       <GradientButton
         on:click={setIsPublished}
         color="pinkToOrange"
       >
         Publish
+      </GradientButton>
+    {/if}
+    {#if isPublished}
+      <GradientButton
+        on:click={setIsUnpublished}
+        color="pinkToOrange"
+      >
+        Unpublish
       </GradientButton>
     {/if}
     </div>
@@ -383,36 +402,44 @@
     <VideoContainer videoId={originalVideoId}>
       <div id="player-original" class="video"/>
     </VideoContainer>
-    {#if isReactionMissing || isEditModeOn}
-      <label>
-        Reaction Video ID:
-        <input bind:value={reactionVideoIdInput} />
-      </label>
-      <button class="submit-button" on:click={setReactionVideoId}>Set Reaction Video Id</button>
-    {/if}
     {#if !isReactionMissing}
       <VideoContainer videoId={reactionVideoId}>
         <div id="player-reaction" class="video"/>
       </VideoContainer>
     {/if}
+  </div>
+
+  <div class="flex flex-col gap-4">
+    {#if isReactionMissing || isEditModeOn}
+      <div class="flex gap-4">
+        <Label for="reaction-video-id-input" class="flex-none block mb-2 self-center">Reaction video id:</Label>
+        <Input class="shrink" bind:value={reactionVideoId} id="reaction-video-id-input" />
+        <Button class="submit-button flex-none" on:click={() => editActionEntryPoint(setReactionVideoId)}>Set Reaction Video Id</Button>
+      </div>
+    {/if}
     {#if isEditModeOn}
-      <label>
-        Set buffer time for intro:
-        <input bind:value={introBufferTime} />
-      </label>
-      <button class="submit-button" on:click={setIntroBufferTime}>Modify reaction times</button>
+      <div class="flex gap-4">
+        <Label for="buffer-time-input" class="flex-none block mb-2 self-center">Set buffer time for intro:</Label>
+        <Input class="shrink" bind:value={introBufferTime} id="buffer-time-input" />
+        <Button class="submit-button flex-none" on:click={() => editActionEntryPoint(setIntroBufferTime)}>Modify reaction times</Button>
+      </div>
     {/if}
   </div>
-  <div class="text-center">
-    <p>Other reactions to the same video</p>
-  </div>
-  <div class="w-auto max-w-96">
-    {#each otherReactions as reaction, index (index)}
-      <div key={reaction.id}>
-        <ReactionsListElement {reaction} />
+
+  {#if !isEditModeOn && otherReactions?.length}
+    <div class="other-reactions">
+      <div class="text-center">
+        <p>Other reactions to the same video</p>
       </div>
-    {/each}
-  </div>
+      <div class="w-auto max-w-96">
+        {#each otherReactions as reaction, index (index)}
+          <div key={reaction.id}>
+            <ReactionsListElement {reaction} />
+          </div>
+        {/each}
+      </div>
+    </div>
+  {/if}
 </div>
 
 <style>

@@ -1,4 +1,4 @@
-export const COLLECTION_REACTION_BINOMES = "reactions-test";
+export const COLLECTION_REACTION_BINOMES = "reactions-test2";
 export const COLLECTION_USER_DATA = "userdata-test";
 export const FIREBASE_CONFIG = {
     apiKey: "AIzaSyBqsnKIBnbRJqkpyOynZGLySf28AuqmOiE",
