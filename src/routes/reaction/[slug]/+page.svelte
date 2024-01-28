@@ -27,24 +27,25 @@
 
   $currentUser;
   
-  var playerReaction;
-  var playerOriginal;
-  let isPublished;
-  var playerOptions = {
+  const playerOptions = {
     autoplay: 0,
     controls: 1,
     disablekb: 1,
     modestbranding: 1,
     rel: 0
   };
-  var iframeOptionDefault = {
+  const iframeOptionDefault = {
       width: '100%',
       height: '100%'
   };
+
+  let playerReaction;
+  let playerOriginal;
+  let isPublished;
   let currentStateOriginalVideo = -1;
-  var currentVolumeOriginalVideo = 100;
-  var changingVolume = false;
-  var changingState = false;
+  let currentVolumeOriginalVideo = 100;
+  let changingVolume = false;
+  let changingState = false;
   let isReactionMissing = false;
   let isEditModeOn = false;
   let canShowEditModeButton = false;
@@ -57,7 +58,7 @@
   let otherReactions = [];
   let pageSlug = data.slug;
   let reactionCreator;
-  // Function to start the YouTube IFrame API loading
+
   function loadYouTubeAPI() {
     const tag = document.createElement("script");
     tag.src = "https://www.youtube.com/iframe_api";
@@ -312,24 +313,18 @@
   };
 
   onMount(async () => {
-    // Check if the YouTube API is already loaded
     if (typeof YT === "undefined" || typeof YT.Player === "undefined") {
-      // If not loaded, start loading the YouTube API
       loadYouTubeAPI();
 
-      // Set up a listener for the YouTube IFrame API ready event
       window.onYouTubeIframeAPIReady = async () => {
         console.log("YouTube IFrame API is ready");
-        // Now, you can proceed to getReaction and set up videos
         await buildInterface(pageSlug);
       };
     } else {
-      // If the YouTube API is already loaded, you can proceed directly
       console.log("YouTube IFrame API is already loaded");
       await buildInterface(pageSlug);
     }
   });
-  // Subscribe to changes in the route using the page store
   const unsubscribe = page.subscribe(async ({ params }) => {
     if (params.slug !== pageSlug) {
       pageSlug = params.slug;
