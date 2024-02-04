@@ -4,6 +4,9 @@
     import { GradientButton } from 'flowbite-svelte';
     import { goToRoute } from "$lib/helpers/routing";
     import { extractYouTubeVideoId } from '$lib/helpers/youtube';
+    import { auth } from '$lib/helpers/firebase';
+    import { handlePrivateRoute } from '$lib/helpers/routing';
+    import { onMount } from 'svelte';
 
     const createReactForm = {
         currentStep: 1,
@@ -18,7 +21,8 @@
             missingReactionVideoId: false
         }
     };
-
+    let user;
+    
     const onConfirmStep2Own = () => {
         goToRoute(`/backend?id=${extractYouTubeVideoId(createReactForm.originalVideoId)}`);
     };
@@ -47,6 +51,14 @@
     const goBackOneStep = () => {
         createReactForm.currentStep--;
     };
+
+    onMount(async () => {
+      // Ensure the user is signed in
+      user = auth.currentUser;
+      if (!user) {
+        handlePrivateRoute();
+      }
+    });
 </script>
 
 <div class="max-w-96 m-auto">
