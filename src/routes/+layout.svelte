@@ -2,10 +2,9 @@
 	/** @type {import('./$types').PageData} */
   import { toasts } from '$lib/stores/toast';
   import Toast from '$lib/components/Toasts/Toast.svelte';
-  import { isMobileDevice } from '$lib/helpers/system';
-  import MobileMenu from '$lib/components/Navigation/MobileMenu.svelte';
   import { onNavigate } from '$app/navigation';
   import TopNavigation from '$lib/components/Navigation/TopNavigation.svelte';
+  import SpeedDialNavigation from '$lib/components/Navigation/SpeedDialNavigation.svelte';
 
   $: currentToasts = $toasts; // Access the store value
 
@@ -30,13 +29,10 @@
 {/each}
 
 <div class="app-container w-screen px-4">
-  
   <slot></slot>
-
-  {#if isMobileDevice()}
-    <MobileMenu />
-  {/if}
 </div>
+
+<SpeedDialNavigation />
 
 <footer class="mb-12">
   <p>&copy; 2023 Pure Reactions</p>

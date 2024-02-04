@@ -2,10 +2,7 @@
     import { onMount } from 'svelte';
     import { auth } from '$lib/helpers/firebase';
     import { handlePrivateRoute } from '$lib/helpers/routing';
-    import { TOASTS } from '$lib/constants/toasts';
-    import { showToast } from '$lib/stores/toast';
-    import { GradientButton, Card } from 'flowbite-svelte';
-    import { goToRoute } from "$lib/helpers/routing";
+    import { Card } from 'flowbite-svelte';
 
     export let data;
 
@@ -34,6 +31,9 @@
       </Card>
       <Card class="m-auto" href="/my-reactions">
         See Your Pure Reactions
+      </Card>
+      <Card class="m-auto" href="/bookmark">
+        See Your Bookmarks
       </Card>
       <Card class="m-auto" href="/" on:click={() => data.handleUserAction('logout')}>
         Logout

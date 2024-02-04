@@ -7,3 +7,23 @@ export function isMobileDevice() {
     }
     return false;
 }
+
+export function copyToClipboard(text) {
+    // Create a temporary input element
+    const input = document.createElement('textarea');
+  
+    // Set the input value to the text to be copied
+    input.value = text;
+  
+    // Append the input element to the document
+    document.body.appendChild(input);
+  
+    // Select the text in the input element
+    input.select();
+  
+    // Execute the "copy" command to copy the selected text
+    document.execCommand('copy');
+  
+    // Remove the temporary input element
+    document.body.removeChild(input);
+  }
