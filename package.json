@@ -24,9 +24,11 @@
   "dependencies": {
     "@popperjs/core": "^2.11.8",
     "@svelteuidev/core": "^0.15.4",
+    "algoliasearch": "^4.22.1",
     "firebase": "^10.4.0",
     "flowbite": "^2.2.1",
     "flowbite-svelte": "^0.44.21",
+    "instantsearch.js": "^4.64.2",
     "netlify-identity-widget": "^1.9.2",
     "tailwind-merge": "^2.2.0"
   }

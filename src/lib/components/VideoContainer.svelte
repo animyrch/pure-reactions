@@ -3,6 +3,7 @@
     import DownTriangle from '$lib/icons/DownTriangle.svelte';
     import UpTriangle from '$lib/icons/UpTriangle.svelte';
     import { isMobileDevice } from '$lib/helpers/system';
+    import VideoAuthor from '$lib/components/VideoAuthor.svelte';
 
     export let videoAuthor;
     export let videoTitle;
@@ -37,9 +38,9 @@
         <p>{videoTitle}</p>
       {/if}
       {#if videoAuthor}
-        <div class="flex gap-2 m-1">
-          <p>{videoAuthor}</p>
-        </div>
+        <VideoAuthor
+          {videoAuthor}
+        />
       {/if}
     {/if}
     <div>

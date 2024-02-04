@@ -265,8 +265,6 @@
                         class="mb-8"
                     />
                 </button>
-                {originalVideoAuthor}
-                {originalVideoTitle}
                 <div class="reaction-buttons text-center m-2 h-24">
                     <ButtonGroup>
                         <Button

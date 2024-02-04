@@ -1,4 +1,6 @@
 <script>
+    import VideoAuthor from '$lib/components/VideoAuthor.svelte';
+
     export let reactionPageId;
     export let reactionVideoId;
     export let originalVideoId;
@@ -22,7 +24,11 @@
     <div class="flex gap-2">
         <p>{reactionVideoTitle || originalVideoTitle}</p>
     </div>
-    <p>{reactionVideoAuthor || originalVideoAuthor}</p>
+    {#if reactionVideoAuthor}
+        <VideoAuthor
+            videoAuthor={reactionVideoAuthor}
+        />
+    {/if}
 </div>
 <hr class="h-px my-8 bg-gray-200 border-0 dark:bg-gray-700">
 

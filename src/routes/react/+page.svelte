@@ -49,7 +49,7 @@
     };
 </script>
 
-<div class="max-w-96">
+<div class="max-w-96 m-auto">
     <div class="step-indicator-container mb-5">
         {#if createReactForm.currentStep}
         <StepIndicator

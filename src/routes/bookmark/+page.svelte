@@ -8,9 +8,11 @@
 <div>
     {#if $isLoggedIn}
         {#if $userExtraDataStore.userExtraData?.bookmarks}
-            {#each $userExtraDataStore.userExtraData?.bookmarks as reactionBinomeId}
-                <BookmarkListElement {reactionBinomeId} />
-            {/each}
+            <div class="flex gap-8 flex-wrap justify-center">
+                {#each $userExtraDataStore.userExtraData?.bookmarks as reactionBinomeId}
+                    <BookmarkListElement {reactionBinomeId} />
+                {/each}
+            </div>
         {/if}
     {:else}{handlePrivateRoute()}{/if}
 </div>

@@ -29,7 +29,7 @@
   <Toast {toast} key={toast.id} />
 {/each}
 
-<div class="app-container">
+<div class="app-container w-screen px-4">
   
   <slot></slot>
 

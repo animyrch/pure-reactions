@@ -11,7 +11,8 @@ import {
     query,
     where,
     serverTimestamp,
-    orderBy
+    orderBy,
+    or
 } from "firebase/firestore/lite";
 import {
     getAuth,
@@ -119,6 +120,27 @@ export const getUserReactions = async (userId) => {
         return reactions;
     } catch (error) {
         console.error('Error getting filtered documents: ', error);
+    }
+};
+export const getReactionsByReactorName = async (reactorName) => {
+    let reactions = [];
+    if (!reactorName) {
+        return reactions;
+    }
+    try {
+        const reactionsCollection = collection(db, COLLECTION_REACTION_BINOMES);
+        const queryRef = query(reactionsCollection,
+            where("reactionVideoAuthor", "==", reactorName),
+            orderBy('createdAt', 'desc')
+        );
+        const querySnapshot = await getDocs(queryRef);
+        reactions = querySnapshot.docs.map((doc) => ({
+            id: doc.id,
+            data: doc.data()
+        }));
+        return reactions;
+    } catch (error) {
+        console.error('Error getting reactor documents: ', error);
     }
 };
 
