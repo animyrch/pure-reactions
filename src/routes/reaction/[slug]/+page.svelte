@@ -460,7 +460,7 @@
   .videos-container {
     display: flex;
     flex-direction: column;
-    width: 100vw;
+    width: 100%;
   }
 
   /* Style for individual video iframes */

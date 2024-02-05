@@ -1,5 +1,4 @@
 <script>
-    import { Input, Button, Label } from 'flowbite-svelte';
     import { onMount } from 'svelte';
     import {
         auth,
@@ -10,6 +9,7 @@
     } from '$lib/helpers/firebase';
     import { showToast } from '$lib/stores/toast';
     import { TOASTS } from '$lib/constants/toasts';
+    import GenericInput from '../../../lib/components/GenericInput.svelte';
 
     let user;
     let newName;
@@ -70,20 +70,26 @@
     };
 </script>
 
-<div class="flex flex-col gap-4">
-    <div class="flex gap-4">
-      <Label for="new-name-input" class="flex-none block mb-2 self-center">Your Display Name:</Label>
-      <Input class="shrink" bind:value={newName} id="new-name-input" />
-      <Button class="submit-button flex-none" on:click={updateDisplayName}>Update Display Name</Button>
-    </div>
-    <div class="flex gap-4">
-      <Label for="new-email-input" class="flex-none block mb-2 self-center">Your Email:</Label>
-      <Input type="email" class="shrink" bind:value={newEmail} id="new-email-input" />
-      <Button class="submit-button flex-none" on:click={updateEmail}>Update Email</Button>
-    </div>
-    <div class="flex gap-4">
-      <Label for="new-password-input" class="flex-none block mb-2 self-center">Your Password:</Label>
-      <Input type="email" class="shrink" bind:value={newPassword} id="new-password-input" />
-      <Button class="submit-button flex-none" on:click={updatePassword}>Update Password</Button>
-    </div>
+<div class="flex flex-col gap-8">
+  <GenericInput
+    bind:value={newName}
+    inputLabel="Your Display Name:"
+    validateAction={updateDisplayName}
+    validateCallToAction="Update Display Name"
+    inputId="new-name-input"
+  />
+  <GenericInput
+    bind:value={newEmail}
+    inputLabel="Your Email:"
+    validateAction={updateEmail}
+    validateCallToAction="Update Email"
+    inputId="new-email-input"
+  />
+  <GenericInput
+    bind:value={newPassword}
+    inputLabel="Your Password:"
+    validateAction={updatePassword}
+    validateCallToAction="Update Password"
+    inputId="new-password-input"
+  />
 </div>

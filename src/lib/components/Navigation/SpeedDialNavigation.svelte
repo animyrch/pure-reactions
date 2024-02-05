@@ -4,10 +4,13 @@
     import SpeedDialOption from '$lib/components/Navigation/SpeedDialOption.svelte';
 	  import { page } from '$app/stores';
     import { copyToClipboard } from '$lib/helpers/system';
+    import { showToast } from '$lib/stores/toast';
+    import { TOASTS } from '$lib/constants/toasts';
 
     const copyCurrentUrl = () => {
       console.log($page.url.href);
       copyToClipboard($page.url.href);
+      showToast('Current URL copied to your clipboard. Now paste it anywhere and share with the world!', TOASTS.SUCCESS);
     };
 </script>
 

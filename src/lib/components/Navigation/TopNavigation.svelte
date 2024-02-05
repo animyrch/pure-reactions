@@ -4,7 +4,7 @@
 </script>
 
 <nav class="bg-white border-gray-200 dark:bg-gray-900">
-  <div class="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
+  <div class="flex flex-wrap items-center justify-between mx-auto py-4">
   <a href="/" class="flex items-center space-x-3 rtl:space-x-reverse">
     <enhanced:img src='$lib/public/pure-reactions.svg' class="h-8" alt="Pure Reactions" />
   </a>

@@ -20,7 +20,7 @@
   });
 </script>
 
-<header class="w-full">
+<header class="w-full px-4">
   <TopNavigation />
 </header>
 
@@ -28,7 +28,7 @@
   <Toast {toast} key={toast.id} />
 {/each}
 
-<div class="app-container w-screen px-4">
+<div class="app-container w-full px-4">
   <slot></slot>
 </div>
 
