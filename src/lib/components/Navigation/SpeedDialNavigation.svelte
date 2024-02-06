@@ -1,6 +1,13 @@
 <script>
     import { SpeedDial } from 'flowbite-svelte';
-    import { ShareNodesSolid, BookmarkSolid, HomeSolid, UserCircleSolid, SearchOutline } from 'flowbite-svelte-icons';
+    import {
+      ShareNodesSolid,
+      BookmarkSolid,
+      HomeSolid,
+      UserCircleSolid,
+      SearchOutline,
+      BellActiveAltSolid
+    } from 'flowbite-svelte-icons';
     import SpeedDialOption from '$lib/components/Navigation/SpeedDialOption.svelte';
 	  import { page } from '$app/stores';
     import { copyToClipboard } from '$lib/helpers/system';
@@ -38,6 +45,12 @@
         href="/account"
     >
       <UserCircleSolid />
+    </SpeedDialOption>
+    <SpeedDialOption
+        name="Follows"
+        href="/?sortBy=following"
+    >
+      <BellActiveAltSolid />
     </SpeedDialOption>
     <SpeedDialOption
         name="Bookmarks"

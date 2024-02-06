@@ -6,7 +6,7 @@
 </script>
 
 <SpeedDialButton
-    btnDefaultClass="w-[65px]"
+    btnDefaultClass="w-[65px] h-[45px]"
     {href}
     {name}
 >
