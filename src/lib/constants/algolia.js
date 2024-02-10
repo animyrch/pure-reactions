@@ -1,0 +1,1 @@
+export const ALGOLIA_REACTIONS_INDEX = "reactions-prod";

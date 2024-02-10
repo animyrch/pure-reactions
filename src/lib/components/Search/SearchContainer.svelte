@@ -11,7 +11,6 @@
     export let input = null;
     export let loadingMsg = `Searching...`;
     export let noResultMsg = (query) => `No results for '${query}'`;
-    export let placeholder = `Search`;
     export let query = ``;
     export let resultCounter = (hits) => hits.length > 0 ? `<span>Results: ${hits.length}<span>` : ``;
     export let searchKey;
@@ -65,7 +64,7 @@
      <form>
         <Input
             id="search"
-            placeholder="Enter a video title or a reactor name"
+            placeholder="Search a video or a reactor"
             size="lg"
             aria-label={ariaLabel}
             type="text"
