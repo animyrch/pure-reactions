@@ -1,5 +1,7 @@
-export const COLLECTION_REACTION_BINOMES = "reactions-prod";
-export const COLLECTION_USER_DATA = "userdata-prod";
+import { env } from '$env/dynamic/public';
+
+export const COLLECTION_REACTION_BINOMES = env.PUBLIC_FIREBASE_COLLECTION_REACTION_BINOMES;
+export const COLLECTION_USER_DATA = env.PUBLIC_FIREBASE_COLLECTION_USER_DATA;
 export const FIREBASE_CONFIG = {
     apiKey: "AIzaSyBqsnKIBnbRJqkpyOynZGLySf28AuqmOiE",
     authDomain: "pure-reactions.firebaseapp.com",
