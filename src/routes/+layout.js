@@ -15,7 +15,6 @@ export async function load() {
     if (browser && !!window) {
         // auth actions worked here
         const user = await checkUserSignInStatusWrapper();
-        console.log(user);
         currentUser.set(user);
         userEmail = user?.email;
         displayName = user?.displayName;

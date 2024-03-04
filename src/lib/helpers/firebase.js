@@ -372,7 +372,6 @@ export const getUserExtraData = async (userId) => {
         return {};
     }
     try {
-        console.log('COLLECTION_USER_DATA', COLLECTION_USER_DATA);
         const userExtraDataCollection = collection(db, COLLECTION_USER_DATA);
         const userExtraDataRef = doc(
             userExtraDataCollection,
