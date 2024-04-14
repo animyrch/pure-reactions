@@ -9,7 +9,6 @@
     updateFirebaseDocument,
     getReactionsToOriginalVideo
   } from '$lib/helpers/firebase';
-  import VideoContainer from "$lib/components/VideoContainer.svelte";
   import { extractYouTubeVideoId } from '$lib/helpers/youtube';
   import { currentUser } from '$lib/stores/user';
   import { userExtraDataStore } from '$lib/stores/userExtraData';
@@ -19,7 +18,9 @@
   import BookmarkManagement from "$lib/components/BookmarkManagement.svelte";
   import { GradientButton, Input, Label, Button } from 'flowbite-svelte';
   import { downloadBasicVideoDetails } from '$lib/helpers/youtube';
-  
+  import CreatorDetails from "$lib/components/Video/CreatorDetails.svelte";
+  import { ExpandSolid, MinimizeSolid } from 'flowbite-svelte-icons';
+
   export let data;
 
   $currentUser;
@@ -58,6 +59,20 @@
   let reactionVideoTitle;
   let originalVideoAuthor;
   let originalVideoTitle;
+  let isFullscreen;
+
+  // Check if window is defined (i.e., we're on the client side)
+  if (typeof window !== 'undefined') {
+    // Create a new URL object with the current URL
+    let url = new URL(window.location.href);
+
+    // Get the query parameters from the URL
+    let params = new URLSearchParams(url.search);
+
+    // Get the isFullscreen query parameter
+    isFullscreen = params.get('isFullscreen') === 'true';
+  }
+
 
   function loadYouTubeAPI() {
     const tag = document.createElement("script");
@@ -327,6 +342,31 @@
     await setIsUnpublished();
   };
 
+  const openWithFullscreen = () => {
+    setVideoScene(true);
+  };
+
+
+  const openWithHalfscreen = () => {
+    setVideoScene(false);
+  };
+
+  const setVideoScene = (newValue) => {
+    const url = new URL(window.location.href);
+
+    // Get the query parameters from the URL
+    const params = new URLSearchParams(url.search);
+
+    // Set the new query parameter
+    params.set('isFullscreen', newValue);
+
+    // Update the URL's query parameters
+    url.search = params.toString();
+
+    // Open the new URL in the same tab
+    window.location.href = url.toString();
+  };
+
   onMount(async () => {
     if (typeof YT === "undefined" || typeof YT.Player === "undefined") {
       loadYouTubeAPI();
@@ -355,42 +395,63 @@
   {#if isReactionMissing}
     <p>Warning: The reaction video id is missing. This reaction page won't be listed on the home page until the reaction video url is added below :</p>
   {/if}
-  {#if isUsersOwnVideo}
-    <div class="text-left m-2">
-    {#if canShowEditModeButton}
-      <GradientButton
-        on:click={enterEditMode}
-        color="pinkToOrange"
-      >
-        Edit Reaction
-      </GradientButton>
-    {/if}
-    {#if canShowCloseEditModeButton}
-      <GradientButton
-        on:click={closeEditMode}
-        color="pinkToOrange"
-      >
-        Finish Editing
-      </GradientButton>
-    {/if}
-    {#if !isPublished && !isReactionMissing}
-      <GradientButton
-        on:click={setIsPublished}
-        color="pinkToOrange"
-      >
-        Publish
-      </GradientButton>
-    {/if}
-    {#if isPublished}
-      <GradientButton
-        on:click={setIsUnpublished}
-        color="pinkToOrange"
-      >
-        Unpublish
-      </GradientButton>
-    {/if}
+  <div class="flex justify-between m-2">
+    {#if isUsersOwnVideo}
+    <div class="text-left">
+      {#if canShowEditModeButton}
+        <GradientButton
+          on:click={enterEditMode}
+          color="pinkToOrange"
+        >
+          Edit Reaction
+        </GradientButton>
+      {/if}
+      {#if canShowCloseEditModeButton}
+        <GradientButton
+          on:click={closeEditMode}
+          color="pinkToOrange"
+        >
+          Finish Editing
+        </GradientButton>
+      {/if}
+      {#if !isPublished && !isReactionMissing}
+        <GradientButton
+          on:click={setIsPublished}
+          color="pinkToOrange"
+        >
+          Publish
+        </GradientButton>
+      {/if}
+      {#if isPublished}
+        <GradientButton
+          on:click={setIsUnpublished}
+          color="pinkToOrange"
+        >
+          Unpublish
+        </GradientButton>
+      {/if}
+      </div>
+      {/if}
+    <div class="hidden md:block">
+      {#if isFullscreen}
+        <Button
+          size="md"
+          on:click={openWithHalfscreen}
+        >
+          <MinimizeSolid class="w-3.5 h-3.5 me-2" />
+          <span>Halfscreen</span>
+        </Button>
+      {:else}
+        <Button
+          size="md"
+          on:click={openWithFullscreen}
+        >
+          <ExpandSolid class="w-3.5 h-3.5 me-2" />
+          <span>Fullscreen</span>
+        </Button>
+      {/if}
     </div>
-  {/if}
+  </div>
   {#if $userExtraDataStore.userExtraData !== null && !isUsersOwnVideo}
   <div class="text-right m-2">
       <div>
@@ -408,21 +469,27 @@
       </div>
     </div>
   {/if}
-  <div class="videos-container">
-    <VideoContainer
-      videoAuthor={originalVideoAuthor}
-      videoTitle={originalVideoTitle}
-    >
-      <div id="player-original" class="video"/>
-    </VideoContainer>
-    {#if !isReactionMissing}
-      <VideoContainer
-        videoAuthor={reactionVideoAuthor}
-        videoTitle={reactionVideoTitle}
-      >
-        <div id="player-reaction" class="video"/>
-      </VideoContainer>
-    {/if}
+  {#if isFullscreen}
+    <!-- fullscreen -->
+    <div class="relative h-screen">
+      <div id="player-original" class="absolute top-0 h-screen"/>
+      <div id="player-reaction" class="absolute top-0 right-0 h-1/3-screen w-1/3"/>
+    </div>
+  {:else}
+    <!-- default -->
+    <div class="flex flex-col-reverse w-full md:flex-row">
+      <div id="player-original" class="h-1/2-screen"/>
+      <div id="player-reaction" class="h-1/2-screen"/>
+    </div>
+  {/if}
+
+  <div class="videos-information-container pt-4">
+    <CreatorDetails
+      originalVideoAuthor={originalVideoAuthor}
+      originalVideoTitle={originalVideoTitle}
+      reactionVideoAuthor={reactionVideoAuthor}
+      reactionVideoTitle={reactionVideoTitle}
+    />
   </div>
 
   <div class="flex flex-col gap-4">
@@ -464,11 +531,11 @@
     width: 100%;
   }
 
-  .videos-container {
+  /* .videos-container {
     display: flex;
-    flex-direction: column;
+    flex-direction: column-reverse;
     width: 100%;
-  }
+  } */
 
   /* Style for individual video iframes */
   .video {
