@@ -309,8 +309,15 @@
         currentConfigs[updatedTime.toFixed(1)] = currentConfigs[timeCode];
         delete currentConfigs[timeCode];
       });
+      const volumeConfigs = window.volumeConfigs;
+      Object.keys(volumeConfigs).forEach(async (timeCode) => {
+        const updatedTime = parseFloat(timeCode) + parseFloat(introBufferTime);
+        volumeConfigs[updatedTime.toFixed(1)] = volumeConfigs[timeCode];
+        delete volumeConfigs[timeCode];
+      });
       updateFirebaseDocument({
-        "reactionConfigs": currentConfigs
+        "reactionConfigs": currentConfigs,
+        "volumeConfigs": volumeConfigs
       });
     }
   }
