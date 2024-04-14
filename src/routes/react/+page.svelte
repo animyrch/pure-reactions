@@ -11,8 +11,7 @@
     const createReactForm = {
         currentStep: 1,
         steps: [
-            'Original Video Id',
-            'Recording platform'
+            'Original Video Id'
         ],
         originalVideoId: '',
         reactionVideoId: '',
@@ -29,18 +28,10 @@
     const onConfirmStep2Here = () => {
         goToRoute(`/backend?id=${extractYouTubeVideoId(createReactForm.originalVideoId)}&record=true`);
     };
-    const onConfirmStep3 = () => {
-        if (createReactForm.reactionVideoId) {
-            createReactForm.errors.missingReactionVideoId = false;
-            onConfirmStep();
-        } else {
-            createReactForm.errors.missingReactionVideoId = true;
-        }
-    };
     const onConfirmStep1 = () => {
         if (createReactForm.originalVideoId) {
             createReactForm.errors.missingOriginalVideoId = false;
-            onConfirmStep();
+            onConfirmStep2Own();
         } else {
             createReactForm.errors.missingOriginalVideoId = true;
         }
@@ -84,17 +75,6 @@
         <div class="text-center">
             <GradientButton on:click={onConfirmStep1} color="pinkToOrange">Confirm</GradientButton>
         </div>
-    {:else if  createReactForm.currentStep === 2}
-        <form>
-            <Label color={createReactForm.errors.missingOriginalVideoId ? "red" : undefined} class="mb-2">
-                <p>Will the reaction be recorded here or on your side?</p>
-                <p class="text-xs">(Your video will be synced with original video automatically even if you record yourself but cuts in the video will break this sync. Sync adjustment feature will come soon):</p>
-            </Label>
-            <div class="flex gap-1">
-                <GradientButton on:click={onConfirmStep2Own} color="pinkToOrange">I handle my own recording</GradientButton>
-                <GradientButton on:click={onConfirmStep2Here} color="pinkToOrange">I will record here and now</GradientButton>
-            </div>
-        </form>
     {/if}
     <div class="backwards-navigation-container mt-5">
         {#if createReactForm.currentStep !== 1 && createReactForm.currentStep !== 4}
