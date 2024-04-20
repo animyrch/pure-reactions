@@ -71,6 +71,11 @@
 
     // Get the isFullscreen query parameter
     isFullscreen = params.get('isFullscreen') === 'true';
+
+    // Check if the user is on a mobile device and the screen orientation is landscape
+    if (window.matchMedia("(orientation: landscape)").matches) {
+      isFullscreen = true;
+    }
   }
 
 
