@@ -483,8 +483,8 @@
   {:else}
     <!-- default -->
     <div class="flex flex-col-reverse w-full md:flex-row">
-      <div id="player-original" class="h-1/2-screen"/>
-      <div id="player-reaction" class="h-1/2-screen"/>
+      <div id="player-original" class="h-1/25-screen"/>
+      <div id="player-reaction" class="h-1/25-screen"/>
     </div>
   {/if}
 

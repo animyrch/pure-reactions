@@ -12,6 +12,7 @@ const config = {
       },
       height: {
         '1/2-screen': '50vh',
+        '1/25-screen': '40vh',
         '1/3-screen': '33vh',
       },
     },
