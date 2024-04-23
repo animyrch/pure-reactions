@@ -340,8 +340,8 @@
         });
       }
       updateFirebaseDocument({
-        "reactionConfigs": reactionConfigs,
-        "volumeConfigs": volumeConfigs
+        "reactionConfigs": reactionConfigs || {},
+        "volumeConfigs": volumeConfigs || {}
       });
     }
   }
