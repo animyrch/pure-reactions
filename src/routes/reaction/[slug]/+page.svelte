@@ -323,20 +323,24 @@
 
   const setIntroBufferTime = () => {
     if (window.playerConfigs && introBufferTime !== '0' && introBufferTime !== 0) {
-      const currentConfigs = window.playerConfigs;
-      Object.keys(currentConfigs).forEach(async (timeCode) => {
+      const reactionConfigs = window.playerConfigs;
+      if (reactionConfigs) {
+        Object.keys(reactionConfigs).forEach(async (timeCode) => {
         const updatedTime = parseFloat(timeCode) + parseFloat(introBufferTime);
-        currentConfigs[updatedTime.toFixed(1)] = currentConfigs[timeCode];
-        delete currentConfigs[timeCode];
+        reactionConfigs[updatedTime.toFixed(1)] = reactionConfigs[timeCode];
+        delete reactionConfigs[timeCode];
       });
+      }
       const volumeConfigs = window.volumeConfigs;
-      Object.keys(volumeConfigs).forEach(async (timeCode) => {
-        const updatedTime = parseFloat(timeCode) + parseFloat(introBufferTime);
-        volumeConfigs[updatedTime.toFixed(1)] = volumeConfigs[timeCode];
-        delete volumeConfigs[timeCode];
-      });
+      if (volumeConfigs) {
+        Object.keys(volumeConfigs).forEach(async (timeCode) => {
+          const updatedTime = parseFloat(timeCode) + parseFloat(introBufferTime);
+          volumeConfigs[updatedTime.toFixed(1)] = volumeConfigs[timeCode];
+          delete volumeConfigs[timeCode];
+        });
+      }
       updateFirebaseDocument({
-        "reactionConfigs": currentConfigs,
+        "reactionConfigs": reactionConfigs,
         "volumeConfigs": volumeConfigs
       });
     }
