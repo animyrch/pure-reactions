@@ -12,11 +12,11 @@
 
 <a href={`/reaction/${reactionPageId}`}>
     <div class="thumbnails-container">
-        <div class="reaction-thumbnail-container">
-            <img src={`https://img.youtube.com/vi/${reactionVideoId}/hqdefault.jpg`} alt="Video Thumbnail">
-        </div>
         <div class="original-thumbnail-container">
             <img src={`https://img.youtube.com/vi/${originalVideoId}/hqdefault.jpg`} alt="Video Thumbnail">
+        </div>
+        <div class="reaction-thumbnail-container">
+            <img src={`https://img.youtube.com/vi/${reactionVideoId}/hqdefault.jpg`} alt="Video Thumbnail">
         </div>
     </div>
 </a>
@@ -36,12 +36,12 @@
     .thumbnails-container {
         position: relative;
     }
-    .reaction-thumbnail-container img {
+    .original-thumbnail-container img {
         width: 100%;
         object-fit: contain;
         border: solid 1px black;
     }
-    .original-thumbnail-container img {
+    .reaction-thumbnail-container img {
         border: solid 1px white;
         border-top: black;
         object-fit: contain;
@@ -49,5 +49,6 @@
         position: absolute;
         z-index: 2;
         top: 0;
+        right: 0;
     }
 </style>
