@@ -70,12 +70,7 @@
     let params = new URLSearchParams(url.search);
 
     // Get the isFullscreen query parameter
-    isFullscreen = params.get('isFullscreen') === 'true';
-
-    // Check if the user is on a mobile device and the screen orientation is landscape
-    if (window.matchMedia("(orientation: landscape)").matches) {
-      isFullscreen = true;
-    }
+    isFullscreen = params.get('isFullscreen') !== 'false';
   }
 
 
@@ -539,12 +534,6 @@
     margin: 0;
     width: 100%;
   }
-
-  /* .videos-container {
-    display: flex;
-    flex-direction: column-reverse;
-    width: 100%;
-  } */
 
   /* Style for individual video iframes */
   .video {
