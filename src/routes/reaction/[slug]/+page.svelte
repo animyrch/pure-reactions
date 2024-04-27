@@ -70,7 +70,7 @@
     let params = new URLSearchParams(url.search);
 
     // Get the isFullscreen query parameter
-    isFullscreen = params.get('isFullscreen') !== 'false';
+    isFullscreen = params.get('isFullscreen') === 'true';
   }
 
 

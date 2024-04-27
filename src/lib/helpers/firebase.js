@@ -144,6 +144,27 @@ export const getReactionsByReactorName = async (reactorName) => {
     }
 };
 
+export const getReactionsByCreatorName = async (creatorName) => {
+    let reactions = [];
+    if (!creatorName) {
+        return reactions;
+    }
+    try {
+        const reactionsCollection = collection(db, COLLECTION_REACTION_BINOMES);
+        const queryRef = query(reactionsCollection,
+            where("originalVideoAuthor", "==", creatorName),
+            orderBy('createdAt', 'desc')
+        );
+        const querySnapshot = await getDocs(queryRef);
+        reactions = querySnapshot.docs.map((doc) => ({
+            id: doc.id,
+            data: doc.data()
+        }));
+        return reactions;
+    } catch (error) {
+        console.error('Error getting creator documents: ', error);
+    }
+};
 export const getReactionsToOriginalVideo = async (originalVideoId, exceptReactionVideoId) => {
     let reactions = [];
     if (!originalVideoId) {

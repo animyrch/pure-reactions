@@ -1,5 +1,6 @@
 <script>
     import { List, Li } from 'flowbite-svelte';
+    import VideoAuthor from '../VideoAuthor.svelte';
 
     export let originalVideoTitle;
     export let originalVideoAuthor;
@@ -16,10 +17,13 @@
             </div>
             <div class="flex-1 min-w-0">
                 {#if originalVideoTitle}
-                     <p class="text-sm font-medium text-gray-900 truncate dark:text-white">{originalVideoTitle}</p>
+                     <p class="text-sm font-bold text-gray-800 truncate dark:text-white">{originalVideoTitle}</p>
                 {/if}
                 {#if originalVideoAuthor}
-                     <p class="text-sm text-gray-500 truncate dark:text-gray-400">{originalVideoAuthor}</p>
+                     <VideoAuthor
+                        videoAuthor={originalVideoAuthor}
+                        showLinks
+                     />
                 {/if}
             </div>
         </div>
@@ -32,10 +36,14 @@
             </div>
             <div class="flex-1 min-w-0">
                 {#if reactionVideoTitle}
-                     <p class="text-sm font-medium text-gray-900 truncate dark:text-white">{reactionVideoTitle}</p>
+                     <p class="text-sm font-bold text-gray-800 truncate dark:text-white">{reactionVideoTitle}</p>
                 {/if}
                 {#if reactionVideoAuthor}
-                     <p class="text-sm text-gray-500 truncate dark:text-gray-400">{reactionVideoAuthor}</p>
+                    <VideoAuthor
+                        videoAuthor={reactionVideoAuthor}
+                        isReactor
+                        showLinks
+                    />
                 {/if}
             </div>
         </div>
