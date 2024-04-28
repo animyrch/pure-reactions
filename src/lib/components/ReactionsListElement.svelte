@@ -9,7 +9,6 @@
     const reactionVideoTitle = reaction?.data?.reactionVideoTitle;
     const reactionVideoAuthor = reaction?.data?.reactionVideoAuthor;
     const originalVideoTitle = reaction?.data?.originalVideoTitle;
-    const originalVideoAuthor = reaction?.data?.originalVideoAuthor;
 </script>
 
 <div>
@@ -20,6 +19,5 @@
         {reactionVideoTitle}
         {originalVideoTitle}
         {reactionVideoAuthor}
-        {originalVideoAuthor}
     />
 </div>

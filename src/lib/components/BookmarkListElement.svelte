@@ -11,7 +11,6 @@
     let reactionVideoTitle;
     let reactionVideoAuthor;
     let originalVideoTitle;
-    let originalVideoAuthor;
 
     const loadReaction = async (reactionBinomeId) => {
         const reaction = await getReaction(reactionBinomeId);
@@ -20,7 +19,6 @@
         originalVideoId = reaction?.originalVideoId;
         reactionVideoAuthor = reaction?.reactionVideoAuthor;
         reactionVideoTitle = reaction?.reactionVideoTitle;
-        originalVideoAuthor = reaction?.originalVideoAuthor;
         originalVideoTitle = reaction?.originalVideoTitle;
     };
 
@@ -38,7 +36,6 @@
             {reactionVideoTitle}
             {originalVideoTitle}
             {reactionVideoAuthor}
-            {originalVideoAuthor}
         />
     {/if}
 </div>

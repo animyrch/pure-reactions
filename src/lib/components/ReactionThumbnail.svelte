@@ -7,7 +7,6 @@
     export let reactionVideoTitle;
     export let originalVideoTitle;
     export let reactionVideoAuthor;
-    export let originalVideoAuthor;
 </script>
 
 <a href={`/reaction/${reactionPageId}`}>
@@ -27,6 +26,7 @@
     {#if reactionVideoAuthor}
         <VideoAuthor
             videoAuthor={reactionVideoAuthor}
+            isReactor
         />
     {/if}
 </div>
