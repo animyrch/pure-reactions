@@ -11,8 +11,7 @@
 <button
     on:click={handleClick}
 >
-    <div class="flex gap-1 content-center py-1">
-    <span>{buttonText}</span>
+    <div title="{buttonText}" class="flex gap-1 content-center">
     <slot></slot>
     </div>
 </button>

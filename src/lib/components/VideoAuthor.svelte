@@ -1,12 +1,10 @@
 <script>
-import {
-    YoutubeSolid
-} from 'flowbite-svelte-icons';
+import { YoutubeSolid } from 'flowbite-svelte-icons';
     import PurePureactionsLogo from './PurePureactionsLogo.svelte';
 
 export let videoAuthor;
 export let isReactor = false;
-export let showLinks = false;
+export let showLinks = true;
 
 const videoAuthorLink = isReactor ? `/reactor/${videoAuthor}` : `/creator/${videoAuthor}`;
 const PureReactionsPageMessage = isReactor ? 'Show Reactor Page' : 'Show Creator Page';

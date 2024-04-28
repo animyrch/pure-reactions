@@ -1,8 +1,8 @@
 <script>
-    import Bookmark from "$lib/icons/Bookmark.svelte";
     import { userExtraDataStore } from '$lib/stores/userExtraData';
     import { currentUser } from '$lib/stores/user';
     import ReactionAction from "$lib/components/ReactionAction.svelte";
+    import { BookmarkOutline, BookmarkSolid } from 'flowbite-svelte-icons';
 
     export let bookmarks;
     export let slug;
@@ -16,22 +16,20 @@
     };
 </script>
 
-<div>
+<div class="h-4">
     {#if bookmarks?.includes(slug)}
         <ReactionAction
             buttonText="Remove from bookmarks"
             on:change={onUnbookmarkReactionBinome}
         >
-            <Bookmark
-            active={true}
-            />
+            <BookmarkSolid class="h-4 text-red-700" />
         </ReactionAction>
     {:else}
         <ReactionAction
             buttonText="Add this reaction to my bookmarks"
             on:change={onBookmarkReactionBinome}
-        >
-            <Bookmark />
+        >           
+            <BookmarkOutline class="h-4 text-gray-800" />
         </ReactionAction>
     {/if}
 </div>

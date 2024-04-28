@@ -5,7 +5,16 @@
     import EmptyBell from '$lib/icons/EmptyBell.svelte';
     import { userExtraDataStore } from '$lib/stores/userExtraData';
     import { currentUser } from '$lib/stores/user';
-
+    import {
+      BellActiveAltSolid,
+      BellActiveAltOutline,
+      BellActiveOutline,
+      BellActiveSolid,
+      BellRingOutline,
+      BellOutline,
+      BellRingSolid,
+      BellSolid
+    } from 'flowbite-svelte-icons';
     export let reactionCreator;
     export let follows;
     export let reactorId;
@@ -24,7 +33,7 @@
 {#if follows?.includes(reactorId)}
     <div
         role="alert"
-        class="inline"
+        class="inline h-4"
         id="follow-creator-button"
         data-popover-target="popover-bottom"
         data-popover-placement="bottom"
@@ -33,7 +42,7 @@
         <ReactionAction
             buttonText={`Unfollow ${reactionCreator}`}
         >
-            <FullBell />
+            <BellActiveAltSolid class="h-4 text-red-700"/>
         </ReactionAction>
         <Popover
             {placement} 
@@ -54,7 +63,7 @@
         buttonText={`Follow the reactions of ${reactionCreator}`}
         on:change={onFollowReactor}
     >
-        <EmptyBell />
+        <BellOutline class="h-4" />
     </ReactionAction>
     {/if}
 {/if}

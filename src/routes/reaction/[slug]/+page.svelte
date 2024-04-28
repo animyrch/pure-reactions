@@ -456,23 +456,6 @@
       {/if}
     </div>
   </div>
-  {#if $userExtraDataStore.userExtraData !== null && !isUsersOwnVideo}
-  <div class="text-right m-2">
-      <div>
-        <BookmarkManagement
-          bookmarks={$userExtraDataStore.userExtraData?.bookmarks}
-          slug={pageSlug}
-        />
-      </div>
-      <div>
-        <FollowManagement
-          reactionCreator={reactionVideoAuthor}
-          {reactorId}
-          follows={$userExtraDataStore.userExtraData?.follows}
-        />
-      </div>
-    </div>
-  {/if}
   {#if isFullscreen}
     <!-- fullscreen -->
     <div class="relative h-screen">
@@ -493,6 +476,9 @@
       originalVideoTitle={originalVideoTitle}
       reactionVideoAuthor={reactionVideoAuthor}
       reactionVideoTitle={reactionVideoTitle}
+      pageSlug={pageSlug}
+      isUsersOwnVideo={isUsersOwnVideo}
+      reactorId={reactorId}
     />
   </div>
 
