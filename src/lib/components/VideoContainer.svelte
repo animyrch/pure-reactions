@@ -1,22 +1,12 @@
 <script>
     import { onMount } from 'svelte';
-    import DownTriangle from '$lib/icons/DownTriangle.svelte';
-    import UpTriangle from '$lib/icons/UpTriangle.svelte';
     import { isMobileDevice } from '$lib/helpers/system';
-    import VideoAuthor from '$lib/components/VideoAuthor.svelte';
-
-    export let videoAuthor;
-    export let videoTitle;
 
     let shouldHideVideoDetails;
     
     onMount(async () => {
       shouldHideVideoDetails = !!isMobileDevice();
     });
-
-    const toggleVideoDetailsButton = () => {
-      shouldHideVideoDetails = !shouldHideVideoDetails;
-    };
 </script>
 
 <div class="video-container">

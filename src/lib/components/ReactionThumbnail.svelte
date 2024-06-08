@@ -12,10 +12,10 @@
 <a href={`/reaction/${reactionPageId}`}>
     <div class="thumbnails-container">
         <div class="original-thumbnail-container">
-            <img src={`https://img.youtube.com/vi/${originalVideoId}/hqdefault.jpg`} alt="Video Thumbnail">
+            <img src={`https://img.youtube.com/vi/${originalVideoId}/mqdefault.jpg`} alt="Video Thumbnail">
         </div>
         <div class="reaction-thumbnail-container">
-            <img src={`https://img.youtube.com/vi/${reactionVideoId}/hqdefault.jpg`} alt="Video Thumbnail">
+            <img src={`https://img.youtube.com/vi/${reactionVideoId}/mqdefault.jpg`} alt="Video Thumbnail">
         </div>
     </div>
 </a>
