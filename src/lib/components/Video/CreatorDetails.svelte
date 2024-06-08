@@ -4,6 +4,7 @@
     import BookmarkManagement from '../BookmarkManagement.svelte';
     import { userExtraDataStore } from '$lib/stores/userExtraData';
     import FollowManagement from "$lib/components/FollowManagement.svelte";
+    import RateVideo from '$lib/components/Video/RateVideo.svelte';
 
     export let originalVideoTitle;
     export let originalVideoAuthor;
@@ -12,6 +13,8 @@
     export let reactorId;
     export let pageSlug;
     export let isUsersOwnVideo;
+    export let reactionVideoId;
+    export let originalVideoId;
 </script>
 
 <List tag="ul" list="none" class="max-w-lg divide-y divide-gray-200 dark:divide-gray-700">
@@ -22,9 +25,16 @@
                 <p class="text-sm font-medium text-gray-900 truncate dark:text-white">Original By:</p>
             </div>
             <div class="flex-1 min-w-0">
-                {#if originalVideoTitle}
-                     <p class="text-sm font-bold text-gray-800 truncate dark:text-white">{originalVideoTitle}</p>
-                {/if}
+                <div class="flex gap-4">
+                    {#if originalVideoTitle}
+                        <p class="text-sm font-bold text-gray-800 truncate dark:text-white">
+                            {originalVideoTitle}
+                        </p>
+                       <RateVideo
+                           videoId={originalVideoId}
+                       />
+                    {/if}
+                </div>
                 {#if originalVideoAuthor}
                      <VideoAuthor
                         videoAuthor={originalVideoAuthor}
@@ -44,6 +54,9 @@
                 {#if reactionVideoTitle}
                     <div class="flex items-center gap-4">
                         <p class="text-sm font-bold text-gray-800 truncate dark:text-white">{reactionVideoTitle}</p>
+                        <RateVideo
+                            videoId={reactionVideoId}
+                        />
                         {#if $userExtraDataStore.userExtraData !== null && !isUsersOwnVideo}
                             <BookmarkManagement
                                 bookmarks={$userExtraDataStore.userExtraData?.bookmarks}

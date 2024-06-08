@@ -11,11 +11,8 @@
   } from '$lib/helpers/firebase';
   import { extractYouTubeVideoId } from '$lib/helpers/youtube';
   import { currentUser } from '$lib/stores/user';
-  import { userExtraDataStore } from '$lib/stores/userExtraData';
   import ReactionsListElement from "$lib/components/ReactionsListElement.svelte";
-  import FollowManagement from "$lib/components/FollowManagement.svelte";
   import { page } from '$app/stores';
-  import BookmarkManagement from "$lib/components/BookmarkManagement.svelte";
   import { GradientButton, Input, Label, Button } from 'flowbite-svelte';
   import { downloadBasicVideoDetails } from '$lib/helpers/youtube';
   import CreatorDetails from "$lib/components/Video/CreatorDetails.svelte";
@@ -474,8 +471,10 @@
     <CreatorDetails
       originalVideoAuthor={originalVideoAuthor}
       originalVideoTitle={originalVideoTitle}
+      originalVideoId={originalVideoId}
       reactionVideoAuthor={reactionVideoAuthor}
       reactionVideoTitle={reactionVideoTitle}
+      reactionVideoId={reactionVideoId}
       pageSlug={pageSlug}
       isUsersOwnVideo={isUsersOwnVideo}
       reactorId={reactorId}
