@@ -6,11 +6,13 @@
 	import { getReactionsByIds } from '$lib/helpers/firebase';
 
     let reactions = [];
+    let isLoading = false;
+
     const loadReactions = async () => {
+        isLoading = true; 
 		reactions = []
-		setTimeout(async () => {
-			reactions = await getReactionsByIds($userExtraDataStore.userExtraData?.bookmarks);
-		}, 100);
+        reactions = await getReactionsByIds($userExtraDataStore.userExtraData?.bookmarks);
+        isLoading = false; 
 	};
     $: if ($userExtraDataStore.userExtraData?.bookmarks) {
         loadReactions();
@@ -20,7 +22,11 @@
 <div>
     {#if $isLoggedIn}
         {#if $userExtraDataStore.userExtraData?.bookmarks}
-            <ReactionsList {reactions}/>
+            {#if isLoading}
+                <div>Loading...</div>
+            {:else}
+                <ReactionsList {reactions}/>
+            {/if}
         {/if}
     {:else}{handlePrivateRoute()}{/if}
 </div>
