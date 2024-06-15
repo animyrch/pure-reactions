@@ -4,8 +4,11 @@
     import ReactionAction from "$lib/components/ReactionAction.svelte";
     import { BookmarkOutline, BookmarkSolid } from 'flowbite-svelte-icons';
 
-    export let bookmarks;
     export let slug;
+    export let isText = false;
+
+    let bookmarks;
+    $: bookmarks = $userExtraDataStore.userExtraData?.bookmarks;
 
     const onBookmarkReactionBinome = () => {
         userExtraDataStore.addBookmark($userExtraDataStore.userExtraData, $currentUser?.uid, slug);
@@ -22,14 +25,22 @@
             buttonText="Remove from bookmarks"
             on:change={onUnbookmarkReactionBinome}
         >
-            <BookmarkSolid class="h-4 text-red-700" />
+            {#if isText}
+                <span>Remove Bookmark</span>
+            {:else}
+                <BookmarkSolid class="h-4 text-red-700" />
+            {/if}
         </ReactionAction>
     {:else}
         <ReactionAction
             buttonText="Add this reaction to my bookmarks"
             on:change={onBookmarkReactionBinome}
-        >           
-            <BookmarkOutline class="h-4 text-gray-800" />
+        >
+            {#if isText}
+                <span>Add Bookmark</span>
+            {:else}
+                <BookmarkOutline class="h-4 text-gray-800" />
+            {/if}
         </ReactionAction>
     {/if}
 </div>

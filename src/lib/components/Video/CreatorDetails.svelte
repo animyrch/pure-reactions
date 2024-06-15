@@ -59,7 +59,6 @@
                         />
                         {#if $userExtraDataStore.userExtraData !== null && !isUsersOwnVideo}
                             <BookmarkManagement
-                                bookmarks={$userExtraDataStore.userExtraData?.bookmarks}
                                 slug={pageSlug}
                             />
                         {/if}

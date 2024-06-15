@@ -1,7 +1,6 @@
 <script>
     import VideoAuthor from '$lib/components/VideoAuthor.svelte';
-    import { DotsVerticalOutline } from 'flowbite-svelte-icons';
-    import { Popover, Button } from 'flowbite-svelte';
+    import ThumbnailContext from '$lib/components/Video/ThumbnailContext.svelte';
 
     export let reactionPageId;
     export let reactionVideoId;
@@ -43,21 +42,10 @@
     <div
         class="flex-shrink-0"
     >
-        <button
-            id="{`offset-${reactionPageId}`}"
-        >
-            <DotsVerticalOutline size="md"/>
-        </button>
-        <Popover class="w-42 text-sm font-light z-100" placement="left" triggeredBy="{`#offset-${reactionPageId}`}" trigger="click">
-            <ul>
-                <li class="flex items-center mb-1 z-100">
-                    <a target="_blank" href={`https://www.youtube.com/${reactionVideoAuthor}`}>Open Youtube Page</a>
-                </li>
-                <li class="flex items-center mb-1">
-                    <a href={`reactor/${reactionVideoAuthor}`}>Open Reactor Page</a>
-                </li>
-            </ul>
-        </Popover>
+        <ThumbnailContext
+            reactionPageId={reactionPageId}
+            reactionVideoAuthor={reactionVideoAuthor}
+        />
     </div>
 </div>
 <hr class="h-px my-8 bg-gray-200 border-0 dark:bg-gray-700">
