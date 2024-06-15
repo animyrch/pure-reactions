@@ -119,7 +119,7 @@ export const getUserReactions = async (userId) => {
         }));
         return reactions;
     } catch (error) {
-        console.error('Error getting filtered documents: ', error);
+        console.error('Error getting documents filtered by user: ', error);
     }
 };
 export const getReactionsByReactorName = async (reactorName) => {
@@ -185,7 +185,7 @@ export const getReactionsToOriginalVideo = async (originalVideoId, exceptReactio
         }));
         return reactions;
     } catch (error) {
-        console.error('Error getting filtered documents: ', error);
+        console.error('Error getting documents filtered by original video: ', error);
     }
 };
 
@@ -205,6 +205,35 @@ export const getReaction = async (reactionId) => {
     } catch (error) {
         console.error('Error getting reaction: ', error);
     }
+};
+
+export const getReactionsByIds = async (reactionIds) => {
+    let reactions = [];
+    if (!reactionIds || !reactionIds.length) {
+        return reactions;
+    }
+    try {
+        const reactionsCollection = collection(db, COLLECTION_REACTION_BINOMES); // replace 'reactions' with your collection name
+        const reactions = [];
+    
+        for (const id of reactionIds) {
+            const reactionRef = doc(
+                reactionsCollection,
+                id
+            );
+            const reactionSnapshot = await getDoc(reactionRef);
+            if (reactionSnapshot.exists()) {
+                const reactionFound = { id: reactionSnapshot.id, data: { ...reactionSnapshot.data() } };
+                reactions.push(reactionFound);
+            } else {
+                return {};
+            }
+        }
+        return reactions;
+    } catch (error) {
+        console.error('Error getting documents filtered by reaction video ids: ', error);
+    }
+    return reactions;
 };
 
 export const createUserWithEmailAndPasswordWrapper = async (email, password) => {
@@ -401,9 +430,9 @@ export const getUserExtraData = async (userId) => {
         const userExtraDataSnapshot = await getDoc(userExtraDataRef);
         if (userExtraDataSnapshot.exists()) {
             return userExtraDataSnapshot.data();
-          } else {
+        } else {
             return {};
-          }
+        }
     } catch (error) {
         console.error("Error getting userdata: ", error);
     }
