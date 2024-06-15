@@ -47,6 +47,7 @@
   let isUsersOwnVideo = false;
   let canShowCloseEditModeButton = false;
   let introBufferTime = 0;
+  let soundLevel;
   let originalVideoId;
   let reactionVideoId;
   let reactorId;
@@ -230,6 +231,7 @@
     reactionVideoTitle = obtainedData?.reactionVideoTitle;
     originalVideoAuthor = obtainedData?.originalVideoAuthor;
     originalVideoTitle = obtainedData?.originalVideoTitle;
+    soundLevel = obtainedData?.volumeConfigs?.[0]?.volume || 100;
 
     originalVideoTitle
     if (playerOriginal) {
@@ -339,6 +341,22 @@
       });
     }
   }
+
+  const setSoundLevel = () => {
+    let volumeConfigs = window.volumeConfigs;
+    if (!volumeConfigs) {
+      volumeConfigs = [];
+      volumeConfigs[0] = { volume: 100 };
+    }
+    if (volumeConfigs) {
+      Object.keys(volumeConfigs).forEach(async (timeCode) => {
+        volumeConfigs[timeCode] = { volume: volumeConfigs[timeCode].volume * (soundLevel / 100) };
+      });
+    }
+    updateFirebaseDocument({
+        "volumeConfigs": volumeConfigs
+    });
+  };
 
   const editActionEntryPoint = async (callback) => {
     await callback();
@@ -496,6 +514,13 @@
         <Label for="buffer-time-input" class="flex-none block mb-2 self-center">Set buffer time for intro:</Label>
         <Input class="shrink" bind:value={introBufferTime} id="buffer-time-input" />
         <Button class="submit-button flex-none" on:click={() => editActionEntryPoint(setIntroBufferTime)}>Modify reaction times</Button>
+      </div>
+    {/if}
+    {#if isEditModeOn}
+      <div class="flex gap-4">
+        <Label for="sound-level-input" class="flex-none block mb-2 self-center">Adjust sound level for original video:</Label>
+        <input type="range" min="0" max="200" bind:value={soundLevel} id="sound-level-input" class="shrink" />
+        <Button class="submit-button flex-none" on:click={() => editActionEntryPoint(setSoundLevel)}>Set sound level</Button>
       </div>
     {/if}
   </div>
