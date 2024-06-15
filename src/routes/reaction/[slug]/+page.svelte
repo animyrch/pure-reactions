@@ -94,6 +94,7 @@
   }
   function handleOriginalVideoVolume(reactionCurrentTime) {
     const originalVideoNewVolume = getCurrentVolumeFromVolumeConfigs(reactionCurrentTime, window.volumeConfigs);
+    console.log(originalVideoNewVolume, 'originalVideoNewVolume');
     if (!changingVolume && currentVolumeOriginalVideo !== originalVideoNewVolume) {
       changingVolume = true;
       setVolumeForOriginalVideo(originalVideoNewVolume);
@@ -231,7 +232,7 @@
     reactionVideoTitle = obtainedData?.reactionVideoTitle;
     originalVideoAuthor = obtainedData?.originalVideoAuthor;
     originalVideoTitle = obtainedData?.originalVideoTitle;
-    soundLevel = obtainedData?.volumeConfigs?.[0]?.volume || 100;
+    soundLevel = obtainedData?.volumeConfigs?.['0.0']?.volume || 100;
 
     originalVideoTitle
     if (playerOriginal) {
@@ -344,17 +345,16 @@
 
   const setSoundLevel = () => {
     let volumeConfigs = window.volumeConfigs;
-    if (!volumeConfigs) {
-      volumeConfigs = [];
-      volumeConfigs[0] = { volume: 100 };
-    }
+    const newVolumeConfigs = new Map();
+    newVolumeConfigs.set('0.0', { volume: 100 * (soundLevel / 100) });
     if (volumeConfigs) {
       Object.keys(volumeConfigs).forEach(async (timeCode) => {
-        volumeConfigs[timeCode] = { volume: volumeConfigs[timeCode].volume * (soundLevel / 100) };
+        newVolumeConfigs.set(timeCode, { volume: volumeConfigs[timeCode].volume * (soundLevel / 100) });
       });
     }
+    const volumeConfigsObject = Object.fromEntries(newVolumeConfigs);
     updateFirebaseDocument({
-        "volumeConfigs": volumeConfigs
+        "volumeConfigs": volumeConfigsObject
     });
   };
 
