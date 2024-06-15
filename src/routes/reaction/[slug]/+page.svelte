@@ -47,7 +47,7 @@
   let isUsersOwnVideo = false;
   let canShowCloseEditModeButton = false;
   let introBufferTime = 0;
-  let soundLevel;
+  let soundLevel = 100;
   let originalVideoId;
   let reactionVideoId;
   let reactorId;
@@ -232,7 +232,6 @@
     reactionVideoTitle = obtainedData?.reactionVideoTitle;
     originalVideoAuthor = obtainedData?.originalVideoAuthor;
     originalVideoTitle = obtainedData?.originalVideoTitle;
-    soundLevel = obtainedData?.volumeConfigs?.['0.0']?.volume || 100;
 
     originalVideoTitle
     if (playerOriginal) {
