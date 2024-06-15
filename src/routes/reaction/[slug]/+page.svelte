@@ -57,6 +57,7 @@
   let originalVideoAuthor;
   let originalVideoTitle;
   let isFullscreen;
+  let isLoading = true;
 
   // Check if window is defined (i.e., we're on the client side)
   if (typeof window !== 'undefined') {
@@ -111,6 +112,7 @@
   }
   // 4. The API will call this function when the video player is ready.
   function onPlayerReady(event) {
+    isLoading = false;
     console.log("player ready");
   }
   const startVideos = () => {
@@ -391,8 +393,8 @@
     unsubscribe();
   });
 </script>
-
-<div class="website-inner-container">
+<div class={!isLoading ? 'hidden' : ''}>Loading...</div>
+<div class="{isLoading ? 'hidden' : ''} website-inner-container">
   {#if isReactionMissing}
     <p>Warning: The reaction video id is missing. This reaction page won't be listed on the home page until the reaction video url is added below :</p>
   {/if}

@@ -10,6 +10,7 @@
 
 	// Initialize Firebase
 	let reactions = [];
+	let isLoading = false;
 
 	$: {
 		const queryParamsSize = $page.url.searchParams.size;
@@ -17,12 +18,14 @@
 	}
 
 	const loadReactions = async () => {
+		isLoading = true;
 		reactions = []
 		setTimeout(async () => {
 			const sortBy = $page.url.searchParams.get('sortBy') || SORTINGS.NEW;
 			const follows = $userExtraDataStore.userExtraData?.follows;
 			reactions = await getAllReactions(sortBy, follows);
-		}, 100);
+			isLoading = false;
+		}, 1);
 	};
 </script>
 		
@@ -30,5 +33,9 @@
 	{#if $page.route.id === '/'}
 		<ReactionsSorting />
 	{/if}
-	<ReactionsList {reactions}/>
+	{#if isLoading}
+    	<div>Loading...</div>
+	{:else}
+		<ReactionsList {reactions}/>
+	{/if}
 </div>
