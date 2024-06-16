@@ -34,6 +34,7 @@ import {
 } from "$lib/constants/firebase";
 import { showToast } from '$lib/stores/toast';
 import { SORTINGS } from '$lib/constants/sortings';
+import { FILTERS } from '$lib/constants/filters';
 
 // Initialize Firebase
 const app = initializeApp(FIREBASE_CONFIG);
@@ -101,18 +102,23 @@ export const getAllReactions = async (sortBy, follows) => {
     return reactions;
 };
 
-export const getUserReactions = async (userId) => {
+export const getUserReactions = async (userId, filter) => {
     let reactions = [];
     if (!userId) {
         return reactions;
     }
     try {
         const reactionsCollection = collection(db, COLLECTION_REACTION_BINOMES);
-        const queryRef = query(reactionsCollection,
+        let baseQuery = query(reactionsCollection,
             where("reactorId", "==", userId),
             orderBy('createdAt', 'desc')
         );
-        const querySnapshot = await getDocs(queryRef);
+        if (filter === FILTERS.PUBLISHED) {
+            baseQuery = query(baseQuery, where('isPublished', '==', true));
+        } else if (filter === FILTERS.UNPUBLISHED) {
+            baseQuery = query(baseQuery, where('isPublished', '==', false));
+        }
+        const querySnapshot = await getDocs(baseQuery);
         reactions = querySnapshot.docs.map((doc) => ({
             id: doc.id,
             data: doc.data()
