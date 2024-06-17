@@ -12,7 +12,9 @@ import {
     where,
     serverTimestamp,
     orderBy,
-    or
+    or,
+    limit,
+    startAfter
 } from "firebase/firestore/lite";
 import {
     getAuth,
@@ -100,6 +102,39 @@ export const getAllReactions = async (sortBy, follows) => {
         console.error('Error getting documents: ', error);
     }
     return reactions;
+};
+
+export const getReactionsByPage = async (lastDoc, limitBy, sortBy, follows) => {
+    let reactions = [];
+    let lastVisible = null;
+    try {
+        const reactionsCollection = collection(db, COLLECTION_REACTION_BINOMES);
+        let baseQuery = query(reactionsCollection,
+            where('reactionVideoId', '!=', ''),
+            where('isPublished', '==', true),
+            orderBy('reactionVideoId', 'desc'),
+            orderBy('createdAt', 'desc')
+        );
+        if (sortBy === SORTINGS.FOLLOWING && follows && follows.length) {
+            baseQuery = query(baseQuery, where('reactorId', 'in', follows));
+        }
+        if (lastDoc) {
+            baseQuery = query(baseQuery, startAfter(lastDoc));
+        }
+        baseQuery = query(baseQuery, limit(limitBy));
+        const querySnapshot = await getDocs(baseQuery);
+        lastVisible = querySnapshot.docs[querySnapshot.docs.length-1];
+        reactions = querySnapshot.docs.map((doc) => ({
+            id: doc.id,
+            data: doc.data()
+        }));
+    } catch (error) {
+        console.error('Error getting paged documents: ', error);
+    }
+    return {
+        reactions,
+        lastVisible
+    };
 };
 
 export const getUserReactions = async (userId, filter) => {
