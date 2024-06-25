@@ -99,6 +99,9 @@
     };
     function logStateChange(originalVideoTime, stateCode) {
         if (startTime) {
+            if (stateCode === YT.PlayerState.BUFFERING) {
+                stateCode = YT.PlayerState.PAUSED;
+            }
             const currentTime = new Date().getTime();
             const elapsedTime = (currentTime - startTime) / 1000; // Convert to seconds
             const reactionVideoTime = getCompensatedReactionTime(elapsedTime)
