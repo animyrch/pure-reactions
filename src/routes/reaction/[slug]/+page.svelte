@@ -17,7 +17,6 @@
   import { downloadBasicVideoDetails } from '$lib/helpers/youtube';
   import CreatorDetails from "$lib/components/Video/CreatorDetails.svelte";
   import { ExpandSolid, MinimizeSolid } from 'flowbite-svelte-icons';
-    import RunTimeEditor from "../../../lib/components/Video/RunTimeEditor.svelte";
 
   export let data;
 
@@ -539,7 +538,6 @@
       </div>
     </div>
   {/if}
-  <RunTimeEditor />
 </div>
 
 <style>
