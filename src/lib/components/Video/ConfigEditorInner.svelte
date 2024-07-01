@@ -67,7 +67,7 @@
       value = value.map(config => ({
         ...config,
         time: (typeof config.time !== 'undefined') ? Number(config.time).toFixed(2) : config.time,
-        timeInReaction: (typeof config.timeInReaction !== 'undefined') ? Number(config.timeInReaction).toFixed(2) : config.timeInReaction
+        timeInReaction: (typeof config.timeInReaction !== 'undefined') ? Number(config.timeInReaction).toFixed(1) : config.timeInReaction
       }));
       updateFirebase(value);
     });
