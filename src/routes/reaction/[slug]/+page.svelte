@@ -17,6 +17,7 @@
   import { downloadBasicVideoDetails } from '$lib/helpers/youtube';
   import CreatorDetails from "$lib/components/Video/CreatorDetails.svelte";
   import { ExpandSolid, MinimizeSolid } from 'flowbite-svelte-icons';
+  import ConfigEditor from "$lib/components/Video/ConfigEditor.svelte";
 
   export let data;
 
@@ -43,6 +44,7 @@
   let changingState = false;
   let isReactionMissing = false;
   let isEditModeOn = false;
+  let isFineTuneModeOn = false;
   let canShowEditModeButton = false;
   let isUsersOwnVideo = false;
   let canShowCloseEditModeButton = false;
@@ -59,6 +61,8 @@
   let originalVideoTitle;
   let isFullscreen;
   let isLoading = true;
+  let playerConfigs = {};  // Declare playerConfigs here
+  let volumeConfigs = {};  // Declare volumeConfigs here
 
   // Check if window is defined (i.e., we're on the client side)
   if (typeof window !== 'undefined') {
@@ -225,7 +229,9 @@
     isUsersOwnVideo = reactorId === data.userId
     canShowEditModeButton = isUsersOwnVideo;
     window.playerConfigs = obtainedData["reactionConfigs"];
+    playerConfigs = obtainedData["reactionConfigs"];
     window.volumeConfigs = obtainedData["volumeConfigs"];
+    volumeConfigs = obtainedData["volumeConfigs"];
     originalVideoId = obtainedData["originalVideoId"];
     reactionVideoId = obtainedData["reactionVideoId"];
     reactionVideoAuthor = obtainedData?.reactionVideoAuthor;
@@ -386,7 +392,9 @@
     // Open the new URL in the same tab
     window.location.href = url.toString();
   };
-
+  function toggleFineTuneMode() {
+    isFineTuneModeOn = !isFineTuneModeOn;
+  }
   onMount(async () => {
     if (typeof YT === "undefined" || typeof YT.Player === "undefined") {
       loadYouTubeAPI();
@@ -537,6 +545,14 @@
         {/each}
       </div>
     </div>
+    {/if}
+    {#if isEditModeOn}
+      <Button on:click={toggleFineTuneMode}>
+        {#if isFineTuneModeOn}Disable Fine Tune Mode{:else}Enable Fine Tune Mode{/if}
+      </Button>
+      {#if isFineTuneModeOn}
+        <ConfigEditor {playerConfigs} {volumeConfigs} />
+      {/if}
   {/if}
 </div>
 
