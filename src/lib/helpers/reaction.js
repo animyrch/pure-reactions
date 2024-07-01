@@ -15,7 +15,7 @@ export const getCurrentVolumeFromVolumeConfigs = (currentTime, volumeConfigs) =>
     const closestSmallerTimeCode = getClosestSmallerKey(volumeConfigs, currentTime);
     // If there are smaller volumes, return the volume for the closest smaller key
     // Otherwise, return a default value of 100
-    return closestSmallerTimeCode !== -Infinity ? volumeConfigs[closestSmallerTimeCode.toFixed(1)].volume : DEFAULT_VOLUME_LEVEL;
+    return closestSmallerTimeCode !== -Infinity ? volumeConfigs[closestSmallerTimeCode.toFixed(1)]?.volume : DEFAULT_VOLUME_LEVEL;
 };
 
 export const getCurrentStateFromStateConfigs = (currentTime, stateConfigs) => {
