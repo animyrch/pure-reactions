@@ -57,10 +57,10 @@
       // validate before updating
       // player config should have values for time, state and timeInReaction
       // volume config should have values for volume and timeInReaction
-      if (value.some(config => config.type === 'player' && (!config.time || !config.state || !config.timeInReaction))) {
+      if (value.some(config => config.type === 'player' && (typeof config.time  === 'undefined'|| !config.state || typeof config.timeInReaction === 'undefined'))) {
         console.error('Invalid player config');
         return;
-      } else if (value.some(config => config.type === 'volume' && (!config.volume || !config.timeInReaction))) {
+      } else if (value.some(config => config.type === 'volume' && (!config.volume || typeof config.timeInReaction === 'undefined'))) {
         console.error('Invalid volume config');
         return;
       }
