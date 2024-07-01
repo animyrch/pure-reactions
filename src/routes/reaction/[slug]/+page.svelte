@@ -98,7 +98,6 @@
   }
   function handleOriginalVideoVolume(reactionCurrentTime) {
     const originalVideoNewVolume = getCurrentVolumeFromVolumeConfigs(reactionCurrentTime, window.volumeConfigs);
-    console.log(originalVideoNewVolume, 'originalVideoNewVolume');
     if (!changingVolume && currentVolumeOriginalVideo !== originalVideoNewVolume) {
       changingVolume = true;
       setVolumeForOriginalVideo(originalVideoNewVolume);
