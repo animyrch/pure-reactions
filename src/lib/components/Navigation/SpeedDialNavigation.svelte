@@ -22,7 +22,7 @@
 </script>
 
 <SpeedDial
-    defaultClass="fixed end-6 bottom-6"
+    defaultClass="fixed end-6 bottom-6 z-100"
     pill={false}
     trigger="click"
     tooltip="none"

@@ -65,7 +65,6 @@
         object-fit: contain;
         width: 50%;
         position: absolute;
-        z-index: 2;
         top: 0;
         right: 0;
     }
