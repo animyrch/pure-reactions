@@ -30,6 +30,9 @@
     };
   
     const updateFirebase = (configs) => {
+      if (configs.length === 0) {
+        return;
+      }
       const newVolumeConfigs = {};
       const newPlayerConfigs = {};
   
@@ -51,7 +54,6 @@
     });
   
     configs.subscribe(value => {
-      console.log(value, 'updating firebase');
       // validate before updating
       // player config should have values for time, state and timeInReaction
       // volume config should have values for volume and timeInReaction
