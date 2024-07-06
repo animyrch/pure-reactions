@@ -13,11 +13,11 @@
   import { currentUser } from '$lib/stores/user';
   import ReactionsListElement from "$lib/components/ReactionsListElement.svelte";
   import { page } from '$app/stores';
-  import { GradientButton, Input, Label, Button } from 'flowbite-svelte';
+  import { Input, Label, Button } from 'flowbite-svelte';
   import { downloadBasicVideoDetails } from '$lib/helpers/youtube';
   import CreatorDetails from "$lib/components/Video/CreatorDetails.svelte";
-  import { ExpandSolid, MinimizeSolid } from 'flowbite-svelte-icons';
   import ConfigEditor from "$lib/components/Video/ConfigEditor.svelte";
+    import ReactionBinomeTopActions from "../../../lib/components/Video/ReactionBinomeTopActions.svelte";
 
   export let data;
 
@@ -422,63 +422,20 @@
   {#if isReactionMissing}
     <p>Warning: The reaction video id is missing. This reaction page won't be listed on the home page until the reaction video url is added below :</p>
   {/if}
-  <div class="flex justify-between m-2">
-    {#if isUsersOwnVideo}
-    <div class="text-left">
-      {#if canShowEditModeButton}
-        <GradientButton
-          on:click={enterEditMode}
-          color="pinkToOrange"
-        >
-          Edit Reaction
-        </GradientButton>
-      {/if}
-      {#if canShowCloseEditModeButton}
-        <GradientButton
-          on:click={closeEditMode}
-          color="pinkToOrange"
-        >
-          Finish Editing
-        </GradientButton>
-      {/if}
-      {#if !isPublished && !isReactionMissing}
-        <GradientButton
-          on:click={setIsPublished}
-          color="pinkToOrange"
-        >
-          Publish
-        </GradientButton>
-      {/if}
-      {#if isPublished}
-        <GradientButton
-          on:click={setIsUnpublished}
-          color="pinkToOrange"
-        >
-          Unpublish
-        </GradientButton>
-      {/if}
-      </div>
-      {/if}
-    <div class="hidden md:block">
-      {#if isFullscreen}
-        <Button
-          size="md"
-          on:click={openWithHalfscreen}
-        >
-          <MinimizeSolid class="w-3.5 h-3.5 me-2" />
-          <span>Halfscreen</span>
-        </Button>
-      {:else}
-        <Button
-          size="md"
-          on:click={openWithFullscreen}
-        >
-          <ExpandSolid class="w-3.5 h-3.5 me-2" />
-          <span>Fullscreen</span>
-        </Button>
-      {/if}
-    </div>
-  </div>
+  <ReactionBinomeTopActions
+    isUsersOwnVideo={isUsersOwnVideo}
+    canShowEditModeButton={canShowEditModeButton}
+    {canShowCloseEditModeButton}
+    {isPublished}
+    {isReactionMissing}
+    {isFullscreen}
+    on:enterEditMode={enterEditMode}
+    on:closeEditMode={closeEditMode}
+    on:setIsPublished={setIsPublished}
+    on:setIsUnpublished={setIsUnpublished}
+    on:openWithFullscreen={openWithFullscreen}
+    on:openWithHalfscreen={openWithHalfscreen}
+  />
   {#if isFullscreen}
     <!-- fullscreen -->
     <div class="relative h-screen">
