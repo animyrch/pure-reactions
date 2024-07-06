@@ -7,17 +7,16 @@
   import {
     getReaction,
     updateFirebaseDocument,
-    getReactionsToOriginalVideo
   } from '$lib/helpers/firebase';
   import { extractYouTubeVideoId } from '$lib/helpers/youtube';
   import { currentUser } from '$lib/stores/user';
-  import ReactionsListElement from "$lib/components/ReactionsListElement.svelte";
   import { page } from '$app/stores';
   import { Input, Label, Button } from 'flowbite-svelte';
   import { downloadBasicVideoDetails } from '$lib/helpers/youtube';
   import CreatorDetails from "$lib/components/Video/CreatorDetails.svelte";
   import ConfigEditor from "$lib/components/Video/ConfigEditor.svelte";
-    import ReactionBinomeTopActions from "../../../lib/components/Video/ReactionBinomeTopActions.svelte";
+  import ReactionBinomeTopActions from "$lib/components/Video/ReactionBinomeTopActions.svelte";
+  import OtherReactions from "$lib/components/Video/OtherReactions.svelte";
 
   export let data;
 
@@ -53,7 +52,6 @@
   let originalVideoId;
   let reactionVideoId;
   let reactorId;
-  let otherReactions = [];
   let pageSlug = data.slug;
   let reactionVideoAuthor;
   let reactionVideoTitle;
@@ -221,7 +219,6 @@
     if (!obtainedData) {
       return;
     }
-    otherReactions = [];
     isPublished = obtainedData.isPublished;
     isReactionMissing = !obtainedData["reactionVideoId"];
     reactorId = obtainedData["reactorId"];
@@ -265,11 +262,6 @@
         onStateChange: onStateChangeOriginal,
       },
     });
-    if (originalVideoId && reactionVideoId) {
-      getReactionsToOriginalVideo(originalVideoId, reactionVideoId).then(reactions => {
-        otherReactions = reactions;
-      });
-    }
   };
 
 
@@ -464,6 +456,13 @@
     />
   </div>
 
+  {#if !isEditModeOn && originalVideoId && reactionVideoId}
+    <OtherReactions
+      originalVideoId={originalVideoId}
+      reactionVideoId={reactionVideoId}
+    />
+  {/if}
+
   <div class="flex flex-col gap-4">
     {#if isReactionMissing || isEditModeOn}
       <div class="flex gap-4">
@@ -488,21 +487,7 @@
     {/if}
   </div>
 
-  {#if !isEditModeOn && otherReactions?.length}
-    <div class="other-reactions">
-      <div class="text-center">
-        <p>Other reactions to the same video</p>
-      </div>
-      <div class="w-auto max-w-96">
-        {#each otherReactions as reaction, index (index)}
-          <div key={reaction.id}>
-            <ReactionsListElement {reaction} />
-          </div>
-        {/each}
-      </div>
-    </div>
-    {/if}
-    {#if isEditModeOn}
+  {#if isEditModeOn}
       <Button on:click={toggleFineTuneMode}>
         {#if isFineTuneModeOn}Disable Fine Tune Mode{:else}Enable Fine Tune Mode{/if}
       </Button>
