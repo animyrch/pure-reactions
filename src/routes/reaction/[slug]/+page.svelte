@@ -62,6 +62,7 @@
   let isLoading = true;
   let playerConfigs = {};  // Declare playerConfigs here
   let volumeConfigs = {};  // Declare volumeConfigs here
+  let isOutOfSync = false;
 
   // Check if window is defined (i.e., we're on the client side)
   if (typeof window !== 'undefined') {
@@ -122,14 +123,15 @@
   const startVideos = () => {
     bothVideosStarted = true;
     startReactionVideo();
-    timeInformationReaction();
+    pollVideoCurrentTime();
   };
 
   let originalVideoClicked;
   let reactionVideoClicked;
   let bothVideosStarted;
+
   function pollVideoCurrentTime() {
-    const interval = 100; // Polling interval in milliseconds (adjust as needed)
+    const interval = 500; // Polling interval in milliseconds (adjust as needed)
     let reactionPlayerState = YT.PlayerState.UNSTARTED;
     // Use setInterval to periodically get the current time
     const pollInterval = setInterval(() => {
@@ -265,10 +267,6 @@
     });
   };
 
-
-  function timeInformationReaction() {
-    pollVideoCurrentTime();
-  }
   const buildInterface = async (slug) => {
     window.currentReactionDocumentId = slug;
     const pureReaction = await getReaction(slug);
@@ -390,12 +388,17 @@
   function togglePlayState(event) {
     if (event.detail.isPlaying) {
       startReactionVideo();
-      // check if original video should be started as well
       handleStateChangeInReactionVideo(YT.PlayerState.PAUSED , YT.PlayerState.PLAYING);
     } else {
       pauseOriginalVideo();
       pauseReactionVideo();
     }
+  }
+  function syncVideos() {
+    pauseOriginalVideo();
+    pauseReactionVideo();
+    startReactionVideo();
+    handleStateChangeInReactionVideo(YT.PlayerState.PAUSED , YT.PlayerState.PLAYING);
   }
   onMount(async () => {
     if (typeof YT === "undefined" || typeof YT.Player === "undefined") {
@@ -456,6 +459,7 @@
     <VideoControl
       {bothVideosStarted}
       on:playStateChanged={togglePlayState}
+      on:syncVideos={syncVideos}
     />
   </div>
   <div class="videos-information-container pt-4">

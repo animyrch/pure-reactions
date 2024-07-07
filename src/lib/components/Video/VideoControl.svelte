@@ -3,7 +3,8 @@
     import { Button, P } from 'flowbite-svelte';
     import {
         PauseSolid,
-        PlaySolid
+        PlaySolid,
+        ClockOutline
     } from 'flowbite-svelte-icons';
 
     export let bothVideosStarted;
@@ -15,18 +16,26 @@
         isPlaying = !isPlaying;
         dispatch('playStateChanged', { isPlaying });
     }
+    function syncVideos() {
+        dispatch('syncVideos');
+    }
 </script>
 
 <div>
     {#if !bothVideosStarted}
         <P class="mb-6 text-lg lg:text-xl sm:px-16 xl:px-48 dark:text-gray-400">Click on both videos to start watching the reaction.</P>
     {:else}
-        <Button on:click={togglePlayState}>
-            {#if isPlaying}
-                <PauseSolid class="w-10 h-5 me-2" />Stop Videos
-            {:else}
-                <PlaySolid class="w-10 h-5 me-2" />Resume Videos
-            {/if}
-        </Button>
+        <div class="flex justify-between">
+            <Button on:click={togglePlayState}>
+                {#if isPlaying}
+                    <PauseSolid class="w-10 h-5 me-2" />Stop Videos
+                {:else}
+                    <PlaySolid class="w-10 h-5 me-2" />Resume Videos
+                {/if}
+            </Button>
+            <Button on:click={syncVideos}>
+                <ClockOutline class="w-10 h-5 me-2" />Sync Videos
+            </Button>
+        </div>
     {/if}
 </div>
