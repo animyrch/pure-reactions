@@ -17,6 +17,7 @@
   import ConfigEditor from "$lib/components/Video/ConfigEditor.svelte";
   import ReactionBinomeTopActions from "$lib/components/Video/ReactionBinomeTopActions.svelte";
   import OtherReactions from "$lib/components/Video/OtherReactions.svelte";
+  import VideoControl from "$lib/components/Video/VideoControl.svelte";
 
   export let data;
 
@@ -386,6 +387,16 @@
   function toggleFineTuneMode() {
     isFineTuneModeOn = !isFineTuneModeOn;
   }
+  function togglePlayState(event) {
+    if (event.detail.isPlaying) {
+      startReactionVideo();
+      // check if original video should be started as well
+      handleStateChangeInReactionVideo(YT.PlayerState.PAUSED , YT.PlayerState.PLAYING);
+    } else {
+      pauseOriginalVideo();
+      pauseReactionVideo();
+    }
+  }
   onMount(async () => {
     if (typeof YT === "undefined" || typeof YT.Player === "undefined") {
       loadYouTubeAPI();
@@ -441,7 +452,12 @@
       <div id="player-reaction" class="h-1/25-screen"/>
     </div>
   {/if}
-
+  <div class="my-4">
+    <VideoControl
+      {bothVideosStarted}
+      on:playStateChanged={togglePlayState}
+    />
+  </div>
   <div class="videos-information-container pt-4">
     <CreatorDetails
       originalVideoAuthor={originalVideoAuthor}
