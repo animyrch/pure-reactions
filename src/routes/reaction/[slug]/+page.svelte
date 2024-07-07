@@ -426,7 +426,7 @@
 <div class={!isLoading ? 'hidden' : ''}>Loading...</div>
 <div class="{isLoading ? 'hidden' : ''} website-inner-container">
   {#if isReactionMissing}
-    <p>Warning: The reaction video id is missing. This reaction page won't be listed on the home page until the reaction video url is added below :</p>
+    <p>Warning: The reaction video id is missing. This reaction page won't be listed on the home page until the reaction video url is added below and then published:</p>
   {/if}
   <ReactionBinomeTopActions
     isUsersOwnVideo={isUsersOwnVideo}
@@ -456,11 +456,13 @@
     </div>
   {/if}
   <div class="my-4">
-    <VideoControl
-      {bothVideosStarted}
-      on:playStateChanged={togglePlayState}
-      on:syncVideos={syncVideos}
-    />
+    {#if playerOriginal && playerReaction}
+      <VideoControl
+        {bothVideosStarted}
+        on:playStateChanged={togglePlayState}
+        on:syncVideos={syncVideos}
+      />
+    {/if}
   </div>
   <div class="videos-information-container pt-4">
     <CreatorDetails

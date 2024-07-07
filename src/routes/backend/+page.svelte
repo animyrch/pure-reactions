@@ -52,6 +52,7 @@
     let startRecording = false;
     let stopRecording = false;
     let currentButtonGroupState = BUTTON_GROUP_STATES.INITIAL;
+    let isPlaying = false;
 
     function loadYoutubePlayer() {
         console.log(originalVideoId, 'originalVideoId');
@@ -186,6 +187,7 @@
     };
 
     const onClickStartVideo = () => {
+        isPlaying = true;
         startOriginalVideo();
         currentButtonGroupState = BUTTON_GROUP_STATES.RECORDING;
     };
@@ -197,6 +199,7 @@
     };
 
     const onClickStopVideo = () => {
+        isPlaying = false;
         pauseOriginalVideo();
         currentButtonGroupState = BUTTON_GROUP_STATES.READY;
     };
@@ -245,7 +248,42 @@
         originalVideoAuthor = videoAuthor;
         originalVideoTitle = videoTitle;
     };
+    function handleKeydown(event) {
+        event.preventDefault();
+        if (
+            event.key === 'Enter' &&
+            currentButtonGroupState === BUTTON_GROUP_STATES.INITIAL
+        ) {
+            onClickStartReaction();
+        }
+        if (
+            event.key === ' ' &&
+            currentButtonGroupState !== BUTTON_GROUP_STATES.INITIAL &&
+            currentButtonGroupState !== BUTTON_GROUP_STATES.FINALISED
+        ) {
+            isPlaying ? onClickStopVideo() : onClickStartVideo();
+        }
+        if (
+            event.key === 'Control' &&
+            currentButtonGroupState === BUTTON_GROUP_STATES.RECORDING &&
+            !isFocusReactOn
+        ) {
+            onClickFocusReact();
+        }
+    }
+    function handleKeyup(event) {
+        event.preventDefault();
+        if (
+            event.key === 'Control' &&
+            currentButtonGroupState === BUTTON_GROUP_STATES.RECORDING &&
+            isFocusReactOn
+        ) {
+            onClickFocusReact();
+        }
+    }
 </script>
+
+<svelte:window on:keydown={handleKeydown} on:keyup={handleKeyup} />
 
 {#if $isLoggedIn}
     <div class="website-inner-container">

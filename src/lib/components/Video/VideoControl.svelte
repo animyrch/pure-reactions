@@ -19,11 +19,21 @@
     function syncVideos() {
         dispatch('syncVideos');
     }
+    function handleKeydown(event) {
+        event.preventDefault();
+        if (event.key === ' ') {
+            togglePlayState();
+        }
+    }
 </script>
+
+<svelte:window on:keydown={handleKeydown} />
 
 <div>
     {#if !bothVideosStarted}
-        <P class="text-center mb-6 text-lg lg:text-xl sm:px-16 xl:px-48 dark:text-gray-400"><Span highlight>Click on both videos to start watching the reaction.</Span></P>
+        <P class="text-center mb-6 text-lg lg:text-xl sm:px-16 xl:px-48">
+            <Span highlight>Click on both videos to start watching the reaction.</Span>
+        </P>
     {:else}
         <div class="flex justify-between">
             <Button on:click={togglePlayState}>
