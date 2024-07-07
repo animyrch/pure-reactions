@@ -53,23 +53,27 @@
             {/if}
         </div>
     {/if}
-    {#if !isPublished && !isReactionMissing}
-        <GradientButton
-            on:click={setIsPublished}
-            color="pinkToOrange"
-        >
-            Publish
-        </GradientButton>
-    {/if}
-    {#if isPublished}
-        <Button
-            on:click={setIsUnpublished}
-            color="light"
-        >
-            Unpublish
-        </Button>
-    {/if}
-    <div class="hidden md:block">
+    <div>
+        {#if isUsersOwnVideo}
+            {#if !isPublished && !isReactionMissing}
+                <GradientButton
+                    on:click={setIsPublished}
+                    color="pinkToOrange"
+                >
+                    Publish
+                </GradientButton>
+            {/if}
+            {#if isPublished}
+                <Button
+                    on:click={setIsUnpublished}
+                    color="light"
+                >
+                    Unpublish
+                </Button>
+            {/if}
+        {/if}
+    </div>
+    <div class="hidden md:block self-end">
         {#if isFullscreen}
             <Button
                 size="md"
