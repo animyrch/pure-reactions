@@ -6,6 +6,7 @@
     import ConfigEditorVolumeConfig from './ConfigEditorVolumeConfig.svelte';
     import { Select, Label, Button } from 'flowbite-svelte';
     import { updateFirebaseDocument } from "$lib/helpers/firebase";
+    import { timeInVideoToSecondsConverter } from "$lib/helpers/reaction";
   
     export let volumeConfigs = {};
     export let playerConfigs = {};
@@ -73,16 +74,16 @@
     });
   
     const addConfig = (type) => {
+      const newConfigTimeAdjusted = timeInVideoToSecondsConverter(newConfigTime);
       configs.update(items => {
         if (type === 'volume') {
-          items.push({ type: 'volume', timeInReaction: parseFloat(newConfigTime), volume: 100});
+          items.push({ type: 'volume', timeInReaction: parseFloat(newConfigTimeAdjusted), volume: 100});
         } else if (type === 'player') {
-          items.push({ type: 'player', timeInReaction: parseFloat(newConfigTime)});
+          items.push({ type: 'player', timeInReaction: parseFloat(newConfigTimeAdjusted)});
         }
         items.sort((a, b) => a.timeInReaction - b.timeInReaction);
         return items;
       });
-      console.log('configs', $configs);
     };
   
     const handleSelectionDelete = ({ timeIndicator, type}) => {
@@ -108,11 +109,12 @@
     }
 
     function updateTimeInReaction(type, time, newTime) {
+      const newTimeAdjusted = timeInVideoToSecondsConverter(newTime);
       configs.update(items => {
         // Create a new array to force reactivity
         const updatedItems = items.map(item => {
           if (item.type === type && item.timeInReaction == time) { // Using == to allow comparison between string and number
-            return { ...item, timeInReaction: newTime };
+            return { ...item, timeInReaction: newTimeAdjusted };
           }
           return item;
         });
@@ -124,11 +126,12 @@
       });
     }
     function updateTimeConfig(type, time, newTime) {
+      const newTimeAdjusted = timeInVideoToSecondsConverter(newTime);
       configs.update(items => {
         // Create a new array to force reactivity
         const updatedItems = items.map(item => {
           if (item.type === type && item.timeInReaction == time) { // Using == to allow comparison between string and number
-            return { ...item, time: newTime };
+            return { ...item, time: newTimeAdjusted };
           }
           return item;
         });

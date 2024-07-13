@@ -37,3 +37,20 @@ export const getCompensatedReactionTime = (originalSeconds) => {
     const timeAdjustedForDatabaseKey = truncatedTime.toString();
     return timeAdjustedForDatabaseKey;
 };
+
+export const timeInVideoToSecondsConverter = (timeInVideo) => {
+    // if input doesnt have :, then it is already in seconds
+    if (!timeInVideo.includes(":")) {
+        return parseFloat(timeInVideo);
+    }
+    // we split the input with :
+    const timeArray = timeInVideo.split(":");
+    // if two elements, then we have minutes and seconds, if three, we have hours, minutes and seconds. We convert to seconds accordingly
+    return timeArray.length === 2 ?
+        parseInt(
+            timeArray[0]) * 60 + parseInt(timeArray[1]
+        ) :
+        parseInt(
+            timeArray[0]) * 3600 + parseInt(timeArray[1]) * 60 + parseInt(timeArray[2]
+        );
+};
