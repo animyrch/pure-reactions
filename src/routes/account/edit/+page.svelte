@@ -9,7 +9,7 @@
     } from '$lib/helpers/firebase';
     import { showToast } from '$lib/stores/toast';
     import { TOASTS } from '$lib/constants/toasts';
-    import GenericInput from '../../../lib/components/GenericInput.svelte';
+    import GenericInput from '$lib/components/GenericInput.svelte';
 
     let user;
     let newName;

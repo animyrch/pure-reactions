@@ -249,11 +249,11 @@
         originalVideoTitle = videoTitle;
     };
     function handleKeydown(event) {
-        event.preventDefault();
         if (
             event.key === 'Enter' &&
             currentButtonGroupState === BUTTON_GROUP_STATES.INITIAL
         ) {
+            event.preventDefault();
             onClickStartReaction();
         }
         if (
@@ -261,6 +261,7 @@
             currentButtonGroupState !== BUTTON_GROUP_STATES.INITIAL &&
             currentButtonGroupState !== BUTTON_GROUP_STATES.FINALISED
         ) {
+            event.preventDefault();
             isPlaying ? onClickStopVideo() : onClickStartVideo();
         }
         if (
@@ -268,16 +269,17 @@
             currentButtonGroupState === BUTTON_GROUP_STATES.RECORDING &&
             !isFocusReactOn
         ) {
+            event.preventDefault();
             onClickFocusReact();
         }
     }
     function handleKeyup(event) {
-        event.preventDefault();
         if (
             event.key === 'Control' &&
             currentButtonGroupState === BUTTON_GROUP_STATES.RECORDING &&
             isFocusReactOn
         ) {
+            event.preventDefault();
             onClickFocusReact();
         }
     }

@@ -20,8 +20,8 @@
         dispatch('syncVideos');
     }
     function handleKeydown(event) {
-        event.preventDefault();
         if (event.key === ' ') {
+            event.preventDefault();
             togglePlayState();
         }
     }
