@@ -51,6 +51,7 @@
   let introBufferTime = 0;
   let soundLevel = 100;
   let originalVideoId;
+  let originalPlaylistId;
   let reactionVideoId;
   let reactorId;
   let pageSlug = data.slug;
@@ -62,7 +63,6 @@
   let isLoading = true;
   let playerConfigs = {};  // Declare playerConfigs here
   let volumeConfigs = {};  // Declare volumeConfigs here
-  let isOutOfSync = false;
 
   // Check if window is defined (i.e., we're on the client side)
   if (typeof window !== 'undefined') {
@@ -232,13 +232,13 @@
     window.volumeConfigs = obtainedData["volumeConfigs"];
     volumeConfigs = obtainedData["volumeConfigs"];
     originalVideoId = obtainedData["originalVideoId"];
+    originalPlaylistId = obtainedData["originalPlaylistId"];
     reactionVideoId = obtainedData["reactionVideoId"];
     reactionVideoAuthor = obtainedData?.reactionVideoAuthor;
     reactionVideoTitle = obtainedData?.reactionVideoTitle;
     originalVideoAuthor = obtainedData?.originalVideoAuthor;
     originalVideoTitle = obtainedData?.originalVideoTitle;
 
-    originalVideoTitle
     if (playerOriginal) {
       playerOriginal.destroy();
     }
@@ -256,15 +256,31 @@
         },
       });
     }
-    playerOriginal = new YT.Player("player-original", {
-      videoId: originalVideoId,
-      playerVars: playerOptions,
-      ...iframeOptionDefault,
-      events: {
-        onReady: onPlayerReady,
-        onStateChange: onStateChangeOriginal,
-      },
-    });
+    console.log(originalVideoId, originalPlaylistId);
+    if (originalPlaylistId) {
+      playerOriginal = new YT.Player("player-original", {
+        playerVars: {
+          ...playerOptions,
+          listType: 'playlist',
+          list: originalPlaylistId,
+        },
+        ...iframeOptionDefault,
+        events: {
+          onReady: onPlayerReady,
+          onStateChange: onStateChangeOriginal,
+        },
+      });
+    } else if (originalVideoId) {
+      playerOriginal = new YT.Player("player-original", {
+        videoId: originalVideoId,
+        playerVars: playerOptions,
+        ...iframeOptionDefault,
+        events: {
+          onReady: onPlayerReady,
+          onStateChange: onStateChangeOriginal,
+        },
+      });
+    }
   };
 
   const buildInterface = async (slug) => {

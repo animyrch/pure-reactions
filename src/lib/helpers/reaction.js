@@ -54,3 +54,6 @@ export const timeInVideoToSecondsConverter = (timeInVideo) => {
             timeArray[0]) * 3600 + parseInt(timeArray[1]) * 60 + parseInt(timeArray[2]
         );
 };
+// https://www.youtube.com/watch?v=6tTQ_tThE2Q&list=PLV1ov38vwflE_TmlTFCtWa2q_EKtZ3Nun&ab_channel=MrVinylObsessive
+// https://www.youtube.com/watch?v=sAgGnXe1P28&list=PLV1ov38vwflE_TmlTFCtWa2q_EKtZ3Nun&index=2&ab_channel=Atmosfear
+// https://www.youtube.com/watch?v=sAgGnXe1P28&list=PLV1ov38vwflE_TmlTFCtWa2q_EKtZ3Nun&index=2&ab_channel=Atmosfear

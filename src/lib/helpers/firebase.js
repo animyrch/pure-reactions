@@ -67,6 +67,27 @@ export const createReactionDocument = ({
         });
 };
 
+export const createPlaylistReactionDocument = ({
+    originalPlaylistId,
+    userId,
+    videosInPlaylist
+}) => {
+    const reactionsCollection = collection(db, COLLECTION_REACTION_BINOMES);
+    const dataToAdd = {
+        "originalPlaylistId": originalPlaylistId,
+        "videosInPlaylist": videosInPlaylist,
+        "reactorId": userId,
+        "createdAt": serverTimestamp()
+    };
+    addDoc(reactionsCollection, dataToAdd)
+        .then((documentRef) => {
+            window.currentReactionDocumentId = documentRef.id;
+        })
+        .catch((error) => {
+            console.error("Error adding document:", error);
+        });
+};
+
 export const updateFirebaseDocument = async (dataToUpdate) => {
     try {
         const reactionsCollection = collection(db, COLLECTION_REACTION_BINOMES);

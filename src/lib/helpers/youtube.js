@@ -40,3 +40,40 @@ export const extractYouTubeVideoId = (url) => {
   const matches = url.match(regex);
   return matches ? (matches[1] || matches[6]) : null;
 };
+
+export const extractYoutubePlaylistId = (input) => {
+    // Regular expression to match YouTube playlist ID
+    const regex = /^PL[A-Za-z0-9_-]{16,}$/;
+
+    // If the input matches the regular expression, return the input as it is
+    if(regex.test(input)) {
+        return input;
+    }
+
+    // If the input is a URL, extract the playlist ID from it
+    const url = new URL(input);
+    const params = new URLSearchParams(url.search);
+    return params.get('list');
+}
+
+export async function getPlaylistVideoDetails(playlistId) {
+    try {
+        const response = await fetch(`https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=50&playlistId=${playlistId}&key=AIzaSyCh578WuJotsqrcVBqZXChOD1SPshe1cnE`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+
+        const videoDetails = data.items.map(item => {
+            return {
+                videoId: item.snippet.resourceId.videoId,
+                title: item.snippet.title,
+                description: item.snippet.description,
+                thumbnail: item.snippet.thumbnails.default.url,
+            };
+        });
+        return videoDetails;
+    } catch (error) {
+        console.error(error);
+    }
+}
