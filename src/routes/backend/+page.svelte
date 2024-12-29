@@ -8,6 +8,7 @@
     import { handlePrivateRoute } from '$lib/helpers/routing';
     import { isMobileDevice } from '$lib/helpers/system';
     import { getCompensatedReactionTime } from '$lib/helpers/reaction';
+    import PlaylistQueue from "$lib/components/Video/PlaylistQueue.svelte";
     import { isLoggedIn } from '$lib/stores/user';
     import { page } from '$app/stores';
     import { ButtonGroup, Button, Progressbar } from 'flowbite-svelte';
@@ -29,6 +30,7 @@
     const volumeConfigs = new Map();
     const originalVideoId = $page.url.searchParams.get('id');
     const playlistId = $page.url.searchParams.get('playlist');
+    let playlistItems = [];
     const showRecorder = $page.url.searchParams.get('record');
     
     const playerOptions = {
@@ -75,6 +77,7 @@
             const data = await response.json();
 
             // Extract video IDs from the response
+            playlistItems = data.items;
             const videoIds = data.items.map(item => item.snippet.resourceId.videoId);
             console.log(videoIds);
             return videoIds;
@@ -314,7 +317,7 @@
 
 {#if $isLoggedIn}
     <div class="website-inner-container">
-        <div class="flex">
+        <div class="flex gap-3">
             <div class="original-video-container w-4/5 h-svh">
                 <div id="player-original" class="w-full h-2/3"/>
                 <button
@@ -388,6 +391,13 @@
                         />
                     </div>
                 {/if}
+                <div>
+                    <PlaylistQueue
+                        {playlistItems}
+                        currentlyViewed={originalVideoId}
+                        playlistId={playlistId}
+                    />
+                </div>
             </div>
         </div>
     </div>
