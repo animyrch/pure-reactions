@@ -21,12 +21,14 @@
     import { sineOut } from 'svelte/easing';
     import { downloadBasicVideoDetails } from '$lib/helpers/youtube';
     import { goToRoute } from "$lib/helpers/routing";
+    import { env } from '$env/dynamic/public';
 
 	export let data;
 
     const reactionConfigs = new Map();
     const volumeConfigs = new Map();
     const originalVideoId = $page.url.searchParams.get('id');
+    const playlistId = $page.url.searchParams.get('playlist');
     const showRecorder = $page.url.searchParams.get('record');
     
     const playerOptions = {
@@ -64,6 +66,28 @@
                 onStateChange: onPlayerStateChange,
             },
         });
+    }
+
+    async function fetchFirst10Videos(playlistId, apiKey) {
+        const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${playlistId}&maxResults=50&key=${apiKey}`;
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+
+            // Extract video IDs from the response
+            const videoIds = data.items.map(item => item.snippet.resourceId.videoId);
+            console.log(videoIds);
+            return videoIds;
+        } catch (error) {
+            console.error('Error fetching playlist videos:', error);
+        }
+    }
+
+    function loadPlaylist() {
+        if (playlistId) {
+            console.log(playlistId, 'playlistId');
+            fetchFirst10Videos(playlistId, env.PUBLIC_YOUTUBE_API_KEY);
+        }
     }
     // 4. The API will call this function when the video player is ready.
     function onPlayerReady(event) {
@@ -236,6 +260,7 @@
 
         setTimeout(() => {
             loadYoutubePlayer();
+            loadPlaylist();
         }, 1000);
 
         await getBasicDetailsOriginal();
