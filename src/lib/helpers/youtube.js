@@ -35,8 +35,17 @@ export const getAuthorFromAuthorUrl = (authorUrl) => {
  * 'https://www.youtube.com/shorts/3JnmAl_8W5k'
  * 'LEv2fMoVvXE';
  */
-export const extractYouTubeVideoId = (url) => {
+export const extractYouTubeVideoId = (originalUrl) => {
   const regex = /^([a-zA-Z0-9_-]{11})$|(youtu\.be\/|youtube\.com\/(watch\?(.*&)?v=|(embed|v|shorts)\/))([^\?&"'>]+)/;
-  const matches = url.match(regex);
+  const matches = originalUrl.match(regex);
   return matches ? (matches[1] || matches[6]) : null;
 };
+
+export const extractYoutubePlaylistId = (originalUrl) => {
+    let playlistId = null;
+    if (originalUrl.includes('youtube.com') || originalUrl.includes('youtu.be')) {
+        const urlParams = new URLSearchParams(new URL(originalUrl).search);
+        playlistId = urlParams.get('list');
+    }
+    return playlistId;
+}
