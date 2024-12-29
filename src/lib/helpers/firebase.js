@@ -41,7 +41,12 @@ import { FILTERS } from '$lib/constants/filters';
 // Initialize Firebase
 const app = initializeApp(FIREBASE_CONFIG);
 const db = getFirestore(app);
+
 export const auth = getAuth(app);
+
+const createCollection = (db, params, caller) => {
+    return collection(db, params);
+};
 
 export const createReactionDocument = ({
     originalVideoId,
@@ -49,7 +54,7 @@ export const createReactionDocument = ({
     originalVideoAuthor,
     originalVideoTitle
 }) => {
-    const reactionsCollection = collection(db, COLLECTION_REACTION_BINOMES);
+    const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'createCollection');
     const dataToAdd = {
         "originalVideoId": originalVideoId,
         "originalVideoAuthor": originalVideoAuthor,
@@ -69,7 +74,7 @@ export const createReactionDocument = ({
 
 export const updateFirebaseDocument = async (dataToUpdate) => {
     try {
-        const reactionsCollection = collection(db, COLLECTION_REACTION_BINOMES);
+        const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'updateFirebaseDocument');
         const documentRef = doc(
             reactionsCollection,
             window.currentReactionDocumentId
@@ -83,7 +88,7 @@ export const updateFirebaseDocument = async (dataToUpdate) => {
 export const getAllReactions = async (sortBy, follows) => {
     let reactions = [];
     try {
-        const reactionsCollection = collection(db, COLLECTION_REACTION_BINOMES);
+        const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'getAllReactions');
         let baseQuery = query(reactionsCollection,
             where('reactionVideoId', '!=', ''),
             where('isPublished', '==', true),
@@ -108,7 +113,7 @@ export const getReactionsByPage = async (lastDoc, limitBy, sortBy, follows) => {
     let reactions = [];
     let lastVisible = null;
     try {
-        const reactionsCollection = collection(db, COLLECTION_REACTION_BINOMES);
+        const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'getReactionsByPage');
         let baseQuery = query(reactionsCollection,
             where('reactionVideoId', '!=', ''),
             where('isPublished', '==', true),
@@ -143,7 +148,7 @@ export const getUserReactions = async (userId, filter) => {
         return reactions;
     }
     try {
-        const reactionsCollection = collection(db, COLLECTION_REACTION_BINOMES);
+        const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'getUserReactions');
         let baseQuery = query(reactionsCollection,
             where("reactorId", "==", userId),
             orderBy('createdAt', 'desc')
@@ -169,7 +174,7 @@ export const getReactionsByReactorName = async (reactorName) => {
         return reactions;
     }
     try {
-        const reactionsCollection = collection(db, COLLECTION_REACTION_BINOMES);
+        const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'getReactionsByReactorName');
         const queryRef = query(reactionsCollection,
             where("reactionVideoAuthor", "==", reactorName),
             orderBy('createdAt', 'desc')
@@ -191,7 +196,7 @@ export const getReactionsByCreatorName = async (creatorName) => {
         return reactions;
     }
     try {
-        const reactionsCollection = collection(db, COLLECTION_REACTION_BINOMES);
+        const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'getReactionsByCreatorName');
         const queryRef = query(reactionsCollection,
             where("originalVideoAuthor", "==", creatorName),
             orderBy('createdAt', 'desc')
@@ -212,7 +217,7 @@ export const getReactionsToOriginalVideo = async (originalVideoId, exceptReactio
         return reactions;
     }
     try {
-        const reactionsCollection = collection(db, COLLECTION_REACTION_BINOMES);
+        const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'getReactionsToOriginalVideo');
         const queryRef = query(reactionsCollection,
             where("originalVideoId", "==", originalVideoId),
             where("reactionVideoId", "!=", exceptReactionVideoId),
@@ -254,7 +259,7 @@ export const getReactionsByIds = async (reactionIds) => {
         return reactions;
     }
     try {
-        const reactionsCollection = collection(db, COLLECTION_REACTION_BINOMES); // replace 'reactions' with your collection name
+        const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'getReactionsByIds'); // replace 'reactions' with your collection name
         const reactions = [];
     
         for (const id of reactionIds) {
@@ -389,7 +394,7 @@ export const addBookmarkWrapper = async (userId, reactionBinomeId) => {
         if (!userBookmarks.includes(reactionBinomeId)) {
             userBookmarks.push(reactionBinomeId);
         }
-        const userExtraDataCollection = collection(db, COLLECTION_USER_DATA);
+        const userExtraDataCollection = createCollection(db, COLLECTION_USER_DATA, 'addBookmarkWrapper');
         const userExtraDataRef = doc(userExtraDataCollection, userId);
         await setDoc(userExtraDataRef, {
             ...userExtraData,
@@ -408,7 +413,7 @@ export const removeBookmarkWrapper = async (userId, reactionBinomeId) => {
         if (userBookmarks.includes(reactionBinomeId)) {
             userBookmarks = userBookmarks.filter(currentReactionBinomeId => currentReactionBinomeId !== reactionBinomeId);
         }
-        const userExtraDataCollection = collection(db, COLLECTION_USER_DATA);
+        const userExtraDataCollection = createCollection(db, COLLECTION_USER_DATA, 'removeBookmarkWrapper');
         const userExtraDataRef = doc(userExtraDataCollection, userId);
         await setDoc(userExtraDataRef, {
             ...userExtraData,
@@ -427,7 +432,7 @@ export const addFollowWrapper = async (userId, reactorId) => {
         if (!userFollows.includes(reactorId) && userId !== reactorId) {
             userFollows.push(reactorId);
         }
-        const userExtraDataCollection = collection(db, COLLECTION_USER_DATA);
+        const userExtraDataCollection = createCollection(db, COLLECTION_USER_DATA, 'addFollowWrapper');
         const userExtraDataRef = doc(userExtraDataCollection, userId);
         await setDoc(userExtraDataRef, {
             ...userExtraData,
@@ -445,8 +450,8 @@ export const removeFollowWrapper = async (userId, reactorId) => {
         let userFollows = [...userExtraData.follows];
         if (userFollows.includes(reactorId)) {
             userFollows = userFollows.filter(currentReactorId => currentReactorId !== reactorId);
-        }
-        const userExtraDataCollection = collection(db, COLLECTION_USER_DATA);
+        }        
+        const userExtraDataCollection = createCollection(db, COLLECTION_USER_DATA, 'removeFollowWrapper');
         const userExtraDataRef = doc(userExtraDataCollection, userId);
         await setDoc(userExtraDataRef, {
             ...userExtraData,
@@ -463,7 +468,7 @@ export const getUserExtraData = async (userId) => {
         return {};
     }
     try {
-        const userExtraDataCollection = collection(db, COLLECTION_USER_DATA);
+        const userExtraDataCollection = createCollection(db, COLLECTION_USER_DATA, 'getUserExtraData');
         const userExtraDataRef = doc(
             userExtraDataCollection,
             userId

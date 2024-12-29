@@ -25,9 +25,6 @@
     const onConfirmStep2Own = () => {
         goToRoute(`/backend?id=${extractYouTubeVideoId(createReactForm.originalVideoId)}`);
     };
-    const onConfirmStep2Here = () => {
-        goToRoute(`/backend?id=${extractYouTubeVideoId(createReactForm.originalVideoId)}&record=true`);
-    };
     const onConfirmStep1 = () => {
         if (createReactForm.originalVideoId) {
             createReactForm.errors.missingOriginalVideoId = false;
