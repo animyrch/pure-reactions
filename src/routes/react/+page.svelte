@@ -3,7 +3,7 @@
     import { ArrowLeftOutline } from 'flowbite-svelte-icons';
     import { GradientButton } from 'flowbite-svelte';
     import { goToRoute } from "$lib/helpers/routing";
-    import { extractYouTubeVideoId } from '$lib/helpers/youtube';
+    import { extractYouTubeVideoId, extractYoutubePlaylistId } from '$lib/helpers/youtube';
     import { auth } from '$lib/helpers/firebase';
     import { handlePrivateRoute } from '$lib/helpers/routing';
     import { onMount } from 'svelte';
@@ -22,9 +22,22 @@
     };
     let user;
     
+    // const onConfirmStep2Own = () => {
+    //     goToRoute(`/backend?id=${extractYouTubeVideoId(createReactForm.originalVideoId)}`);
+    // };
+
     const onConfirmStep2Own = () => {
-        goToRoute(`/backend?id=${extractYouTubeVideoId(createReactForm.originalVideoId)}`);
+        const originalUrl = createReactForm.originalVideoId;
+        const videoId = extractYouTubeVideoId(originalUrl);
+        const playlistId = extractYoutubePlaylistId(originalUrl);
+
+        const redirectUrl = playlistId 
+            ? `/backend?id=${videoId}&playlist=${playlistId}` 
+            : `/backend?id=${videoId}`;
+        
+        goToRoute(redirectUrl);
     };
+
     const onConfirmStep1 = () => {
         if (createReactForm.originalVideoId) {
             createReactForm.errors.missingOriginalVideoId = false;
