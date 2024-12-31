@@ -7,7 +7,6 @@
 </script>
 
 <div>
-    Playlist Queue
     {#each playlistItems as playlistItem, index (index)}
         <div key={playlistItem.playlistId}>
         <PlaylistQueueItem
