@@ -3,7 +3,9 @@
     import { onMount } from "svelte";
     import {
         createReactionDocument,
-        updateFirebaseDocument
+        updateFirebaseDocument,
+        createPlaylistDocument,
+        addToPlaylistDocument
     } from "$lib/helpers/firebase";
     import { handlePrivateRoute } from '$lib/helpers/routing';
     import { isMobileDevice } from '$lib/helpers/system';
@@ -23,6 +25,7 @@
     import { downloadBasicVideoDetails } from '$lib/helpers/youtube';
     import { goToRoute } from "$lib/helpers/routing";
     import { env } from '$env/dynamic/public';
+    import { fetchFirstPlaylistVideos } from '$lib/helpers/youtube';
 
 	export let data;
 
@@ -32,7 +35,9 @@
     const playlistId = $page.url.searchParams.get('playlist');
     let playlistItems = [];
     const showRecorder = $page.url.searchParams.get('record');
-    
+    let currentPlaylistDocumentId = $page.url.searchParams.get('playlistDocumentId') || '';
+    let playlistElements;
+
     const playerOptions = {
         autoplay: 0,
         controls: 0,
@@ -70,26 +75,11 @@
         });
     }
 
-    async function fetchFirst10Videos(playlistId, apiKey) {
-        const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${playlistId}&maxResults=50&key=${apiKey}`;
-        try {
-            const response = await fetch(url);
-            const data = await response.json();
-
-            // Extract video IDs from the response
-            playlistItems = data.items;
-            const videoIds = data.items.map(item => item.snippet.resourceId.videoId);
-            console.log(videoIds);
-            return videoIds;
-        } catch (error) {
-            console.error('Error fetching playlist videos:', error);
-        }
-    }
-
-    function loadPlaylist() {
+    async function loadPlaylist() {
         if (playlistId) {
             console.log(playlistId, 'playlistId');
-            fetchFirst10Videos(playlistId, env.PUBLIC_YOUTUBE_API_KEY);
+            playlistItems = await fetchFirstPlaylistVideos(playlistId, env.PUBLIC_YOUTUBE_API_KEY);
+            playlistElements = playlistItems.map(item => item.snippet.resourceId.videoId);
         }
     }
     // 4. The API will call this function when the video player is ready.
@@ -198,16 +188,38 @@
     let currentTimeDisplay = "0:00 / 0:00";
     let isFocusReactOn = false;
 
-    const onClickStartReaction = () => {
-        createReactionDocument({
+    const onClickStartReaction = async () => {
+        const currentReactionDocumentId = await createReactionDocument({
             originalVideoId,
             userId: data.userId,
             originalVideoAuthor,
-            originalVideoTitle
+            originalVideoTitle,
         });
+        if (playlistId) {
+            if (currentPlaylistDocumentId) {
+                const updateData = {
+                    reactionDocumentId: currentReactionDocumentId,
+                    playlistDocumentId: currentPlaylistDocumentId,
+                    originalVideoId
+                };
+                console.log(updateData, 'updateData');
+                await addToPlaylistDocument(updateData);
+            } else {
+                currentPlaylistDocumentId = await createPlaylistDocument({
+                playlistYoutubeId: playlistId,
+                userId: data.userId,
+                reactionDocumentId: currentReactionDocumentId,
+                originalVideoId
+            });
+            }
+        }
         if (showRecorder) {
             startRecording = true;
         }
+        updateFirebaseDocument({
+            "playlistId": currentPlaylistDocumentId,
+            "youtubePlaylistId": playlistId
+        });
         currentButtonGroupState = BUTTON_GROUP_STATES.READY;
 
         startTime = new Date().getTime();
@@ -231,13 +243,28 @@
         currentButtonGroupState = BUTTON_GROUP_STATES.READY;
     };
 
-    const onClickFinishReaction = () => {
-        if (showRecorder) {
-            stopRecording = true;
-        }
+    const goToReactionConfiguration = () => {
         currentButtonGroupState = BUTTON_GROUP_STATES.FINALISED;
         clearInterval(timer);
         goToRoute(`/reaction/${window.currentReactionDocumentId}`);
+    };
+
+    const onClickFinishReaction = async () => {
+        if (showRecorder) {
+            stopRecording = true;
+        }
+        if (!currentPlaylistDocumentId) {
+            goToReactionConfiguration();
+            return;
+        }
+        const nextVideoIndex = playlistElements.findIndex(item => item === originalVideoId) + 1;
+        const nextVideoId = playlistElements[nextVideoIndex];
+        if (!nextVideoId) {
+            goToReactionConfiguration();
+            return;
+        }
+        await goToRoute(`/backend?id=${nextVideoId}&playlist=${playlistId}&playlistDocumentId=${currentPlaylistDocumentId}`);
+        location.reload();
     };
 
     const onClickProgress = (event) => {
@@ -272,7 +299,9 @@
     let originalVideoAuthor;
     let originalVideoTitle;
     const getBasicDetailsOriginal = async () => {
+        console.log(originalVideoId, 'originalVideoId');
         const { videoAuthor, videoTitle } = await downloadBasicVideoDetails(originalVideoId);
+        console.log(videoAuthor, videoTitle);
         originalVideoAuthor = videoAuthor;
         originalVideoTitle = videoTitle;
     };
@@ -318,6 +347,7 @@
 {#if $isLoggedIn}
     <div class="website-inner-container">
         <div class="flex gap-3">
+            {currentPlaylistDocumentId}
             <div class="original-video-container w-4/5 h-svh">
                 <div id="player-original" class="w-full h-2/3"/>
                 <button
@@ -396,6 +426,7 @@
                         {playlistItems}
                         currentlyViewed={originalVideoId}
                         playlistId={playlistId}
+                        playlistDocumentId={currentPlaylistDocumentId}
                     />
                 </div>
             </div>

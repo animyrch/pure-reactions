@@ -10,9 +10,9 @@ export function handlePrivateRoute() {
     }
 }
 
-export function goToRoute(route) {
+export async function goToRoute(route) {
     if (browser) {
-        goto(route);
+        await goto(route);
         currentPath.set(route);
     }
 }

@@ -7,6 +7,7 @@
   import {
     getReaction,
     updateFirebaseDocument,
+    getPlaylist,
   } from '$lib/helpers/firebase';
   import { extractYouTubeVideoId } from '$lib/helpers/youtube';
   import { currentUser } from '$lib/stores/user';
@@ -18,6 +19,9 @@
   import ReactionBinomeTopActions from "$lib/components/Video/ReactionBinomeTopActions.svelte";
   import OtherReactions from "$lib/components/Video/OtherReactions.svelte";
   import VideoControl from "$lib/components/Video/VideoControl.svelte";
+  import PlaylistQueue from "$lib/components/Video/PlaylistQueue.svelte";
+  import { fetchFirstPlaylistVideos } from '$lib/helpers/youtube';
+  import { env } from '$env/dynamic/public';
 
   export let data;
 
@@ -63,6 +67,10 @@
   let playerConfigs = {};  // Declare playerConfigs here
   let volumeConfigs = {};  // Declare volumeConfigs here
   let isOutOfSync = false;
+  let playlistItems = [];
+  let playlistDocument;
+  let playlistId;
+  let youtubePlaylistId;
 
   // Check if window is defined (i.e., we're on the client side)
   if (typeof window !== 'undefined') {
@@ -74,6 +82,7 @@
 
     // Get the isFullscreen query parameter
     isFullscreen = params.get('isFullscreen') === 'true';
+    playlistId = params.get('playlistId');
   }
 
 
@@ -218,10 +227,11 @@
     playerOriginal.setVolume(volume);
   }
 
-  const setUpVideos = (obtainedData) => {
+  const setUpVideos = async (obtainedData) => {
     if (!obtainedData) {
       return;
     }
+    console.log("setting up videos", obtainedData);
     isPublished = obtainedData.isPublished;
     isReactionMissing = !obtainedData["reactionVideoId"];
     reactorId = obtainedData["reactorId"];
@@ -237,6 +247,7 @@
     reactionVideoTitle = obtainedData?.reactionVideoTitle;
     originalVideoAuthor = obtainedData?.originalVideoAuthor;
     originalVideoTitle = obtainedData?.originalVideoTitle;
+    youtubePlaylistId = obtainedData?.youtubePlaylistId;
 
     originalVideoTitle
     if (playerOriginal) {
@@ -265,6 +276,16 @@
         onStateChange: onStateChangeOriginal,
       },
     });
+    console.log("youtubePlaylistId", youtubePlaylistId);
+    if (playlistId) {
+      playlistItems = await fetchFirstPlaylistVideos(youtubePlaylistId, env.PUBLIC_YOUTUBE_API_KEY);
+      playlistDocument = await getPlaylist(playlistId);
+      console.log("playlistItems", playlistItems);
+      // only keep videos in playlistItems if they are in the playlistDocument.originalVideoIds
+      playlistItems = playlistItems.filter((item) => playlistDocument.originalVideoIds.includes(item.snippet.resourceId.videoId));
+      console.log("playlistDocument", playlistDocument);
+      console.log("playlistItems", playlistItems);
+    }
   };
 
   const buildInterface = async (slug) => {
@@ -464,18 +485,31 @@
       />
     {/if}
   </div>
-  <div class="videos-information-container pt-4">
-    <CreatorDetails
-      originalVideoAuthor={originalVideoAuthor}
-      originalVideoTitle={originalVideoTitle}
-      originalVideoId={originalVideoId}
-      reactionVideoAuthor={reactionVideoAuthor}
-      reactionVideoTitle={reactionVideoTitle}
-      reactionVideoId={reactionVideoId}
-      pageSlug={pageSlug}
-      isUsersOwnVideo={isUsersOwnVideo}
-      reactorId={reactorId}
-    />
+  <div class="videos-information-container pt-4 flex gap-4">
+    <div class="w-1/2">
+      <CreatorDetails
+        originalVideoAuthor={originalVideoAuthor}
+        originalVideoTitle={originalVideoTitle}
+        originalVideoId={originalVideoId}
+        reactionVideoAuthor={reactionVideoAuthor}
+        reactionVideoTitle={reactionVideoTitle}
+        reactionVideoId={reactionVideoId}
+        pageSlug={pageSlug}
+        isUsersOwnVideo={isUsersOwnVideo}
+        reactorId={reactorId}
+      />
+    </div>
+
+    {#if originalVideoId && playlistId}
+      <div class="w-1/2">
+        <PlaylistQueue
+          {playlistItems}
+          currentlyViewed={originalVideoId}
+          playlistId={youtubePlaylistId}
+          playlistDocumentId={playlistId}
+        />
+      </div>
+    {/if}
   </div>
 
   {#if !isEditModeOn && originalVideoId && reactionVideoId}

@@ -9,6 +9,7 @@
     const reactionVideoTitle = reaction?.data?.reactionVideoTitle;
     const reactionVideoAuthor = reaction?.data?.reactionVideoAuthor;
     const originalVideoTitle = reaction?.data?.originalVideoTitle;
+    const playlistId = reaction?.data?.playlistId;
 </script>
 
 <div>
@@ -19,5 +20,6 @@
         {reactionVideoTitle}
         {originalVideoTitle}
         {reactionVideoAuthor}
+        {playlistId}
     />
 </div>

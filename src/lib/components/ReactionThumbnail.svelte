@@ -8,9 +8,12 @@
     export let reactionVideoTitle;
     export let originalVideoTitle;
     export let reactionVideoAuthor;
+    export let playlistId;
+    // path is /reaction/ + reactionPageId and we added query parameter playlistId if exists
+    const reactionRedirectionPath = `/reaction/${reactionPageId}${playlistId ? `?playlistId=${playlistId}` : ''}`;
 </script>
 
-<a href={`/reaction/${reactionPageId}`}>
+<a href={reactionRedirectionPath}>
     <div class="thumbnails-container">
         <div class="original-thumbnail-container">
             <img src={`https://img.youtube.com/vi/${originalVideoId}/mqdefault.jpg`} alt="Video Thumbnail">

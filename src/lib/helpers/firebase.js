@@ -32,6 +32,7 @@ import {
 import {
     COLLECTION_REACTION_BINOMES,
     COLLECTION_USER_DATA,
+    COLLECTION_PLAYLISTS,
     FIREBASE_CONFIG
 } from "$lib/constants/firebase";
 import { showToast } from '$lib/stores/toast';
@@ -45,31 +46,83 @@ const db = getFirestore(app);
 export const auth = getAuth(app);
 
 const createCollection = (db, params, caller) => {
+    console.log('createCollection', caller, params);
     return collection(db, params);
 };
 
-export const createReactionDocument = ({
+export const createReactionDocument = async ({
     originalVideoId,
     userId,
     originalVideoAuthor,
     originalVideoTitle
 }) => {
-    const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'createCollection');
-    const dataToAdd = {
-        "originalVideoId": originalVideoId,
-        "originalVideoAuthor": originalVideoAuthor,
-        "originalVideoTitle": originalVideoTitle,
-        "reactionConfigs": {},
-        "reactorId": userId,
-        "createdAt": serverTimestamp()
-    };
-    addDoc(reactionsCollection, dataToAdd)
-        .then((documentRef) => {
-            window.currentReactionDocumentId = documentRef.id;
-        })
-        .catch((error) => {
-            console.error("Error adding document:", error);
+    try {
+        const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'createReactionDocument');
+        const dataToAdd = {
+            originalVideoId,
+            originalVideoAuthor,
+            originalVideoTitle,
+            reactionConfigs: {},
+            reactorId: userId,
+            createdAt: serverTimestamp()
+        };
+
+        const documentRef = await addDoc(reactionsCollection, dataToAdd);
+        window.currentReactionDocumentId = documentRef.id;
+        return documentRef.id; // Return the document ID if needed
+    } catch (error) {
+        console.error("Error adding document:", error);
+        throw error; // Ensure errors are properly propagated
+    }
+};
+
+export const createPlaylistDocument = async ({ reactionDocumentId, originalVideoId, userId }) => {
+    try {
+        const playlistsCollection = createCollection(db, COLLECTION_PLAYLISTS, 'createPlaylistDocument');
+        const dataToAdd = {
+            reactionBinomeIds: [reactionDocumentId],
+            originalVideoIds: [originalVideoId],
+            reactorId: userId,
+            createdAt: serverTimestamp()
+        };
+
+        console.log('dataToAdd', dataToAdd);
+
+        const documentRef = await addDoc(playlistsCollection, dataToAdd);
+        window.currentPlaylistDocumentId = documentRef.id;
+        return documentRef.id; // Return the document ID if needed
+    } catch (error) {
+        console.error("Error adding document:", error);
+        throw error; // Ensure errors are properly propagated
+    }
+};
+
+export const addToPlaylistDocument = async ({ reactionDocumentId, originalVideoId, playlistDocumentId }) => {
+    try {
+        const playlistsCollection = createCollection(db, COLLECTION_PLAYLISTS, 'addToPlaylistDocument');
+        const playlistDocumentRef = doc(playlistsCollection, playlistDocumentId);
+
+        // Fetch the existing document
+        const playlistDocSnap = await getDoc(playlistDocumentRef);
+        console.log('playlistDocSnap', playlistDocSnap);
+        if (!playlistDocSnap.exists()) {
+            throw new Error(`Playlist document with ID ${playlistDocumentId} does not exist.`);
+        }
+
+        const playlistData = playlistDocSnap.data();
+        const existingReactions = playlistData.reactionBinomeIds || [];
+        const existingOriginalVideos = playlistData.originalVideoIds || [];
+        // doc is updated by adding the new reactionDocumentId to the existing array
+        const updatedReactions = [...new Set([...existingReactions, reactionDocumentId])]; // Prevent duplicates
+        const updatedOriginalVideos = [...new Set([...existingOriginalVideos, originalVideoId])]; // Prevent duplicates
+        await setDoc(playlistDocumentRef, { 
+            ...playlistData, 
+            reactionBinomeIds: updatedReactions,
+            originalVideoIds: updatedOriginalVideos
         });
+    } catch (error) {
+        console.error('Error updating document: ', error);
+    }
 };
 
 export const updateFirebaseDocument = async (dataToUpdate) => {
@@ -151,6 +204,8 @@ export const getUserReactions = async (userId, filter) => {
         const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'getUserReactions');
         let baseQuery = query(reactionsCollection,
             where("reactorId", "==", userId),
+            where("playlistId", "==", ""),
+            orderBy('playlistId', 'desc'),
             orderBy('createdAt', 'desc')
         );
         if (filter === FILTERS.PUBLISHED) {
@@ -163,11 +218,76 @@ export const getUserReactions = async (userId, filter) => {
             id: doc.id,
             data: doc.data()
         }));
+        console.log('reactions', reactions);
         return reactions;
     } catch (error) {
         console.error('Error getting documents filtered by user: ', error);
     }
 };
+
+export const getPlaylist = async (playlistId) => {
+    try {
+        const playlistsCollection = createCollection(db, COLLECTION_PLAYLISTS, 'getPlaylist');
+        const playlistRef = doc(
+            playlistsCollection,
+            playlistId
+        );
+        const playlistSnapshot = await getDoc(playlistRef);
+        if (playlistSnapshot.exists()) {
+            return playlistSnapshot.data();
+        } else {
+            return {};
+        }
+    }
+    catch (error) {
+        console.error('Error getting playlist: ', error);
+    }
+};
+
+export const getUserPlaylists = async (userId) => {
+    let playlists = [];
+    if (!userId) {
+        return playlists;
+    }
+    try {
+        const playlistsCollection = createCollection(db, COLLECTION_PLAYLISTS, 'getUserPlaylists');
+        const queryRef = query(
+            playlistsCollection,
+            where("reactorId", "==", userId),
+            orderBy('createdAt', 'desc')
+        );
+        const querySnapshot = await getDocs(queryRef);
+
+        // Use Promise.all to handle asynchronous fetching for each playlist
+        playlists = await Promise.all(querySnapshot.docs.map(async (docSnapshot) => {
+            const playlistData = docSnapshot.data();
+            let firstReactionBinomeData = null;
+
+            // Check if reactionBinomeIds exists and has at least one element
+            if (playlistData.reactionBinomeIds && playlistData.reactionBinomeIds.length > 0) {
+                const firstReactionBinomeId = playlistData.reactionBinomeIds[0];
+                // Get a reference to the reaction binome document
+                const reactionBinomeRef = doc(db, COLLECTION_REACTION_BINOMES, firstReactionBinomeId);
+                const reactionBinomeSnap = await getDoc(reactionBinomeRef);
+                if (reactionBinomeSnap.exists()) {
+                    firstReactionBinomeData = reactionBinomeSnap.data();
+                }
+            }
+
+            // Return a new object that includes the playlist data and the first reaction binome data
+            return {
+                id: docSnapshot.id,
+                data: playlistData,
+                firstReactionBinomeData
+            };
+        }));
+
+        return playlists;
+    } catch (error) {
+        console.error('Error getting documents filtered by user: ', error);
+    }
+};
+
 export const getReactionsByReactorName = async (reactorName) => {
     let reactions = [];
     if (!reactorName) {
