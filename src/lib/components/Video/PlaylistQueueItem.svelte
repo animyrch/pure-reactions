@@ -4,8 +4,14 @@
     export let currentlyViewed = '';
     export let playlistId = '';
     export let playlistDocumentId = '';
+    export let isCreation = true;
+    export let targetReactionDocumentId = '';
     const navigate = async () => {
-        await goto(`/backend?id=${playlistItem?.snippet?.resourceId?.videoId}&playlist=${playlistId}&playlistDocumentId=${playlistDocumentId}`);
+        if (isCreation) {
+            await goto(`/backend?id=${playlistItem?.snippet?.resourceId?.videoId}&playlist=${playlistId}&playlistDocumentId=${playlistDocumentId}`);
+        } else {
+            await goto(`/reaction/${targetReactionDocumentId}?playlistId=${playlistDocumentId}`);
+        }
         location.reload();
     };
 </script>

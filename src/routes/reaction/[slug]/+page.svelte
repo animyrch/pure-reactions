@@ -280,11 +280,9 @@
     if (playlistId) {
       playlistItems = await fetchFirstPlaylistVideos(youtubePlaylistId, env.PUBLIC_YOUTUBE_API_KEY);
       playlistDocument = await getPlaylist(playlistId);
-      console.log("playlistItems", playlistItems);
+      console.log("playlistDocument", playlistDocument);
       // only keep videos in playlistItems if they are in the playlistDocument.originalVideoIds
       playlistItems = playlistItems.filter((item) => playlistDocument.originalVideoIds.includes(item.snippet.resourceId.videoId));
-      console.log("playlistDocument", playlistDocument);
-      console.log("playlistItems", playlistItems);
     }
   };
 
@@ -499,14 +497,15 @@
         reactorId={reactorId}
       />
     </div>
-
     {#if originalVideoId && playlistId}
       <div class="w-1/2">
         <PlaylistQueue
           {playlistItems}
+          {playlistDocument}
           currentlyViewed={originalVideoId}
           playlistId={youtubePlaylistId}
           playlistDocumentId={playlistId}
+          isCreation={false}
         />
       </div>
     {/if}
