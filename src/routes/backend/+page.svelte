@@ -64,7 +64,6 @@
     let isPlaying = false;
 
     function loadYoutubePlayer() {
-        console.log(originalVideoId, 'originalVideoId');
         playerOriginal = new YT.Player("player-original", {
             videoId: originalVideoId,
             playerVars: playerOptions,
@@ -77,7 +76,6 @@
 
     async function loadPlaylist() {
         if (playlistId) {
-            console.log(playlistId, 'playlistId');
             playlistItems = await fetchFirstPlaylistVideos(playlistId, env.PUBLIC_YOUTUBE_API_KEY);
             playlistElements = playlistItems.map(item => item.snippet.resourceId.videoId);
         }
@@ -202,7 +200,6 @@
                     playlistDocumentId: currentPlaylistDocumentId,
                     originalVideoId
                 };
-                console.log(updateData, 'updateData');
                 await addToPlaylistDocument(updateData);
             } else {
                 currentPlaylistDocumentId = await createPlaylistDocument({
@@ -299,9 +296,7 @@
     let originalVideoAuthor;
     let originalVideoTitle;
     const getBasicDetailsOriginal = async () => {
-        console.log(originalVideoId, 'originalVideoId');
         const { videoAuthor, videoTitle } = await downloadBasicVideoDetails(originalVideoId);
-        console.log(videoAuthor, videoTitle);
         originalVideoAuthor = videoAuthor;
         originalVideoTitle = videoTitle;
     };

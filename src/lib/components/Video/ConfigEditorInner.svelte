@@ -90,7 +90,6 @@
       configs.update(items => {
         return items.filter(item => !(item.type === type && item.timeInReaction == timeIndicator)); // Using == to allow comparison between string and number
       });
-      console.log('configs', $configs);
     };
   
     function updateConfig(type, time, newState) {

@@ -10,9 +10,7 @@
 
     onMount(() => {
         if (originalVideoId && reactionVideoId) {
-            console.log(originalVideoId, reactionVideoId, 'ids');
             getReactionsToOriginalVideo(originalVideoId, reactionVideoId).then(reactions => {
-                console.log(reactions, 'reactions');
                 otherReactions = reactions;
             });
         }

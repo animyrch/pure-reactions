@@ -15,7 +15,6 @@
     import { TOASTS } from '$lib/constants/toasts';
 
     const copyCurrentUrl = () => {
-      console.log($page.url.href);
       copyToClipboard($page.url.href);
       showToast('Current URL copied to your clipboard. Now paste it anywhere and share with the world!', TOASTS.SUCCESS);
     };

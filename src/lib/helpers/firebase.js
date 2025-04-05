@@ -46,7 +46,6 @@ const db = getFirestore(app);
 export const auth = getAuth(app);
 
 const createCollection = (db, params, caller) => {
-    console.log('createCollection', caller, params);
     return collection(db, params);
 };
 
@@ -86,8 +85,6 @@ export const createPlaylistDocument = async ({ reactionDocumentId, originalVideo
             createdAt: serverTimestamp()
         };
 
-        console.log('dataToAdd', dataToAdd);
-
         const documentRef = await addDoc(playlistsCollection, dataToAdd);
         window.currentPlaylistDocumentId = documentRef.id;
         return documentRef.id; // Return the document ID if needed
@@ -104,7 +101,6 @@ export const addToPlaylistDocument = async ({ reactionDocumentId, originalVideoI
 
         // Fetch the existing document
         const playlistDocSnap = await getDoc(playlistDocumentRef);
-        console.log('playlistDocSnap', playlistDocSnap);
         if (!playlistDocSnap.exists()) {
             throw new Error(`Playlist document with ID ${playlistDocumentId} does not exist.`);
         }
@@ -218,7 +214,6 @@ export const getUserReactions = async (userId, filter) => {
             id: doc.id,
             data: doc.data()
         }));
-        console.log('reactions', reactions);
         return reactions;
     } catch (error) {
         console.error('Error getting documents filtered by user: ', error);

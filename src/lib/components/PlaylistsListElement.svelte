@@ -2,7 +2,6 @@
     import ReactionThumbnail from "$lib/components/ReactionThumbnail.svelte";
     
     export let playlist;
-    console.log(playlist, 'playlist');
     const reaction = playlist.firstReactionBinomeData;
     const reactionPageId = playlist.data?.reactionBinomeIds?.[0];
     const reactionVideoId = reaction?.reactionVideoId;

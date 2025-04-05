@@ -10,9 +10,7 @@
     export let isCreation = true;
     let playlistDocument;
     onMount(async () => {
-        console.log(playlistId, 'playlistId in queue');
         playlistDocument = await getPlaylist(playlistDocumentId);
-        console.log(playlistDocument, 'playlistDocument in queue');
     });
 </script>
 

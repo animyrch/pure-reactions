@@ -6,7 +6,6 @@ import {
 
 const getBasicVideoDetailsWithEmbedApi = async (videoId) => {
     try {
-      console.log('Fetching data for video:', basicVideoDetailsUrl.replace(videoIdPlaceholder, videoId));
         const response = await fetch(basicVideoDetailsUrl.replace(videoIdPlaceholder, videoId));
         const data = await response.json();
         return data;

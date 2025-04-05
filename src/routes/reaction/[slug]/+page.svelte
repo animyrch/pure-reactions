@@ -233,11 +233,8 @@
     }
   }
   async function onStateChangeReaction(event) {
-    console.log("reaction video state change", playlistItems);
     if (event.data === YT.PlayerState.ENDED && getAutoPlayCookie()) {
       if (hasNextIndexInPlaylist) {
-        console.log('playlistDocument', playlistDocument.reactionBinomeIds);
-        console.log("hasNextIndexInPlaylist", currentIndexInPlaylist + 1);
         const targetReactionDocumentId = playlistDocument.reactionBinomeIds[currentIndexInPlaylist + 1];
         await goto(`/reaction/${targetReactionDocumentId}?playlistId=${playlistId}`);
         location.reload();
@@ -265,7 +262,6 @@
     if (!obtainedData) {
       return;
     }
-    console.log("setting up videos", obtainedData);
     isPublished = obtainedData.isPublished;
     isReactionMissing = !obtainedData["reactionVideoId"];
     reactorId = obtainedData["reactorId"];
