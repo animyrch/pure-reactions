@@ -22,6 +22,7 @@
   import PlaylistQueue from "$lib/components/Video/PlaylistQueue.svelte";
   import { fetchFirstPlaylistVideos } from '$lib/helpers/youtube';
   import { env } from '$env/dynamic/public';
+  import { goto } from '$app/navigation'
 
   export let data;
 
@@ -71,7 +72,25 @@
   let playlistDocument;
   let playlistId;
   let youtubePlaylistId;
+  let currentIndexInPlaylist;
+  let hasNextIndexInPlaylist;
+  let isPlaylistAutoPlay = false;
 
+  function getAutoPlayCookie() {
+    const autoPlayCookie = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('autoPlay='))
+      ?.split('=')[1];
+    return autoPlayCookie === 'true';
+  }
+  function setAutoPlayCookie(value) {
+    if (!playlistId) {
+      return;
+    }
+    const expiry = new Date();
+    expiry.setTime(expiry.getTime() + 365 * 24 * 60 * 60 * 1000);
+    document.cookie = `autoPlay=${value}; expires=${expiry.toUTCString()}; path=/`;
+  }
   // Check if window is defined (i.e., we're on the client side)
   if (typeof window !== 'undefined') {
     // Create a new URL object with the current URL
@@ -104,6 +123,11 @@
   }
   function pauseReactionVideo() {
     playerReaction.pauseVideo();
+  }
+  function toggleAutoPlaylist() {
+    const autoPlayCookie = getAutoPlayCookie();
+    isPlaylistAutoPlay = !autoPlayCookie;
+    setAutoPlayCookie(!autoPlayCookie);
   }
   function handleOriginalVideoVolume(reactionCurrentTime) {
     const originalVideoNewVolume = getCurrentVolumeFromVolumeConfigs(reactionCurrentTime, window.volumeConfigs);
@@ -208,7 +232,17 @@
       }
     }
   }
-  function onStateChangeReaction(event) {
+  async function onStateChangeReaction(event) {
+    console.log("reaction video state change", playlistItems);
+    if (event.data === YT.PlayerState.ENDED && getAutoPlayCookie()) {
+      if (hasNextIndexInPlaylist) {
+        console.log('playlistDocument', playlistDocument.reactionBinomeIds);
+        console.log("hasNextIndexInPlaylist", currentIndexInPlaylist + 1);
+        const targetReactionDocumentId = playlistDocument.reactionBinomeIds[currentIndexInPlaylist + 1];
+        await goto(`/reaction/${targetReactionDocumentId}?playlistId=${playlistId}`);
+        location.reload();
+      } 
+    }
     if (event.data == YT.PlayerState.PLAYING) {
       if (!reactionVideoClicked) {
         pauseReactionVideo();
@@ -276,13 +310,13 @@
         onStateChange: onStateChangeOriginal,
       },
     });
-    console.log("youtubePlaylistId", youtubePlaylistId);
     if (playlistId) {
       playlistItems = await fetchFirstPlaylistVideos(youtubePlaylistId, env.PUBLIC_YOUTUBE_API_KEY);
       playlistDocument = await getPlaylist(playlistId);
-      console.log("playlistDocument", playlistDocument);
       // only keep videos in playlistItems if they are in the playlistDocument.originalVideoIds
       playlistItems = playlistItems.filter((item) => playlistDocument.originalVideoIds.includes(item.snippet.resourceId.videoId));
+      currentIndexInPlaylist = playlistItems.findIndex((item) => item.snippet.resourceId.videoId === originalVideoId);
+      hasNextIndexInPlaylist = currentIndexInPlaylist < playlistItems.length - 1;
     }
   };
 
@@ -420,6 +454,7 @@
     handleStateChangeInReactionVideo(YT.PlayerState.PAUSED , YT.PlayerState.PLAYING);
   }
   onMount(async () => {
+    isPlaylistAutoPlay = getAutoPlayCookie();
     if (typeof YT === "undefined" || typeof YT.Player === "undefined") {
       loadYouTubeAPI();
 
@@ -478,8 +513,11 @@
     {#if playerOriginal && playerReaction}
       <VideoControl
         {bothVideosStarted}
+        isPlaylist={!!(playlistId)}
+        isPlaylistAutoPlay={isPlaylistAutoPlay}
         on:playStateChanged={togglePlayState}
         on:syncVideos={syncVideos}
+        on:toggleAutoPlaylist={toggleAutoPlaylist}
       />
     {/if}
   </div>

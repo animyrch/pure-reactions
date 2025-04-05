@@ -20,8 +20,6 @@
     {#each playlistItems as playlistItem, index (index)}
         <div key={playlistItem?.playlistId}>
             {#if playlistDocument}
-                {index}
-                {playlistDocument.reactionBinomeIds[index]}
                 <PlaylistQueueItem
                     {playlistItem}
                     {currentlyViewed}
