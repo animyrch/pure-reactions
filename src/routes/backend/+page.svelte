@@ -418,7 +418,6 @@
                 {/if}
                 <div>
                     <PlaylistQueue
-                        {playlistItems}
                         currentlyViewed={originalVideoId}
                         playlistId={playlistId}
                         playlistDocumentId={currentPlaylistDocumentId}
