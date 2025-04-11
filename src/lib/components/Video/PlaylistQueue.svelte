@@ -11,6 +11,7 @@
     export let isCreation = true;
     let playlistItems = [];
     let playlistDocument;
+
     onMount(async () => {
         playlistItems = await fetchFirstPlaylistVideos(playlistId, env.PUBLIC_YOUTUBE_API_KEY);
         if (playlistDocumentId) {
