@@ -24,7 +24,6 @@
     import { sineOut } from 'svelte/easing';
     import { downloadBasicVideoDetails } from '$lib/helpers/youtube';
     import { goToRoute } from "$lib/helpers/routing";
-    import { env } from '$env/dynamic/public';
     import { fetchFirstPlaylistVideos } from '$lib/helpers/youtube';
 
 	export let data;
@@ -76,7 +75,7 @@
 
     async function loadPlaylist() {
         if (playlistId) {
-            playlistItems = await fetchFirstPlaylistVideos(playlistId, env.PUBLIC_YOUTUBE_API_KEY);
+            playlistItems = await fetchFirstPlaylistVideos(playlistId);
             playlistElements = playlistItems.map(item => item.snippet.resourceId.videoId);
         }
     }

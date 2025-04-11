@@ -3,7 +3,6 @@
     import { getPlaylist } from '$lib/helpers/firebase';
     import { onMount } from "svelte";
     import { fetchFirstPlaylistVideos } from '$lib/helpers/youtube';
-    import { env } from '$env/dynamic/public';
 
     export let currentlyViewed = '';
     export let playlistId = '';
@@ -13,7 +12,7 @@
     let playlistDocument;
 
     onMount(async () => {
-        playlistItems = await fetchFirstPlaylistVideos(playlistId, env.PUBLIC_YOUTUBE_API_KEY);
+        playlistItems = await fetchFirstPlaylistVideos(playlistId);
         if (playlistDocumentId) {
             playlistDocument = await getPlaylist(playlistDocumentId);
         }

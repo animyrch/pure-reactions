@@ -21,7 +21,6 @@
   import VideoControl from "$lib/components/Video/VideoControl.svelte";
   import PlaylistQueue from "$lib/components/Video/PlaylistQueue.svelte";
   import { fetchFirstPlaylistVideos } from '$lib/helpers/youtube';
-  import { env } from '$env/dynamic/public';
   import { goto } from '$app/navigation'
 
   export let data;
@@ -307,7 +306,7 @@
       },
     });
     if (playlistId) {
-      playlistItems = await fetchFirstPlaylistVideos(youtubePlaylistId, env.PUBLIC_YOUTUBE_API_KEY);
+      playlistItems = await fetchFirstPlaylistVideos(youtubePlaylistId);
       playlistDocument = await getPlaylist(playlistId);
       // only keep videos in playlistItems if they are in the playlistDocument.originalVideoIds
       playlistItems = playlistItems.filter((item) => playlistDocument.originalVideoIds.includes(item.snippet.resourceId.videoId));
