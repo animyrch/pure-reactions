@@ -1,4 +1,4 @@
 [build]
   command = "npm run build"
   publish = "build"
-  secrets_scan_omit_paths = ["src/routes/api/playlist/[id]/+server.js"]
+  secrets_scan_omit_paths = ["src/routes/api/youtube/playlist/[id]/+server.js", ".svelte-kit/output/server/entries/endpoints/api/youtube/playlist/_id_/_server.js"]
