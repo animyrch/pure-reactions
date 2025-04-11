@@ -1,6 +1,6 @@
 [build]
   command = "npm run build"
   publish = "build"
-  
+
 [secrets_scan]
-  secrets_scan_omit_keys = ["YOUTUBE_API_KEY"]
+  SECRETS_SCAN_OMIT_KEYS = ["YOUTUBE_API_KEY"]
