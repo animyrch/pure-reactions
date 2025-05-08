@@ -31,11 +31,14 @@ export const getCurrentStateFromStateConfigs = (currentTime, stateConfigs) => {
      } : DEFAULT_STATE_CONFIG;
 };
 
-export const getCompensatedReactionTime = (originalSeconds) => {
-    const compensatedTime = originalSeconds - 1;
+export const getCompensatedReactionTime = (startTime, playlistBufferTime = 0) => {
+    const currentTime = new Date().getTime();
+    const reactionSeconds = (currentTime - startTime) / 1000; // Convert to seconds
+    const reactionSecondsInCasePlaylist = reactionSeconds + +playlistBufferTime;
+    const compensatedTime = reactionSecondsInCasePlaylist - 1;
     const truncatedTime = compensatedTime.toFixed(1);
     const timeAdjustedForDatabaseKey = truncatedTime.toString();
-    return timeAdjustedForDatabaseKey;
+    return timeAdjustedForDatabaseKey < 0 ? 0 : timeAdjustedForDatabaseKey;
 };
 
 export const timeInVideoToSecondsConverter = (timeInVideo) => {

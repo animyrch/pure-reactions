@@ -8,6 +8,9 @@
     export let playlistId = '';
     export let playlistDocumentId = '';
     export let isCreation = true;
+    export let startTime = 0;
+    export let playlistBufferTime = 0;
+
     let playlistItems = [];
     let playlistDocument;
 
@@ -28,6 +31,8 @@
                     {playlistId}
                     {playlistDocumentId}
                     {isCreation}
+                    {startTime}
+                    {playlistBufferTime}
                     targetReactionDocumentId={playlistDocument?.reactionBinomeIds?.[index]}
                 />
         </div>

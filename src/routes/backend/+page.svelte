@@ -32,6 +32,7 @@
     const volumeConfigs = new Map();
     const originalVideoId = $page.url.searchParams.get('id');
     const playlistId = $page.url.searchParams.get('playlist');
+    const playlistBufferTime = $page.url.searchParams.get('playlistBufferTime');
     let playlistItems = [];
     const showRecorder = $page.url.searchParams.get('record');
     let currentPlaylistDocumentId = $page.url.searchParams.get('playlistDocumentId') || '';
@@ -117,9 +118,7 @@
             if (stateCode === YT.PlayerState.BUFFERING) {
                 stateCode = YT.PlayerState.PAUSED;
             }
-            const currentTime = new Date().getTime();
-            const elapsedTime = (currentTime - startTime) / 1000; // Convert to seconds
-            const reactionVideoTime = getCompensatedReactionTime(elapsedTime)
+            const reactionVideoTime = getCompensatedReactionTime(startTime, playlistBufferTime || 0);
             reactionConfigs.set(reactionVideoTime, { time: originalVideoTime, state: stateCode });
             const reactionConfigsObject = Object.fromEntries(reactionConfigs); // Convert the Map to an object
             updateFirebaseDocument({
@@ -130,9 +129,7 @@
 
     function logVolumeChange(newVolume) {
         if (startTime) {
-            const currentTime = new Date().getTime();
-            const elapsedTime = (currentTime - startTime) / 1000; // Convert to seconds
-            const reactionVideoTime = getCompensatedReactionTime(elapsedTime)
+            const reactionVideoTime = getCompensatedReactionTime(startTime, playlistBufferTime || 0);
             volumeConfigs.set(reactionVideoTime, { volume: newVolume });
             const volumeConfigsObject = Object.fromEntries(volumeConfigs);
             updateFirebaseDocument({
@@ -259,7 +256,8 @@
             goToReactionConfiguration();
             return;
         }
-        await goToRoute(`/backend?id=${nextVideoId}&playlist=${playlistId}&playlistDocumentId=${currentPlaylistDocumentId}`);
+        const reactionVideoTime = getCompensatedReactionTime(startTime, playlistBufferTime || 0);
+        await goToRoute(`/backend?id=${nextVideoId}&playlist=${playlistId}&playlistDocumentId=${currentPlaylistDocumentId}&playlistBufferTime=${reactionVideoTime}`);
         location.reload();
     };
 
@@ -341,7 +339,6 @@
 {#if $isLoggedIn}
     <div class="website-inner-container">
         <div class="flex gap-3">
-            {currentPlaylistDocumentId}
             <div class="original-video-container w-4/5 h-svh">
                 <div id="player-original" class="w-full h-2/3"/>
                 <button
@@ -420,6 +417,8 @@
                         currentlyViewed={originalVideoId}
                         playlistId={playlistId}
                         playlistDocumentId={currentPlaylistDocumentId}
+                        startTime={startTime}
+                        playlistBufferTime={playlistBufferTime}
                     />
                 </div>
             </div>

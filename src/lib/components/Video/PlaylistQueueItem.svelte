@@ -1,14 +1,20 @@
 <script>
     import { goto } from '$app/navigation'
+    import { getCompensatedReactionTime } from '$lib/helpers/reaction';
+
     export let playlistItem = {};
     export let currentlyViewed = '';
     export let playlistId = '';
     export let playlistDocumentId = '';
     export let isCreation = true;
     export let targetReactionDocumentId = '';
+    export let startTime = 0;
+    export let playlistBufferTime = 0;
+
     const navigate = async () => {
         if (isCreation) {
-            await goto(`/backend?id=${playlistItem?.snippet?.resourceId?.videoId}&playlist=${playlistId}&playlistDocumentId=${playlistDocumentId}`);
+            const reactionVideoTime = getCompensatedReactionTime(startTime, playlistBufferTime || 0);
+            await goto(`/backend?id=${playlistItem?.snippet?.resourceId?.videoId}&playlist=${playlistId}&playlistDocumentId=${playlistDocumentId}&playlistBufferTime=${reactionVideoTime}`);
         } else {
             await goto(`/reaction/${targetReactionDocumentId}?playlistId=${playlistDocumentId}`);
         }
