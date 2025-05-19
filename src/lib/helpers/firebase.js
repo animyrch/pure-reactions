@@ -53,7 +53,8 @@ export const createReactionDocument = async ({
     originalVideoId,
     userId,
     originalVideoAuthor,
-    originalVideoTitle
+    originalVideoTitle,
+    offsetStartTime
 }) => {
     try {
         const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'createReactionDocument');
@@ -63,6 +64,7 @@ export const createReactionDocument = async ({
             originalVideoTitle,
             reactionConfigs: {},
             reactorId: userId,
+            offsetStartTime,
             createdAt: serverTimestamp()
         };
 

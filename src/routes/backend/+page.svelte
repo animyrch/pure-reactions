@@ -188,6 +188,7 @@
             userId: data.userId,
             originalVideoAuthor,
             originalVideoTitle,
+            offsetStartTime: playlistBufferTime || 0,
         });
         if (playlistId) {
             if (currentPlaylistDocumentId) {
@@ -243,6 +244,11 @@
     };
 
     const onClickFinishReaction = async () => {
+        const reactionVideoTime = getCompensatedReactionTime(startTime, playlistBufferTime || 0);
+        console.log('finish reaction', reactionVideoTime);
+        updateFirebaseDocument({
+            "reactionFinishTime": reactionVideoTime,
+        });
         if (showRecorder) {
             stopRecording = true;
         }
@@ -256,7 +262,6 @@
             goToReactionConfiguration();
             return;
         }
-        const reactionVideoTime = getCompensatedReactionTime(startTime, playlistBufferTime || 0);
         await goToRoute(`/backend?id=${nextVideoId}&playlist=${playlistId}&playlistDocumentId=${currentPlaylistDocumentId}&playlistBufferTime=${reactionVideoTime}`);
         location.reload();
     };
@@ -288,6 +293,9 @@
         }, 1000);
 
         await getBasicDetailsOriginal();
+        if (playlistBufferTime) {
+            onClickStartReaction();
+        }
     });
 
     let originalVideoAuthor;

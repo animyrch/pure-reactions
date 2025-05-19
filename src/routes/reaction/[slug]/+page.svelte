@@ -74,6 +74,8 @@
   let currentIndexInPlaylist;
   let hasNextIndexInPlaylist;
   let isPlaylistAutoPlay = false;
+  let offsetStartTime = 0;
+  let reactionFinishTime = 100000;
 
   function getAutoPlayCookie() {
     const autoPlayCookie = document.cookie
@@ -154,6 +156,7 @@
   }
   const startVideos = () => {
     bothVideosStarted = true;
+    goToSecondsInReactionVideo(offsetStartTime || 0);
     startReactionVideo();
     pollVideoCurrentTime();
   };
@@ -166,7 +169,7 @@
     const interval = 500; // Polling interval in milliseconds (adjust as needed)
     let reactionPlayerState = YT.PlayerState.UNSTARTED;
     // Use setInterval to periodically get the current time
-    const pollInterval = setInterval(() => {
+    const pollInterval = setInterval(async () => {
       if (
         playerReaction && playerOriginal
       ) {
@@ -180,6 +183,22 @@
         playerReaction
       ) {
         const reactionCurrentTime = playerReaction.getCurrentTime().toFixed(1);
+        console.log("reactionCurrentTime", reactionCurrentTime);
+        if (reactionCurrentTime > reactionFinishTime) {
+          console.log('exceeding reaction finish time');
+          pauseOriginalVideo();
+          pauseReactionVideo();
+          clearInterval(pollInterval);
+          if (isPlaylistAutoPlay) {
+            console.log('is autoplay');
+            if (hasNextIndexInPlaylist) {
+              console.log('has next index in playlist');
+              const targetReactionDocumentId = playlistDocument.reactionBinomeIds[currentIndexInPlaylist + 1];
+              await goto(`/reaction/${targetReactionDocumentId}?playlistId=${playlistId}`);
+              location.reload();
+            }
+          }
+        }
         handleOriginalVideoVolume(reactionCurrentTime);
         handleOriginalVideoState(reactionCurrentTime);
       }
@@ -232,12 +251,12 @@
     }
   }
   async function onStateChangeReaction(event) {
-    if (event.data === YT.PlayerState.ENDED && getAutoPlayCookie()) {
+    if (event.data === YT.PlayerState.ENDED && isPlaylistAutoPlay) {
       if (hasNextIndexInPlaylist) {
         const targetReactionDocumentId = playlistDocument.reactionBinomeIds[currentIndexInPlaylist + 1];
         await goto(`/reaction/${targetReactionDocumentId}?playlistId=${playlistId}`);
         location.reload();
-      } 
+      }
     }
     if (event.data == YT.PlayerState.PLAYING) {
       if (!reactionVideoClicked) {
@@ -252,6 +271,10 @@
 
   function goToSecondsInOriginalVideo(seconds) {
     playerOriginal.seekTo(seconds);
+  }
+  function goToSecondsInReactionVideo(seconds) {
+    console.log("going to seconds in reaction video", seconds);
+    playerReaction.seekTo(seconds);
   }
   function setVolumeForOriginalVideo(volume) {
     playerOriginal.setVolume(volume);
@@ -277,6 +300,8 @@
     originalVideoAuthor = obtainedData?.originalVideoAuthor;
     originalVideoTitle = obtainedData?.originalVideoTitle;
     youtubePlaylistId = obtainedData?.youtubePlaylistId;
+    offsetStartTime = obtainedData?.offsetStartTime;
+    reactionFinishTime = obtainedData?.reactionFinishTime;
 
     originalVideoTitle
     if (playerOriginal) {
