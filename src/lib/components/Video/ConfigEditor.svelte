@@ -5,6 +5,8 @@
     
     export let volumeConfigs = {};
     export let playerConfigs = {};
+    export let stateTimeline = [];
+    export let volumeTimeline = [];
 
     const createSampleConfig = async () => {
         const newPlayerConfigs = {};
@@ -17,7 +19,7 @@
 </script>
 
 <div>
-    {#if playerConfigs && Object.keys(playerConfigs).length > 0}
+    {#if (playerConfigs && Object.keys(playerConfigs).length > 0) || (stateTimeline && stateTimeline.length > 0)}
         <ConfigEditorInner
             {playerConfigs} {volumeConfigs}
         />

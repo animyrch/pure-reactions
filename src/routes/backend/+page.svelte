@@ -249,6 +249,21 @@
         updateFirebaseDocument({
             "reactionFinishTime": reactionVideoTime,
         });
+        // Also persist array-based timelines for efficient playback
+        try {
+            const stateTimeline = Array.from(reactionConfigs.entries())
+                .map(([t, v]) => ({ t: parseFloat(t), state: v.state, targetTime: parseFloat(v.time) }))
+                .sort((a, b) => a.t - b.t);
+            const volumeTimeline = Array.from(volumeConfigs.entries())
+                .map(([t, v]) => ({ t: parseFloat(t), volume: v.volume }))
+                .sort((a, b) => a.t - b.t);
+            await updateFirebaseDocument({
+                stateTimeline,
+                volumeTimeline
+            });
+        } catch (e) {
+            console.error('Failed to persist array timelines', e);
+        }
         if (showRecorder) {
             stopRecording = true;
         }

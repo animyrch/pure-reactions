@@ -76,6 +76,8 @@
   let isPlaylistAutoPlay = false;
   let offsetStartTime = 0;
   let reactionFinishTime = 100000;
+  let timeOffset = 0; // non-destructive shift for timelines
+  let globalGain = 1.0; // non-destructive volume gain
 
   function getAutoPlayCookie() {
     const autoPlayCookie = document.cookie
@@ -131,7 +133,12 @@
     setAutoPlayCookie(!autoPlayCookie);
   }
   function handleOriginalVideoVolume(reactionCurrentTime) {
-    const originalVideoNewVolume = getCurrentVolumeFromVolumeConfigs(reactionCurrentTime, window.volumeConfigs);
+    const originalVideoNewVolume = getCurrentVolumeFromVolumeConfigs(
+      reactionCurrentTime,
+      window.volumeConfigs,
+      globalGain,
+      timeOffset
+    );
     if (!changingVolume && currentVolumeOriginalVideo !== originalVideoNewVolume) {
       changingVolume = true;
       setVolumeForOriginalVideo(originalVideoNewVolume);
@@ -141,7 +148,11 @@
   }
 
   function handleOriginalVideoState(reactionCurrentTime) {
-    const originalVideoNewStateConfig = getCurrentStateFromStateConfigs(reactionCurrentTime, window.playerConfigs);
+    const originalVideoNewStateConfig = getCurrentStateFromStateConfigs(
+      reactionCurrentTime,
+      window.playerConfigs,
+      timeOffset
+    );
     if (!changingState && originalVideoNewStateConfig.state !== currentStateOriginalVideo) {
       changingState = true;
       handleStateChangeInOriginalVideo(currentStateOriginalVideo, originalVideoNewStateConfig.state, originalVideoNewStateConfig.time);
@@ -289,10 +300,24 @@
     reactorId = obtainedData["reactorId"];
     isUsersOwnVideo = reactorId === data.userId
     canShowEditModeButton = isUsersOwnVideo;
-    window.playerConfigs = obtainedData["reactionConfigs"];
-    playerConfigs = obtainedData["reactionConfigs"];
-    window.volumeConfigs = obtainedData["volumeConfigs"];
-    volumeConfigs = obtainedData["volumeConfigs"];
+    // Prefer new array timelines; fall back to legacy maps
+    window.playerConfigs = obtainedData["stateTimeline"] || obtainedData["reactionConfigs"];
+    window.volumeConfigs = obtainedData["volumeTimeline"] || obtainedData["volumeConfigs"];
+    // For editor compatibility: if only arrays exist, convert to legacy maps locally
+    if (!obtainedData["reactionConfigs"] && Array.isArray(obtainedData["stateTimeline"])) {
+      playerConfigs = Object.fromEntries(
+        obtainedData["stateTimeline"].map((ev) => [Number(ev.t).toFixed(1), { time: Number(ev.targetTime).toFixed(2), state: ev.state }])
+      );
+    } else {
+      playerConfigs = obtainedData["reactionConfigs"] || {};
+    }
+    if (!obtainedData["volumeConfigs"] && Array.isArray(obtainedData["volumeTimeline"])) {
+      volumeConfigs = Object.fromEntries(
+        obtainedData["volumeTimeline"].map((ev) => [Number(ev.t).toFixed(1), { volume: ev.volume }])
+      );
+    } else {
+      volumeConfigs = obtainedData["volumeConfigs"] || {};
+    }
     originalVideoId = obtainedData["originalVideoId"];
     reactionVideoId = obtainedData["reactionVideoId"];
     reactionVideoAuthor = obtainedData?.reactionVideoAuthor;
@@ -302,6 +327,8 @@
     youtubePlaylistId = obtainedData?.youtubePlaylistId;
     offsetStartTime = obtainedData?.offsetStartTime;
     reactionFinishTime = obtainedData?.reactionFinishTime;
+    timeOffset = obtainedData?.timeOffset || 0;
+    globalGain = obtainedData?.globalGain || 1.0;
 
     originalVideoTitle
     if (playerOriginal) {
@@ -387,42 +414,20 @@
   };
 
   const setIntroBufferTime = () => {
-    if (window.playerConfigs && introBufferTime !== '0' && introBufferTime !== 0) {
-      const reactionConfigs = window.playerConfigs;
-      if (reactionConfigs) {
-        Object.keys(reactionConfigs).forEach(async (timeCode) => {
-        const updatedTime = parseFloat(timeCode) + parseFloat(introBufferTime);
-        reactionConfigs[updatedTime.toFixed(1)] = reactionConfigs[timeCode];
-        delete reactionConfigs[timeCode];
-      });
-      }
-      const volumeConfigs = window.volumeConfigs;
-      if (volumeConfigs) {
-        Object.keys(volumeConfigs).forEach(async (timeCode) => {
-          const updatedTime = parseFloat(timeCode) + parseFloat(introBufferTime);
-          volumeConfigs[updatedTime.toFixed(1)] = volumeConfigs[timeCode];
-          delete volumeConfigs[timeCode];
-        });
-      }
+    // Non-destructive: store as timeOffset
+    const parsed = parseFloat(introBufferTime);
+    if (!isNaN(parsed)) {
       updateFirebaseDocument({
-        "reactionConfigs": reactionConfigs || {},
-        "volumeConfigs": volumeConfigs || {}
+        timeOffset: parsed
       });
     }
   }
 
   const setSoundLevel = () => {
-    let volumeConfigs = window.volumeConfigs;
-    const newVolumeConfigs = new Map();
-    newVolumeConfigs.set('0.0', { volume: 100 * (soundLevel / 100) });
-    if (volumeConfigs) {
-      Object.keys(volumeConfigs).forEach(async (timeCode) => {
-        newVolumeConfigs.set(timeCode, { volume: volumeConfigs[timeCode].volume * (soundLevel / 100) });
-      });
-    }
-    const volumeConfigsObject = Object.fromEntries(newVolumeConfigs);
+    // Non-destructive: store as globalGain (1.0 means unchanged)
+    const gain = Number(soundLevel) / 100;
     updateFirebaseDocument({
-        "volumeConfigs": volumeConfigsObject
+      globalGain: isNaN(gain) ? 1.0 : gain
     });
   };
 

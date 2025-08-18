@@ -10,6 +10,8 @@
   
     export let volumeConfigs = {};
     export let playerConfigs = {};
+    export let stateTimeline = [];
+    export let volumeTimeline = [];
   
     let newConfigTime = '';
     const db = getDatabase();
@@ -18,13 +20,20 @@
   
     const updateConfigs = () => {
       const mergedConfigs = [];
-  
-      // Merge and sort configs
-      for (const key in volumeConfigs) {
-        mergedConfigs.push({ type: 'volume', timeInReaction: parseFloat(key), ...volumeConfigs[key] });
+      // Prefer new arrays, fall back to legacy maps
+      if (Array.isArray(volumeTimeline) && volumeTimeline.length) {
+        volumeTimeline.forEach(ev => mergedConfigs.push({ type: 'volume', timeInReaction: Number(ev.t), volume: ev.volume }));
+      } else {
+        for (const key in volumeConfigs) {
+          mergedConfigs.push({ type: 'volume', timeInReaction: parseFloat(key), ...volumeConfigs[key] });
+        }
       }
-      for (const key in playerConfigs) {
-        mergedConfigs.push({ type: 'player', timeInReaction: parseFloat(key), ...playerConfigs[key] });
+      if (Array.isArray(stateTimeline) && stateTimeline.length) {
+        stateTimeline.forEach(ev => mergedConfigs.push({ type: 'player', timeInReaction: Number(ev.t), state: ev.state, time: Number(ev.targetTime) }));
+      } else {
+        for (const key in playerConfigs) {
+          mergedConfigs.push({ type: 'player', timeInReaction: parseFloat(key), ...playerConfigs[key] });
+        }
       }
       mergedConfigs.sort((a, b) => a.timeInReaction - b.timeInReaction);
       configs.set(mergedConfigs);
@@ -36,17 +45,23 @@
       }
       const newVolumeConfigs = {};
       const newPlayerConfigs = {};
+      const newStateTimeline = [];
+      const newVolumeTimeline = [];
   
       configs.forEach(config => {
         if (config.type === 'volume') {
           newVolumeConfigs[config.timeInReaction] = { volume: config.volume };
+          newVolumeTimeline.push({ t: Number(config.timeInReaction), volume: Number(config.volume) });
         } else if (config.type === 'player') {
           newPlayerConfigs[config.timeInReaction] = { time: config.time, state: config.state };
+          newStateTimeline.push({ t: Number(config.timeInReaction), state: Number(config.state), targetTime: Number(config.time) });
         }
       });
       updateFirebaseDocument({
-          "volumeConfigs": newVolumeConfigs,
-          "reactionConfigs": newPlayerConfigs
+          volumeConfigs: newVolumeConfigs,
+          reactionConfigs: newPlayerConfigs,
+          stateTimeline: newStateTimeline.sort((a,b) => a.t - b.t),
+          volumeTimeline: newVolumeTimeline.sort((a,b) => a.t - b.t)
       });
     };
   

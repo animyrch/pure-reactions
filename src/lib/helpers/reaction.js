@@ -3,30 +3,77 @@ const getClosestSmallerKey = (timedConfigs, searchKey) => {
         return -Infinity;
     }
     const keys = Object.keys(timedConfigs).map(Number);
-    // Filter keys to keep only those smaller than the input
     const smallerKeys = keys.filter(currentKey => currentKey < searchKey);
-
-    // Find the closest smaller key
     return smallerKeys.reduce((prev, curr) => (curr > prev ? curr : prev), -Infinity);
 };
 
-export const getCurrentVolumeFromVolumeConfigs = (currentTime, volumeConfigs) => {
-    const DEFAULT_VOLUME_LEVEL = 100;
-    const closestSmallerTimeCode = getClosestSmallerKey(volumeConfigs, currentTime);
-    // If there are smaller volumes, return the volume for the closest smaller key
-    // Otherwise, return a default value of 100
-    return closestSmallerTimeCode !== -Infinity ? volumeConfigs[closestSmallerTimeCode.toFixed(1)]?.volume : DEFAULT_VOLUME_LEVEL;
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+// Binary search utility over an array of events sorted by t
+const findLastEventAtOrBefore = (timelineArray, t) => {
+    if (!Array.isArray(timelineArray) || timelineArray.length === 0) {
+        return null;
+    }
+    let low = 0;
+    let high = timelineArray.length - 1;
+    let ansIndex = -1;
+    while (low <= high) {
+        const mid = (low + high) >> 1;
+        const midTime = Number(timelineArray[mid].t);
+        if (midTime <= t) {
+            ansIndex = mid;
+            low = mid + 1;
+        } else {
+            high = mid - 1;
+        }
+    }
+    return ansIndex >= 0 ? timelineArray[ansIndex] : null;
 };
 
-export const getCurrentStateFromStateConfigs = (currentTime, stateConfigs) => {
+// Backward-compatible: accepts either an object map (old) or an array of { t, volume } (new)
+export const getCurrentVolumeFromVolumeConfigs = (currentTime, volumeConfigsOrTimeline, globalGain = 1.0, timeOffset = 0) => {
+    const DEFAULT_VOLUME_LEVEL = 100;
+    const effectiveTime = Number(currentTime) - Number(timeOffset || 0);
+
+    // New format: array of { t: number, volume: number }
+    if (Array.isArray(volumeConfigsOrTimeline)) {
+        const ev = findLastEventAtOrBefore(volumeConfigsOrTimeline, effectiveTime);
+        const base = ev && typeof ev.volume === 'number' ? ev.volume : DEFAULT_VOLUME_LEVEL;
+        return clamp(base * Number(globalGain || 1.0), 0, 200);
+    }
+
+    // Old format: object map keyed by time string
+    const closestSmallerTimeCode = getClosestSmallerKey(volumeConfigsOrTimeline, effectiveTime);
+    return closestSmallerTimeCode !== -Infinity
+        ? volumeConfigsOrTimeline[closestSmallerTimeCode.toFixed(1)]?.volume ?? DEFAULT_VOLUME_LEVEL
+        : DEFAULT_VOLUME_LEVEL;
+};
+
+// Backward-compatible: accepts either an object map (old) or an array of { t, state, targetTime } (new)
+export const getCurrentStateFromStateConfigs = (currentTime, stateConfigsOrTimeline, timeOffset = 0) => {
     const DEFAULT_STATE_CONFIG = {
         state: -1,
         time: "0.00",
         closestSmallerTimeCode: 0.00
     };
-    const closestSmallerTimeCode = getClosestSmallerKey(stateConfigs, currentTime);
+    const effectiveTime = Number(currentTime) - Number(timeOffset || 0);
+
+    // New format: array of { t, state, targetTime }
+    if (Array.isArray(stateConfigsOrTimeline)) {
+        const ev = findLastEventAtOrBefore(stateConfigsOrTimeline, effectiveTime);
+        if (!ev) return DEFAULT_STATE_CONFIG;
+        const closestSmallerTimeCode = Number(ev.t) || 0;
+        return {
+            state: typeof ev.state === 'number' ? ev.state : -1,
+            time: (typeof ev.targetTime !== 'undefined' ? Number(ev.targetTime) : 0).toFixed(2),
+            closestSmallerTimeCode
+        };
+    }
+
+    // Old format: object map keyed by time string
+    const closestSmallerTimeCode = getClosestSmallerKey(stateConfigsOrTimeline, effectiveTime);
     return closestSmallerTimeCode !== -Infinity ? {
-        ...stateConfigs[closestSmallerTimeCode.toFixed(1)],
+        ...stateConfigsOrTimeline[closestSmallerTimeCode.toFixed(1)],
         closestSmallerTimeCode: closestSmallerTimeCode
      } : DEFAULT_STATE_CONFIG;
 };
