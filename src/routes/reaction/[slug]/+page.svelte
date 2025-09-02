@@ -193,8 +193,7 @@
       if (
         playerReaction
       ) {
-        const reactionCurrentTime = playerReaction.getCurrentTime().toFixed(1);
-        console.log("reactionCurrentTime", reactionCurrentTime);
+        const reactionCurrentTime = parseFloat(playerReaction.getCurrentTime().toFixed(1));
         if (reactionCurrentTime > reactionFinishTime) {
           console.log('exceeding reaction finish time');
           pauseOriginalVideo();
@@ -326,7 +325,7 @@
     originalVideoTitle = obtainedData?.originalVideoTitle;
     youtubePlaylistId = obtainedData?.youtubePlaylistId;
     offsetStartTime = obtainedData?.offsetStartTime;
-    reactionFinishTime = obtainedData?.reactionFinishTime;
+    reactionFinishTime = parseFloat(obtainedData?.reactionFinishTime);
     timeOffset = obtainedData?.timeOffset || 0;
     globalGain = obtainedData?.globalGain || 1.0;
 
