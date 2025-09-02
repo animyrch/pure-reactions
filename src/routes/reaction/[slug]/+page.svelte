@@ -78,6 +78,7 @@
   let reactionFinishTime = 100000;
   let timeOffset = 0; // non-destructive shift for timelines
   let globalGain = 1.0; // non-destructive volume gain
+  let currentReactionData; // Store current reaction data for playlist navigation
 
   function getAutoPlayCookie() {
     const autoPlayCookie = document.cookie
@@ -203,9 +204,7 @@
             console.log('is autoplay');
             if (hasNextIndexInPlaylist) {
               console.log('has next index in playlist');
-              const targetReactionDocumentId = playlistDocument.reactionBinomeIds[currentIndexInPlaylist + 1];
-              await goto(`/reaction/${targetReactionDocumentId}?playlistId=${playlistId}`);
-              location.reload();
+              loadNextReactionInPlaylist();
             }
           }
         }
@@ -263,9 +262,7 @@
   async function onStateChangeReaction(event) {
     if (event.data === YT.PlayerState.ENDED && isPlaylistAutoPlay) {
       if (hasNextIndexInPlaylist) {
-        const targetReactionDocumentId = playlistDocument.reactionBinomeIds[currentIndexInPlaylist + 1];
-        await goto(`/reaction/${targetReactionDocumentId}?playlistId=${playlistId}`);
-        location.reload();
+        loadNextReactionInPlaylist();
       }
     }
     if (event.data == YT.PlayerState.PLAYING) {
@@ -288,6 +285,44 @@
   }
   function setVolumeForOriginalVideo(volume) {
     playerOriginal.setVolume(volume);
+  }
+
+  function loadNextReactionInPlaylist() {
+    if (!hasNextIndexInPlaylist || !playlistDocument) {
+      return;
+    }
+    
+    const nextIndex = currentIndexInPlaylist + 1;
+    const nextReactionDocumentId = playlistDocument.reactionBinomeIds[nextIndex];
+    
+    // Get the next reaction data and update the players
+    buildInterface(nextReactionDocumentId, { isUpdate: true }).then(() => {
+      // Update playlist state
+      currentIndexInPlaylist = nextIndex;
+      hasNextIndexInPlaylist = currentIndexInPlaylist < playlistItems.length - 1;
+      
+      // Update URL without page reload
+      const url = new URL(window.location.href);
+      url.pathname = `/reaction/${nextReactionDocumentId}`;
+      window.history.pushState({}, '', url.toString());
+      
+      // Reset player states
+      originalVideoClicked = false;
+      reactionVideoClicked = false;
+      bothVideosStarted = false;
+      currentStateOriginalVideo = -1;
+      currentVolumeOriginalVideo = 100;
+    });
+  }
+
+  function updateUIElements() {
+    // Update page slug for UI components
+    pageSlug = currentReactionData?.id || data.slug;
+    
+    // Trigger reactivity by updating the data store
+    if (typeof window !== 'undefined') {
+      window.currentReactionDocumentId = pageSlug;
+    }
   }
 
   const setUpVideos = async (obtainedData) => {
@@ -366,10 +401,22 @@
     }
   };
 
-  const buildInterface = async (slug) => {
-    window.currentReactionDocumentId = slug;
-    const pureReaction = await getReaction(slug);
-    setUpVideos(pureReaction);
+
+  const buildInterface = async (slug, {
+    isUpdate = false
+  } = {}) => {
+    if (isUpdate) {
+      // Update existing interface without destroying players
+      window.currentReactionDocumentId = slug;
+      const pureReaction = await getReaction(slug);
+      await setUpVideos(pureReaction);
+      updateUIElements();
+    } else {
+      // Build new interface (existing behavior)
+      window.currentReactionDocumentId = slug;
+      const pureReaction = await getReaction(slug);
+      setUpVideos(pureReaction);
+    }
   };
 
   const getBasicDetailsReaction = async () => {
@@ -420,7 +467,7 @@
         timeOffset: parsed
       });
     }
-  }
+  };
 
   const setSoundLevel = () => {
     // Non-destructive: store as globalGain (1.0 means unchanged)
