@@ -62,6 +62,8 @@
     let stopRecording = false;
     let currentButtonGroupState = BUTTON_GROUP_STATES.INITIAL;
     let isPlaying = false;
+    let reactionConfigsArray = [];
+    let volumeConfigsArray = [];
 
     function loadYoutubePlayer() {
         playerOriginal = new YT.Player("player-original", {
@@ -120,6 +122,8 @@
             }
             const reactionVideoTime = getCompensatedReactionTime(startTime, playlistBufferTime || 0);
             reactionConfigs.set(reactionVideoTime, { time: originalVideoTime, state: stateCode });
+            reactionConfigsArray = Array.from(reactionConfigs.entries());
+
             const reactionConfigsObject = Object.fromEntries(reactionConfigs); // Convert the Map to an object
             updateFirebaseDocument({
                 "reactionConfigs": reactionConfigsObject
@@ -131,6 +135,8 @@
         if (startTime) {
             const reactionVideoTime = getCompensatedReactionTime(startTime, playlistBufferTime || 0);
             volumeConfigs.set(reactionVideoTime, { volume: newVolume });
+            volumeConfigsArray = Array.from(volumeConfigs.entries());
+
             const volumeConfigsObject = Object.fromEntries(volumeConfigs);
             updateFirebaseDocument({
                 "volumeConfigs": volumeConfigsObject
@@ -447,4 +453,29 @@
             </div>
         </div>
     </div>
+    {#if currentButtonGroupState !== BUTTON_GROUP_STATES.INITIAL}
+        <div class="debug-panel bg-gray-100 p-4 m-2 rounded text-sm">
+            <h3 class="font-bold">Debug Info:</h3>
+            <p>Start Time: {startTime ? new Date(startTime).toISOString() : 'Not set'}</p>
+            <p>Playlist Buffer: {playlistBufferTime || 0}s</p>
+            <p>Reaction Configs: {reactionConfigsArray.length}</p>
+            <p>Volume Configs: {volumeConfigsArray.length}</p>
+            <p>Current State: {currentButtonGroupState}</p>
+            
+            <!-- Show recent configs -->
+            <div class="mt-2">
+                <h4 class="font-semibold">Recent State Changes:</h4>
+                {#each reactionConfigsArray.slice(-5) as [time, config]}
+                    <div>R: {time} → {config.state} (orig: {config.time})</div>
+                {/each}
+            </div>
+            
+            <div class="mt-2">
+                <h4 class="font-semibold">Recent Volume Changes:</h4>
+                {#each volumeConfigsArray.slice(-5) as [time, config]}
+                    <div>V: {time} → {config.volume}</div>
+                {/each}
+            </div>
+        </div>
+    {/if}
 {:else}{handlePrivateRoute()}{/if}
