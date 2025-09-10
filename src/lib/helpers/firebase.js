@@ -1,6 +1,4 @@
-import { initializeApp } from "firebase/app";
 import {
-    getFirestore,
     collection,
     doc,
     addDoc,
@@ -33,15 +31,11 @@ import {
     COLLECTION_REACTION_BINOMES,
     COLLECTION_USER_DATA,
     COLLECTION_PLAYLISTS,
-    FIREBASE_CONFIG
+    app, db
 } from "$lib/constants/firebase";
 import { showToast } from '$lib/stores/toast';
 import { SORTINGS } from '$lib/constants/sortings';
 import { FILTERS } from '$lib/constants/filters';
-
-// Initialize Firebase
-const app = initializeApp(FIREBASE_CONFIG);
-const db = getFirestore(app);
 
 export const auth = getAuth(app);
 

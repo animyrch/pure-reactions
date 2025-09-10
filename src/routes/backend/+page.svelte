@@ -13,18 +13,27 @@
     import PlaylistQueue from "$lib/components/Video/PlaylistQueue.svelte";
     import { isLoggedIn } from '$lib/stores/user';
     import { page } from '$app/stores';
-    import { ButtonGroup, Button, Progressbar } from 'flowbite-svelte';
+    import { ButtonGroup, Button, Progressbar, Modal } from 'flowbite-svelte';
     import {
         BullhornSolid,
         PauseSolid,
         PlaySolid,
         VideoSolid,
-        DownloadSolid
+        DownloadSolid,
+        UsersSolid
     } from 'flowbite-svelte-icons';
     import { sineOut } from 'svelte/easing';
     import { downloadBasicVideoDetails } from '$lib/helpers/youtube';
     import { goToRoute } from "$lib/helpers/routing";
     import { fetchFirstPlaylistVideos } from '$lib/helpers/youtube';
+    import { 
+        createSharedSession, 
+        updateSessionState, 
+        generateShareUrl, 
+        SESSION_STATES,
+        cleanupInactiveSessions,
+        listenToSession
+    } from '$lib/helpers/sharedSession';
 
 	export let data;
 
@@ -64,6 +73,13 @@
     let isPlaying = false;
     let reactionConfigsArray = [];
     let volumeConfigsArray = [];
+    
+    // Shared session variables
+    let sharedSessionId = null;
+    let shareUrl = '';
+    let showShareModal = false;
+    let viewerCount = 0;
+    let sessionUnsubscribe = null;
 
     function loadYoutubePlayer() {
         playerOriginal = new YT.Player("player-original", {
@@ -85,6 +101,12 @@
     // 4. The API will call this function when the video player is ready.
     function onPlayerReady(event) {
         console.log("player ready");
+        // Update shared session with video duration
+        if (sharedSessionId && playerOriginal) {
+            updateSessionState(sharedSessionId, {
+                duration: playerOriginal.getDuration()
+            });
+        }
     }
     function onPlayerStateChange(event) {
         const currentTime = playerOriginal.getCurrentTime();
@@ -146,9 +168,23 @@
 
     function startOriginalVideo() {
         playerOriginal.playVideo();
+        // Update shared session state
+        if (sharedSessionId) {
+            updateSessionState(sharedSessionId, {
+                state: SESSION_STATES.PLAYING,
+                currentTime: playerOriginal.getCurrentTime()
+            });
+        }
     }
     function pauseOriginalVideo() {
         playerOriginal.pauseVideo();
+        // Update shared session state
+        if (sharedSessionId) {
+            updateSessionState(sharedSessionId, {
+                state: SESSION_STATES.PAUSED,
+                currentTime: playerOriginal.getCurrentTime()
+            });
+        }
     }
     function updateSeekBar() {
         const duration = playerOriginal.getDuration();
@@ -180,6 +216,13 @@
         if (playerOriginal && typeof playerOriginal.setVolume === 'function') {
             playerOriginal.setVolume(volume);
             console.log('new sound set');
+            
+            // Update shared session volume
+            if (sharedSessionId) {
+                updateSessionState(sharedSessionId, {
+                    volume: volume
+                });
+            }
         } else {
             console.error('Player not ready or setVolume method not available.');
         }
@@ -196,6 +239,23 @@
             originalVideoTitle,
             offsetStartTime: playlistBufferTime || 0,
         });
+        
+        // Create shared session
+        try {
+            sharedSessionId = await createSharedSession(currentReactionDocumentId, originalVideoId, data.userId);
+            shareUrl = generateShareUrl(sharedSessionId);
+            console.log('Shared session created:', shareUrl);
+            
+            // Listen to session changes to track viewer count
+            sessionUnsubscribe = listenToSession(sharedSessionId, (sessionData) => {
+                if (sessionData && sessionData.viewers) {
+                    viewerCount = Object.keys(sessionData.viewers).length;
+                }
+            });
+        } catch (error) {
+            console.error('Failed to create shared session:', error);
+        }
+        
         if (playlistId) {
             if (currentPlaylistDocumentId) {
                 const updateData = {
@@ -252,6 +312,18 @@
     const onClickFinishReaction = async () => {
         const reactionVideoTime = getCompensatedReactionTime(startTime, playlistBufferTime || 0);
         console.log('finish reaction', reactionVideoTime);
+        
+        // End the shared session
+        if (sharedSessionId) {
+            try {
+                await updateSessionState(sharedSessionId, {
+                    state: SESSION_STATES.ENDED
+                });
+            } catch (error) {
+                console.error('Failed to end shared session:', error);
+            }
+        }
+        
         updateFirebaseDocument({
             "reactionFinishTime": reactionVideoTime,
         });
@@ -287,6 +359,20 @@
         location.reload();
     };
 
+    const onClickShareSession = () => {
+        showShareModal = true;
+    };
+
+    const copyShareUrl = async () => {
+        try {
+            await navigator.clipboard.writeText(shareUrl);
+            // You could add a toast notification here
+            console.log('Share URL copied to clipboard');
+        } catch (error) {
+            console.error('Failed to copy URL:', error);
+        }
+    };
+
     const onClickProgress = (event) => {
         const progressBar = event.currentTarget;
         const clickX = event.clientX - progressBar.getBoundingClientRect().left;
@@ -297,6 +383,13 @@
 
         const seekTime = (progress / 100) * playerOriginal.getDuration();
         playerOriginal.seekTo(parseFloat(seekTime), true);
+        
+        // Update shared session with new time
+        if (sharedSessionId) {
+            updateSessionState(sharedSessionId, {
+                currentTime: parseFloat(seekTime)
+            });
+        }
     };
 
     onMount(async () => {
@@ -317,7 +410,22 @@
         if (playlistBufferTime) {
             onClickStartReaction();
         }
+
+        // Clean up inactive sessions periodically
+        setInterval(cleanupInactiveSessions, 60 * 60 * 1000); // Every hour
     });
+
+    // Clean up session when page is unloaded
+    const handleBeforeUnload = () => {
+        if (sharedSessionId) {
+            updateSessionState(sharedSessionId, {
+                state: SESSION_STATES.ENDED
+            });
+        }
+        if (sessionUnsubscribe) {
+            sessionUnsubscribe();
+        }
+    };
 
     let originalVideoAuthor;
     let originalVideoTitle;
@@ -363,7 +471,7 @@
     }
 </script>
 
-<svelte:window on:keydown={handleKeydown} on:keyup={handleKeyup} />
+<svelte:window on:keydown={handleKeydown} on:keyup={handleKeyup} on:beforeunload={handleBeforeUnload} />
 
 {#if $isLoggedIn}
     <div class="website-inner-container">
@@ -429,6 +537,14 @@
                           <DownloadSolid class="w-3 h-3 me-2" />
                           Finish Reaction
                         </Button>
+                        <Button
+                            disabled={!sharedSessionId}
+                            on:click={onClickShareSession}
+                            outline color="blue"
+                        >
+                          <UsersSolid class="w-3 h-3 me-2" />
+                          Share Session
+                        </Button>
                       </ButtonGroup>
                 </div>
             </div>
@@ -478,4 +594,31 @@
             </div>
         </div>
     {/if}
+
+    <!-- Share Session Modal -->
+    <Modal bind:open={showShareModal} title="Share Your Reaction Session">
+        <div class="space-y-4">
+            <p class="text-gray-600">
+                Share this URL with others to let them watch your reaction in real-time. 
+                They'll see the same video and it will sync with your controls.
+            </p>
+            
+            <div class="flex items-center space-x-2">
+                <input 
+                    type="text" 
+                    value={shareUrl} 
+                    readonly 
+                    class="flex-1 p-2 border border-gray-300 rounded-md bg-gray-50 text-sm"
+                />
+                <Button on:click={copyShareUrl} color="blue" size="sm">
+                    Copy
+                </Button>
+            </div>
+            
+            <div class="text-sm text-gray-500">
+                <p>👥 Viewers: {viewerCount}</p>
+                <p>📹 Video: {originalVideoTitle}</p>
+            </div>
+        </div>
+    </Modal>
 {:else}{handlePrivateRoute()}{/if}
