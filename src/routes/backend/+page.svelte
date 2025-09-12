@@ -74,6 +74,9 @@
     let reactionConfigsArray = [];
     let volumeConfigsArray = [];
     
+    // Debug mode
+    let debugMode = $page.url.searchParams.get('debug') === 'true';
+    
     // Shared session variables
     let sharedSessionId = null;
     let shareUrl = '';
@@ -415,6 +418,7 @@
         setInterval(cleanupInactiveSessions, 60 * 60 * 1000); // Every hour
     });
 
+
     // Clean up session when page is unloaded
     const handleBeforeUnload = () => {
         if (sharedSessionId) {
@@ -569,7 +573,7 @@
             </div>
         </div>
     </div>
-    {#if currentButtonGroupState !== BUTTON_GROUP_STATES.INITIAL}
+    {#if debugMode && currentButtonGroupState !== BUTTON_GROUP_STATES.INITIAL}
         <div class="debug-panel bg-gray-100 p-4 m-2 rounded text-sm">
             <h3 class="font-bold">Debug Info:</h3>
             <p>Start Time: {startTime ? new Date(startTime).toISOString() : 'Not set'}</p>
@@ -592,6 +596,7 @@
                     <div>V: {time} → {config.volume}</div>
                 {/each}
             </div>
+            
         </div>
     {/if}
 

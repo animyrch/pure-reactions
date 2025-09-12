@@ -25,6 +25,19 @@
     let originalVideoAuthor = '';
     let isPlayerReady = false;
     let unsubscribe = null;
+    
+    // Debug mode
+    let debugMode = $page.url.searchParams.get('debug') === 'true';
+    
+    // Twitch delay configuration for viewers
+    const TWITCH_DELAY_SECONDS = 6;
+    let delayedControls = {
+        play: false,
+        pause: false,
+        seek: null,
+        volume: null
+    };
+    let controlTimeouts = new Map();
 
     const playerOptions = {
         autoplay: 0,
@@ -68,6 +81,47 @@
         // Only the reactor controls the session
     }
 
+    // Clear existing timeouts for a control type
+    function clearControlTimeout(controlType) {
+        if (controlTimeouts.has(controlType)) {
+            clearTimeout(controlTimeouts.get(controlType));
+            controlTimeouts.delete(controlType);
+        }
+    }
+
+    // Delayed video controls for viewers to sync with Twitch delay
+    function delayedPlay() {
+        clearControlTimeout('play');
+        const timeoutId = setTimeout(() => {
+            playerOriginal.playVideo();
+        }, TWITCH_DELAY_SECONDS * 1000);
+        controlTimeouts.set('play', timeoutId);
+    }
+
+    function delayedPause() {
+        clearControlTimeout('pause');
+        const timeoutId = setTimeout(() => {
+            playerOriginal.pauseVideo();
+        }, TWITCH_DELAY_SECONDS * 1000);
+        controlTimeouts.set('pause', timeoutId);
+    }
+
+    function delayedSeek(time) {
+        clearControlTimeout('seek');
+        const timeoutId = setTimeout(() => {
+            playerOriginal.seekTo(time, true);
+        }, TWITCH_DELAY_SECONDS * 1000);
+        controlTimeouts.set('seek', timeoutId);
+    }
+
+    function delayedVolume(volume) {
+        clearControlTimeout('volume');
+        const timeoutId = setTimeout(() => {
+            playerOriginal.setVolume(volume);
+        }, TWITCH_DELAY_SECONDS * 1000);
+        controlTimeouts.set('volume', timeoutId);
+    }
+
     function syncWithSession() {
         if (!playerOriginal || !sessionData) return;
 
@@ -77,19 +131,19 @@
 
         // Only sync if there's a significant time difference (more than 1 second)
         if (timeDiff > 1) {
-            playerOriginal.seekTo(sessionTime, true);
+            delayedSeek(sessionTime);
         }
 
-        // Sync volume
+        // Sync volume with delay
         if (sessionData.volume !== undefined) {
-            playerOriginal.setVolume(sessionData.volume);
+            delayedVolume(sessionData.volume);
         }
 
-        // Sync play/pause state
+        // Sync play/pause state with delay
         if (sessionData.state === SESSION_STATES.PLAYING && playerOriginal.getPlayerState() !== YT.PlayerState.PLAYING) {
-            playerOriginal.playVideo();
+            delayedPlay();
         } else if (sessionData.state === SESSION_STATES.PAUSED && playerOriginal.getPlayerState() === YT.PlayerState.PLAYING) {
-            playerOriginal.pauseVideo();
+            delayedPause();
         }
     }
 
@@ -164,6 +218,12 @@
     });
 
     onDestroy(async () => {
+        // Clear all pending timeouts
+        controlTimeouts.forEach((timeoutId) => {
+            clearTimeout(timeoutId);
+        });
+        controlTimeouts.clear();
+        
         // Leave session when component is destroyed
         if (viewerId && sessionId) {
             try {
@@ -219,7 +279,6 @@
                     src="https://player.twitch.tv/?channel=animy_tr&parent=localhost"
                     height="480"
                     width="720"
-                    class="w-3/12"
                     allowfullscreen>
                 </iframe>
                 <!-- Video Player -->
@@ -234,26 +293,7 @@
                 </iframe>
             </div>
 
-            <!-- Session Status -->
-            <div class="bg-gray-50 p-4 rounded-lg">
-                <h3 class="font-semibold mb-2">Session Status</h3>
-                <div class="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                        <span class="font-medium">Status:</span> 
-                        <span class="ml-2 px-2 py-1 rounded text-xs {
-                            sessionData?.state === SESSION_STATES.PLAYING ? 'bg-green-100 text-green-800' :
-                            sessionData?.state === SESSION_STATES.PAUSED ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-gray-100 text-gray-800'
-                        }">
-                            {sessionData?.state || 'Unknown'}
-                        </span>
-                    </div>
-                    <div>
-                        <span class="font-medium">Viewers:</span> 
-                        <span class="ml-2">{Object.keys(sessionData?.viewers || {}).length}</span>
-                    </div>
-                </div>
-            </div>
+                
 
             <!-- Instructions -->
             <div class="bg-yellow-50 p-4 rounded-lg">
@@ -265,6 +305,57 @@
                     <li>• Refresh the page if the video stops syncing</li>
                 </ul>
             </div>
+
+            <!-- Debug Panel -->
+            {#if debugMode}
+
+                <!-- Twitch Delay Indicator -->
+                <div class="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                    <div class="text-xs text-yellow-700">
+                        <strong>Twitch Delay:</strong> {TWITCH_DELAY_SECONDS}s - Video controls are delayed to sync with Twitch stream
+                    </div>
+                </div>
+
+            <!-- Session Status -->
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <h3 class="font-semibold mb-2">Session Status</h3>
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <span class="font-medium">Status:</span> 
+                            <span class="ml-2 px-2 py-1 rounded text-xs {
+                                sessionData?.state === SESSION_STATES.PLAYING ? 'bg-green-100 text-green-800' :
+                                sessionData?.state === SESSION_STATES.PAUSED ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-gray-100 text-gray-800'
+                            }">
+                                {sessionData?.state || 'Unknown'}
+                            </span>
+                        </div>
+                        <div>
+                            <span class="font-medium">Viewers:</span> 
+                            <span class="ml-2">{Object.keys(sessionData?.viewers || {}).length}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="debug-panel bg-gray-100 p-4 rounded text-sm">
+                    <h3 class="font-bold">Debug Info (Viewer):</h3>
+                    <p>Session ID: {sessionId}</p>
+                    <p>Viewer ID: {viewerId || 'Not set'}</p>
+                    <p>Player Ready: {isPlayerReady ? 'Yes' : 'No'}</p>
+                    <p>Connected: {isConnected ? 'Yes' : 'No'}</p>
+                    <p>Current Time: {playerOriginal ? playerOriginal.getCurrentTime()?.toFixed(2) : 'N/A'}s</p>
+                    <p>Session State: {sessionData?.state || 'Unknown'}</p>
+                    <p>Session Time: {sessionData?.currentTime || 'N/A'}s</p>
+                    <p>Session Volume: {sessionData?.volume || 'N/A'}%</p>
+                    <p>Pending Timeouts: {controlTimeouts.size}</p>
+                    
+                    <div class="mt-2">
+                        <h4 class="font-semibold">Active Timeouts:</h4>
+                        {#each Array.from(controlTimeouts.keys()) as controlType}
+                            <div>• {controlType}</div>
+                        {/each}
+                    </div>
+                </div>
+            {/if}
         </div>
     {/if}
 </div>
