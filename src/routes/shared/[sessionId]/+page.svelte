@@ -213,27 +213,25 @@
                     You're watching a live reaction session. The video will sync with the reactor's controls.
                 </p>
             </div>
-
-            <!-- Video Player -->
-            <div class="w-full">
-                <div id="player-viewer" class="w-full h-96 mb-4"></div>
-                
-                <!-- Progress Bar -->
+            <div class="flex gap-4">
+                <iframe
+                    title="Twitch Player"
+                    src="https://player.twitch.tv/?channel=animy_tr&parent=localhost"
+                    height="480"
+                    width="720"
+                    class="w-3/12"
+                    allowfullscreen>
+                </iframe>
+                <!-- Video Player -->
                 <div class="w-full">
-                    <div class="text-center mb-2">
-                        {currentTimeDisplay}
-                    </div>
-                    <Progressbar
-                        {progress}
-                        animate
-                        precision={2}
-                        tweenDuration={400}
-                        easing={sineOut}
-                        size="h-2"
-                        labelInsideClass="hidden"
-                        class="mb-4"
-                    />
+                    <div id="player-viewer" class="w-full h-96 mb-4"></div>
                 </div>
+                <iframe
+                    title="Twitch Chat"
+                    src="https://www.twitch.tv/embed/animy_tr/chat?parent=localhost"
+                    height="500"
+                    width="350">
+                </iframe>
             </div>
 
             <!-- Session Status -->
