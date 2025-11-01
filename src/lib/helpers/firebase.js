@@ -57,6 +57,7 @@ export const createReactionDocument = async ({
             originalVideoAuthor,
             originalVideoTitle,
             reactionConfigs: {},
+            playbackRateConfigs: {},
             reactorId: userId,
             offsetStartTime,
             createdAt: serverTimestamp()

@@ -39,6 +39,7 @@
 
     const reactionConfigs = new Map();
     const volumeConfigs = new Map();
+    const playbackRateConfigs = new Map();
     const originalVideoId = $page.url.searchParams.get('id');
     const playlistId = $page.url.searchParams.get('playlist');
     const playlistBufferTime = $page.url.searchParams.get('playlistBufferTime');
@@ -74,6 +75,11 @@
     let isPlaying = false;
     let reactionConfigsArray = [];
     let volumeConfigsArray = [];
+    let playbackRateConfigsArray = [];
+    let availablePlaybackRates = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+    let playbackRateIndex = availablePlaybackRates.indexOf(1) !== -1 ? availablePlaybackRates.indexOf(1) : 0;
+    let playbackRate = availablePlaybackRates[playbackRateIndex] || 1;
+    let pendingPlaybackRate = null;
     
     // Debug mode
     let debugMode = $page.url.searchParams.get('debug') === 'true';
@@ -121,11 +127,34 @@
     // 4. The API will call this function when the video player is ready.
     function onPlayerReady(event) {
         console.log("player ready");
-        // Update shared session with video duration
-        if (sharedSessionId && playerOriginal) {
-            updateSessionState(sharedSessionId, {
-                duration: playerOriginal.getDuration()
-            });
+        if (event?.target === playerOriginal) {
+            const playerRates = typeof playerOriginal.getAvailablePlaybackRates === 'function'
+                ? playerOriginal.getAvailablePlaybackRates()
+                : availablePlaybackRates;
+            availablePlaybackRates = Array.isArray(playerRates) && playerRates.length
+                ? [...playerRates].sort((a, b) => a - b)
+                : [1];
+
+            const desiredRate = pendingPlaybackRate ?? playbackRate;
+            const fallbackRate = availablePlaybackRates.includes(desiredRate)
+                ? desiredRate
+                : (availablePlaybackRates.includes(1) ? 1 : availablePlaybackRates[0]);
+            playbackRateIndex = Math.max(availablePlaybackRates.indexOf(fallbackRate), 0);
+            playbackRate = availablePlaybackRates[playbackRateIndex] ?? 1;
+
+            applyPlaybackRate(playbackRate, { shouldLog: false, syncSession: false });
+            pendingPlaybackRate = null;
+
+            // Update shared session with video duration and playback speed
+            if (sharedSessionId) {
+                updateSessionState(sharedSessionId, {
+                    duration: playerOriginal.getDuration(),
+                    playbackRate
+                });
+            }
+        } else if (event?.target && typeof event.target.setPlaybackRate === 'function') {
+            // Ensure auxiliary players (e.g., recorder preview) stay at real-time speed
+            event.target.setPlaybackRate(1);
         }
     }
     function onPlayerStateChange(event) {
@@ -186,13 +215,82 @@
         }
     }
 
+    const formatPlaybackRate = (rate) => {
+        const numeric = Number(rate ?? 1);
+        return Math.abs(numeric - Math.round(numeric)) < 1e-3 ? numeric.toFixed(0) : numeric.toFixed(2);
+    };
+
+    function logPlaybackRateChange(newPlaybackRate) {
+        if (startTime) {
+            const parsedRate = Number(newPlaybackRate) || 1;
+            const reactionVideoTime = getCompensatedReactionTime(startTime, playlistBufferTime || 0);
+            playbackRateConfigs.set(reactionVideoTime, { rate: parsedRate });
+            playbackRateConfigsArray = Array.from(playbackRateConfigs.entries());
+
+            const playbackRateConfigsObject = Object.fromEntries(playbackRateConfigs);
+            updateFirebaseDocument({
+                "playbackRateConfigs": playbackRateConfigsObject
+            });
+        }
+    }
+
+    function applyPlaybackRate(rate, { shouldLog = false, syncSession = true } = {}) {
+        const playerRates = typeof playerOriginal?.getAvailablePlaybackRates === 'function'
+            ? playerOriginal.getAvailablePlaybackRates()
+            : null;
+        const normalizedRates = Array.isArray(playerRates) && playerRates.length
+            ? [...playerRates].sort((a, b) => a - b)
+            : (availablePlaybackRates.length ? [...availablePlaybackRates] : [1]);
+
+        availablePlaybackRates = normalizedRates;
+
+        let resolvedRate = rate;
+        if (!normalizedRates.includes(rate)) {
+            resolvedRate = normalizedRates.includes(1) ? 1 : normalizedRates[0];
+        }
+
+        const targetIndex = normalizedRates.indexOf(resolvedRate);
+        playbackRateIndex = targetIndex >= 0 ? targetIndex : playbackRateIndex;
+        playbackRate = resolvedRate;
+
+        if (playerOriginal && typeof playerOriginal.setPlaybackRate === 'function') {
+            playerOriginal.setPlaybackRate(resolvedRate);
+            pendingPlaybackRate = null;
+        } else {
+            pendingPlaybackRate = resolvedRate;
+        }
+
+        if (shouldLog) {
+            logPlaybackRateChange(resolvedRate);
+        }
+
+        if (syncSession && sharedSessionId) {
+            updateSessionState(sharedSessionId, {
+                playbackRate: resolvedRate
+            });
+        }
+    }
+
+    function updatePlaybackRateFromIndex(index, { userInitiated = false } = {}) {
+        if (!Array.isArray(availablePlaybackRates) || availablePlaybackRates.length === 0) {
+            availablePlaybackRates = [1];
+        }
+        const normalizedIndex = Math.round(index);
+        const clampedIndex = Math.max(0, Math.min(normalizedIndex, availablePlaybackRates.length - 1));
+        const selectedRate = availablePlaybackRates[clampedIndex] ?? 1;
+        playbackRateIndex = clampedIndex;
+        applyPlaybackRate(selectedRate, { shouldLog: userInitiated, syncSession: true });
+    }
+
     function startOriginalVideo() {
+        applyPlaybackRate(playbackRate, { shouldLog: false, syncSession: false });
         playerOriginal.playVideo();
         // Update shared session state
         if (sharedSessionId) {
             updateSessionState(sharedSessionId, {
                 state: SESSION_STATES.PLAYING,
-                currentTime: playerOriginal.getCurrentTime()
+                currentTime: playerOriginal.getCurrentTime(),
+                playbackRate
             });
         }
     }
@@ -202,7 +300,8 @@
         if (sharedSessionId) {
             updateSessionState(sharedSessionId, {
                 state: SESSION_STATES.PAUSED,
-                currentTime: playerOriginal.getCurrentTime()
+                currentTime: playerOriginal.getCurrentTime(),
+                playbackRate
             });
         }
     }
@@ -259,6 +358,9 @@
             originalVideoTitle,
             offsetStartTime: playlistBufferTime || 0,
         });
+
+        playbackRateConfigs.clear();
+        playbackRateConfigsArray = [];
         
         // Create shared session
         try {
@@ -272,13 +374,16 @@
                     activeReactionDocumentId: currentReactionDocumentId,
                     state: SESSION_STATES.WAITING,
                     currentTime: 0,
-                    duration: 0
+                    duration: 0,
+                    playbackRate
                 });
                 console.log('Shared session updated for new playlist video:', sharedSessionId);
             }
 
             shareUrl = generateShareUrl(sharedSessionId);
             subscribeToSession();
+
+            applyPlaybackRate(playbackRate, { shouldLog: false, syncSession: true });
         } catch (error) {
             console.error('Failed to initialise shared session:', error);
         }
@@ -310,6 +415,7 @@
         currentButtonGroupState = BUTTON_GROUP_STATES.READY;
 
         startTime = new Date().getTime();
+        logPlaybackRateChange(playbackRate);
     };
 
     const onClickStartVideo = () => {
@@ -351,9 +457,13 @@
             const volumeTimeline = Array.from(volumeConfigs.entries())
                 .map(([t, v]) => ({ t: parseFloat(t), volume: v.volume }))
                 .sort((a, b) => a.t - b.t);
+            const playbackTimeline = Array.from(playbackRateConfigs.entries())
+                .map(([t, v]) => ({ t: parseFloat(t), rate: Number(v.rate) || 1 }))
+                .sort((a, b) => a.t - b.t);
             await updateFirebaseDocument({
                 stateTimeline,
-                volumeTimeline
+                volumeTimeline,
+                playbackTimeline
             });
         } catch (e) {
             console.error('Failed to persist array timelines', e);
@@ -372,11 +482,13 @@
                 if (nextVideoId) {
                     await updateSessionState(sharedSessionId, {
                         state: SESSION_STATES.WAITING,
-                        currentTime: 0
+                        currentTime: 0,
+                        playbackRate
                     });
                 } else {
                     await updateSessionState(sharedSessionId, {
-                        state: SESSION_STATES.ENDED
+                        state: SESSION_STATES.ENDED,
+                        playbackRate
                     });
                 }
             } catch (error) {
@@ -420,7 +532,8 @@
         // Update shared session with new time
         if (sharedSessionId) {
             updateSessionState(sharedSessionId, {
-                currentTime: parseFloat(seekTime)
+                currentTime: parseFloat(seekTime),
+                playbackRate
             });
         }
     };
@@ -588,6 +701,33 @@
                 </div>
             </div>
             <div class="tools-container w-1/5">
+                <div class="playback-rate-control mb-6">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Playback speed</label>
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs text-gray-500">{formatPlaybackRate(availablePlaybackRates[0] ?? 1)}x</span>
+                        <input
+                            type="range"
+                            min="0"
+                            max={Math.max(availablePlaybackRates.length - 1, 0)}
+                            step="1"
+                            bind:value={playbackRateIndex}
+                            on:input={() => updatePlaybackRateFromIndex(playbackRateIndex, { userInitiated: true })}
+                            class="flex-1"
+                            disabled={availablePlaybackRates.length <= 1}
+                        />
+                        <span class="text-xs text-gray-500">{formatPlaybackRate(availablePlaybackRates[availablePlaybackRates.length - 1] ?? 1)}x</span>
+                    </div>
+                    <div class="mt-1 text-xs text-gray-600 text-right">
+                        Current: {formatPlaybackRate(playbackRate)}x
+                    </div>
+                    <div class="mt-1 flex flex-wrap gap-2 text-[10px] text-gray-500">
+                        {#each availablePlaybackRates as rate, idx}
+                            <span class={idx === playbackRateIndex ? 'font-semibold text-gray-700' : ''}>
+                                {formatPlaybackRate(rate)}x
+                            </span>
+                        {/each}
+                    </div>
+                </div>
                 {#if showRecorder}
                     <div>
                         <Recorder
@@ -615,6 +755,7 @@
             <p>Playlist Buffer: {playlistBufferTime || 0}s</p>
             <p>Reaction Configs: {reactionConfigsArray.length}</p>
             <p>Volume Configs: {volumeConfigsArray.length}</p>
+            <p>Playback Rate Configs: {playbackRateConfigsArray.length}</p>
             <p>Current State: {currentButtonGroupState}</p>
             
             <!-- Show recent configs -->
@@ -629,6 +770,13 @@
                 <h4 class="font-semibold">Recent Volume Changes:</h4>
                 {#each volumeConfigsArray.slice(-5) as [time, config]}
                     <div>V: {time} → {config.volume}</div>
+                {/each}
+            </div>
+
+            <div class="mt-2">
+                <h4 class="font-semibold">Recent Playback Rate Changes:</h4>
+                {#each playbackRateConfigsArray.slice(-5) as [time, config]}
+                    <div>S: {time} → {formatPlaybackRate(config.rate)}x</div>
                 {/each}
             </div>
             

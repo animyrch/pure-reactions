@@ -78,6 +78,22 @@ export const getCurrentStateFromStateConfigs = (currentTime, stateConfigsOrTimel
      } : DEFAULT_STATE_CONFIG;
 };
 
+// Backward-compatible: accepts either an object map (old) or an array of { t, rate } (new)
+export const getCurrentPlaybackRateFromConfigs = (currentTime, playbackConfigsOrTimeline, timeOffset = 0) => {
+    const DEFAULT_PLAYBACK_RATE = 1;
+    const effectiveTime = Number(currentTime) - Number(timeOffset || 0);
+
+    if (Array.isArray(playbackConfigsOrTimeline)) {
+        const ev = findLastEventAtOrBefore(playbackConfigsOrTimeline, effectiveTime);
+        return ev && typeof ev.rate === 'number' ? ev.rate : DEFAULT_PLAYBACK_RATE;
+    }
+
+    const closestSmallerTimeCode = getClosestSmallerKey(playbackConfigsOrTimeline, effectiveTime);
+    return closestSmallerTimeCode !== -Infinity
+        ? playbackConfigsOrTimeline[closestSmallerTimeCode.toFixed(1)]?.rate ?? DEFAULT_PLAYBACK_RATE
+        : DEFAULT_PLAYBACK_RATE;
+};
+
 export const getCompensatedReactionTime = (startTime, playlistBufferTime = 0) => {
     const currentTime = new Date().getTime();
     const reactionSeconds = (currentTime - startTime) / 1000; // Convert to seconds

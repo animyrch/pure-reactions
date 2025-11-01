@@ -2,7 +2,8 @@
   import { onMount, onDestroy } from "svelte";
   import {
     getCurrentVolumeFromVolumeConfigs,
-    getCurrentStateFromStateConfigs
+    getCurrentStateFromStateConfigs,
+    getCurrentPlaybackRateFromConfigs
   } from "$lib/helpers/reaction";
   import {
     getReaction,
@@ -66,6 +67,12 @@
   let isLoading = true;
   let playerConfigs = {};  // Declare playerConfigs here
   let volumeConfigs = {};  // Declare volumeConfigs here
+  let playbackRateConfigs = {};
+  let stateTimeline = [];
+  let volumeTimeline = [];
+  let playbackRateTimeline = [];
+  let currentPlaybackRate = 1;
+  let changingSpeed = false;
   let isOutOfSync = false;
   let playlistItems = [];
   let playlistDocument;
@@ -120,6 +127,7 @@
     playerReaction.playVideo();
   }
   function startOriginalVideo() {
+    setPlaybackRateForOriginalVideo(currentPlaybackRate);
     playerOriginal.playVideo();
   }
   function pauseOriginalVideo() {
@@ -148,6 +156,20 @@
     }
   }
 
+  function handleOriginalVideoSpeed(reactionCurrentTime) {
+    const desiredPlaybackRate = getCurrentPlaybackRateFromConfigs(
+      reactionCurrentTime,
+      window.playbackRateConfigs,
+      timeOffset
+    );
+    if (!changingSpeed && Math.abs(desiredPlaybackRate - currentPlaybackRate) > 0.001) {
+      changingSpeed = true;
+      currentPlaybackRate = desiredPlaybackRate;
+      setPlaybackRateForOriginalVideo(desiredPlaybackRate);
+      changingSpeed = false;
+    }
+  }
+
   function handleOriginalVideoState(reactionCurrentTime) {
     const originalVideoNewStateConfig = getCurrentStateFromStateConfigs(
       reactionCurrentTime,
@@ -165,10 +187,17 @@
   function onPlayerReady(event) {
     isLoading = false;
     console.log("player ready");
+    if (event?.target === playerOriginal) {
+      setPlaybackRateForOriginalVideo(currentPlaybackRate);
+    }
+    if (event?.target === playerReaction && typeof event?.target?.setPlaybackRate === 'function') {
+      event.target.setPlaybackRate(1);
+    }
   }
   const startVideos = () => {
     bothVideosStarted = true;
     goToSecondsInReactionVideo(offsetStartTime || 0);
+    setPlaybackRateForOriginalVideo(currentPlaybackRate);
     startReactionVideo();
     pollVideoCurrentTime();
   };
@@ -209,6 +238,7 @@
           }
         }
         handleOriginalVideoVolume(reactionCurrentTime);
+        handleOriginalVideoSpeed(reactionCurrentTime);
         handleOriginalVideoState(reactionCurrentTime);
       }
     }, interval);
@@ -287,6 +317,12 @@
     playerOriginal.setVolume(volume);
   }
 
+  function setPlaybackRateForOriginalVideo(rate) {
+    if (playerOriginal && typeof playerOriginal.setPlaybackRate === 'function') {
+      playerOriginal.setPlaybackRate(rate);
+    }
+  }
+
   function loadNextReactionInPlaylist() {
     if (!hasNextIndexInPlaylist || !playlistDocument) {
       return;
@@ -334,9 +370,11 @@
     reactorId = obtainedData["reactorId"];
     isUsersOwnVideo = reactorId === data.userId
     canShowEditModeButton = isUsersOwnVideo;
+    changingSpeed = false;
     // Prefer new array timelines; fall back to legacy maps
     window.playerConfigs = obtainedData["stateTimeline"] || obtainedData["reactionConfigs"];
     window.volumeConfigs = obtainedData["volumeTimeline"] || obtainedData["volumeConfigs"];
+    window.playbackRateConfigs = obtainedData["playbackTimeline"] || obtainedData["playbackRateConfigs"];
     // For editor compatibility: if only arrays exist, convert to legacy maps locally
     if (!obtainedData["reactionConfigs"] && Array.isArray(obtainedData["stateTimeline"])) {
       playerConfigs = Object.fromEntries(
@@ -352,6 +390,36 @@
     } else {
       volumeConfigs = obtainedData["volumeConfigs"] || {};
     }
+    if (!obtainedData["playbackRateConfigs"] && Array.isArray(obtainedData["playbackTimeline"])) {
+      playbackRateConfigs = Object.fromEntries(
+        obtainedData["playbackTimeline"].map((ev) => [Number(ev.t).toFixed(1), { rate: ev.rate }])
+      );
+    } else {
+      playbackRateConfigs = obtainedData["playbackRateConfigs"] || {};
+    }
+
+    stateTimeline = Array.isArray(obtainedData["stateTimeline"]) && obtainedData["stateTimeline"].length
+      ? obtainedData["stateTimeline"]
+      : Object.entries(playerConfigs).map(([key, value]) => ({
+          t: Number(key),
+          state: Number(value?.state ?? -1),
+          targetTime: Number(value?.time ?? 0)
+        })).sort((a, b) => a.t - b.t);
+
+    volumeTimeline = Array.isArray(obtainedData["volumeTimeline"]) && obtainedData["volumeTimeline"].length
+      ? obtainedData["volumeTimeline"]
+      : Object.entries(volumeConfigs).map(([key, value]) => ({
+          t: Number(key),
+          volume: Number(value?.volume ?? 100)
+        })).sort((a, b) => a.t - b.t);
+
+    playbackRateTimeline = Array.isArray(obtainedData["playbackTimeline"]) && obtainedData["playbackTimeline"].length
+      ? obtainedData["playbackTimeline"]
+      : Object.entries(playbackRateConfigs).map(([key, value]) => ({
+          t: Number(key),
+          rate: Number(value?.rate ?? 1)
+        })).sort((a, b) => a.t - b.t);
+
     originalVideoId = obtainedData["originalVideoId"];
     reactionVideoId = obtainedData["reactionVideoId"];
     reactionVideoAuthor = obtainedData?.reactionVideoAuthor;
@@ -363,6 +431,11 @@
     reactionFinishTime = parseFloat(obtainedData?.reactionFinishTime);
     timeOffset = obtainedData?.timeOffset || 0;
     globalGain = obtainedData?.globalGain || 1.0;
+    currentPlaybackRate = getCurrentPlaybackRateFromConfigs(
+      offsetStartTime || 0,
+      window.playbackRateConfigs,
+      timeOffset
+    );
 
     originalVideoTitle
     if (playerOriginal) {
@@ -656,7 +729,14 @@
         {#if isFineTuneModeOn}Disable Fine Tune Mode{:else}Enable Fine Tune Mode{/if}
       </Button>
       {#if isFineTuneModeOn}
-        <ConfigEditor {playerConfigs} {volumeConfigs} />
+        <ConfigEditor
+          {playerConfigs}
+          {volumeConfigs}
+          {stateTimeline}
+          {volumeTimeline}
+          playbackRateConfigs={playbackRateConfigs}
+          playbackRateTimeline={playbackRateTimeline}
+        />
       {/if}
   {/if}
 </div>

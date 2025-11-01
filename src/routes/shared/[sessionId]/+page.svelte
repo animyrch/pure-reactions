@@ -37,7 +37,8 @@
         play: false,
         pause: false,
         seek: null,
-        volume: null
+        volume: null,
+        playbackRate: null
     };
     let controlTimeouts = new Map();
 
@@ -155,6 +156,16 @@
         controlTimeouts.set('volume', timeoutId);
     }
 
+    function delayedPlaybackRate(rate) {
+        clearControlTimeout('speed');
+        const timeoutId = setTimeout(() => {
+            if (playerOriginal && typeof playerOriginal.setPlaybackRate === 'function') {
+                playerOriginal.setPlaybackRate(rate);
+            }
+        }, TWITCH_DELAY_SECONDS * 1000);
+        controlTimeouts.set('speed', timeoutId);
+    }
+
     async function handleVideoChange(newVideoId) {
         if (!newVideoId) return;
 
@@ -173,6 +184,8 @@
         } else {
             pendingVideoUpdate = videoConfig;
         }
+
+        delayedPlaybackRate(sessionData?.playbackRate ?? 1);
 
         progress = 0;
         currentTimeDisplay = formatTime(videoConfig.startSeconds) + " / 0:00";
@@ -193,6 +206,10 @@
         // Sync volume with delay
         if (sessionData.volume !== undefined) {
             delayedVolume(sessionData.volume);
+        }
+
+        if (sessionData.playbackRate !== undefined) {
+            delayedPlaybackRate(sessionData.playbackRate);
         }
 
         // Sync play/pause state with delay
@@ -403,6 +420,7 @@
                     <p>Session State: {sessionData?.state || 'Unknown'}</p>
                     <p>Session Time: {sessionData?.currentTime || 'N/A'}s</p>
                     <p>Session Volume: {sessionData?.volume || 'N/A'}%</p>
+                    <p>Session Playback Rate: {sessionData?.playbackRate || 'N/A'}x</p>
                     <p>Pending Timeouts: {controlTimeouts.size}</p>
                     
                     <div class="mt-2">

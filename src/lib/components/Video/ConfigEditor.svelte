@@ -7,6 +7,8 @@
     export let playerConfigs = {};
     export let stateTimeline = [];
     export let volumeTimeline = [];
+    export let playbackRateConfigs = {};
+    export let playbackRateTimeline = [];
 
     const createSampleConfig = async () => {
         const newPlayerConfigs = {};
@@ -21,7 +23,12 @@
 <div>
     {#if (playerConfigs && Object.keys(playerConfigs).length > 0) || (stateTimeline && stateTimeline.length > 0)}
         <ConfigEditorInner
-            {playerConfigs} {volumeConfigs}
+            {playerConfigs}
+            {volumeConfigs}
+            {stateTimeline}
+            {volumeTimeline}
+            playbackRateConfigs={playbackRateConfigs}
+            playbackRateTimeline={playbackRateTimeline}
         />
     {:else}
         <p>No configurations found</p>

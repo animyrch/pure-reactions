@@ -21,6 +21,7 @@ export const createSharedSession = async (reactionDocumentId, originalVideoId, r
             currentTime: 0,
             duration: 0,
             volume: 100,
+            playbackRate: 1,
             createdAt: serverTimestamp(),
             lastUpdated: serverTimestamp(),
             viewers: {}
