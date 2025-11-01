@@ -46,6 +46,7 @@
     const showRecorder = $page.url.searchParams.get('record');
     let currentPlaylistDocumentId = $page.url.searchParams.get('playlistDocumentId') || '';
     let playlistElements;
+    const existingSharedSessionId = $page.url.searchParams.get('sharedSessionId');
 
     const playerOptions = {
         autoplay: 0,
@@ -78,11 +79,27 @@
     let debugMode = $page.url.searchParams.get('debug') === 'true';
     
     // Shared session variables
-    let sharedSessionId = null;
+    let sharedSessionId = existingSharedSessionId;
     let shareUrl = '';
     let showShareModal = false;
     let viewerCount = 0;
     let sessionUnsubscribe = null;
+
+    function subscribeToSession() {
+        if (!sharedSessionId) {
+            return;
+        }
+
+        if (sessionUnsubscribe) {
+            sessionUnsubscribe();
+        }
+
+        sessionUnsubscribe = listenToSession(sharedSessionId, (sessionData) => {
+            if (sessionData && sessionData.viewers) {
+                viewerCount = Object.keys(sessionData.viewers).length;
+            }
+        });
+    }
 
     function loadYoutubePlayer() {
         playerOriginal = new YT.Player("player-original", {
@@ -245,18 +262,25 @@
         
         // Create shared session
         try {
-            sharedSessionId = await createSharedSession(currentReactionDocumentId, originalVideoId, data.userId);
+            if (!sharedSessionId) {
+                sharedSessionId = await createSharedSession(currentReactionDocumentId, originalVideoId, data.userId);
+                console.log('Shared session created:', sharedSessionId);
+            } else {
+                await updateSessionState(sharedSessionId, {
+                    originalVideoId,
+                    reactorId: data.userId,
+                    activeReactionDocumentId: currentReactionDocumentId,
+                    state: SESSION_STATES.WAITING,
+                    currentTime: 0,
+                    duration: 0
+                });
+                console.log('Shared session updated for new playlist video:', sharedSessionId);
+            }
+
             shareUrl = generateShareUrl(sharedSessionId);
-            console.log('Shared session created:', shareUrl);
-            
-            // Listen to session changes to track viewer count
-            sessionUnsubscribe = listenToSession(sharedSessionId, (sessionData) => {
-                if (sessionData && sessionData.viewers) {
-                    viewerCount = Object.keys(sessionData.viewers).length;
-                }
-            });
+            subscribeToSession();
         } catch (error) {
-            console.error('Failed to create shared session:', error);
+            console.error('Failed to initialise shared session:', error);
         }
         
         if (playlistId) {
@@ -316,17 +340,6 @@
         const reactionVideoTime = getCompensatedReactionTime(startTime, playlistBufferTime || 0);
         console.log('finish reaction', reactionVideoTime);
         
-        // End the shared session
-        if (sharedSessionId) {
-            try {
-                await updateSessionState(sharedSessionId, {
-                    state: SESSION_STATES.ENDED
-                });
-            } catch (error) {
-                console.error('Failed to end shared session:', error);
-            }
-        }
-        
         updateFirebaseDocument({
             "reactionFinishTime": reactionVideoTime,
         });
@@ -354,11 +367,28 @@
         }
         const nextVideoIndex = playlistElements.findIndex(item => item === originalVideoId) + 1;
         const nextVideoId = playlistElements[nextVideoIndex];
+        if (sharedSessionId) {
+            try {
+                if (nextVideoId) {
+                    await updateSessionState(sharedSessionId, {
+                        state: SESSION_STATES.WAITING,
+                        currentTime: 0
+                    });
+                } else {
+                    await updateSessionState(sharedSessionId, {
+                        state: SESSION_STATES.ENDED
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to update shared session at finish:', error);
+            }
+        }
         if (!nextVideoId) {
             goToReactionConfiguration();
             return;
         }
-        await goToRoute(`/backend?id=${nextVideoId}&playlist=${playlistId}&playlistDocumentId=${currentPlaylistDocumentId}&playlistBufferTime=${reactionVideoTime}`);
+        const nextRoute = `/backend?id=${nextVideoId}&playlist=${playlistId}&playlistDocumentId=${currentPlaylistDocumentId}&playlistBufferTime=${reactionVideoTime}` + (sharedSessionId ? `&sharedSessionId=${sharedSessionId}` : '');
+        await goToRoute(nextRoute);
         location.reload();
     };
 
@@ -412,6 +442,11 @@
         await getBasicDetailsOriginal();
         if (playlistBufferTime) {
             onClickStartReaction();
+        }
+
+        if (sharedSessionId) {
+            shareUrl = generateShareUrl(sharedSessionId);
+            subscribeToSession();
         }
 
         // Clean up inactive sessions periodically

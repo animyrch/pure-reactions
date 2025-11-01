@@ -16,6 +16,8 @@
     let sessionId = $page.params.sessionId;
     let sessionData = null;
     let playerOriginal = null;
+    let currentVideoId = null;
+    let pendingVideoUpdate = null;
     let progress = 0;
     let currentTimeDisplay = "0:00 / 0:00";
     let isConnected = false;
@@ -53,11 +55,37 @@
         return 'viewer_' + Math.random().toString(36).substr(2, 9);
     };
 
+    function clearAllControlTimeouts() {
+        controlTimeouts.forEach((timeoutId) => {
+            clearTimeout(timeoutId);
+        });
+        controlTimeouts.clear();
+    }
+
+    async function refreshVideoDetails(videoId) {
+        if (!videoId) {
+            originalVideoAuthor = '';
+            originalVideoTitle = '';
+            return;
+        }
+
+        try {
+            const { videoAuthor, videoTitle } = await downloadBasicVideoDetails(videoId);
+            originalVideoAuthor = videoAuthor;
+            originalVideoTitle = videoTitle;
+        } catch (error) {
+            console.error('Failed to download video details:', error);
+            originalVideoAuthor = '';
+            originalVideoTitle = '';
+        }
+    }
+
     function loadYoutubePlayer() {
-        if (!sessionData?.originalVideoId) return;
+        const videoIdToLoad = currentVideoId || sessionData?.originalVideoId;
+        if (!videoIdToLoad) return;
         
         playerOriginal = new YT.Player("player-viewer", {
-            videoId: sessionData.originalVideoId,
+            videoId: videoIdToLoad,
             playerVars: playerOptions,
             events: {
                 onReady: onPlayerReady,
@@ -69,6 +97,11 @@
     function onPlayerReady(event) {
         console.log("Viewer player ready");
         isPlayerReady = true;
+        
+        if (pendingVideoUpdate && typeof playerOriginal?.cueVideoById === 'function') {
+            playerOriginal.cueVideoById(pendingVideoUpdate);
+            pendingVideoUpdate = null;
+        }
         
         // Sync with current session state
         if (sessionData) {
@@ -120,6 +153,29 @@
             playerOriginal.setVolume(volume);
         }, TWITCH_DELAY_SECONDS * 1000);
         controlTimeouts.set('volume', timeoutId);
+    }
+
+    async function handleVideoChange(newVideoId) {
+        if (!newVideoId) return;
+
+        currentVideoId = newVideoId;
+        clearAllControlTimeouts();
+        await refreshVideoDetails(newVideoId);
+
+        const videoConfig = {
+            videoId: newVideoId,
+            startSeconds: sessionData?.currentTime || 0
+        };
+
+        if (playerOriginal && typeof playerOriginal.cueVideoById === 'function' && isPlayerReady) {
+            playerOriginal.cueVideoById(videoConfig);
+            pendingVideoUpdate = null;
+        } else {
+            pendingVideoUpdate = videoConfig;
+        }
+
+        progress = 0;
+        currentTimeDisplay = formatTime(videoConfig.startSeconds) + " / 0:00";
     }
 
     function syncWithSession() {
@@ -179,16 +235,20 @@
             viewerId = generateViewerId();
             await joinSharedSession(sessionId, viewerId, 'Anonymous Viewer');
             
-            // Get video details
-            const { videoAuthor, videoTitle } = await downloadBasicVideoDetails(sessionData.originalVideoId);
-            originalVideoAuthor = videoAuthor;
-            originalVideoTitle = videoTitle;
+            // Track current video and load initial metadata
+            currentVideoId = sessionData.originalVideoId;
+            await refreshVideoDetails(currentVideoId);
 
             isConnected = true;
 
             // Start listening to session changes
-            unsubscribe = listenToSession(sessionId, (newSessionData) => {
+            unsubscribe = listenToSession(sessionId, async (newSessionData) => {
+                const previousVideoId = currentVideoId;
                 sessionData = newSessionData;
+
+                if (sessionData?.originalVideoId && sessionData.originalVideoId !== previousVideoId) {
+                    await handleVideoChange(sessionData.originalVideoId);
+                }
                 if (isPlayerReady) {
                     syncWithSession();
                 }
@@ -219,10 +279,7 @@
 
     onDestroy(async () => {
         // Clear all pending timeouts
-        controlTimeouts.forEach((timeoutId) => {
-            clearTimeout(timeoutId);
-        });
-        controlTimeouts.clear();
+        clearAllControlTimeouts();
         
         // Leave session when component is destroyed
         if (viewerId && sessionId) {

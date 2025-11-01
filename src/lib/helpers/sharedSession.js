@@ -1,4 +1,4 @@
-import { ref, set, onValue, remove, serverTimestamp } from "firebase/database";
+import { ref, set, update, onValue, remove, serverTimestamp } from "firebase/database";
 import { database } from "$lib/constants/firebase";
 
 // Session state constants
@@ -16,6 +16,7 @@ export const createSharedSession = async (reactionDocumentId, originalVideoId, r
         const sessionData = {
             originalVideoId,
             reactorId,
+            activeReactionDocumentId: reactionDocumentId,
             state: SESSION_STATES.WAITING,
             currentTime: 0,
             duration: 0,
@@ -70,8 +71,8 @@ export const updateSessionState = async (sessionId, updates) => {
             ...updates,
             lastUpdated: serverTimestamp()
         };
-        
-        await set(sessionRef, updateData);
+
+        await update(sessionRef, updateData);
     } catch (error) {
         console.error('Error updating session state:', error);
         throw error;
