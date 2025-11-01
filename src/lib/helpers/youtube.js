@@ -35,7 +35,7 @@ export const getAuthorFromAuthorUrl = (authorUrl) => {
  * 'LEv2fMoVvXE';
  */
 export const extractYouTubeVideoId = (originalUrl) => {
-  const regex = /^([a-zA-Z0-9_-]{11})$|(youtu\.be\/|youtube\.com\/(watch\?(.*&)?v=|(embed|v|shorts)\/))([^\?&"'>]+)/;
+  const regex = /^([a-zA-Z0-9_-]{11})$|(youtu\.be\/|youtube\.com\/(watch\?(.*&)?v=|(embed|v|shorts)\/))([^?&"'>]+)/;
   const matches = originalUrl.match(regex);
   return matches ? (matches[1] || matches[6]) : null;
 };

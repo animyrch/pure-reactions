@@ -10,6 +10,7 @@
     import { showToast } from '$lib/stores/toast';
     import { TOASTS } from '$lib/constants/toasts';
     import GenericInput from '$lib/components/GenericInput.svelte';
+  import { handlePrivateRoute } from '$lib/helpers/routing';
 
     let user;
     let newName;

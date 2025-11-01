@@ -1,6 +1,6 @@
 <script>
     import ConfigEditorInner from './ConfigEditorInner.svelte';
-    import { Select, Label, Button } from 'flowbite-svelte';
+    import { Button } from 'flowbite-svelte';
     import { updateFirebaseDocument } from "$lib/helpers/firebase";
     
     export let volumeConfigs = {};

@@ -1,5 +1,5 @@
 <script>
-    import { Select, Label, Button } from 'flowbite-svelte';
+    import { Label, Button } from 'flowbite-svelte';
     import { createEventDispatcher } from 'svelte';
 
     export let volume;

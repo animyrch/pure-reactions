@@ -1,66 +1,273 @@
 <script>
-    import { SpeedDial } from 'flowbite-svelte';
-    import {
-      ShareNodesSolid,
-      BookmarkSolid,
-      HomeSolid,
-      UserCircleSolid,
-      SearchOutline,
-      BellActiveAltSolid
-    } from 'flowbite-svelte-icons';
-    import SpeedDialOption from '$lib/components/Navigation/SpeedDialOption.svelte';
-	  import { page } from '$app/stores';
-    import { copyToClipboard } from '$lib/helpers/system';
-    import { showToast } from '$lib/stores/toast';
-    import { TOASTS } from '$lib/constants/toasts';
+  import { onMount } from 'svelte';
+  import {
+    ShareNodesSolid,
+    BookmarkSolid,
+    HomeSolid,
+    UserCircleSolid,
+    SearchOutline,
+    BellActiveAltSolid,
+  } from 'flowbite-svelte-icons';
+  import { page } from '$app/stores';
+  import { copyToClipboard } from '$lib/helpers/system';
+  import { showToast } from '$lib/stores/toast';
+  import { TOASTS } from '$lib/constants/toasts';
 
-    const copyCurrentUrl = () => {
-      copyToClipboard($page.url.href);
-      showToast('Current URL copied to your clipboard. Now paste it anywhere and share with the world!', TOASTS.SUCCESS);
+  const options = [
+    { name: 'Share Current Page', icon: ShareNodesSolid, type: 'action' },
+    { name: 'Search', icon: SearchOutline, href: '/search' },
+    { name: 'My Account', icon: UserCircleSolid, href: '/account' },
+    { name: 'Reactors I Follow', icon: BellActiveAltSolid, href: '/?sortBy=following' },
+    { name: 'My Bookmarks', icon: BookmarkSolid, href: '/bookmark' },
+    { name: 'Home', icon: HomeSolid, href: '/' }
+  ];
+
+  let isOpen = false;
+  let dialRef;
+  let triggerRef;
+  const menuId = 'speed-dial-menu';
+
+  const copyCurrentUrl = () => {
+    copyToClipboard($page.url.href);
+    showToast('Current URL copied to your clipboard.', TOASTS.SUCCESS);
+  };
+
+  const closeDial = (refocus = false) => {
+    if (!isOpen) return;
+    isOpen = false;
+    if (refocus) {
+      triggerRef?.focus();
+    }
+  };
+
+  const toggleDial = () => {
+    isOpen = !isOpen;
+  };
+
+  const handleWindowKeydown = (event) => {
+    if (event.key === 'Escape') {
+      closeDial(true);
+    }
+  };
+
+  const handlePointerDown = (event) => {
+    if (isOpen && !dialRef?.contains(event.target)) {
+      closeDial(false);
+    }
+  };
+
+  onMount(() => {
+    window.addEventListener('keydown', handleWindowKeydown);
+    window.addEventListener('pointerdown', handlePointerDown, { passive: true });
+    return () => {
+      window.removeEventListener('keydown', handleWindowKeydown);
+      window.removeEventListener('pointerdown', handlePointerDown);
     };
+  });
+
+  const handleAction = (option) => {
+    if (option.type === 'action') {
+      copyCurrentUrl();
+      closeDial(true);
+    } else if (option.href) {
+      closeDial(false);
+    }
+  };
 </script>
 
-<SpeedDial
-    defaultClass="fixed end-6 bottom-6 z-100"
-    pill={false}
-    trigger="click"
-    tooltip="none"
+<div
+  bind:this={dialRef}
+  class="speed-dial fixed bottom-6 left-6 z-[95] flex flex-col items-start gap-2"
+  data-open={isOpen}
 >
-    <SpeedDialOption
-        name="Share"
-    >
-      <ShareNodesSolid 
-        on:click={copyCurrentUrl}
-      />
-    </SpeedDialOption>
-    <SpeedDialOption
-        name="Search"
-        href="/search"
-    >
-      <SearchOutline />
-    </SpeedDialOption>
-    <SpeedDialOption
-        name="Account"
-        href="/account"
-    >
-      <UserCircleSolid />
-    </SpeedDialOption>
-    <SpeedDialOption
-        name="Follows"
-        href="/?sortBy=following"
-    >
-      <BellActiveAltSolid />
-    </SpeedDialOption>
-    <SpeedDialOption
-        name="Bookmarks"
-        href="/bookmark"
-    >
-      <BookmarkSolid />
-    </SpeedDialOption>
-    <SpeedDialOption
-        name="Home"
-        href="/"
-    >
-      <HomeSolid />
-    </SpeedDialOption>
-  </SpeedDial>
+  <ul
+    id={menuId}
+    class={`dial-menu mb-2 flex flex-col items-start gap-2 transition duration-slow ease-cinematic ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}
+    aria-hidden={!isOpen}
+  >
+    {#each options as option, index}
+      {#if option.type === 'action'}
+        <li class="dial-item" style={`--item-delay: ${index * 50}ms`}>
+          <button
+            type="button"
+            class="dial-button"
+            tabindex={isOpen ? 0 : -1}
+            on:click={() => handleAction(option)}
+            aria-label={option.name}
+          >
+            <svelte:component this={option.icon} class="h-5 w-5" />
+            <span class="dial-label" aria-hidden="true">{option.name}</span>
+            <span class="sr-only">{option.name}</span>
+          </button>
+        </li>
+      {:else}
+        <li class="dial-item" style={`--item-delay: ${index * 50}ms`}>
+          <a
+            href={option.href}
+            class="dial-button"
+            tabindex={isOpen ? 0 : -1}
+            on:click={() => handleAction(option)}
+            aria-label={option.name}
+          >
+            <svelte:component this={option.icon} class="h-5 w-5" />
+            <span class="dial-label" aria-hidden="true">{option.name}</span>
+            <span class="sr-only">{option.name}</span>
+          </a>
+        </li>
+      {/if}
+    {/each}
+  </ul>
+
+  <button
+    bind:this={triggerRef}
+    type="button"
+    class={`fab-button ${isOpen ? 'rotate-45 bg-accent-primary text-background' : 'bg-surface text-text-primary'}`}
+    aria-haspopup="true"
+    aria-expanded={isOpen}
+    aria-controls={menuId}
+    on:click={toggleDial}
+  >
+    <span class="sr-only">Toggle quick navigation</span>
+    <ShareNodesSolid class="h-5 w-5" />
+  </button>
+</div>
+
+<style>
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .fab-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 12px 28px rgba(5, 8, 12, 0.32);
+    transition: transform 320ms cubic-bezier(0.33, 1, 0.68, 1),
+      background-color 320ms cubic-bezier(0.33, 1, 0.68, 1),
+      color 320ms cubic-bezier(0.33, 1, 0.68, 1),
+      box-shadow 320ms cubic-bezier(0.33, 1, 0.68, 1);
+  }
+
+  .fab-button:hover {
+    box-shadow: 0 18px 36px rgba(5, 8, 12, 0.38);
+  }
+
+  .fab-button:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(12, 18, 27, 0.9), 0 0 0 4px rgba(92, 178, 255, 0.45);
+  }
+
+  .dial-menu {
+    min-width: 3rem;
+  }
+
+  .dial-item {
+    position: relative;
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+    transition: opacity 320ms cubic-bezier(0.33, 1, 0.68, 1),
+      transform 320ms cubic-bezier(0.33, 1, 0.68, 1);
+    transition-delay: var(--item-delay);
+  }
+
+  .speed-dial[data-open='true'] .dial-item {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  .dial-button {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 999px;
+    background: rgba(17, 21, 28, 0.88);
+    color: #f5f7fa;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 10px 26px rgba(5, 8, 12, 0.3);
+    transition: background-color 240ms cubic-bezier(0.33, 1, 0.68, 1),
+      transform 240ms cubic-bezier(0.33, 1, 0.68, 1),
+      color 240ms cubic-bezier(0.33, 1, 0.68, 1);
+  }
+
+  .dial-button:hover {
+    background: rgba(35, 41, 52, 0.98);
+  }
+
+  .dial-button:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(12, 18, 27, 0.9), 0 0 0 4px rgba(92, 178, 255, 0.45);
+  }
+
+  .dial-label {
+    position: absolute;
+    top: 50%;
+    left: calc(100% + 0.75rem);
+    transform: translateY(-50%) scale(0.96);
+    padding: 0.4rem 0.6rem;
+    border-radius: 999px;
+    background: rgba(12, 18, 27, 0.95);
+    color: #f5f7fa;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 12px 28px rgba(5, 8, 12, 0.28);
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    opacity: 0;
+    white-space: nowrap;
+    pointer-events: none;
+    transition: opacity 220ms cubic-bezier(0.33, 1, 0.68, 1),
+      transform 220ms cubic-bezier(0.33, 1, 0.68, 1);
+  }
+
+  .dial-button:hover .dial-label,
+  .dial-button:focus-visible .dial-label,
+  .dial-button:focus .dial-label {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dial-label {
+      transition: opacity 120ms linear;
+      transform: translateY(-50%);
+    }
+
+    .dial-button:hover .dial-label,
+    .dial-button:focus-visible .dial-label,
+    .dial-button:focus .dial-label {
+      transform: translateY(-50%);
+    }
+  }
+
+  @media (max-width: 640px) {
+    .speed-dial {
+      left: 1.25rem;
+      bottom: 1.25rem;
+    }
+
+    .fab-button {
+      width: 2.75rem;
+      height: 2.75rem;
+    }
+
+    .dial-button {
+      width: 2.5rem;
+      height: 2.5rem;
+    }
+  }
+</style>

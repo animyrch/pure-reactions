@@ -1,4 +1,5 @@
 <script>
+    /* global YT */
     import Recorder from "$lib/components/Recorder.svelte";
     import { onMount } from "svelte";
     import {
@@ -7,13 +8,13 @@
         createPlaylistDocument,
         addToPlaylistDocument
     } from "$lib/helpers/firebase";
-    import { handlePrivateRoute } from '$lib/helpers/routing';
+    import { handlePrivateRoute, goToRoute } from "$lib/helpers/routing";
     import { isMobileDevice } from '$lib/helpers/system';
     import { getCompensatedReactionTime } from '$lib/helpers/reaction';
     import PlaylistQueue from "$lib/components/Video/PlaylistQueue.svelte";
     import { isLoggedIn } from '$lib/stores/user';
     import { page } from '$app/stores';
-    import { ButtonGroup, Button, Progressbar, Modal } from 'flowbite-svelte';
+    import { Progressbar, Modal } from 'flowbite-svelte';
     import {
         BullhornSolid,
         PauseSolid,
@@ -23,9 +24,7 @@
         UsersSolid
     } from 'flowbite-svelte-icons';
     import { sineOut } from 'svelte/easing';
-    import { downloadBasicVideoDetails } from '$lib/helpers/youtube';
-    import { goToRoute } from "$lib/helpers/routing";
-    import { fetchFirstPlaylistVideos } from '$lib/helpers/youtube';
+    import { downloadBasicVideoDetails, fetchFirstPlaylistVideos } from '$lib/helpers/youtube';
     import { 
         createSharedSession, 
         updateSessionState, 
@@ -65,6 +64,47 @@
         FINALISED: 'finalised'
     };
 
+    const stageSequence = [
+        {
+            id: 'setup',
+            title: 'Setup',
+            description: 'Prep your camera, playlist and session links.'
+        },
+        {
+            id: 'record',
+            title: 'Record',
+            description: 'Capture reactions while keeping playback in sync.'
+        },
+        {
+            id: 'review',
+            title: 'Review',
+            description: 'Wrap up and push the reaction to the editor.'
+        }
+    ];
+
+    const mapButtonStateToStageIndex = (state) => {
+        switch (state) {
+            case BUTTON_GROUP_STATES.INITIAL:
+            case BUTTON_GROUP_STATES.READY:
+                return 0;
+            case BUTTON_GROUP_STATES.RECORDING:
+            case BUTTON_GROUP_STATES.PAUSED:
+                return 1;
+            case BUTTON_GROUP_STATES.FINALISED:
+                return 2;
+            default:
+                return 0;
+        }
+    };
+
+    let currentStageIndex = 0;
+    let stageProgress = stageSequence.map((stage, index) => ({
+        ...stage,
+        status: index === 0 ? 'active' : 'upcoming',
+        displayIndex: String(index + 1).padStart(2, '0')
+    }));
+    let stageActions = [];
+
     let timer;
     let startTime;
     let playerOriginal;
@@ -80,6 +120,7 @@
     let playbackRateIndex = availablePlaybackRates.indexOf(1) !== -1 ? availablePlaybackRates.indexOf(1) : 0;
     let playbackRate = availablePlaybackRates[playbackRateIndex] || 1;
     let pendingPlaybackRate = null;
+    let isBuffering = false;
     
     // Debug mode
     let debugMode = $page.url.searchParams.get('debug') === 'true';
@@ -89,7 +130,18 @@
     let shareUrl = '';
     let showShareModal = false;
     let viewerCount = 0;
+    let viewerLabel = 'viewers';
     let sessionUnsubscribe = null;
+
+    $: currentStageIndex = mapButtonStateToStageIndex(currentButtonGroupState);
+
+    $: stageProgress = stageSequence.map((stage, index) => ({
+        ...stage,
+        status: index < currentStageIndex ? 'complete' : index === currentStageIndex ? 'active' : 'upcoming',
+        displayIndex: String(index + 1).padStart(2, '0')
+    }));
+
+    $: viewerLabel = viewerCount === 1 ? 'viewer' : 'viewers';
 
     function subscribeToSession() {
         if (!sharedSessionId) {
@@ -158,7 +210,16 @@
         }
     }
     function onPlayerStateChange(event) {
-        const currentTime = playerOriginal.getCurrentTime();
+        if (event?.data === YT.PlayerState.BUFFERING) {
+            isBuffering = true;
+        } else if (
+            event?.data === YT.PlayerState.PLAYING ||
+            event?.data === YT.PlayerState.PAUSED ||
+            event?.data === YT.PlayerState.CUED ||
+            event?.data === YT.PlayerState.ENDED
+        ) {
+            isBuffering = false;
+        }
         logStateChange(getCurrentTimeForOriginalVideo(), event.data);
         if (event.data == YT.PlayerState.UNSTARTED) {
             console.log('YT.PlayerState.UNSTARTED');
@@ -538,6 +599,53 @@
         }
     };
 
+    $: stageActions = [
+        {
+            id: 'start-reaction',
+            label: 'Start Reaction',
+            description: 'Create your synced session and prep the recorder.',
+            icon: VideoSolid,
+            onClick: onClickStartReaction,
+            disabled: currentButtonGroupState !== BUTTON_GROUP_STATES.INITIAL,
+            tone: 'accent'
+        },
+        {
+            id: 'start-video',
+            label: 'Start Video',
+            description: 'Kick off playback for everyone in the session.',
+            icon: PlaySolid,
+            onClick: onClickStartVideo,
+            disabled: currentButtonGroupState !== BUTTON_GROUP_STATES.READY
+        },
+        {
+            id: 'focus-react',
+            label: isFocusReactOn ? 'Release Focus' : 'Focus React',
+            description: isFocusReactOn
+                ? 'Restore the original track to full volume.'
+                : 'Duck the original audio so the mic takes lead.',
+            icon: BullhornSolid,
+            onClick: onClickFocusReact,
+            disabled: currentButtonGroupState !== BUTTON_GROUP_STATES.RECORDING,
+            active: isFocusReactOn
+        },
+        {
+            id: 'stop-video',
+            label: 'Pause Video',
+            description: 'Pause playback to regroup or add notes.',
+            icon: PauseSolid,
+            onClick: onClickStopVideo,
+            disabled: currentButtonGroupState !== BUTTON_GROUP_STATES.RECORDING
+        },
+        {
+            id: 'finish-reaction',
+            label: 'Finish Reaction',
+            description: 'Lock the timeline and move into review.',
+            icon: DownloadSolid,
+            onClick: onClickFinishReaction,
+            disabled: currentButtonGroupState === BUTTON_GROUP_STATES.INITIAL || currentButtonGroupState === BUTTON_GROUP_STATES.FINALISED
+        }
+    ];
+
     onMount(async () => {
         if (isMobileDevice()) {
             handlePrivateRoute();
@@ -626,187 +734,274 @@
 <svelte:window on:keydown={handleKeydown} on:keyup={handleKeyup} on:beforeunload={handleBeforeUnload} />
 
 {#if $isLoggedIn}
-    <div class="website-inner-container">
-        <div class="flex gap-3">
-            <div class="original-video-container w-4/5 h-svh">
-                <div id="player-original" class="w-full h-2/3"/>
-                <button
-                    class="new-seekbar w-full h-24" 
-                    on:click={onClickProgress}
-                >
-                    {currentTimeDisplay}
-                    <Progressbar
-                        {progress}
-                        animate
-                        precision={2}
-                        tweenDuration={400}
-                        easing={sineOut}
-                        size="h-2"
-                        labelInsideClass="hidden"
-                        class="mb-8"
-                    />
-                </button>
-                <div class="reaction-buttons text-center m-2 h-24">
-                    <ButtonGroup>
-                        <Button
-                            disabled={currentButtonGroupState !== BUTTON_GROUP_STATES.INITIAL}
-                            on:click={onClickStartReaction}
-                            outline color="dark"
-                        >
-                          <VideoSolid class="w-3 h-3 me-2" />
-                          Start Reaction
-                        </Button>
-                        <Button
-                            disabled={currentButtonGroupState !== BUTTON_GROUP_STATES.READY}
-                            on:click={onClickStartVideo}
-                            outline color="dark"
-                        >
-                          <PlaySolid class="w-3 h-3 me-2" />
-                          Start Video
-                        </Button>
-                        <Button
-                            disabled={currentButtonGroupState !== BUTTON_GROUP_STATES.RECORDING}
-                            on:click={onClickFocusReact}
-                            outline={!isFocusReactOn}
-                            color={isFocusReactOn ? "red" : "dark"}
-                        >
-                          <BullhornSolid class="w-3 h-3 me-2" />
-                          Focus React
-                        </Button>
-                        <Button
-                            disabled={currentButtonGroupState !== BUTTON_GROUP_STATES.RECORDING}
-                            on:click={onClickStopVideo}
-                            outline color="dark"
-                        >
-                          <PauseSolid class="w-3 h-3 me-2" />
-                          Stop Video
-                        </Button>
-                        <Button
-                            disabled={currentButtonGroupState === BUTTON_GROUP_STATES.INITIAL || currentButtonGroupState === BUTTON_GROUP_STATES.FINALISED}
-                            on:click={onClickFinishReaction}
-                            outline color="dark"
-                        >
-                          <DownloadSolid class="w-3 h-3 me-2" />
-                          Finish Reaction
-                        </Button>
-                        <Button
-                            disabled={!sharedSessionId}
-                            on:click={onClickShareSession}
-                            outline color="blue"
-                        >
-                          <UsersSolid class="w-3 h-3 me-2" />
-                          Share Session
-                        </Button>
-                      </ButtonGroup>
-                </div>
-            </div>
-            <div class="tools-container w-1/5">
-                <div class="playback-rate-control mb-6">
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Playback speed</label>
+    <div class="min-h-screen bg-slate-950 text-slate-100">
+        <div class="mx-auto flex h-full max-w-6xl flex-col gap-6 px-4 py-8">
+            <header class="space-y-6">
+                <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div class="space-y-1">
+                        <p class="text-xs uppercase tracking-[0.3em] text-slate-500">Now Recording</p>
+                        <h1 class="text-xl font-semibold text-white">
+                            {originalVideoTitle ?? "Loading reaction details…"}
+                        </h1>
+                        <p class="text-xs uppercase tracking-[0.3em] text-slate-600">
+                            {originalVideoAuthor ? `Original by ${originalVideoAuthor}` : ""}
+                        </p>
+                    </div>
                     <div class="flex items-center gap-3">
-                        <span class="text-xs text-gray-500">{formatPlaybackRate(availablePlaybackRates[0] ?? 1)}x</span>
-                        <input
-                            type="range"
-                            min="0"
-                            max={Math.max(availablePlaybackRates.length - 1, 0)}
-                            step="1"
-                            bind:value={playbackRateIndex}
-                            on:input={() => updatePlaybackRateFromIndex(playbackRateIndex, { userInitiated: true })}
-                            class="flex-1"
-                            disabled={availablePlaybackRates.length <= 1}
+                        <div class="hidden items-center gap-2 rounded-full border border-slate-800 bg-slate-900/80 px-4 py-2 text-sm font-medium text-slate-300 sm:flex">
+                            <UsersSolid class="h-4 w-4 text-slate-400" />
+                            <span>{viewerCount} {viewerLabel}</span>
+                        </div>
+                        <button
+                            class="flex items-center gap-2 rounded-full border border-blue-500/50 bg-blue-500/10 px-4 py-2 text-sm font-semibold text-blue-200 transition hover:bg-blue-500/20 focus:outline-none focus:ring-2 focus:ring-blue-400/70 disabled:border-slate-700 disabled:bg-slate-800/60 disabled:text-slate-500 disabled:focus:ring-0"
+                            on:click={onClickShareSession}
+                            disabled={!sharedSessionId}
+                        >
+                            <UsersSolid class="h-4 w-4" />
+                            Share Session
+                        </button>
+                    </div>
+                </div>
+                <div class="flex flex-wrap items-center gap-4">
+                    {#each stageProgress as stage, idx}
+                        <div class="flex items-center gap-4">
+                            <div
+                                class={`flex h-16 min-w-[12rem] items-center gap-3 rounded-2xl border px-4 transition ${
+                                    stage.status === 'complete'
+                                        ? 'border-emerald-500/80 bg-emerald-500/10 text-emerald-100'
+                                        : stage.status === 'active'
+                                        ? 'border-blue-500/80 bg-blue-500/10 text-blue-100'
+                                        : 'border-slate-800 bg-slate-900/40 text-slate-400'
+                                }`}
+                            >
+                                <span
+                                    class={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold ${
+                                        stage.status === 'complete'
+                                            ? 'bg-emerald-500 text-slate-950'
+                                            : stage.status === 'active'
+                                            ? 'bg-blue-500 text-white'
+                                            : 'bg-slate-800 text-slate-400'
+                                    }`}
+                                >
+                                    {stage.displayIndex}
+                                </span>
+                                <div class="flex flex-col">
+                                    <span class="text-sm font-semibold text-inherit">{stage.title}</span>
+                                    <span class="text-xs text-slate-400">
+                                        {stage.description}
+                                    </span>
+                                </div>
+                            </div>
+                            {#if idx < stageProgress.length - 1}
+                                <span class="hidden h-px w-10 bg-slate-800 md:block"></span>
+                            {/if}
+                        </div>
+                    {/each}
+                </div>
+            </header>
+
+            <main class="grid flex-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+                <section class="flex flex-col gap-6">
+                    <div class="overflow-hidden rounded-3xl border border-slate-900/60 bg-slate-900/60 shadow-[0_30px_60px_-40px_rgba(15,23,42,0.8)]">
+                        <div class="relative aspect-video w-full bg-black" aria-busy={isBuffering}>
+                            {#if isBuffering}
+                                <div class="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-400/70 via-blue-200/40 to-blue-400/70 animate-pulse"></div>
+                            {/if}
+                            <div id="player-original" class="h-full w-full"></div>
+                            <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/70 via-slate-950/10 to-transparent"></div>
+                            <div class="pointer-events-none absolute bottom-5 left-6 flex items-center gap-3 text-sm font-mono text-slate-200">
+                                <span class="text-xs uppercase tracking-[0.3em] text-slate-500">Timeline</span>
+                                <span class="rounded-full bg-slate-950/60 px-3 py-1 text-base font-semibold text-white">
+                                    {currentTimeDisplay}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button
+                        class="group relative overflow-hidden rounded-3xl border border-slate-900/60 bg-slate-900/40 px-6 py-5 text-left transition hover:border-slate-800 hover:bg-slate-900/60 focus:outline-none focus:ring-2 focus:ring-blue-500/60"
+                        on:click={onClickProgress}
+                    >
+                        <div class="flex items-baseline justify-between">
+                            <span class="text-xs uppercase tracking-[0.3em] text-slate-500">Scrub</span>
+                            <span class="font-mono text-sm text-slate-200">{currentTimeDisplay}</span>
+                        </div>
+                        <Progressbar
+                            {progress}
+                            animate
+                            precision={2}
+                            tweenDuration={400}
+                            easing={sineOut}
+                            size="h-2"
+                            labelInsideClass="hidden"
+                            class="mt-4"
                         />
-                        <span class="text-xs text-gray-500">{formatPlaybackRate(availablePlaybackRates[availablePlaybackRates.length - 1] ?? 1)}x</span>
-                    </div>
-                    <div class="mt-1 text-xs text-gray-600 text-right">
-                        Current: {formatPlaybackRate(playbackRate)}x
-                    </div>
-                    <div class="mt-1 flex flex-wrap gap-2 text-[10px] text-gray-500">
-                        {#each availablePlaybackRates as rate, idx}
-                            <span class={idx === playbackRateIndex ? 'font-semibold text-gray-700' : ''}>
-                                {formatPlaybackRate(rate)}x
-                            </span>
+                    </button>
+
+                    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                        {#each stageActions as action}
+                            <button
+                                class={`flex h-full items-start gap-3 rounded-3xl border px-4 py-4 text-left transition focus:outline-none focus-visible:outline-none focus:ring-2 focus:ring-blue-500/60 ${
+                                    action.active
+                                        ? 'border-emerald-500/70 bg-emerald-500/10 text-emerald-100'
+                                        : action.tone === 'accent'
+                                        ? 'border-blue-500/60 bg-blue-500/10 text-blue-100'
+                                        : 'border-slate-900/60 bg-slate-900/40 text-slate-200'
+                                } disabled:cursor-not-allowed disabled:border-slate-800 disabled:bg-slate-900/20 disabled:text-slate-500`}
+                                on:click={action.onClick}
+                                disabled={action.disabled}
+                            >
+                                <div class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-950/60">
+                                    <svelte:component
+                                        this={action.icon}
+                                        class={`h-4 w-4 ${
+                                            action.active
+                                                ? 'text-emerald-300'
+                                                : action.tone === 'accent'
+                                                ? 'text-blue-300'
+                                                : 'text-slate-300'
+                                        }`}
+                                    />
+                                </div>
+                                <div class="flex flex-col">
+                                    <span class="text-sm font-semibold leading-tight text-inherit">{action.label}</span>
+                                    <span class="mt-1 text-xs text-slate-400">{action.description}</span>
+                                </div>
+                            </button>
                         {/each}
                     </div>
-                </div>
-                {#if showRecorder}
-                    <div>
-                        <Recorder
-                            {startRecording}
-                            {stopRecording}
+                </section>
+
+                <aside class="flex w-full flex-col gap-4">
+                    <div class="rounded-3xl border border-slate-900/60 bg-slate-900/40 p-5">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-xs uppercase tracking-[0.3em] text-slate-500">Playback Rate</p>
+                                <p class="text-sm font-semibold text-slate-100">{formatPlaybackRate(playbackRate)}x</p>
+                            </div>
+                            <span class="text-xs text-slate-500">
+                                {formatPlaybackRate(availablePlaybackRates[0] ?? 1)}x – {formatPlaybackRate(availablePlaybackRates[availablePlaybackRates.length - 1] ?? 1)}x
+                            </span>
+                        </div>
+                        <div class="mt-4 flex items-center gap-3">
+                            <input
+                                type="range"
+                                min="0"
+                                max={Math.max(availablePlaybackRates.length - 1, 0)}
+                                step="1"
+                                bind:value={playbackRateIndex}
+                                on:input={() => updatePlaybackRateFromIndex(playbackRateIndex, { userInitiated: true })}
+                                class="h-1 flex-1 appearance-none rounded-full bg-slate-800 accent-blue-500"
+                                disabled={availablePlaybackRates.length <= 1}
+                            />
+                        </div>
+                        <div class="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-500">
+                            {#each availablePlaybackRates as rate, idx}
+                                <span class={`rounded-full px-2 py-1 ${idx === playbackRateIndex ? 'bg-slate-800 text-slate-200' : ''}`}>
+                                    {formatPlaybackRate(rate)}x
+                                </span>
+                            {/each}
+                        </div>
+                    </div>
+
+                    {#if showRecorder}
+                        <div class="rounded-3xl border border-slate-900/60 bg-slate-900/40 p-5">
+                            <p class="mb-3 text-xs uppercase tracking-[0.3em] text-slate-500">Recorder</p>
+                            <Recorder {startRecording} {stopRecording} />
+                        </div>
+                    {/if}
+
+                    <div class="rounded-3xl border border-slate-900/60 bg-slate-900/40 p-5">
+                        <p class="mb-3 text-xs uppercase tracking-[0.3em] text-slate-500">Upcoming Videos</p>
+                        <PlaylistQueue
+                            currentlyViewed={originalVideoId}
+                            playlistId={playlistId}
+                            playlistDocumentId={currentPlaylistDocumentId}
+                            startTime={startTime}
+                            playlistBufferTime={playlistBufferTime}
                         />
                     </div>
-                {/if}
-                <div>
-                    <PlaylistQueue
-                        currentlyViewed={originalVideoId}
-                        playlistId={playlistId}
-                        playlistDocumentId={currentPlaylistDocumentId}
-                        startTime={startTime}
-                        playlistBufferTime={playlistBufferTime}
-                    />
-                </div>
-            </div>
+
+                    {#if debugMode && currentButtonGroupState !== BUTTON_GROUP_STATES.INITIAL}
+                        <div class="rounded-3xl border border-slate-900/60 bg-slate-900/40 p-5 text-xs text-slate-300">
+                            <div class="flex items-center justify-between">
+                                <p class="text-xs uppercase tracking-[0.3em] text-slate-500">Debug</p>
+                                <span class="rounded-full bg-slate-950/60 px-2 py-1 font-mono text-[10px] text-slate-400">DEV</span>
+                            </div>
+                            <ul class="mt-3 space-y-1">
+                                <li>Start Time: {startTime ? new Date(startTime).toISOString() : 'Not set'}</li>
+                                <li>Playlist Buffer: {playlistBufferTime || 0}s</li>
+                                <li>Reaction Configs: {reactionConfigsArray.length}</li>
+                                <li>Volume Configs: {volumeConfigsArray.length}</li>
+                                <li>Playback Rate Configs: {playbackRateConfigsArray.length}</li>
+                                <li>Current State: {currentButtonGroupState}</li>
+                            </ul>
+                            <div class="mt-4 space-y-3">
+                                <div>
+                                    <p class="font-semibold text-slate-200">Recent State Changes</p>
+                                    {#if reactionConfigsArray.length === 0}
+                                        <p class="text-slate-500">No entries yet.</p>
+                                    {:else}
+                                        {#each reactionConfigsArray.slice(-5) as [time, config]}
+                                            <p>R: {time} → {config.state} (orig: {config.time})</p>
+                                        {/each}
+                                    {/if}
+                                </div>
+                                <div>
+                                    <p class="font-semibold text-slate-200">Recent Volume Changes</p>
+                                    {#if volumeConfigsArray.length === 0}
+                                        <p class="text-slate-500">No entries yet.</p>
+                                    {:else}
+                                        {#each volumeConfigsArray.slice(-5) as [time, config]}
+                                            <p>V: {time} → {config.volume}</p>
+                                        {/each}
+                                    {/if}
+                                </div>
+                                <div>
+                                    <p class="font-semibold text-slate-200">Recent Playback Speed</p>
+                                    {#if playbackRateConfigsArray.length === 0}
+                                        <p class="text-slate-500">No entries yet.</p>
+                                    {:else}
+                                        {#each playbackRateConfigsArray.slice(-5) as [time, config]}
+                                            <p>S: {time} → {formatPlaybackRate(config.rate)}x</p>
+                                        {/each}
+                                    {/if}
+                                </div>
+                            </div>
+                        </div>
+                    {/if}
+                </aside>
+            </main>
         </div>
     </div>
-    {#if debugMode && currentButtonGroupState !== BUTTON_GROUP_STATES.INITIAL}
-        <div class="debug-panel bg-gray-100 p-4 m-2 rounded text-sm">
-            <h3 class="font-bold">Debug Info:</h3>
-            <p>Start Time: {startTime ? new Date(startTime).toISOString() : 'Not set'}</p>
-            <p>Playlist Buffer: {playlistBufferTime || 0}s</p>
-            <p>Reaction Configs: {reactionConfigsArray.length}</p>
-            <p>Volume Configs: {volumeConfigsArray.length}</p>
-            <p>Playback Rate Configs: {playbackRateConfigsArray.length}</p>
-            <p>Current State: {currentButtonGroupState}</p>
-            
-            <!-- Show recent configs -->
-            <div class="mt-2">
-                <h4 class="font-semibold">Recent State Changes:</h4>
-                {#each reactionConfigsArray.slice(-5) as [time, config]}
-                    <div>R: {time} → {config.state} (orig: {config.time})</div>
-                {/each}
-            </div>
-            
-            <div class="mt-2">
-                <h4 class="font-semibold">Recent Volume Changes:</h4>
-                {#each volumeConfigsArray.slice(-5) as [time, config]}
-                    <div>V: {time} → {config.volume}</div>
-                {/each}
-            </div>
 
-            <div class="mt-2">
-                <h4 class="font-semibold">Recent Playback Rate Changes:</h4>
-                {#each playbackRateConfigsArray.slice(-5) as [time, config]}
-                    <div>S: {time} → {formatPlaybackRate(config.rate)}x</div>
-                {/each}
-            </div>
-            
-        </div>
-    {/if}
-
-    <!-- Share Session Modal -->
     <Modal bind:open={showShareModal} title="Share Your Reaction Session">
-        <div class="space-y-4">
-            <p class="text-gray-600">
-                Share this URL with others to let them watch your reaction in real-time. 
-                They'll see the same video and it will sync with your controls.
+        <div class="space-y-4 text-slate-200">
+            <p class="text-sm text-slate-400">
+                Share this link so collaborators can watch your reaction live. Playback stays in sync with your controls.
             </p>
-            
-            <div class="flex items-center space-x-2">
-                <input 
-                    type="text" 
-                    value={shareUrl} 
-                    readonly 
-                    class="flex-1 p-2 border border-gray-300 rounded-md bg-gray-50 text-sm"
+
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                <input
+                    type="text"
+                    value={shareUrl}
+                    readonly
+                    class="flex-1 rounded-full border border-slate-800 bg-slate-900/80 px-4 py-2 font-mono text-sm text-slate-200"
                 />
-                <Button on:click={copyShareUrl} color="blue" size="sm">
+                <button
+                    class="flex items-center justify-center rounded-full border border-blue-500/50 bg-blue-500/10 px-4 py-2 text-sm font-semibold text-blue-200 transition hover:bg-blue-500/20 focus:outline-none focus:ring-2 focus:ring-blue-400/70"
+                    on:click={copyShareUrl}
+                >
                     Copy
-                </Button>
+                </button>
             </div>
-            
-            <div class="text-sm text-gray-500">
+
+            <div class="grid gap-2 text-xs text-slate-400">
                 <p>👥 Viewers: {viewerCount}</p>
                 <p>📹 Video: {originalVideoTitle}</p>
             </div>
         </div>
     </Modal>
-{:else}{handlePrivateRoute()}{/if}
+{:else}
+    {handlePrivateRoute()}
+{/if}

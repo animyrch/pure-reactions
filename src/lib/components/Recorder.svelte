@@ -102,6 +102,7 @@
 
 <div>
   <div class="recorder-container">
+    <!-- svelte-ignore a11y-media-has-caption -->
     <video bind:this={videoElement} controls autoplay width="100%" />
     {#if videoError}
       <p class="m-1 text-sm">

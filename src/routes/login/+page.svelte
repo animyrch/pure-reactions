@@ -31,7 +31,7 @@
       </div>
       <button type="button" class="w-full bg-gray-900 text-white p-3 rounded" on:click={handleLogin}>Login</button>
     </form>
-    <p class="mt-4 text-center">Don't have an account? <span class="text-blue-500 cursor-pointer" on:click={toggleForm}>Sign up</span></p>
+  <p class="mt-4 text-center">Don't have an account? <button type="button" class="text-blue-500 underline-offset-2 hover:underline bg-transparent p-0 border-0" on:click={toggleForm}>Sign up</button></p>
   {/if}
 
   {#if isSignUp}
@@ -45,6 +45,6 @@
       </div>
       <button type="button" class="w-full bg-pink-700 text-white p-3 rounded" on:click={handleSignUp}>Sign Up</button>
     </form>
-    <p class="mt-4 text-center">Already have an account? <span class="text-blue-500 cursor-pointer" on:click={toggleForm}>Login</span></p>
+  <p class="mt-4 text-center">Already have an account? <button type="button" class="text-blue-500 underline-offset-2 hover:underline bg-transparent p-0 border-0" on:click={toggleForm}>Login</button></p>
   {/if}
 </div>

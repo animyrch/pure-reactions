@@ -1,11 +1,11 @@
 <script>
     import { onMount } from 'svelte';
     import { writable } from 'svelte/store';
-    import { getDatabase, ref, set, update } from 'firebase/database'; // Ensure firebase is initialized
-  import ConfigEditorPlayerConfig from './ConfigEditorPlayerConfig.svelte';
-  import ConfigEditorVolumeConfig from './ConfigEditorVolumeConfig.svelte';
-  import ConfigEditorPlaybackConfig from './ConfigEditorPlaybackConfig.svelte';
-    import { Select, Label, Button } from 'flowbite-svelte';
+    import { getDatabase } from 'firebase/database';
+    import ConfigEditorPlayerConfig from './ConfigEditorPlayerConfig.svelte';
+    import ConfigEditorVolumeConfig from './ConfigEditorVolumeConfig.svelte';
+    import ConfigEditorPlaybackConfig from './ConfigEditorPlaybackConfig.svelte';
+    import { Button } from 'flowbite-svelte';
     import { updateFirebaseDocument } from "$lib/helpers/firebase";
     import { timeInVideoToSecondsConverter } from "$lib/helpers/reaction";
   
@@ -17,7 +17,7 @@
   export let playbackRateTimeline = [];
   
     let newConfigTime = '';
-    const db = getDatabase();
+  getDatabase();
   
     const configs = writable([]);
   
@@ -211,16 +211,12 @@
       align-items: center;
       gap: 10px;
     }
-    .icon {
-      width: 20px;
-      height: 20px;
-    }
   </style>
   
   <div>
     <h1>Configs</h1>
     <div class="config-container">
-      {#each $configs as config, index}
+  {#each $configs as config}
         <div class="config-item">
           {#if config.type === 'volume'}
             <ConfigEditorVolumeConfig

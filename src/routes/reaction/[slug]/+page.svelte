@@ -1,4 +1,5 @@
 <script>
+  /* global YT */
   import { onMount, onDestroy } from "svelte";
   import {
     getCurrentVolumeFromVolumeConfigs,
@@ -22,7 +23,6 @@
   import VideoControl from "$lib/components/Video/VideoControl.svelte";
   import PlaylistQueue from "$lib/components/Video/PlaylistQueue.svelte";
   import { fetchFirstPlaylistVideos } from '$lib/helpers/youtube';
-  import { goto } from '$app/navigation'
 
   export let data;
 
@@ -74,6 +74,7 @@
   let currentPlaybackRate = 1;
   let changingSpeed = false;
   let isOutOfSync = false;
+  let showCinematicBars = false;
   let playlistItems = [];
   let playlistDocument;
   let playlistId;
@@ -86,6 +87,14 @@
   let timeOffset = 0; // non-destructive shift for timelines
   let globalGain = 1.0; // non-destructive volume gain
   let currentReactionData; // Store current reaction data for playlist navigation
+  const fullscreenBodyClass = 'reaction-fullscreen';
+  let escListener;
+  let isControlSurfaceVisible = false;
+  let controlHideTimeout;
+  let fullscreenPointerOverlay;
+  let overlayPointerRestoreTimeout;
+  let isExitButtonExpanded = false;
+  let exitButtonCollapseTimeout;
 
   function getAutoPlayCookie() {
     const autoPlayCookie = document.cookie
@@ -113,6 +122,10 @@
     // Get the isFullscreen query parameter
     isFullscreen = params.get('isFullscreen') === 'true';
     playlistId = params.get('playlistId');
+  }
+
+  $: if (typeof document !== 'undefined') {
+    document.body.classList.toggle(fullscreenBodyClass, Boolean(isFullscreen));
   }
 
 
@@ -205,6 +218,8 @@
   let originalVideoClicked;
   let reactionVideoClicked;
   let bothVideosStarted;
+  const controlsFadeClass = 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100';
+  $: stickyControlsClass = bothVideosStarted ? controlsFadeClass : 'opacity-100';
 
   function pollVideoCurrentTime() {
     const interval = 500; // Polling interval in milliseconds (adjust as needed)
@@ -582,6 +597,9 @@
   function toggleFineTuneMode() {
     isFineTuneModeOn = !isFineTuneModeOn;
   }
+  function toggleCinematicBars() {
+    showCinematicBars = !showCinematicBars;
+  }
   function togglePlayState(event) {
     if (event.detail.isPlaying) {
       startReactionVideo();
@@ -597,8 +615,105 @@
     startReactionVideo();
     handleStateChangeInReactionVideo(YT.PlayerState.PAUSED , YT.PlayerState.PLAYING);
   }
+
+  function showControls() {
+    isControlSurfaceVisible = true;
+    clearTimeout(controlHideTimeout);
+  }
+
+  function scheduleHideControls() {
+    clearTimeout(controlHideTimeout);
+    if (!isFullscreen) {
+      isControlSurfaceVisible = false;
+      isExitButtonExpanded = false;
+      return;
+    }
+    controlHideTimeout = setTimeout(() => {
+      isControlSurfaceVisible = false;
+      isExitButtonExpanded = false;
+    }, 3000);
+  }
+
+  function handleFullscreenMouseMove() {
+    if (!isFullscreen) {
+      return;
+    }
+    showControls();
+    scheduleHideControls();
+  }
+
+  function handleExitFullscreenClick() {
+    openWithHalfscreen();
+    isControlSurfaceVisible = false;
+    clearTimeout(controlHideTimeout);
+    collapseExitButton(true);
+  }
+
+  function temporarilyDisableOverlayPointerEvents() {
+    if (!fullscreenPointerOverlay) {
+      return;
+    }
+    fullscreenPointerOverlay.style.pointerEvents = 'none';
+    clearTimeout(overlayPointerRestoreTimeout);
+    overlayPointerRestoreTimeout = setTimeout(() => {
+      if (fullscreenPointerOverlay) {
+        fullscreenPointerOverlay.style.pointerEvents = 'auto';
+      }
+      overlayPointerRestoreTimeout = undefined;
+    }, 1500);
+  }
+
+  function handleFullscreenPointerMove() {
+    handleFullscreenMouseMove();
+  }
+
+  function handleFullscreenPointerDown() {
+    handleFullscreenMouseMove();
+    temporarilyDisableOverlayPointerEvents();
+  }
+
+  function expandExitButton() {
+    clearTimeout(exitButtonCollapseTimeout);
+    isExitButtonExpanded = true;
+  }
+
+  function collapseExitButton(force = false) {
+    clearTimeout(exitButtonCollapseTimeout);
+    if (force) {
+      isExitButtonExpanded = false;
+      return;
+    }
+    exitButtonCollapseTimeout = setTimeout(() => {
+      isExitButtonExpanded = false;
+    }, 120);
+  }
+
+  function handleExitButtonEnter() {
+    showControls();
+    expandExitButton();
+  }
+
+  function handleExitButtonLeave() {
+    scheduleHideControls();
+    collapseExitButton();
+  }
+
   onMount(async () => {
     isPlaylistAutoPlay = getAutoPlayCookie();
+    escListener = (event) => {
+      if (isFullscreen && event.key === 'Escape') {
+        event.preventDefault();
+        openWithHalfscreen();
+      }
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('keydown', escListener);
+      window.addEventListener('mousemove', handleFullscreenMouseMove);
+    }
+    if (isFullscreen) {
+      showControls();
+      scheduleHideControls();
+    }
     if (typeof YT === "undefined" || typeof YT.Player === "undefined") {
       loadYouTubeAPI();
 
@@ -619,10 +734,25 @@
   });
   onDestroy(() => {
     unsubscribe();
+    if (typeof document !== 'undefined') {
+      document.body.classList.remove(fullscreenBodyClass);
+    }
+    if (typeof window !== 'undefined') {
+      if (escListener) {
+        window.removeEventListener('keydown', escListener);
+      }
+      window.removeEventListener('mousemove', handleFullscreenMouseMove);
+    }
+    clearTimeout(controlHideTimeout);
+    clearTimeout(overlayPointerRestoreTimeout);
+    clearTimeout(exitButtonCollapseTimeout);
+    if (fullscreenPointerOverlay) {
+      fullscreenPointerOverlay.style.pointerEvents = 'auto';
+    }
   });
 </script>
 <div class={!isLoading ? 'hidden' : ''}>Loading...</div>
-<div class="{isLoading ? 'hidden' : ''} website-inner-container">
+<div class={`website-inner-container ${isLoading ? 'hidden' : ''} bg-background text-text-primary`}>
   {#if isReactionMissing}
     <p>Warning: The reaction video id is missing. This reaction page won't be listed on the home page until the reaction video url is added below and then published:</p>
   {/if}
@@ -640,33 +770,104 @@
     on:openWithFullscreen={openWithFullscreen}
     on:openWithHalfscreen={openWithHalfscreen}
   />
-  {#if isFullscreen}
-    <!-- fullscreen -->
-    <div class="relative h-screen">
-      <div id="player-original" class="absolute top-0 h-screen"/>
-      <div id="player-reaction" class="absolute top-0 right-0 h-1/3-screen w-1/3"/>
-    </div>
-  {:else}
-    <!-- default -->
-    <div class="flex flex-col-reverse w-full md:flex-row">
-      <div id="player-original" class="h-1/25-screen"/>
-      <div id="player-reaction" class="h-1/25-screen"/>
-    </div>
-  {/if}
-  <div class="my-4">
-    {#if playerOriginal && playerReaction}
-      <VideoControl
-        {bothVideosStarted}
-        isPlaylist={!!(playlistId)}
-        isPlaylistAutoPlay={isPlaylistAutoPlay}
-        on:playStateChanged={togglePlayState}
-        on:syncVideos={syncVideos}
-        on:toggleAutoPlaylist={toggleAutoPlaylist}
-      />
+  <section class={`theater-wrapper ${isFullscreen
+    ? 'fixed inset-0 z-50 m-0 h-screen w-screen overflow-hidden rounded-none bg-black px-0 py-0 text-text-primary shadow-none'
+    : 'relative mx-auto my-10 w-full max-w-none rounded-2xl bg-surface/80 px-4 py-8 text-text-primary shadow-elevated backdrop-blur sm:px-6 lg:px-10 xl:rounded-3xl'
+  }`}>
+    {#if isFullscreen}
+      <div class="relative h-full w-full overflow-hidden">
+        <div class={`absolute left-6 top-6 z-50 transition-opacity duration-200 ease-cinematic ${isControlSurfaceVisible ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}`}>
+          <button
+            type="button"
+            class={`group flex items-center overflow-hidden rounded-full bg-surface/40 ${isExitButtonExpanded ? 'pl-3 pr-4' : 'px-3'} py-2 text-sm font-semibold text-text-primary shadow-elevated backdrop-blur transition-all duration-200 ease-cinematic hover:-translate-y-0.5 hover:bg-surface/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent`}
+            on:click={handleExitFullscreenClick}
+            on:mouseenter={handleExitButtonEnter}
+            on:mouseleave={handleExitButtonLeave}
+            on:focus={handleExitButtonEnter}
+            on:blur={handleExitButtonLeave}
+            on:touchstart={handleExitButtonEnter}
+            on:touchend={handleExitButtonLeave}
+            aria-label="Exit fullscreen"
+            title="Exit fullscreen"
+          >
+            <span class={`flex items-center justify-center overflow-hidden transition-all duration-200 ease-cinematic ${isExitButtonExpanded ? 'w-0 opacity-0' : 'w-4 opacity-80'}`}>
+              <svg
+                class="h-4 w-4 text-text-primary/80"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path d="M5 9V5h4V3H3v6h2zm14-6h-6v2h4v4h2V3zm-6 18h6v-6h-2v4h-4v2zM5 15H3v6h6v-2H5v-4z" />
+              </svg>
+            </span>
+            <span class={`inline-flex items-center whitespace-nowrap transition-all duration-200 ease-cinematic ${isExitButtonExpanded ? 'ml-2 max-w-xs opacity-100' : 'ml-0 max-w-0 opacity-0'}`}>
+              Exit fullscreen
+            </span>
+          </button>
+        </div>
+        <div
+          bind:this={fullscreenPointerOverlay}
+          class="absolute inset-0 z-40 cursor-default bg-transparent"
+          on:pointermove={handleFullscreenPointerMove}
+          on:pointerdown={handleFullscreenPointerDown}
+          on:pointerleave={scheduleHideControls}
+        ></div>
+        <div class="absolute inset-0">
+          <div id="player-original" class="h-full w-full"></div>
+        </div>
+        {#if showCinematicBars}
+          <div class="pointer-events-none absolute inset-x-0 top-0 h-[12%] bg-gradient-to-b from-black via-black/80 to-transparent" aria-hidden="true"></div>
+          <div class="pointer-events-none absolute inset-x-0 bottom-0 h-[12%] bg-gradient-to-t from-black via-black/80 to-transparent" aria-hidden="true"></div>
+        {/if}
+        {#if !isReactionMissing}
+          <div class="pointer-events-auto absolute right-6 top-6 z-50 w-[min(28%,320px)]">
+            <div class="relative aspect-cinematic overflow-hidden rounded-lg bg-black/80 shadow-elevated">
+              <div id="player-reaction" class="absolute inset-0 h-full w-full"></div>
+            </div>
+          </div>
+        {/if}
+      </div>
+    {:else}
+      <div class="grid gap-6 md:grid-cols-2 xl:gap-8">
+        <div class="relative overflow-hidden rounded-xl bg-black shadow-elevated">
+          <div class="relative aspect-[16/9] sm:aspect-[3/2]">
+            <div id="player-original" class="absolute inset-0 h-full w-full"></div>
+          </div>
+          {#if showCinematicBars}
+            <div class="pointer-events-none absolute inset-x-0 top-0 h-[12%] bg-gradient-to-b from-black via-black/80 to-transparent" aria-hidden="true"></div>
+            <div class="pointer-events-none absolute inset-x-0 bottom-0 h-[12%] bg-gradient-to-t from-black via-black/80 to-transparent" aria-hidden="true"></div>
+          {/if}
+        </div>
+        {#if !isReactionMissing}
+          <div class="relative overflow-hidden rounded-xl bg-black/80 shadow-surface">
+            <div class="relative aspect-[16/9] sm:aspect-[3/2]">
+              <div id="player-reaction" class="absolute inset-0 h-full w-full"></div>
+            </div>
+          </div>
+        {/if}
+      </div>
     {/if}
-  </div>
-  <div class="videos-information-container pt-4 flex gap-4">
-    <div class="w-1/2">
+
+    {#if playerOriginal && playerReaction}
+      <div class={`controls-dock group pointer-events-none ${isFullscreen ? 'fixed inset-x-0 bottom-12 z-50 flex justify-center px-6' : 'sticky top-6 z-30 mt-10 flex justify-center'}`}>
+        <div class={`controls-surface pointer-events-auto rounded-full bg-overlay px-sm py-xs shadow-elevated transition duration-slow ease-cinematic ${stickyControlsClass}`}>
+          <VideoControl
+            {bothVideosStarted}
+            isPlaylist={!!(playlistId)}
+            isPlaylistAutoPlay={isPlaylistAutoPlay}
+            {showCinematicBars}
+            on:playStateChanged={togglePlayState}
+            on:syncVideos={syncVideos}
+            on:toggleAutoPlaylist={toggleAutoPlaylist}
+            on:toggleBars={toggleCinematicBars}
+          />
+        </div>
+      </div>
+    {/if}
+  </section>
+  {#if !isFullscreen}
+    <div class="videos-information-container mx-auto w-full px-4 pt-6 sm:px-6 lg:px-10">
       <CreatorDetails
         originalVideoAuthor={originalVideoAuthor}
         originalVideoTitle={originalVideoTitle}
@@ -678,66 +879,67 @@
         isUsersOwnVideo={isUsersOwnVideo}
         reactorId={reactorId}
       />
-    </div>
-    {#if originalVideoId && playlistId}
-      <div class="w-1/2">
-        <PlaylistQueue
-          {playlistItems}
-          {playlistDocument}
-          currentlyViewed={originalVideoId}
-          playlistId={youtubePlaylistId}
-          playlistDocumentId={playlistId}
-          isCreation={false}
-        />
-      </div>
-    {/if}
-  </div>
 
-  {#if !isEditModeOn && originalVideoId && reactionVideoId}
-    <OtherReactions
-      originalVideoId={originalVideoId}
-      reactionVideoId={reactionVideoId}
-    />
-  {/if}
-
-  <div class="flex flex-col gap-4">
-    {#if isReactionMissing || isEditModeOn}
-      <div class="flex gap-4">
-        <Label for="reaction-video-id-input" class="flex-none block mb-2 self-center">Reaction video id:</Label>
-        <Input class="shrink" bind:value={reactionVideoId} id="reaction-video-id-input" />
-        <Button class="submit-button flex-none" on:click={() => editActionEntryPoint(setReactionVideoId)}>Set Reaction Video Id</Button>
-      </div>
-    {/if}
-    {#if isEditModeOn}
-      <div class="flex gap-4">
-        <Label for="buffer-time-input" class="flex-none block mb-2 self-center">Set buffer time for intro:</Label>
-        <Input class="shrink" bind:value={introBufferTime} id="buffer-time-input" />
-        <Button class="submit-button flex-none" on:click={() => editActionEntryPoint(setIntroBufferTime)}>Modify reaction times</Button>
-      </div>
-    {/if}
-    {#if isEditModeOn}
-      <div class="flex gap-4">
-        <Label for="sound-level-input" class="flex-none block mb-2 self-center">Adjust sound level for original video:</Label>
-        <input type="range" min="0" max="200" bind:value={soundLevel} id="sound-level-input" class="shrink" />
-        <Button class="submit-button flex-none" on:click={() => editActionEntryPoint(setSoundLevel)}>Set sound level</Button>
-      </div>
-    {/if}
-  </div>
-
-  {#if isEditModeOn}
-      <Button on:click={toggleFineTuneMode}>
-        {#if isFineTuneModeOn}Disable Fine Tune Mode{:else}Enable Fine Tune Mode{/if}
-      </Button>
-      {#if isFineTuneModeOn}
-        <ConfigEditor
-          {playerConfigs}
-          {volumeConfigs}
-          {stateTimeline}
-          {volumeTimeline}
-          playbackRateConfigs={playbackRateConfigs}
-          playbackRateTimeline={playbackRateTimeline}
-        />
+      {#if originalVideoId && playlistId}
+        <div class="mt-8">
+          <PlaylistQueue
+            {playlistItems}
+            {playlistDocument}
+            currentlyViewed={originalVideoId}
+            playlistId={youtubePlaylistId}
+            playlistDocumentId={playlistId}
+            isCreation={false}
+          />
+        </div>
       {/if}
+    </div>
+
+    {#if !isEditModeOn && originalVideoId && reactionVideoId}
+      <OtherReactions
+        originalVideoId={originalVideoId}
+        reactionVideoId={reactionVideoId}
+      />
+    {/if}
+
+    <div class="flex flex-col gap-4">
+      {#if isReactionMissing || isEditModeOn}
+        <div class="flex gap-4">
+          <Label for="reaction-video-id-input" class="flex-none block mb-2 self-center">Reaction video id:</Label>
+          <Input class="shrink" bind:value={reactionVideoId} id="reaction-video-id-input" />
+          <Button class="submit-button flex-none" on:click={() => editActionEntryPoint(setReactionVideoId)}>Set Reaction Video Id</Button>
+        </div>
+      {/if}
+      {#if isEditModeOn}
+        <div class="flex gap-4">
+          <Label for="buffer-time-input" class="flex-none block mb-2 self-center">Set buffer time for intro:</Label>
+          <Input class="shrink" bind:value={introBufferTime} id="buffer-time-input" />
+          <Button class="submit-button flex-none" on:click={() => editActionEntryPoint(setIntroBufferTime)}>Modify reaction times</Button>
+        </div>
+      {/if}
+      {#if isEditModeOn}
+        <div class="flex gap-4">
+          <Label for="sound-level-input" class="flex-none block mb-2 self-center">Adjust sound level for original video:</Label>
+          <input type="range" min="0" max="200" bind:value={soundLevel} id="sound-level-input" class="shrink" />
+          <Button class="submit-button flex-none" on:click={() => editActionEntryPoint(setSoundLevel)}>Set sound level</Button>
+        </div>
+      {/if}
+    </div>
+
+    {#if isEditModeOn}
+        <Button on:click={toggleFineTuneMode}>
+          {#if isFineTuneModeOn}Disable Fine Tune Mode{:else}Enable Fine Tune Mode{/if}
+        </Button>
+        {#if isFineTuneModeOn}
+          <ConfigEditor
+            {playerConfigs}
+            {volumeConfigs}
+            {stateTimeline}
+            {volumeTimeline}
+            playbackRateConfigs={playbackRateConfigs}
+            playbackRateTimeline={playbackRateTimeline}
+          />
+        {/if}
+    {/if}
   {/if}
 </div>
 
@@ -747,22 +949,11 @@
     width: 100%;
   }
 
-  /* Style for individual video iframes */
-  .video {
-    object-fit: contain;
-    width: 100%;
-    height: calc(100vw * 0.56);
-  }
   .submit-button {
     height: 2rem;
   }
-  @media screen and (min-width: 600px) {
-    .videos-container {
-      flex-direction: row;
-    }
-    .video {
-      /* width: 49%; */
-      height: calc((100vw * 0.56) / 2);
-    }
+
+  :global(body.reaction-fullscreen) {
+    overflow: hidden;
   }
 </style>
