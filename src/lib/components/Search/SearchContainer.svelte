@@ -1,7 +1,7 @@
 <script>
     import algoliasearch from 'algoliasearch/lite';
     import { onDestroy, onMount, tick } from 'svelte';
-    import { SearchOutline as SearchIcon, XMarkOutline } from 'flowbite-svelte-icons';
+    import { CloseOutline as CloseIcon, SearchOutline as SearchIcon } from 'flowbite-svelte-icons';
 
     export let appId;
     export let ariaLabel = 'Search';
@@ -287,7 +287,7 @@
                             aria-label="Close search"
                             on:click={closeOverlay}
                         >
-                            <XMarkOutline class="h-5 w-5" aria-hidden="true" />
+                            <CloseIcon class="h-5 w-5" aria-hidden="true" />
                         </button>
                     </div>
                 </form>
