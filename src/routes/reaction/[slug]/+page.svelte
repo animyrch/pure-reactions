@@ -1,14 +1,18 @@
 <script>
   import { page } from '$app/stores';
-  import ReactionBinomeTopActions from '$lib/components/Video/ReactionBinomeTopActions.svelte';
   import CreatorDetails from '$lib/components/Video/CreatorDetails.svelte';
   import PlaylistQueue from '$lib/components/Video/PlaylistQueue.svelte';
   import OtherReactions from '$lib/components/Video/OtherReactions.svelte';
   import SubtleLoader from '$lib/components/design-system/SubtleLoader.svelte';
+  import CinematicButton from '$lib/components/design-system/CinematicButton.svelte';
   import FullscreenChrome from '$lib/components/reaction/FullscreenChrome.svelte';
   import ControlDock from '$lib/components/reaction/ControlDock.svelte';
   import EditorPanels from '$lib/components/reaction/EditorPanels.svelte';
   import { useTwinPlayers, CONTROLS_FADE_CLASS } from '$lib/composables/useTwinPlayers';
+  import { reactionDial } from '$lib/stores/reactionDial';
+  import { browser } from '$app/environment';
+  import { onDestroy } from 'svelte';
+  import { ExpandSolid } from 'flowbite-svelte-icons';
 
   export let data;
 
@@ -35,6 +39,29 @@
   const handleSetSoundLevel = async (value) => {
     await actions.editActionEntryPoint(() => actions.setSoundLevel(value));
   };
+
+  $: if (browser && !$state.isLoading) {
+    reactionDial.updateContext({
+      isUsersOwnVideo: $state.isUsersOwnVideo,
+      canShowEditModeButton: $state.canShowEditModeButton,
+      canShowCloseEditModeButton: $state.canShowCloseEditModeButton,
+      isPublished: $state.isPublished,
+      isReactionMissing: $state.isReactionMissing,
+      isFullscreen: $state.isFullscreen,
+      handlers: {
+        enterEditMode: actions.enterEditMode,
+        closeEditMode: actions.closeEditMode,
+        setIsPublished: actions.setIsPublished,
+        setIsUnpublished: actions.setIsUnpublished,
+        openWithFullscreen: actions.openWithFullscreen,
+        openWithHalfscreen: actions.openWithHalfscreen
+      }
+    });
+  }
+
+  onDestroy(() => {
+    reactionDial.reset();
+  });
 </script>
 
 <div class={$state.isLoading ? '' : 'hidden'}>
@@ -49,22 +76,6 @@
         Warning: The reaction video id is missing. This reaction page will stay hidden until a video id is added below and published again.
       </p>
     {/if}
-
-    <ReactionBinomeTopActions
-      isUsersOwnVideo={$state.isUsersOwnVideo}
-      canShowEditModeButton={$state.canShowEditModeButton}
-      canShowCloseEditModeButton={$state.canShowCloseEditModeButton}
-      isPublished={$state.isPublished}
-      isReactionMissing={$state.isReactionMissing}
-      isFullscreen={$state.isFullscreen}
-      on:enterEditMode={actions.enterEditMode}
-      on:closeEditMode={actions.closeEditMode}
-      on:setIsPublished={actions.setIsPublished}
-      on:setIsUnpublished={actions.setIsUnpublished}
-      on:openWithFullscreen={actions.openWithFullscreen}
-      on:openWithHalfscreen={actions.openWithHalfscreen}
-    />
-
     <section
       class={`theater-wrapper ${$state.isFullscreen
         ? 'fixed inset-0 z-50 m-0 h-screen w-screen overflow-hidden rounded-none bg-black px-0 py-0 text-text-primary shadow-none'
@@ -86,7 +97,21 @@
           onPointerLeave={actions.scheduleHideControls}
         />
       {:else}
-        <div class="grid gap-6 md:grid-cols-2 xl:gap-8">
+        <div>
+          <div class="mb-3 flex justify-end">
+            <CinematicButton
+              variant="secondary"
+              size="sm"
+              ariaLabel="Enter fullscreen view"
+              on:click={actions.openWithFullscreen}
+            >
+              <span class="inline-flex items-center gap-2">
+                <ExpandSolid class="h-4 w-4" aria-hidden="true" />
+                <span>Fullscreen</span>
+              </span>
+            </CinematicButton>
+          </div>
+          <div class="grid gap-6 md:grid-cols-2 xl:gap-8">
           <div class="relative overflow-hidden rounded-xl bg-black shadow-elevated">
             <div class="relative aspect-[16/9] sm:aspect-[3/2]">
               <div id="player-original" class="absolute inset-0 h-full w-full"></div>
@@ -103,6 +128,7 @@
               </div>
             </div>
           {/if}
+          </div>
         </div>
       {/if}
 

@@ -7,20 +7,17 @@
     UserCircleSolid,
     SearchOutline,
     BellActiveAltSolid,
+    PenSolid,
+    CheckCircleSolid,
+    ArrowUpFromBracketSolid,
+    EyeSlashSolid,
+    BarsSolid,
   } from 'flowbite-svelte-icons';
   import { page } from '$app/stores';
   import { copyToClipboard } from '$lib/helpers/system';
   import { showToast } from '$lib/stores/toast';
   import { TOASTS } from '$lib/constants/toasts';
-
-  const options = [
-    { name: 'Share Current Page', icon: ShareNodesSolid, type: 'action' },
-    { name: 'Search', icon: SearchOutline, href: '/search' },
-    { name: 'My Account', icon: UserCircleSolid, href: '/account' },
-    { name: 'Reactors I Follow', icon: BellActiveAltSolid, href: '/?sortBy=following' },
-    { name: 'My Bookmarks', icon: BookmarkSolid, href: '/bookmark' },
-    { name: 'Home', icon: HomeSolid, href: '/' }
-  ];
+  import { reactionDial } from '$lib/stores/reactionDial';
 
   let isOpen = false;
   let dialRef;
@@ -31,6 +28,18 @@
     copyToClipboard($page.url.href);
     showToast('Current URL copied to your clipboard.', TOASTS.SUCCESS);
   };
+
+  const baseOptions = [
+    { name: 'Share Current Page', icon: ShareNodesSolid, onSelect: () => copyCurrentUrl() },
+    { name: 'Search', icon: SearchOutline, href: '/search' },
+    { name: 'My Account', icon: UserCircleSolid, href: '/account' },
+    { name: 'Reactors I Follow', icon: BellActiveAltSolid, href: '/?sortBy=following' },
+    { name: 'My Bookmarks', icon: BookmarkSolid, href: '/bookmark' },
+    { name: 'Home', icon: HomeSolid, href: '/' }
+  ];
+
+  let reactionOptions = [];
+  let options = baseOptions;
 
   const closeDial = (refocus = false) => {
     if (!isOpen) return;
@@ -65,14 +74,69 @@
     };
   });
 
+  $: reactionOptions = $reactionDial.isActive
+    ? buildReactionOptions($reactionDial)
+    : [];
+
+  $: options = [...reactionOptions, ...baseOptions];
+
   const handleAction = (option) => {
-    if (option.type === 'action') {
-      copyCurrentUrl();
+    if (option.onSelect) {
+      option.onSelect();
       closeDial(true);
-    } else if (option.href) {
+      return;
+    }
+
+    if (option.href) {
       closeDial(false);
     }
   };
+
+  function buildReactionOptions(state) {
+    const itemList = [];
+    const {
+      isUsersOwnVideo,
+      canShowEditModeButton,
+      canShowCloseEditModeButton,
+      isPublished,
+      isReactionMissing,
+      handlers
+    } = state;
+
+    if (isUsersOwnVideo && canShowEditModeButton && handlers.enterEditMode) {
+      itemList.push({
+        name: 'Edit Reaction',
+        icon: PenSolid,
+        onSelect: handlers.enterEditMode
+      });
+    }
+
+    if (isUsersOwnVideo && canShowCloseEditModeButton && handlers.closeEditMode) {
+      itemList.push({
+        name: 'Finish Editing',
+        icon: CheckCircleSolid,
+        onSelect: handlers.closeEditMode
+      });
+    }
+
+    if (isUsersOwnVideo && !isPublished && !isReactionMissing && handlers.setIsPublished) {
+      itemList.push({
+        name: 'Publish Reaction',
+        icon: ArrowUpFromBracketSolid,
+        onSelect: handlers.setIsPublished
+      });
+    }
+
+    if (isUsersOwnVideo && isPublished && handlers.setIsUnpublished) {
+      itemList.push({
+        name: 'Unpublish Reaction',
+        icon: EyeSlashSolid,
+        onSelect: handlers.setIsUnpublished
+      });
+    }
+
+    return itemList;
+  }
 </script>
 
 <div
@@ -85,7 +149,7 @@
     class={`dial-menu mb-2 flex flex-col items-start gap-2 transition duration-slow ease-cinematic ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}
     aria-hidden={!isOpen}
   >
-    {#each options as option, index}
+  {#each options as option, index}
       {#if option.type === 'action'}
         <li class="dial-item" style={`--item-delay: ${index * 50}ms`}>
           <button
@@ -128,7 +192,7 @@
     on:click={toggleDial}
   >
     <span class="sr-only">Toggle quick navigation</span>
-    <ShareNodesSolid class="h-5 w-5" />
+    <BarsSolid class="h-5 w-5" />
   </button>
 </div>
 
