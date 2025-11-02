@@ -3,9 +3,9 @@
 
     export let buttonText = '';
     export let iconOnly = false;
-    export let tooltip;
+    export let tooltip = '';
     export let ariaLabel = '';
-    export let pressed;
+    export let pressed = false;
     export let disabled = false;
     export let className = '';
 

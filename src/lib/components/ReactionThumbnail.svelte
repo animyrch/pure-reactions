@@ -9,6 +9,7 @@
     export let originalVideoTitle;
     export let reactionVideoAuthor;
     export let playlistId;
+    export let interactive = false;
 
     const reactionRedirectionPath = `/reaction/${reactionPageId}${playlistId ? `?playlistId=${playlistId}` : ''}`;
     const originalAlt = originalVideoTitle ? `Original: ${originalVideoTitle}` : 'Original video thumbnail';
@@ -61,6 +62,7 @@
 
 <div
     class="thumbnail-card group flex flex-col gap-sm rounded-md bg-surface p-sm text-text-primary shadow-surface transition duration-deliberate ease-cinematic hover:shadow-elevated focus-within:ring-2 focus-within:ring-focus focus-within:ring-offset-2 focus-within:ring-offset-background"
+    data-interactive={interactive ? 'true' : undefined}
 >
     <a
         class="thumbnail-link block focus-visible:outline-none"

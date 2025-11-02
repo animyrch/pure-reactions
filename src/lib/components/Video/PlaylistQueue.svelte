@@ -10,13 +10,14 @@
     export let isCreation = true;
     export let startTime = 0;
     export let playlistBufferTime = 0;
-
-    let playlistItems = [];
-    let playlistDocument;
+    export let playlistItems = [];
+    export let playlistDocument;
 
     onMount(async () => {
-        playlistItems = await fetchFirstPlaylistVideos(playlistId);
-        if (playlistDocumentId) {
+        if (!playlistItems?.length && playlistId) {
+            playlistItems = await fetchFirstPlaylistVideos(playlistId);
+        }
+        if (!playlistDocument && playlistDocumentId) {
             playlistDocument = await getPlaylist(playlistDocumentId);
         }
     });

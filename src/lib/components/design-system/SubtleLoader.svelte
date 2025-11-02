@@ -1,6 +1,6 @@
 <script>
   export let label = 'Loading';
-  export let progress;
+  export let progress = undefined;
 
   const hasProgress = typeof progress === 'number' && !Number.isNaN(progress);
   $: clampedProgress = hasProgress ? Math.min(100, Math.max(0, progress)) : undefined;

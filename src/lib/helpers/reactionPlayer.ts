@@ -1,0 +1,124 @@
+export const FULLSCREEN_BODY_CLASS = 'reaction-fullscreen';
+
+type TimelineEvent = Record<string, number | string>;
+
+type ReactionDocument = Record<string, unknown>;
+
+export function readAutoPlayCookie(): boolean {
+  if (typeof document === 'undefined') {
+    return false;
+  }
+  const match = document.cookie
+    .split('; ')
+    .find((row) => row.startsWith('autoPlay='))
+    ?.split('=')[1];
+  return match === 'true';
+}
+
+export function writeAutoPlayCookie(value: boolean, playlistId?: string | null): void {
+  if (!playlistId || typeof document === 'undefined') {
+    return;
+  }
+  const expiry = new Date();
+  expiry.setTime(expiry.getTime() + 365 * 24 * 60 * 60 * 1000);
+  document.cookie = `autoPlay=${value}; expires=${expiry.toUTCString()}; path=/`;
+}
+
+export function toggleFullscreenBodyClass(isFullscreen: boolean, className = FULLSCREEN_BODY_CLASS): void {
+  if (typeof document === 'undefined') {
+    return;
+  }
+  document.body.classList.toggle(className, Boolean(isFullscreen));
+}
+
+function mapTimelineEntries(entries: [string, unknown][], mapper: (value: unknown) => TimelineEvent): TimelineEvent[] {
+  return entries
+    .map(([key, value]) => ({
+      t: Number(key),
+      ...mapper(value)
+    }))
+    .sort((a, b) => (Number(a.t) - Number(b.t)));
+}
+
+export function deriveTimelines(obtainedData: ReactionDocument) {
+  const rawStateTimeline = obtainedData?.['stateTimeline'];
+  const rawVolumeTimeline = obtainedData?.['volumeTimeline'];
+  const rawPlaybackTimeline = obtainedData?.['playbackTimeline'];
+
+  const reactionConfigs = obtainedData?.['reactionConfigs'];
+  const volumeConfigsRaw = obtainedData?.['volumeConfigs'];
+  const playbackRateConfigsRaw = obtainedData?.['playbackRateConfigs'];
+
+  const playerConfigs = (!reactionConfigs && Array.isArray(rawStateTimeline))
+    ? Object.fromEntries(
+        (rawStateTimeline as TimelineEvent[]).map((event) => [
+          Number(event?.['t']).toFixed(1),
+          {
+            time: Number(event?.['targetTime']).toFixed(2),
+            state: event?.['state']
+          }
+        ])
+      )
+    : (reactionConfigs as Record<string, unknown> | undefined) ?? {};
+
+  const volumeConfigs = (!volumeConfigsRaw && Array.isArray(rawVolumeTimeline))
+    ? Object.fromEntries(
+        (rawVolumeTimeline as TimelineEvent[]).map((event) => [
+          Number(event?.['t']).toFixed(1),
+          {
+            volume: event?.['volume']
+          }
+        ])
+      )
+    : (volumeConfigsRaw as Record<string, unknown> | undefined) ?? {};
+
+  const playbackRateConfigs = (!playbackRateConfigsRaw && Array.isArray(rawPlaybackTimeline))
+    ? Object.fromEntries(
+        (rawPlaybackTimeline as TimelineEvent[]).map((event) => [
+          Number(event?.['t']).toFixed(1),
+          {
+            rate: event?.['rate']
+          }
+        ])
+      )
+    : (playbackRateConfigsRaw as Record<string, unknown> | undefined) ?? {};
+
+  const stateTimeline = Array.isArray(rawStateTimeline) && rawStateTimeline.length
+    ? rawStateTimeline
+    : mapTimelineEntries(
+        Object.entries(playerConfigs),
+        (value) => ({
+          state: Number((value as Record<string, unknown>)?.['state'] ?? -1),
+          targetTime: Number((value as Record<string, unknown>)?.['time'] ?? 0)
+        })
+      );
+
+  const volumeTimeline = Array.isArray(rawVolumeTimeline) && rawVolumeTimeline.length
+    ? rawVolumeTimeline
+    : mapTimelineEntries(
+        Object.entries(volumeConfigs),
+        (value) => ({
+          volume: Number((value as Record<string, unknown>)?.['volume'] ?? 100)
+        })
+      );
+
+  const playbackRateTimeline = Array.isArray(rawPlaybackTimeline) && rawPlaybackTimeline.length
+    ? rawPlaybackTimeline
+    : mapTimelineEntries(
+        Object.entries(playbackRateConfigs),
+        (value) => ({
+          rate: Number((value as Record<string, unknown>)?.['rate'] ?? 1)
+        })
+      );
+
+  return {
+    playerConfigs,
+    volumeConfigs,
+    playbackRateConfigs,
+    stateTimeline,
+    volumeTimeline,
+    playbackRateTimeline
+  };
+}
+
+export type DerivedTimelines = ReturnType<typeof deriveTimelines>;
