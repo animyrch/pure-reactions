@@ -156,6 +156,8 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
   let exitButtonCollapseTimeout: ReturnType<typeof setTimeout> | undefined;
   let pollInterval: ReturnType<typeof setInterval> | undefined;
   let escListener: ((event: KeyboardEvent) => void) | undefined;
+  let pendingPlayerReadyCount = 0;
+  let playerReadyTimeout: ReturnType<typeof setTimeout> | undefined;
 
   let originalVideoClicked = false;
   let reactionVideoClicked = false;
@@ -174,6 +176,43 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
         ...patch
       };
     });
+  };
+
+  const finalizeLoadingState = () => {
+    pendingPlayerReadyCount = 0;
+    clearTimeout(playerReadyTimeout);
+    playerReadyTimeout = undefined;
+    updateState({ isLoading: false });
+  };
+
+  const scheduleLoadingFallback = () => {
+    clearTimeout(playerReadyTimeout);
+    if (pendingPlayerReadyCount === 0) {
+      return;
+    }
+    playerReadyTimeout = setTimeout(() => {
+      finalizeLoadingState();
+    }, 8000);
+  };
+
+  const setExpectedPlayerReadyCount = (count: number) => {
+    pendingPlayerReadyCount = count;
+    if (count === 0) {
+      finalizeLoadingState();
+      return;
+    }
+    updateState({ isLoading: true });
+    scheduleLoadingFallback();
+  };
+
+  const markPlayerReady = () => {
+    if (pendingPlayerReadyCount === 0) {
+      return;
+    }
+    pendingPlayerReadyCount -= 1;
+    if (pendingPlayerReadyCount === 0) {
+      finalizeLoadingState();
+    }
   };
 
   const startReactionVideo = () => {
@@ -325,7 +364,7 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
   };
 
   const onPlayerReady = (event: any) => {
-    updateState({ isLoading: false });
+    markPlayerReady();
     const snapshot = get(state);
     if (event?.target === snapshot.playerOriginal) {
       setPlaybackRateForOriginalVideo(snapshot.currentPlaybackRate);
@@ -423,6 +462,12 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
 
   const setUpVideos = async (reactionData: Record<string, any>) => {
     if (!reactionData) {
+      setExpectedPlayerReadyCount(0);
+      updateState({
+        isReactionMissing: true,
+        playerOriginal: null,
+        playerReaction: null
+      });
       return;
     }
 
@@ -441,11 +486,24 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
 
     const reactionVideoId = reactionData['reactionVideoId'];
     const originalVideoId = reactionData['originalVideoId'];
+    if (!originalVideoId) {
+      setExpectedPlayerReadyCount(0);
+      updateState({
+        isReactionMissing: true,
+        reactionVideoId: reactionVideoId ?? '',
+        originalVideoId: undefined,
+        playerOriginal: null,
+        playerReaction: null
+      });
+      return;
+    }
     const youtubePlaylistId = reactionData['youtubePlaylistId'];
     const offsetStartTime = reactionData['offsetStartTime'] ?? 0;
     const reactionFinishTime = parseFloat(reactionData['reactionFinishTime']) || 100000;
     const timeOffset = reactionData['timeOffset'] || 0;
-    const globalGain = reactionData['globalGain'] || 1.0;
+    const globalGainValue = reactionData['globalGain'];
+    const globalGain = typeof globalGainValue === 'number' && !Number.isNaN(globalGainValue) ? globalGainValue : 1.0;
+    const soundLevel = Math.max(0, Math.min(200, Math.round(globalGain * 100)));
     const currentPlaybackRate = getCurrentPlaybackRateFromConfigs(offsetStartTime || 0, window.playbackRateConfigs, timeOffset);
 
     const playerOriginal = get(state).playerOriginal;
@@ -453,28 +511,39 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     playerOriginal?.destroy?.();
     playerReaction?.destroy?.();
 
+    const expectedPlayers = 1 + (reactionVideoId ? 1 : 0);
+    setExpectedPlayerReadyCount(expectedPlayers);
+
     let newPlayerReaction: any = null;
-    if (reactionVideoId) {
-      newPlayerReaction = new YT.Player('player-reaction', {
-        videoId: reactionVideoId,
+    let newPlayerOriginal: any = null;
+
+    try {
+      if (reactionVideoId) {
+        newPlayerReaction = new YT.Player('player-reaction', {
+          videoId: reactionVideoId,
+          playerVars: playerOptions,
+          ...iframeOptionDefault,
+          events: {
+            onReady: onPlayerReady,
+            onStateChange: onStateChangeReaction
+          }
+        });
+      }
+
+      newPlayerOriginal = new YT.Player('player-original', {
+        videoId: originalVideoId,
         playerVars: playerOptions,
         ...iframeOptionDefault,
         events: {
           onReady: onPlayerReady,
-          onStateChange: onStateChangeReaction
+          onStateChange: onStateChangeOriginal
         }
       });
+    } catch (error) {
+      console.error('Failed to initialise YouTube players', error);
+      finalizeLoadingState();
+      return;
     }
-
-    const newPlayerOriginal = new YT.Player('player-original', {
-      videoId: originalVideoId,
-      playerVars: playerOptions,
-      ...iframeOptionDefault,
-      events: {
-        onReady: onPlayerReady,
-        onStateChange: onStateChangeOriginal
-      }
-    });
 
     updateState({
       isPublished: reactionData.isPublished,
@@ -499,6 +568,8 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       reactionFinishTime,
       timeOffset,
       globalGain,
+  introBufferTime: timeOffset,
+  soundLevel,
       currentPlaybackRate,
       playerOriginal: newPlayerOriginal,
       playerReaction: newPlayerReaction,
@@ -799,6 +870,7 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     clearTimeout(controlHideTimeout);
     clearTimeout(overlayPointerRestoreTimeout ?? undefined);
     clearTimeout(exitButtonCollapseTimeout);
+    clearTimeout(playerReadyTimeout);
     clearInterval(pollInterval);
     if (overlayElement) {
       overlayElement.style.pointerEvents = 'auto';

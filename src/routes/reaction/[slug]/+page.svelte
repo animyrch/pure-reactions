@@ -7,10 +7,10 @@
   import CinematicButton from '$lib/components/design-system/CinematicButton.svelte';
   import FullscreenChrome from '$lib/components/reaction/FullscreenChrome.svelte';
   import ControlDock from '$lib/components/reaction/ControlDock.svelte';
-  import EditorPanels from '$lib/components/reaction/EditorPanels.svelte';
   import { useTwinPlayers, CONTROLS_FADE_CLASS } from '$lib/composables/useTwinPlayers';
   import { reactionDial } from '$lib/stores/reactionDial';
   import { browser } from '$app/environment';
+  import { goto } from '$app/navigation';
   import { onDestroy } from 'svelte';
   import { ExpandSolid } from 'flowbite-svelte-icons';
 
@@ -28,18 +28,6 @@
     actions.handlePlayStateChange(event.detail.isPlaying);
   };
 
-  const handleSetReactionVideoId = async (value) => {
-    await actions.editActionEntryPoint(() => actions.setReactionVideoId(value));
-  };
-
-  const handleSetIntroBufferTime = async (value) => {
-    await actions.editActionEntryPoint(() => actions.setIntroBufferTime(value));
-  };
-
-  const handleSetSoundLevel = async (value) => {
-    await actions.editActionEntryPoint(() => actions.setSoundLevel(value));
-  };
-
   $: if (browser && !$state.isLoading) {
     reactionDial.updateContext({
       isUsersOwnVideo: $state.isUsersOwnVideo,
@@ -49,8 +37,11 @@
       isReactionMissing: $state.isReactionMissing,
       isFullscreen: $state.isFullscreen,
       handlers: {
-        enterEditMode: actions.enterEditMode,
-        closeEditMode: actions.closeEditMode,
+        enterEditMode: () => {
+          if (!browser) return;
+          goto(`/edit-reaction/${$state.pageSlug}`);
+        },
+        closeEditMode: null,
         setIsPublished: actions.setIsPublished,
         setIsUnpublished: actions.setIsUnpublished,
         openWithFullscreen: actions.openWithFullscreen,
@@ -73,7 +64,9 @@
 <div class={`website-inner-container bg-background text-text-primary ${$state.isLoading ? 'hidden' : ''}`}>
     {#if $state.isReactionMissing}
       <p class="mb-4 rounded-md bg-warning/10 px-4 py-3 text-sm text-warning">
-        Warning: The reaction video id is missing. This reaction page will stay hidden until a video id is added below and published again.
+  Warning: The reaction video id is missing. This reaction page will stay hidden until a video id is added in the
+  <a class="underline" href={`/edit-reaction/${$state.pageSlug}`}>edit view</a>
+        and published again.
       </p>
     {/if}
     <section
@@ -182,25 +175,6 @@
           reactionVideoId={$state.reactionVideoId}
         />
       {/if}
-
-      <EditorPanels
-        isReactionMissing={$state.isReactionMissing}
-        isEditModeOn={$state.isEditModeOn}
-        isFineTuneModeOn={$state.isFineTuneModeOn}
-        reactionVideoId={$state.reactionVideoId}
-        introBufferTime={$state.introBufferTime}
-        soundLevel={$state.soundLevel}
-        playerConfigs={$state.playerConfigs}
-        volumeConfigs={$state.volumeConfigs}
-        stateTimeline={$state.stateTimeline}
-        volumeTimeline={$state.volumeTimeline}
-        playbackRateConfigs={$state.playbackRateConfigs}
-        playbackRateTimeline={$state.playbackRateTimeline}
-        onSetReactionVideoId={handleSetReactionVideoId}
-        onSetIntroBufferTime={handleSetIntroBufferTime}
-        onSetSoundLevel={handleSetSoundLevel}
-        onToggleFineTuneMode={actions.toggleFineTuneMode}
-      />
     {/if}
   </div>
 
