@@ -28,7 +28,7 @@
 </script>
 
 <header class={`nav-shell fixed inset-x-0 top-0 z-40 transition-transform duration-500 ease-cinematic ${isHidden ? '-translate-y-full' : 'translate-y-0'}`}>
-  <nav class="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-3">
+  <nav class="mx-auto flex w-full items-center justify-between px-4 py-3">
     <a
       href="/"
       class="flex items-center gap-3 text-text-primary transition-opacity duration-subtle ease-cinematic hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"

@@ -5,13 +5,15 @@
             PlaySolid,
             ClockOutline,
             ArrowsRepeatOutline,
-            VideoSolid
+            VideoSolid,
+            ExpandSolid
         } from 'flowbite-svelte-icons';
 
         export let bothVideosStarted;
         export let isPlaylist;
         export let isPlaylistAutoPlay;
         export let showCinematicBars = false;
+        export let isFullscreen = false;
 
         let isPlaying = true;
         let isInteracting = false;
@@ -86,6 +88,9 @@
         }
         function toggleBars() {
             dispatch('toggleBars');
+        }
+        function enterFullscreen() {
+            dispatch('enterFullscreen');
         }
 
         function handleKeydown(event) {
@@ -187,6 +192,23 @@
                         Bars {showCinematicBars ? 'On' : 'Off'}
                     </span>
                 </div>
+
+                {#if !isFullscreen}
+                    <div class="group relative">
+                        <button
+                            type="button"
+                            class={`${buttonBase} bg-surface/80 shadow-surface`}
+                            on:click={enterFullscreen}
+                            aria-label="Enter fullscreen view"
+                        >
+                            <ExpandSolid class="h-5 w-5" />
+                            <span class="sr-only">Enter fullscreen</span>
+                        </button>
+                        <span class={`${tooltipBase} group-hover:opacity-100 group-focus-within:opacity-100`}>
+                            Fullscreen
+                        </span>
+                    </div>
+                {/if}
             </div>
         {/if}
     </div>

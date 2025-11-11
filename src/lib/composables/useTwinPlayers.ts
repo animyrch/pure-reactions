@@ -24,6 +24,14 @@ import {
 
 declare const YT: any;
 
+declare global {
+  interface Window {
+    playerConfigs: Record<string, any> | any[];
+    volumeConfigs: Record<string, any> | any[];
+    playbackRateConfigs: Record<string, any> | any[];
+  }
+}
+
 type Nullable<T> = T | null | undefined;
 
 type TwinPlayersState = {
@@ -62,9 +70,12 @@ type TwinPlayersState = {
   stateTimeline: any[];
   volumeTimeline: any[];
   playbackRateTimeline: any[];
+  playerEventTimeline: any[];
   currentPlaybackRate: number;
   currentStateOriginalVideo: number;
   currentVolumeOriginalVideo: number;
+  reactionCurrentTime: number;
+  reactionDuration: number;
   offsetStartTime: number;
   reactionFinishTime: number;
   timeOffset: number;
@@ -82,6 +93,23 @@ type UseTwinPlayersOptions = {
   };
 };
 
+type CreatePlayerConfigParams = {
+  timeInReaction: number;
+  targetTime: number;
+  state: number;
+};
+
+type UpdatePlayerConfigParams = {
+  timeInReaction: number;
+  targetTime?: number;
+  state?: number;
+  previousTimeInReaction?: number;
+};
+
+type DeletePlayerConfigParams = {
+  timeInReaction: number;
+};
+
 export const CONTROLS_FADE_CLASS = 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100';
 
 const playerOptions = {
@@ -97,10 +125,26 @@ const iframeOptionDefault = {
   height: '100%'
 };
 
+const buildPlayerEventTimeline = (timeline: any[] = []) =>
+  timeline
+    .map((event: any, index: number) => ({
+      id: `player-array-${index}-${Number(event?.t ?? index)}`,
+      type: 'player',
+      timeInReaction: Number(event?.t) || 0,
+      state: Number(event?.state) || 0,
+      targetTime: Number(event?.targetTime ?? 0)
+    }))
+    .sort(
+      (
+        a: { timeInReaction: number },
+        b: { timeInReaction: number }
+      ) => a.timeInReaction - b.timeInReaction
+    );
+
 export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
   const { slug, userId } = data;
   const initialUrlState = getInitialUrlState();
-
+  // console.log('Initial URL State:', initialUrlState);
   const state = writable<TwinPlayersState>({
     isLoading: true,
     isReactionMissing: false,
@@ -137,9 +181,12 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     stateTimeline: [],
     volumeTimeline: [],
     playbackRateTimeline: [],
+    playerEventTimeline: [],
     currentPlaybackRate: 1,
     currentStateOriginalVideo: -1,
     currentVolumeOriginalVideo: 100,
+    reactionCurrentTime: 0,
+    reactionDuration: 0,
     offsetStartTime: 0,
     reactionFinishTime: 100000,
     timeOffset: 0,
@@ -155,6 +202,8 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
   let overlayPointerRestoreTimeout: ReturnType<typeof setTimeout> | undefined;
   let exitButtonCollapseTimeout: ReturnType<typeof setTimeout> | undefined;
   let pollInterval: ReturnType<typeof setInterval> | undefined;
+  let durationProbeTimeout: ReturnType<typeof setTimeout> | undefined;
+  let durationProbeAttempts = 0;
   let escListener: ((event: KeyboardEvent) => void) | undefined;
   let pendingPlayerReadyCount = 0;
   let playerReadyTimeout: ReturnType<typeof setTimeout> | undefined;
@@ -329,6 +378,12 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
         reactionPlayerState = newReactionState;
       }
       const reactionCurrentTime = parseFloat(playerReaction.getCurrentTime().toFixed(1));
+      const rawDuration = typeof playerReaction.getDuration === 'function' ? Number(playerReaction.getDuration()) : Number.NaN;
+      console.log('Polling reaction time:', reactionCurrentTime, 'of', rawDuration);
+      const reactionDuration = Number.isFinite(rawDuration) ? rawDuration : snapshot.reactionDuration;
+      if (reactionCurrentTime !== snapshot.reactionCurrentTime || Math.abs(reactionDuration - snapshot.reactionDuration) > 0.1) {
+        updateState({ reactionCurrentTime, reactionDuration });
+      }
       if (reactionCurrentTime > reactionFinishTime) {
         pauseOriginalVideo();
         pauseReactionVideo();
@@ -342,6 +397,28 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       handleOriginalVideoSpeed(reactionCurrentTime);
       handleOriginalVideoState(reactionCurrentTime);
     }, interval);
+  };
+
+  const resetReactionDurationProbe = () => {
+    clearTimeout(durationProbeTimeout);
+    durationProbeTimeout = undefined;
+    durationProbeAttempts = 0;
+  };
+
+  const probeReactionDuration = () => {
+    durationProbeAttempts += 1;
+    const { playerReaction } = get(state);
+    const measuredDuration = typeof playerReaction?.getDuration === 'function' ? Number(playerReaction.getDuration()) : Number.NaN;
+    if (Number.isFinite(measuredDuration) && measuredDuration > 0) {
+      updateState({ reactionDuration: measuredDuration });
+      resetReactionDurationProbe();
+      return;
+    }
+    if (durationProbeAttempts < 10) {
+      durationProbeTimeout = setTimeout(probeReactionDuration, 400);
+    } else {
+      resetReactionDurationProbe();
+    }
   };
 
   const handleStateChangeInReactionVideo = (previousState: number, nextState: number) => {
@@ -365,12 +442,21 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
 
   const onPlayerReady = (event: any) => {
     markPlayerReady();
+    console.log('Player ready event for', event?.target);
     const snapshot = get(state);
     if (event?.target === snapshot.playerOriginal) {
       setPlaybackRateForOriginalVideo(snapshot.currentPlaybackRate);
     }
-    if (event?.target === snapshot.playerReaction && typeof event?.target?.setPlaybackRate === 'function') {
-      event.target.setPlaybackRate(1);
+    if (event?.target === snapshot.playerReaction) {
+      if (typeof event?.target?.setPlaybackRate === 'function') {
+        event.target.setPlaybackRate(1);
+      }
+      pollVideoCurrentTime();
+
+      if (!durationProbeTimeout) {
+        resetReactionDurationProbe();
+        probeReactionDuration();
+      }
     }
   };
 
@@ -388,6 +474,7 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
 
   const onStateChangeOriginal = (event: any) => {
     if (event.data === YT.PlayerState.PLAYING) {
+      console.log('Original video started playing');
       if (!originalVideoClicked) {
         pauseOriginalVideo();
         originalVideoClicked = true;
@@ -409,8 +496,11 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
         pauseReactionVideo();
         reactionVideoClicked = true;
       }
-      if (!get(state).bothVideosStarted && originalVideoClicked && reactionVideoClicked) {
+      const snapshot = get(state);
+      if (!snapshot.bothVideosStarted && originalVideoClicked && reactionVideoClicked) {
         startVideos();
+      } else if (snapshot.playerReaction && snapshot.playerOriginal) {
+        pollVideoCurrentTime();
       }
     }
   };
@@ -440,9 +530,9 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     playlistFetchPromise = (async () => {
       const playlistItems = await fetchFirstPlaylistVideos(youtubePlaylistId);
       const playlistDocument = await getPlaylist(playlistId);
-      const filteredItems = playlistItems.filter((item) => playlistDocument.originalVideoIds.includes(item.snippet.resourceId.videoId));
+  const filteredItems = playlistItems.filter((item: any) => playlistDocument.originalVideoIds.includes(item.snippet.resourceId.videoId));
       const snapshot = get(state);
-      const currentIndex = filteredItems.findIndex((item) => item.snippet.resourceId.videoId === snapshot.originalVideoId);
+  const currentIndex = filteredItems.findIndex((item: any) => item.snippet.resourceId.videoId === snapshot.originalVideoId);
       updateState({
         playlistItems: filteredItems,
         playlistDocument,
@@ -463,10 +553,14 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
   const setUpVideos = async (reactionData: Record<string, any>) => {
     if (!reactionData) {
       setExpectedPlayerReadyCount(0);
+      resetReactionDurationProbe();
       updateState({
         isReactionMissing: true,
         playerOriginal: null,
-        playerReaction: null
+        playerReaction: null,
+        reactionCurrentTime: 0,
+        reactionDuration: 0,
+        playerEventTimeline: []
       });
       return;
     }
@@ -484,16 +578,22 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     window.volumeConfigs = reactionData['volumeTimeline'] || reactionData['volumeConfigs'];
     window.playbackRateConfigs = reactionData['playbackTimeline'] || reactionData['playbackRateConfigs'];
 
+    const normalizedPlayerEvents = buildPlayerEventTimeline(stateTimeline);
+
     const reactionVideoId = reactionData['reactionVideoId'];
     const originalVideoId = reactionData['originalVideoId'];
     if (!originalVideoId) {
       setExpectedPlayerReadyCount(0);
+      resetReactionDurationProbe();
       updateState({
         isReactionMissing: true,
         reactionVideoId: reactionVideoId ?? '',
         originalVideoId: undefined,
         playerOriginal: null,
-        playerReaction: null
+        playerReaction: null,
+        reactionCurrentTime: 0,
+        reactionDuration: 0,
+        playerEventTimeline: []
       });
       return;
     }
@@ -510,6 +610,8 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     const playerReaction = get(state).playerReaction;
     playerOriginal?.destroy?.();
     playerReaction?.destroy?.();
+
+    resetReactionDurationProbe();
 
     const expectedPlayers = 1 + (reactionVideoId ? 1 : 0);
     setExpectedPlayerReadyCount(expectedPlayers);
@@ -557,6 +659,7 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       stateTimeline,
       volumeTimeline,
       playbackRateTimeline,
+      playerEventTimeline: normalizedPlayerEvents,
       reactionVideoId,
       originalVideoId,
       reactionVideoAuthor: reactionData?.reactionVideoAuthor,
@@ -568,13 +671,15 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       reactionFinishTime,
       timeOffset,
       globalGain,
-  introBufferTime: timeOffset,
-  soundLevel,
+      introBufferTime: timeOffset,
+      soundLevel,
       currentPlaybackRate,
       playerOriginal: newPlayerOriginal,
       playerReaction: newPlayerReaction,
       currentStateOriginalVideo: -1,
-      currentVolumeOriginalVideo: 100
+      currentVolumeOriginalVideo: 100,
+      reactionCurrentTime: offsetStartTime || 0,
+      reactionDuration: typeof newPlayerReaction?.getDuration === 'function' ? Number(newPlayerReaction.getDuration()) || 0 : 0
     });
 
     await setPlaylistData(get(state).playlistDocumentId, youtubePlaylistId);
@@ -619,7 +724,9 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       updateState({
         bothVideosStarted: false,
         currentStateOriginalVideo: -1,
-        currentVolumeOriginalVideo: 100
+        currentVolumeOriginalVideo: 100,
+        reactionCurrentTime: 0,
+        reactionDuration: 0
       });
     });
   };
@@ -657,6 +764,164 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     const gain = Number(value) / 100;
     await updateFirebaseDocument({ globalGain: Number.isNaN(gain) ? 1.0 : gain });
     updateState({ globalGain: Number.isNaN(gain) ? 1.0 : gain, soundLevel: value });
+  };
+
+  const roundReactionTime = (value: number) => Math.round(value * 10) / 10;
+  const roundTargetTime = (value: number) => Math.round(value * 100) / 100;
+
+  const timelineArrayToMap = (timeline: any[] = []) => {
+    const map = new Map<string, { t: number; state: number; targetTime: number }>();
+    for (const entry of timeline) {
+      if (!entry) continue;
+      const rawReactionTime = Number(entry?.t);
+      if (!Number.isFinite(rawReactionTime)) continue;
+      const roundedReactionTime = roundReactionTime(Math.max(0, rawReactionTime));
+      const rawStateValue = Number(entry?.state);
+      const sanitizedState = Number.isFinite(rawStateValue) ? rawStateValue : 2;
+      const rawTarget = Number(entry?.targetTime ?? entry?.time);
+      const sanitizedTarget = Number.isFinite(rawTarget) ? Math.max(0, rawTarget) : 0;
+      const roundedTarget = roundTargetTime(sanitizedTarget);
+      map.set(roundedReactionTime.toFixed(3), {
+        t: roundedReactionTime,
+        state: sanitizedState,
+        targetTime: roundedTarget
+      });
+    }
+    return map;
+  };
+
+  const persistPlayerTimelineMap = async (
+    map: Map<string, { t: number; state: number; targetTime: number }>
+  ) => {
+    const normalizedTimeline = Array.from(map.values()).sort((a, b) => a.t - b.t);
+    const nextPlayerConfigs = Object.fromEntries(
+      normalizedTimeline.map((entry) => [
+        Number(entry.t).toFixed(1),
+        {
+          state: Number(entry.state),
+          time: Number(entry.targetTime ?? 0).toFixed(2)
+        }
+      ])
+    );
+
+    await updateFirebaseDocument({
+      stateTimeline: normalizedTimeline.map((entry) => ({
+        t: Number(entry.t),
+        state: Number(entry.state),
+        targetTime: Number(entry.targetTime ?? 0)
+      })),
+      reactionConfigs: nextPlayerConfigs
+    });
+
+    if (typeof window !== 'undefined') {
+      (window as any).playerConfigs = normalizedTimeline;
+    }
+
+    updateState({
+      stateTimeline: normalizedTimeline,
+      playerConfigs: nextPlayerConfigs,
+      playerEventTimeline: buildPlayerEventTimeline(normalizedTimeline)
+    });
+  };
+
+  const createPlayerConfig = async ({ timeInReaction, targetTime, state: rawState }: CreatePlayerConfigParams) => {
+    const snapshot = get(state);
+    const sanitizedReactionTime = Number.isFinite(timeInReaction) ? Math.max(0, timeInReaction) : 0;
+    const sanitizedTargetTime = Number.isFinite(targetTime) ? Math.max(0, targetTime) : 0;
+    const sanitizedState = Number.isFinite(rawState) ? rawState : 2;
+
+    const roundedReactionTime = roundReactionTime(sanitizedReactionTime);
+    const roundedTargetTime = roundTargetTime(sanitizedTargetTime);
+
+    const existingTimeline = Array.isArray(snapshot.stateTimeline) ? snapshot.stateTimeline : [];
+    const timelineMap = timelineArrayToMap(existingTimeline);
+    timelineMap.set(roundedReactionTime.toFixed(3), {
+      t: roundedReactionTime,
+      state: sanitizedState,
+      targetTime: roundedTargetTime
+    });
+
+    try {
+      await persistPlayerTimelineMap(timelineMap);
+    } catch (error) {
+      console.error('Failed to create player config', error);
+      throw error;
+    }
+  };
+
+  const updatePlayerConfig = async ({
+    timeInReaction,
+    targetTime,
+    state: rawState,
+    previousTimeInReaction
+  }: UpdatePlayerConfigParams) => {
+    const snapshot = get(state);
+    const existingTimeline = Array.isArray(snapshot.stateTimeline) ? snapshot.stateTimeline : [];
+    const timelineMap = timelineArrayToMap(existingTimeline);
+
+    const sanitizedReactionTime = Number.isFinite(timeInReaction) ? Math.max(0, timeInReaction) : 0;
+    const roundedReactionTime = roundReactionTime(sanitizedReactionTime);
+    const sanitizedPreviousTime =
+      typeof previousTimeInReaction === 'number' && Number.isFinite(previousTimeInReaction)
+        ? Math.max(0, previousTimeInReaction)
+        : sanitizedReactionTime;
+    const roundedPreviousTime = roundReactionTime(sanitizedPreviousTime);
+    const previousKey = roundedPreviousTime.toFixed(3);
+    const nextKey = roundedReactionTime.toFixed(3);
+
+    const currentEntry = timelineMap.get(previousKey);
+    if (!currentEntry) {
+      return;
+    }
+
+    const resolvedState =
+      typeof rawState === 'number' && Number.isFinite(rawState)
+        ? rawState
+        : Number(currentEntry?.state ?? 2);
+    const resolvedTarget =
+      typeof targetTime === 'number' && Number.isFinite(targetTime)
+        ? Math.max(0, targetTime)
+        : Number(currentEntry?.targetTime ?? 0);
+    const roundedTargetTime = roundTargetTime(resolvedTarget);
+
+    if (nextKey !== previousKey) {
+      timelineMap.delete(previousKey);
+    }
+
+    timelineMap.set(nextKey, {
+      t: roundedReactionTime,
+      state: resolvedState,
+      targetTime: roundedTargetTime
+    });
+
+    try {
+      await persistPlayerTimelineMap(timelineMap);
+    } catch (error) {
+      console.error('Failed to update player config', error);
+      throw error;
+    }
+  };
+
+  const deletePlayerConfig = async ({ timeInReaction }: DeletePlayerConfigParams) => {
+    const snapshot = get(state);
+    const existingTimeline = Array.isArray(snapshot.stateTimeline) ? snapshot.stateTimeline : [];
+    const timelineMap = timelineArrayToMap(existingTimeline);
+
+    const sanitizedReactionTime = Number.isFinite(timeInReaction) ? Math.max(0, timeInReaction) : 0;
+    const key = roundReactionTime(sanitizedReactionTime).toFixed(3);
+
+    if (!timelineMap.has(key)) {
+      return;
+    }
+
+    timelineMap.delete(key);
+
+    try {
+      await persistPlayerTimelineMap(timelineMap);
+    } catch (error) {
+      console.error('Failed to delete player config', error);
+      throw error;
+    }
   };
 
   const setIsPublished = async () => {
@@ -872,6 +1137,7 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     clearTimeout(exitButtonCollapseTimeout);
     clearTimeout(playerReadyTimeout);
     clearInterval(pollInterval);
+    resetReactionDurationProbe();
     if (overlayElement) {
       overlayElement.style.pointerEvents = 'auto';
     }
@@ -897,6 +1163,9 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       setReactionVideoId,
       setIntroBufferTime,
       setSoundLevel,
+      createPlayerConfig,
+      updatePlayerConfig,
+      deletePlayerConfig,
       setIsPublished,
       setIsUnpublished,
       openWithFullscreen,

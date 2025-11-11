@@ -4,7 +4,6 @@
   import PlaylistQueue from '$lib/components/Video/PlaylistQueue.svelte';
   import OtherReactions from '$lib/components/Video/OtherReactions.svelte';
   import SubtleLoader from '$lib/components/design-system/SubtleLoader.svelte';
-  import CinematicButton from '$lib/components/design-system/CinematicButton.svelte';
   import FullscreenChrome from '$lib/components/reaction/FullscreenChrome.svelte';
   import ControlDock from '$lib/components/reaction/ControlDock.svelte';
   import { useTwinPlayers, CONTROLS_FADE_CLASS } from '$lib/composables/useTwinPlayers';
@@ -12,7 +11,6 @@
   import { browser } from '$app/environment';
   import { goto } from '$app/navigation';
   import { onDestroy } from 'svelte';
-  import { ExpandSolid } from 'flowbite-svelte-icons';
 
   export let data;
 
@@ -20,7 +18,7 @@
 
   let overlayRef;
 
-  $: stickyControlsClass = $state.bothVideosStarted ? CONTROLS_FADE_CLASS : 'opacity-100';
+  $: stickyControlsClass = $state.isFullscreen ? CONTROLS_FADE_CLASS : 'opacity-100';
   $: overlayRef && actions.registerOverlayRef(overlayRef);
   $: actions.handleSlugChange($page.params.slug);
 
@@ -90,21 +88,7 @@
           onPointerLeave={actions.scheduleHideControls}
         />
       {:else}
-        <div>
-          <div class="mb-3 flex justify-end">
-            <CinematicButton
-              variant="secondary"
-              size="sm"
-              ariaLabel="Enter fullscreen view"
-              on:click={actions.openWithFullscreen}
-            >
-              <span class="inline-flex items-center gap-2">
-                <ExpandSolid class="h-4 w-4" aria-hidden="true" />
-                <span>Fullscreen</span>
-              </span>
-            </CinematicButton>
-          </div>
-          <div class="grid gap-6 md:grid-cols-2 xl:gap-8">
+        <div class="grid gap-6 md:grid-cols-2 xl:gap-8">
           <div class="relative overflow-hidden rounded-xl bg-black shadow-elevated">
             <div class="relative aspect-[16/9] sm:aspect-[3/2]">
               <div id="player-original" class="absolute inset-0 h-full w-full"></div>
@@ -121,7 +105,6 @@
               </div>
             </div>
           {/if}
-          </div>
         </div>
       {/if}
 
@@ -137,6 +120,7 @@
           onSyncVideos={actions.syncVideos}
           onToggleAutoPlaylist={actions.toggleAutoPlaylist}
           onToggleBars={actions.toggleCinematicBars}
+          onEnterFullscreen={actions.openWithFullscreen}
         />
       {/if}
     </section>

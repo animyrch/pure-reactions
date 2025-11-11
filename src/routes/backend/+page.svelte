@@ -108,6 +108,8 @@
     let timer;
     let startTime;
     let playerOriginal;
+    let isPlayerOriginalReady = false;
+    let shouldStartWhenReady = false;
     let progress = 0;
     let startRecording = false;
     let stopRecording = false;
@@ -160,6 +162,7 @@
     }
 
     function loadYoutubePlayer() {
+        isPlayerOriginalReady = false;
         playerOriginal = new YT.Player("player-original", {
             videoId: originalVideoId,
             playerVars: playerOptions,
@@ -196,6 +199,11 @@
 
             applyPlaybackRate(playbackRate, { shouldLog: false, syncSession: false });
             pendingPlaybackRate = null;
+            isPlayerOriginalReady = true;
+            if (shouldStartWhenReady) {
+                shouldStartWhenReady = false;
+                startOriginalVideo();
+            }
 
             // Update shared session with video duration and playback speed
             if (sharedSessionId) {
@@ -244,6 +252,9 @@
         }
     }
     const getCurrentTimeForOriginalVideo = () => {
+        if (!playerOriginal || typeof playerOriginal.getDuration !== 'function') {
+            return "0.00";
+        }
         const seekTime = (progress / 100) * playerOriginal.getDuration();
         return seekTime.toFixed(2);
     };
@@ -345,29 +356,54 @@
 
     function startOriginalVideo() {
         applyPlaybackRate(playbackRate, { shouldLog: false, syncSession: false });
+        if (!playerOriginal || typeof playerOriginal.playVideo !== 'function') {
+            shouldStartWhenReady = true;
+            return false;
+        }
+        shouldStartWhenReady = false;
         playerOriginal.playVideo();
+        isPlayerOriginalReady = true;
+        isPlaying = true;
+        currentButtonGroupState = BUTTON_GROUP_STATES.RECORDING;
         // Update shared session state
         if (sharedSessionId) {
+            const currentTime = typeof playerOriginal.getCurrentTime === 'function'
+                ? playerOriginal.getCurrentTime()
+                : 0;
             updateSessionState(sharedSessionId, {
                 state: SESSION_STATES.PLAYING,
-                currentTime: playerOriginal.getCurrentTime(),
+                currentTime,
                 playbackRate
             });
         }
+        return true;
     }
     function pauseOriginalVideo() {
+        if (!playerOriginal || typeof playerOriginal.pauseVideo !== 'function') {
+            return;
+        }
         playerOriginal.pauseVideo();
         // Update shared session state
         if (sharedSessionId) {
+            const currentTime = typeof playerOriginal.getCurrentTime === 'function'
+                ? playerOriginal.getCurrentTime()
+                : 0;
             updateSessionState(sharedSessionId, {
                 state: SESSION_STATES.PAUSED,
-                currentTime: playerOriginal.getCurrentTime(),
+                currentTime,
                 playbackRate
             });
         }
     }
     function updateSeekBar() {
+        if (!playerOriginal || typeof playerOriginal.getDuration !== 'function' || typeof playerOriginal.getCurrentTime !== 'function') {
+            return;
+        }
         const duration = playerOriginal.getDuration();
+        if (!duration) {
+            requestAnimationFrame(updateSeekBar);
+            return;
+        }
         const currentTime = playerOriginal.getCurrentTime();
 
         progress = (currentTime / duration) * 100;
@@ -480,9 +516,10 @@
     };
 
     const onClickStartVideo = () => {
-        isPlaying = true;
-        startOriginalVideo();
-        currentButtonGroupState = BUTTON_GROUP_STATES.RECORDING;
+        const started = startOriginalVideo();
+        if (!started) {
+            console.warn('YouTube player not ready yet; playback will start once it loads.');
+        }
     };
 
     const onClickFocusReact = () => {
@@ -506,10 +543,21 @@
     const onClickFinishReaction = async () => {
         const reactionVideoTime = getCompensatedReactionTime(startTime, playlistBufferTime || 0);
         console.log('finish reaction', reactionVideoTime);
-        
-        updateFirebaseDocument({
-            "reactionFinishTime": reactionVideoTime,
-        });
+
+        const isPlaylistFlow = Boolean(playlistId);
+        const playlistHasItems = Array.isArray(playlistElements) && playlistElements.length > 0;
+        const currentPlaylistIndex = isPlaylistFlow && playlistHasItems
+            ? playlistElements.findIndex((item) => item === originalVideoId)
+            : -1;
+        const nextVideoId = currentPlaylistIndex !== -1 && currentPlaylistIndex < playlistElements.length - 1
+            ? playlistElements[currentPlaylistIndex + 1]
+            : undefined;
+
+        if (isPlaylistFlow && nextVideoId) {
+            updateFirebaseDocument({
+                "reactionFinishTime": reactionVideoTime,
+            });
+        }
         // Also persist array-based timelines for efficient playback
         try {
             const stateTimeline = Array.from(reactionConfigs.entries())
@@ -536,8 +584,6 @@
             goToReactionConfiguration();
             return;
         }
-        const nextVideoIndex = playlistElements.findIndex(item => item === originalVideoId) + 1;
-        const nextVideoId = playlistElements[nextVideoIndex];
         if (sharedSessionId) {
             try {
                 if (nextVideoId) {
@@ -586,7 +632,9 @@
 
         const clickPercentage = (clickX / progressBarWidth) * 100;
         progress = clickPercentage;
-
+        if (!playerOriginal || typeof playerOriginal.getDuration !== 'function' || typeof playerOriginal.seekTo !== 'function') {
+            return;
+        }
         const seekTime = (progress / 100) * playerOriginal.getDuration();
         playerOriginal.seekTo(parseFloat(seekTime), true);
         
@@ -615,7 +663,7 @@
             description: 'Kick off playback for everyone in the session.',
             icon: PlaySolid,
             onClick: onClickStartVideo,
-            disabled: currentButtonGroupState !== BUTTON_GROUP_STATES.READY
+            disabled: currentButtonGroupState !== BUTTON_GROUP_STATES.READY || !isPlayerOriginalReady
         },
         {
             id: 'focus-react',

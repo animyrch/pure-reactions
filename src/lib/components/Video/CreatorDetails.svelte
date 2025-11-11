@@ -46,17 +46,6 @@
                 {#if originalVideoId}
                     <RateVideo videoId={originalVideoId} />
                 {/if}
-                {#if originalVideoId}
-                                <a
-                        class="link-out"
-                        href={youtubeWatchUrl(originalVideoId)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                    >
-                        View on YouTube
-                                    <ArrowUpRightFromSquareOutline style="width:1.05rem;height:1.05rem;" />
-                    </a>
-                {/if}
             </div>
         </header>
 
@@ -68,7 +57,7 @@
                 width="48"
                 height="48"
             />
-            <div class="identity-text">
+            <div class="identity-text m-auto">
                 {#if originalVideoAuthor}
                     <a
                         class="author"
@@ -109,21 +98,10 @@
                         follows={viewerData?.follows}
                     />
                 {/if}
-                {#if reactionVideoId}
-                    <a
-                        class="link-out"
-                        href={youtubeWatchUrl(reactionVideoId)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                    >
-                        View on YouTube
-                                <ArrowUpRightFromSquareOutline style="width:1.05rem;height:1.05rem;" />
-                    </a>
-                {/if}
             </div>
         </header>
 
-        <div class="identity">
+        <div class="identity flex justify-center items-center gap-4">
             <img
                 src={reactionAvatarSrc}
                 alt={reactionVideoAuthor ? `${reactionVideoAuthor} avatar` : 'Reactor'}
@@ -131,7 +109,7 @@
                 width="48"
                 height="48"
             />
-            <div class="identity-text">
+            <div class="identity-text m-auto">
                 {#if reactionVideoAuthor}
                     <a
                         class="author"

@@ -3,19 +3,21 @@
   import { goto } from '$app/navigation';
   import { browser } from '$app/environment';
   import { onDestroy, tick } from 'svelte';
-  import { ExpandSolid } from 'flowbite-svelte-icons';
   import CreatorDetails from '$lib/components/Video/CreatorDetails.svelte';
   import PlaylistQueue from '$lib/components/Video/PlaylistQueue.svelte';
   import SubtleLoader from '$lib/components/design-system/SubtleLoader.svelte';
   import CinematicButton from '$lib/components/design-system/CinematicButton.svelte';
   import FullscreenChrome from '$lib/components/reaction/FullscreenChrome.svelte';
   import ControlDock from '$lib/components/reaction/ControlDock.svelte';
-  import EditorPanels from '$lib/components/reaction/EditorPanels.svelte';
+  import EditorPanelsV2 from '$lib/components/reaction/EditorPanelsV2.svelte';
+  import MissingReactionPlaceholder from '$lib/components/reaction/MissingReactionPlaceholder.svelte';
   import { useTwinPlayers, CONTROLS_FADE_CLASS } from '$lib/composables/useTwinPlayers';
   import { reactionDial } from '$lib/stores/reactionDial';
+  import { showToast } from '$lib/stores/toast';
+  import { TOASTS } from '$lib/constants/toasts';
 
   export let data;
-
+  // console.log('Edit Reaction Page Data:', data);
   const { state, actions } = useTwinPlayers({ data });
 
   let overlayRef;
@@ -24,7 +26,7 @@
   let isScrollPending = false;
   let scrollFrame;
 
-  $: stickyControlsClass = $state.bothVideosStarted ? CONTROLS_FADE_CLASS : 'opacity-100';
+  $: stickyControlsClass = $state.isFullscreen ? CONTROLS_FADE_CLASS : 'opacity-100';
   $: overlayRef && actions.registerOverlayRef(overlayRef);
   $: actions.handleSlugChange($page.params.slug);
 
@@ -32,8 +34,32 @@
     actions.handlePlayStateChange(event.detail.isPlaying);
   };
 
+  let isSettingReactionVideoId = false;
+  let reactionVideoIdError = '';
+
   const handleSetReactionVideoId = async (value) => {
-    await actions.editActionEntryPoint(() => actions.setReactionVideoId(value));
+    const trimmed = value?.trim?.() ?? '';
+    if (!trimmed) {
+      reactionVideoIdError = 'Enter a YouTube URL or ID before continuing.';
+      return;
+    }
+    reactionVideoIdError = '';
+    isSettingReactionVideoId = true;
+    try {
+      await actions.editActionEntryPoint(() => actions.setReactionVideoId(trimmed));
+    } catch (error) {
+      console.error('Failed to set reaction video ID', error);
+      reactionVideoIdError = 'We couldn\'t load that video. Double-check the link or ID and try again.';
+      if (browser) {
+        showToast('Unable to load that reaction video. Check the ID and try again.', TOASTS.WARNING);
+      }
+    } finally {
+      isSettingReactionVideoId = false;
+    }
+  };
+
+  const handleMissingReactionSubmit = async (event) => {
+    await handleSetReactionVideoId(event.detail.value);
   };
 
   const handleSetIntroBufferTime = async (value) => {
@@ -60,6 +86,10 @@
     if (!$state.isUsersOwnVideo) {
       goto(`/reaction/${$state.pageSlug}`);
     }
+  }
+
+  $: if (!$state.isReactionMissing && reactionVideoIdError) {
+    reactionVideoIdError = '';
   }
 
   $: if (browser && !$state.isLoading && $state.isUsersOwnVideo && !$state.isEditModeOn) {
@@ -137,17 +167,6 @@
         >
           <span>View Live Page</span>
         </CinematicButton>
-        <CinematicButton
-          variant="secondary"
-          size="sm"
-          ariaLabel="Enter fullscreen view"
-          on:click={actions.openWithFullscreen}
-        >
-          <span class="inline-flex items-center gap-2">
-            <ExpandSolid class="h-4 w-4" aria-hidden="true" />
-            <span>Fullscreen</span>
-          </span>
-        </CinematicButton>
       </div>
     </div>
   {/if}
@@ -190,9 +209,11 @@
             </div>
           </div>
         {:else}
-          <div class="flex aspect-[16/9] flex-col items-center justify-center rounded-xl border border-dashed border-text-muted/40 bg-surface/40 p-6 text-center text-sm text-text-muted shadow-surface sm:aspect-[3/2]">
-            Add a reaction video ID to preview the edited cut here.
-          </div>
+          <MissingReactionPlaceholder
+            loading={isSettingReactionVideoId}
+            error={reactionVideoIdError}
+            on:submit={handleMissingReactionSubmit}
+          />
         {/if}
       </div>
     {/if}
@@ -209,6 +230,7 @@
         onSyncVideos={actions.syncVideos}
         onToggleAutoPlaylist={actions.toggleAutoPlaylist}
         onToggleBars={actions.toggleCinematicBars}
+        onEnterFullscreen={actions.openWithFullscreen}
       />
     {/if}
   </section>
@@ -244,11 +266,13 @@
         class="mt-10 rounded-2xl bg-surface/80 p-6 shadow-elevated"
         bind:this={editSectionRef}
       >
-        <EditorPanels
+        <EditorPanelsV2
           isReactionMissing={$state.isReactionMissing}
           isEditModeOn={$state.isEditModeOn}
           isFineTuneModeOn={$state.isFineTuneModeOn}
           reactionVideoId={$state.reactionVideoId}
+          reactionVideoIdError={reactionVideoIdError}
+          isSettingReactionVideoId={isSettingReactionVideoId}
           introBufferTime={$state.introBufferTime}
           soundLevel={$state.soundLevel}
           playerConfigs={$state.playerConfigs}
@@ -257,6 +281,12 @@
           volumeTimeline={$state.volumeTimeline}
           playbackRateConfigs={$state.playbackRateConfigs}
           playbackRateTimeline={$state.playbackRateTimeline}
+          reactionCurrentTime={$state.reactionCurrentTime}
+          reactionDuration={$state.reactionDuration}
+          playerEventTimeline={$state.playerEventTimeline}
+          onCreatePlayerConfig={actions.createPlayerConfig}
+          onUpdatePlayerConfig={actions.updatePlayerConfig}
+          onDeletePlayerConfig={actions.deletePlayerConfig}
           onSetReactionVideoId={handleSetReactionVideoId}
           onSetIntroBufferTime={handleSetIntroBufferTime}
           onSetSoundLevel={handleSetSoundLevel}

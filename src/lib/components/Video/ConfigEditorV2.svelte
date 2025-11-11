@@ -1,0 +1,221 @@
+<script>
+  import { createEventDispatcher } from 'svelte';
+  import { page } from '$app/stores';
+  import DebugConfigs from './DebugConfigs.svelte';
+  import InteractiveSynchronizer from './InteractiveSynchronizer.svelte';
+  const dispatch = createEventDispatcher();
+
+  export let volumeConfigs = {};
+  export let playerConfigs = {};
+  export let stateTimeline = [];
+  export let volumeTimeline = [];
+  export let playbackRateConfigs = {};
+  export let playbackRateTimeline = [];
+  export let reactionCurrentTime = 0;
+  export let reactionDuration = 0;
+  export let playerEventTimeline = [];
+
+  const YOUTUBE_STATE_LABELS = {
+    '-1': 'Unstarted',
+    0: 'Ended',
+    1: 'Playing',
+    2: 'Paused',
+    3: 'Buffering',
+    5: 'Video cued'
+  };
+
+  const TYPE_META = {
+    volume: {
+      label: 'Volume change',
+      badgeClass: 'border border-accent-primary/40 bg-accent-primary/10 text-accent-primary'
+    },
+    player: {
+      label: 'Playback state',
+      badgeClass: 'border border-border-strong bg-surface/50 text-text-primary'
+    },
+    speed: {
+      label: 'Speed shift',
+      badgeClass: 'border border-accent-secondary/40 bg-accent-secondary/10 text-accent-secondary'
+    }
+  };
+
+  const parseSeconds = (value) => {
+    const numeric = typeof value === 'string' ? Number.parseFloat(value) : value;
+    return Number.isFinite(numeric) ? numeric : null;
+  };
+
+  const formatSeconds = (value) => {
+    if (!Number.isFinite(value)) return '—';
+    const rounded = Math.round(value * 100) / 100;
+    return `${rounded.toString()}s`;
+  };
+
+  const formatPercent = (value) => {
+    if (!Number.isFinite(value)) return '—';
+    return `${Math.round(value)}%`;
+  };
+
+  const formatRate = (value) => {
+    if (!Number.isFinite(value)) return '—';
+    const rounded = Math.round(value * 100) / 100;
+    return `${rounded.toString()}×`;
+  };
+
+  const resolveStateLabel = (state) => {
+    if (!Number.isFinite(state)) return 'Unknown state';
+    return YOUTUBE_STATE_LABELS[state] ?? `State ${state}`;
+  };
+
+  const normalizeVolumeEvents = () => {
+    if (Array.isArray(volumeTimeline) && volumeTimeline.length) {
+      return volumeTimeline
+        .map((event, index) => {
+          const timeInReaction = parseSeconds(event?.t);
+          const volume = Number.parseFloat(event?.volume);
+          if (!Number.isFinite(timeInReaction) || Number.isNaN(volume)) return null;
+          return {
+            id: `volume-array-${index}-${timeInReaction}`,
+            type: 'volume',
+            timeInReaction,
+            volume
+          };
+        })
+        .filter(Boolean);
+    }
+
+    return Object.entries(volumeConfigs ?? {})
+      .map(([timeKey, value], index) => {
+        const timeInReaction = parseSeconds(timeKey);
+        const volume = Number.parseFloat(value?.volume ?? value);
+        if (!Number.isFinite(timeInReaction) || Number.isNaN(volume)) return null;
+        return {
+          id: `volume-map-${index}-${timeInReaction}`,
+          type: 'volume',
+          timeInReaction,
+          volume
+        };
+      })
+      .filter(Boolean);
+  };
+
+  const normalizePlayerEvents = () => {
+    if (Array.isArray(stateTimeline) && stateTimeline.length) {
+      return stateTimeline
+        .map((event, index) => {
+          const timeInReaction = parseSeconds(event?.t);
+          const state = Number.parseFloat(event?.state);
+          const targetTime = parseSeconds(event?.targetTime);
+          if (!Number.isFinite(timeInReaction) || Number.isNaN(state)) return null;
+          return {
+            id: `player-array-${index}-${timeInReaction}`,
+            type: 'player',
+            timeInReaction,
+            state,
+            targetTime
+          };
+        })
+        .filter(Boolean);
+    }
+
+    return Object.entries(playerConfigs ?? {})
+      .map(([timeKey, value], index) => {
+        const timeInReaction = parseSeconds(timeKey);
+        const state = Number.parseFloat(value?.state ?? value);
+        const targetTime = parseSeconds(value?.time);
+        if (!Number.isFinite(timeInReaction) || Number.isNaN(state)) return null;
+        return {
+          id: `player-map-${index}-${timeInReaction}`,
+          type: 'player',
+          timeInReaction,
+          state,
+          targetTime
+        };
+      })
+      .filter(Boolean);
+  };
+
+  const normalizePlaybackEvents = () => {
+    if (Array.isArray(playbackRateTimeline) && playbackRateTimeline.length) {
+      return playbackRateTimeline
+        .map((event, index) => {
+          const timeInReaction = parseSeconds(event?.t);
+          const rate = Number.parseFloat(event?.rate);
+          if (!Number.isFinite(timeInReaction) || Number.isNaN(rate)) return null;
+          return {
+            id: `speed-array-${index}-${timeInReaction}`,
+            type: 'speed',
+            timeInReaction,
+            rate
+          };
+        })
+        .filter(Boolean);
+    }
+
+    return Object.entries(playbackRateConfigs ?? {})
+      .map(([timeKey, value], index) => {
+        const timeInReaction = parseSeconds(timeKey);
+        const rate = Number.parseFloat(value?.rate ?? value);
+        if (!Number.isFinite(timeInReaction) || Number.isNaN(rate)) return null;
+        return {
+          id: `speed-map-${index}-${timeInReaction}`,
+          type: 'speed',
+          timeInReaction,
+          rate
+        };
+      })
+      .filter(Boolean);
+  };
+
+  $: volumeEvents = normalizeVolumeEvents();
+  $: normalizedPlayerEvents = normalizePlayerEvents();
+  $: playerEvents = Array.isArray(playerEventTimeline) && playerEventTimeline.length
+    ? playerEventTimeline
+    : normalizedPlayerEvents;
+  $: playbackEvents = normalizePlaybackEvents();
+
+  $: timelineEntries = [...volumeEvents, ...playerEvents, ...playbackEvents]
+    .sort((a, b) => a.timeInReaction - b.timeInReaction);
+
+  $: summary = {
+    total: timelineEntries.length,
+    volume: volumeEvents.length,
+    player: playerEvents.length,
+    speed: playbackEvents.length,
+    spanStart: timelineEntries[0]?.timeInReaction ?? null,
+    spanEnd: timelineEntries[timelineEntries.length - 1]?.timeInReaction ?? null
+  };
+
+  let showDebugConfigs = false;
+  $: showDebugConfigs = $page.url.searchParams.get('debug') === 'true';
+</script>
+
+<div class="flex flex-col gap-6">
+  {#if showDebugConfigs}
+    <DebugConfigs
+      summary={summary}
+      timelineEntries={timelineEntries}
+      typeMeta={TYPE_META}
+      formatSeconds={formatSeconds}
+      resolveStateLabel={resolveStateLabel}
+      formatPercent={formatPercent}
+      formatRate={formatRate}
+    />
+  {/if}
+
+  <div class="rounded-2xl border border-border-subtle/80 bg-surface/60 p-4">
+    <div class="mb-3 flex items-center justify-between">
+      <p class="text-sm font-semibold text-text-primary">Live reaction timeline</p>
+      <p class="text-xs text-text-muted">Tracks playback position in real time</p>
+    </div>
+    <InteractiveSynchronizer
+      currentTime={reactionCurrentTime}
+      duration={reactionDuration}
+      playerEvents={playerEvents}
+      volumeEvents={volumeEvents}
+      playbackRateEvents={playbackEvents}
+      on:createPlayerConfig={(event) => dispatch('createPlayerConfig', event.detail)}
+      on:updatePlayerConfig={(event) => dispatch('updatePlayerConfig', event.detail)}
+      on:deletePlayerConfig={(event) => dispatch('deletePlayerConfig', event.detail)}
+    />
+  </div>
+</div>

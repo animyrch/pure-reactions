@@ -12,6 +12,7 @@
   export let onSyncVideos = () => {};
   export let onToggleAutoPlaylist = () => {};
   export let onToggleBars = () => {};
+  export let onEnterFullscreen = () => {};
 </script>
 
 <div class={`controls-dock group pointer-events-none ${isFullscreen ? 'fixed inset-x-0 bottom-12 z-50 flex justify-center px-6' : 'sticky top-6 z-30 mt-10 flex justify-center'}`}>
@@ -21,10 +22,12 @@
       isPlaylist={isPlaylist}
       {isPlaylistAutoPlay}
       {showCinematicBars}
+      {isFullscreen}
       on:playStateChanged={onPlayStateChanged}
       on:syncVideos={onSyncVideos}
       on:toggleAutoPlaylist={onToggleAutoPlaylist}
       on:toggleBars={onToggleBars}
+      on:enterFullscreen={onEnterFullscreen}
     />
   </div>
 </div>

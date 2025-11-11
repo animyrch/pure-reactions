@@ -32,6 +32,7 @@
   disabled={disabled || loading}
   aria-label={ariaLabel}
   aria-busy={loading}
+  on:click
 >
   {#if loading}
     <span class="relative flex items-center gap-xs" aria-hidden="true">

@@ -1,0 +1,1182 @@
+<script>
+  import { createEventDispatcher, onDestroy } from 'svelte';
+  import { PlaySolid, PauseSolid } from 'flowbite-svelte-icons';
+
+  export let currentTime = 0;
+  export let duration = 0;
+  export let playerEvents = [];
+  export let volumeEvents = [];
+  export let playbackRateEvents = [];
+
+  const clamp01 = (value) => {
+    if (!Number.isFinite(value)) return 0;
+    return Math.min(Math.max(value, 0), 1);
+  };
+
+  const formatTimecode = (value) => {
+    if (!Number.isFinite(value) || value < 0) return '0:00';
+    const totalSeconds = Math.floor(value);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  const formatRateDisplay = (value) => {
+    if (!Number.isFinite(value)) return '1×';
+    const normalized = Math.round(value * 100) / 100;
+    return `${normalized.toString()}×`;
+  };
+
+  const formatVolumeDisplay = (value) => {
+    if (!Number.isFinite(value)) return '0%';
+    const bounded = Math.min(Math.max(value, 0), 100);
+    return `${Math.round(bounded)}%`;
+  };
+
+  const STATE_MARKERS = {
+    1: { label: 'Resumed original', tone: 'resume', icon: PlaySolid },
+    2: { label: 'Stopped original', tone: 'stop', icon: PauseSolid }
+  };
+
+  const MARKER_STYLES = {
+    resume: 'border border-accent-primary/40 bg-accent-primary/15 text-accent-primary',
+    stop: 'border border-border-strong/60 bg-background/90 text-text-primary',
+    speed: 'border border-accent-secondary/50 bg-accent-secondary/10 text-accent-secondary',
+    volume: 'border border-accent-primary/30 bg-accent-primary/10 text-accent-primary'
+  };
+
+  const MIN_ZOOM_RATIO = 0.01;
+  const MIN_ZOOM_SPAN_SECONDS = 0.5;
+
+  const dispatch = createEventDispatcher();
+
+  let pendingConfig = null;
+  let activeMarker = null;
+  let maxEventTime = 0;
+  let effectiveDuration = 0;
+  let pendingTargetMinutesInput = '0';
+  let pendingTargetSecondsInput = '0.00';
+  let activeTargetMinutesInput = '0';
+  let activeTargetSecondsInput = '0.00';
+  let pendingReactionMinutesInput = '0';
+  let pendingReactionSecondsInput = '0.00';
+  let activeReactionMinutesInput = '0';
+  let activeReactionSecondsInput = '0.00';
+  let pendingTargetSeconds = 0;
+  let activeTargetSeconds = 0;
+  let pendingReactionSeconds = 0;
+  let activeReactionSeconds = 0;
+  let activeMarkerIsDirty = false;
+  let hoverViewportRatio = null;
+  let hoverTimeLabel = null;
+  let viewportInitialized = false;
+  let viewportStart = 0;
+  let viewportEnd = 0;
+  let safeViewportStart = 0;
+  let safeViewportEnd = 0;
+  let viewportSpan = 0;
+  let isZoomed = false;
+  let displayProgress = 0;
+  let zoomSelectionActive = false;
+  let zoomDragStartViewportRatio = null;
+  let zoomDragCurrentViewportRatio = null;
+  let zoomSelectionLeft = null;
+  let zoomSelectionWidth = null;
+  let zoomBoundingRect = null;
+  let zoomDragCommitted = false;
+  let suppressNextClick = false;
+  let isSelectingZoom = false;
+  let lastDuration = 0;
+  let visibleTracks = [];
+  let hasManualZoom = false;
+
+  const PENDING_TARGET_MINUTES_INPUT_ID = 'pending-target-minutes';
+  const PENDING_TARGET_SECONDS_INPUT_ID = 'pending-target-seconds';
+  const ACTIVE_TARGET_MINUTES_INPUT_ID = 'active-target-minutes';
+  const ACTIVE_TARGET_SECONDS_INPUT_ID = 'active-target-seconds';
+  const PENDING_REACTION_MINUTES_INPUT_ID = 'pending-reaction-minutes';
+  const PENDING_REACTION_SECONDS_INPUT_ID = 'pending-reaction-seconds';
+  const ACTIVE_REACTION_MINUTES_INPUT_ID = 'active-reaction-minutes';
+  const ACTIVE_REACTION_SECONDS_INPUT_ID = 'active-reaction-seconds';
+
+  const sanitizeNumber = (value, fallback = 0) => {
+    const numeric = Number.parseFloat(value);
+    return Number.isFinite(numeric) ? numeric : fallback;
+  };
+
+  const formatSecondsForInput = (value) => {
+    if (!Number.isFinite(value)) {
+      return { minutes: '0', seconds: '0.00' };
+    }
+    const clamped = Math.max(0, value);
+    const totalSeconds = Math.floor(clamped);
+    const minutes = Math.floor(totalSeconds / 60);
+    const remainingSeconds = clamped - minutes * 60;
+    return {
+      minutes: String(minutes),
+      seconds: (Math.round(remainingSeconds * 100) / 100).toFixed(2).padStart(4, '0')
+    };
+  };
+
+  const parseInputsToSeconds = (minutesInput, secondsInput, fallback = 0) => {
+    const minutesValue = Number.parseInt(minutesInput, 10);
+    const secondsValue = Number.parseFloat(secondsInput);
+    if (!Number.isFinite(minutesValue) || minutesValue < 0) {
+      return fallback;
+    }
+    if (!Number.isFinite(secondsValue) || secondsValue < 0) {
+      return fallback;
+    }
+    return minutesValue * 60 + secondsValue;
+  };
+
+  $: safeDuration = Number.isFinite(duration) && duration > 0 ? duration : 0;
+  $: safeCurrentTime = Number.isFinite(currentTime) && currentTime > 0 ? currentTime : 0;
+  $: if (safeDuration !== lastDuration) {
+    lastDuration = safeDuration;
+    if (safeDuration > 0) {
+      viewportInitialized = true;
+      if (!hasManualZoom) {
+        viewportStart = 0;
+        viewportEnd = safeDuration;
+      } else if (viewportEnd > safeDuration) {
+        viewportEnd = safeDuration;
+      }
+    } else {
+      viewportInitialized = false;
+      viewportStart = 0;
+      viewportEnd = 0;
+      hasManualZoom = false;
+    }
+  }
+  $: if (viewportEnd > effectiveDuration && effectiveDuration > 0) {
+    viewportEnd = effectiveDuration;
+  }
+  $: {
+    const startCandidate = Math.min(viewportStart, viewportEnd);
+    const endCandidate = Math.max(viewportStart, viewportEnd);
+    const boundedStart = Math.max(0, startCandidate);
+    const durationCeiling = safeDuration > 0 ? safeDuration : endCandidate;
+    const minEnd = boundedStart + 0.001;
+    safeViewportStart = boundedStart;
+    safeViewportEnd = Math.max(minEnd, Math.min(endCandidate, durationCeiling));
+    viewportSpan = Math.max(0.001, safeViewportEnd - safeViewportStart);
+  }
+  $: isZoomed =
+    viewportInitialized &&
+    safeDuration > 0 &&
+    (safeViewportStart > 0.0005 || Math.abs(safeViewportEnd - safeDuration) > 0.0005);
+  $: displayProgress = clamp01(viewportSpan <= 0 ? 0 : (safeCurrentTime - safeViewportStart) / viewportSpan);
+  $: indicatorPosition = `${(displayProgress * 100).toFixed(3)}%`;
+  $: playerEventsSorted = Array.isArray(playerEvents)
+    ? [...playerEvents]
+        .map((event) => ({
+          ...event,
+          timeInReaction: sanitizeNumber(event?.timeInReaction),
+          targetTime: sanitizeNumber(event?.targetTime ?? event?.time)
+        }))
+        .filter((event) => Number.isFinite(event.timeInReaction))
+        .sort((a, b) => a.timeInReaction - b.timeInReaction)
+    : [];
+  $: volumeEventsSorted = Array.isArray(volumeEvents)
+    ? [...volumeEvents]
+        .map((event) => ({
+          ...event,
+          timeInReaction: sanitizeNumber(event?.timeInReaction ?? event?.t),
+          volume: Number.parseFloat(event?.volume ?? event?.value)
+        }))
+        .filter((event) => Number.isFinite(event.timeInReaction) && Number.isFinite(event.volume))
+        .sort((a, b) => a.timeInReaction - b.timeInReaction)
+    : [];
+  $: playbackRateEventsSorted = Array.isArray(playbackRateEvents)
+    ? [...playbackRateEvents]
+        .map((event) => ({
+          ...event,
+          timeInReaction: sanitizeNumber(event?.timeInReaction ?? event?.t),
+          rate: Number.parseFloat(event?.rate ?? event?.value)
+        }))
+        .filter((event) => Number.isFinite(event.timeInReaction) && Number.isFinite(event.rate))
+        .sort((a, b) => a.timeInReaction - b.timeInReaction)
+    : [];
+  $: playerMarkers = playerEventsSorted
+    .map((event, index) => {
+      if (!Number.isFinite(event?.timeInReaction)) return null;
+      const markerMeta = STATE_MARKERS[event?.state];
+      if (!markerMeta?.icon) return null;
+      const normalized = effectiveDuration <= 0 ? 0 : clamp01(event.timeInReaction / effectiveDuration);
+      const targetTime = sanitizeNumber(event?.targetTime ?? event?.time, 0);
+      return {
+        id: event?.id ?? `player-marker-${index}`,
+        label: markerMeta.label,
+        tone: markerMeta.tone,
+        position: `${(normalized * 100).toFixed(3)}%`,
+        ratio: normalized,
+        timeLabel: formatTimecode(event.timeInReaction),
+        timeInReaction: event.timeInReaction,
+        targetTime,
+        state: Number(event.state),
+        icon: markerMeta.icon,
+        editable: true
+      };
+    })
+    .filter(Boolean);
+  $: playMarkers = playerMarkers.filter((marker) => marker.state === 1);
+  $: pauseMarkers = playerMarkers.filter((marker) => marker.state === 2);
+  $: playbackRateMarkers = playbackRateEventsSorted
+    .map((event, index) => {
+      const timeInReaction = event.timeInReaction;
+      const rate = event.rate;
+      if (!Number.isFinite(timeInReaction) || !Number.isFinite(rate)) return null;
+      const normalized = effectiveDuration <= 0 ? 0 : clamp01(timeInReaction / effectiveDuration);
+      const displayValue = formatRateDisplay(rate);
+      return {
+        id: event?.id ?? `speed-marker-${index}`,
+        label: `Playback speed ${displayValue}`,
+        tone: 'speed',
+        position: `${(normalized * 100).toFixed(3)}%`,
+        ratio: normalized,
+        timeLabel: formatTimecode(timeInReaction),
+        timeInReaction,
+        rate,
+        displayValue,
+        editable: false
+      };
+    })
+    .filter(Boolean);
+  $: volumeMarkers = volumeEventsSorted
+    .map((event, index) => {
+      const timeInReaction = event.timeInReaction;
+      const volume = event.volume;
+      if (!Number.isFinite(timeInReaction) || !Number.isFinite(volume)) return null;
+      const normalized = effectiveDuration <= 0 ? 0 : clamp01(timeInReaction / effectiveDuration);
+      const displayValue = formatVolumeDisplay(volume);
+      return {
+        id: event?.id ?? `volume-marker-${index}`,
+        label: `Volume ${displayValue}`,
+        tone: 'volume',
+        position: `${(normalized * 100).toFixed(3)}%`,
+        ratio: normalized,
+        timeLabel: formatTimecode(timeInReaction),
+        timeInReaction,
+        volume,
+        displayValue,
+        editable: false
+      };
+    })
+    .filter(Boolean);
+  $: if (effectiveDuration <= 0) {
+    hoverViewportRatio = null;
+    hoverTimeLabel = null;
+  }
+  $: hoverIndicatorPosition =
+    hoverViewportRatio !== null ? `${(hoverViewportRatio * 100).toFixed(3)}%` : null;
+  $: maxPlayerEventTime = playerEventsSorted.length
+    ? playerEventsSorted[playerEventsSorted.length - 1].timeInReaction
+    : 0;
+  $: maxVolumeEventTime = volumeEventsSorted.length
+    ? volumeEventsSorted[volumeEventsSorted.length - 1].timeInReaction
+    : 0;
+  $: maxPlaybackRateEventTime = playbackRateEventsSorted.length
+    ? playbackRateEventsSorted[playbackRateEventsSorted.length - 1].timeInReaction
+    : 0;
+  $: maxEventTime = Math.max(maxPlayerEventTime, maxVolumeEventTime, maxPlaybackRateEventTime);
+  $: effectiveDuration = safeDuration > 0 ? safeDuration : Math.max(maxEventTime, safeCurrentTime);
+  $: if (!viewportInitialized && effectiveDuration > 0) {
+    viewportInitialized = true;
+    viewportStart = 0;
+    viewportEnd = effectiveDuration;
+    hasManualZoom = false;
+  }
+  $: tracks = [
+    {
+      id: 'play',
+      label: 'Play cues',
+      markers: playMarkers,
+      showProgress: true,
+      interactive: true
+    },
+    {
+      id: 'pause',
+      label: 'Pause cues',
+      markers: pauseMarkers,
+      showProgress: false,
+      interactive: true
+    },
+    {
+      id: 'speed',
+      label: 'Playback speed',
+      markers: playbackRateMarkers,
+      showProgress: false,
+      interactive: false
+    },
+    {
+      id: 'volume',
+      label: 'Volume level',
+      markers: volumeMarkers,
+      showProgress: false,
+      interactive: false
+    }
+  ];
+  $: {
+    const viewportStartBoundary = safeViewportStart - 0.0005;
+    const viewportEndBoundary = safeViewportEnd + 0.0005;
+    visibleTracks = tracks.map((track) => ({
+      ...track,
+      markers: track.markers.filter((marker) => {
+        const markerTime = marker?.timeInReaction;
+        return (
+          Number.isFinite(markerTime) &&
+          markerTime >= viewportStartBoundary &&
+          markerTime <= viewportEndBoundary
+        );
+      })
+    }));
+  }
+  $: if (
+    zoomSelectionActive &&
+    zoomDragStartViewportRatio !== null &&
+    zoomDragCurrentViewportRatio !== null
+  ) {
+    const minRatio = Math.min(zoomDragStartViewportRatio, zoomDragCurrentViewportRatio);
+    const maxRatio = Math.max(zoomDragStartViewportRatio, zoomDragCurrentViewportRatio);
+    const span = maxRatio - minRatio;
+    if (span > 0.0005) {
+      zoomSelectionLeft = `${(minRatio * 100).toFixed(3)}%`;
+      zoomSelectionWidth = `${(span * 100).toFixed(3)}%`;
+    } else {
+      zoomSelectionLeft = null;
+      zoomSelectionWidth = null;
+    }
+  } else {
+    zoomSelectionLeft = null;
+    zoomSelectionWidth = null;
+  }
+  $: if (pendingConfig && (effectiveDuration <= 0 || pendingConfig.reactionTime > effectiveDuration)) {
+    closeConfigPopup();
+  }
+  $: if (pendingConfig) {
+    const nextRatio =
+      viewportSpan > 0 ? clamp01((pendingReactionSeconds - safeViewportStart) / viewportSpan) : 0;
+    if (Math.abs(nextRatio - pendingConfig.ratio) > 0.0005) {
+      pendingConfig = {
+        ...pendingConfig,
+        ratio: nextRatio
+      };
+    }
+  }
+
+  $: if (activeMarker) {
+    const nextRatio =
+      viewportSpan > 0 ? clamp01((activeReactionSeconds - safeViewportStart) / viewportSpan) : 0;
+    if (Math.abs(nextRatio - activeMarker.ratio) > 0.0005) {
+      const { initialTimeInReaction, initialTargetTime, initialState } = activeMarker;
+      activeMarker = {
+        ...activeMarker,
+        ratio: nextRatio,
+        timeInReaction: activeReactionSeconds,
+        targetTime: activeTargetSeconds,
+        initialTimeInReaction,
+        initialTargetTime,
+        initialState
+      };
+    }
+  }
+
+  $: if (activeMarker && !activeMarkerIsDirty) {
+    const exists = playerMarkers.some(
+      (marker) => Math.abs(marker.timeInReaction - activeMarker.initialTimeInReaction) < 0.001
+    );
+    if (!exists) {
+      closeMarkerEditor();
+    }
+  }
+
+  const findPreviousPlayerEvent = (reactionTime, exclude) => {
+    if (!playerEventsSorted.length) return null;
+    let candidate = null;
+    const excludeTime = Number.isFinite(exclude?.timeInReaction) ? exclude.timeInReaction : null;
+    const excludeState = Number.isFinite(exclude?.state) ? Number(exclude.state) : null;
+    const hasExcludeTime = Number.isFinite(excludeTime);
+    const hasExcludeState = Number.isFinite(excludeState);
+    for (const event of playerEventsSorted) {
+      const eventTime = sanitizeNumber(event?.timeInReaction);
+      if (
+        exclude &&
+        hasExcludeTime &&
+        Math.abs(eventTime - excludeTime) < 0.0005 &&
+        (!hasExcludeState || Number(event?.state) === excludeState)
+      ) {
+        continue;
+      }
+      if (eventTime <= reactionTime) {
+        candidate = event;
+      } else {
+        break;
+      }
+    }
+    return candidate;
+  };
+
+  const computeOriginalTimeForNewEvent = (reactionTime, exclude) => {
+    const previous = findPreviousPlayerEvent(reactionTime, exclude);
+    if (!previous) return 0;
+    const previousTargetTime = Number.isFinite(previous.targetTime) ? previous.targetTime : 0;
+    const delta = Math.max(0, reactionTime - sanitizeNumber(previous.timeInReaction));
+    return Number(previous.state) === 1 ? previousTargetTime + delta : previousTargetTime;
+  };
+
+  const toViewportRatio = (timeInSeconds) => {
+    if (!Number.isFinite(timeInSeconds) || viewportSpan <= 0) {
+      return null;
+    }
+    return clamp01((timeInSeconds - safeViewportStart) / viewportSpan);
+  };
+
+  const toViewportPosition = (timeInSeconds) => {
+    const ratio = toViewportRatio(timeInSeconds);
+    if (ratio === null) {
+      return '0%';
+    }
+    return `${(ratio * 100).toFixed(3)}%`;
+  };
+
+  const getTimelineCoordinates = (event, rectOverride = null) => {
+    if (viewportSpan <= 0) {
+      return null;
+    }
+    const rect = rectOverride ?? event.currentTarget?.getBoundingClientRect?.();
+    if (!rect || rect.width <= 0) {
+      return null;
+    }
+    const clientX = event.clientX;
+    if (typeof clientX !== 'number' || !Number.isFinite(clientX)) {
+      return null;
+    }
+    const viewportRatio = clamp01((clientX - rect.left) / rect.width);
+    const absoluteTime = safeViewportStart + viewportRatio * viewportSpan;
+    const boundedAbsoluteTime =
+      effectiveDuration > 0 ? Math.min(Math.max(absoluteTime, 0), effectiveDuration) : absoluteTime;
+    const overallRatio =
+      effectiveDuration > 0 ? clamp01(boundedAbsoluteTime / effectiveDuration) : 0;
+    return {
+      viewportRatio,
+      absoluteTime: boundedAbsoluteTime,
+      overallRatio
+    };
+  };
+
+  const updateHover = (event) => {
+    const coordinates = getTimelineCoordinates(event);
+    if (!coordinates) {
+      hoverViewportRatio = null;
+      hoverTimeLabel = null;
+      return;
+    }
+    hoverViewportRatio = coordinates.viewportRatio;
+    hoverTimeLabel = formatTimecode(coordinates.absoluteTime);
+  };
+
+  const clearHover = () => {
+    hoverViewportRatio = null;
+    hoverTimeLabel = null;
+  };
+
+  const cleanupZoomListeners = () => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    window.removeEventListener('mousemove', handleZoomMouseMove);
+    window.removeEventListener('mouseup', handleZoomMouseUp);
+  };
+
+  const startZoomSelection = (event) => {
+    if (typeof window === 'undefined') return;
+    if (event.button !== 0) return;
+    if (event.defaultPrevented) return;
+    if (viewportSpan <= 0) return;
+    if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+    const rect = event.currentTarget?.getBoundingClientRect?.();
+    if (!rect || rect.width <= 0) return;
+    const coordinates = getTimelineCoordinates(event, rect);
+    if (!coordinates) return;
+    event.preventDefault();
+    cleanupZoomListeners();
+    isSelectingZoom = true;
+    zoomBoundingRect = rect;
+    zoomDragStartViewportRatio = coordinates.viewportRatio;
+    zoomDragCurrentViewportRatio = coordinates.viewportRatio;
+    zoomDragCommitted = false;
+    zoomSelectionActive = true;
+    suppressNextClick = false;
+    hoverViewportRatio = null;
+    hoverTimeLabel = null;
+    window.addEventListener('mousemove', handleZoomMouseMove);
+    window.addEventListener('mouseup', handleZoomMouseUp);
+  };
+
+  const handleZoomMouseMove = (event) => {
+    if (typeof window === 'undefined') return;
+    if (!isSelectingZoom || !zoomBoundingRect) return;
+    event.preventDefault();
+    const coordinates = getTimelineCoordinates(event, zoomBoundingRect);
+    if (!coordinates) return;
+    zoomDragCurrentViewportRatio = coordinates.viewportRatio;
+    if (!zoomDragCommitted && Math.abs(zoomDragCurrentViewportRatio - (zoomDragStartViewportRatio ?? 0)) > MIN_ZOOM_RATIO / 2) {
+      zoomDragCommitted = true;
+    }
+  };
+
+  const handleZoomMouseUp = (event) => {
+    if (typeof window === 'undefined') return;
+    if (!isSelectingZoom) return;
+    const coordinates = zoomBoundingRect ? getTimelineCoordinates(event, zoomBoundingRect) : null;
+    if (coordinates) {
+      zoomDragCurrentViewportRatio = coordinates.viewportRatio;
+    }
+    finalizeZoomSelection();
+  };
+
+  const finalizeZoomSelection = () => {
+    cleanupZoomListeners();
+    if (!isSelectingZoom) {
+      zoomSelectionActive = false;
+      return;
+    }
+    const startRatio = clamp01(zoomDragStartViewportRatio ?? 0);
+    const endRatio = clamp01(zoomDragCurrentViewportRatio ?? startRatio);
+    const minRatio = Math.min(startRatio, endRatio);
+    const maxRatio = Math.max(startRatio, endRatio);
+    const ratioSpan = Math.abs(maxRatio - minRatio);
+    const spanSeconds = ratioSpan * viewportSpan;
+    const meetsThreshold =
+      zoomDragCommitted && (ratioSpan >= MIN_ZOOM_RATIO || spanSeconds >= MIN_ZOOM_SPAN_SECONDS);
+    if (meetsThreshold) {
+      const newStart = safeViewportStart + minRatio * viewportSpan;
+      const newEnd = safeViewportStart + maxRatio * viewportSpan;
+      if (newEnd - newStart >= 0.1) {
+        viewportStart = newStart;
+        viewportEnd = newEnd;
+        hasManualZoom = true;
+        suppressNextClick = true;
+        closeConfigPopup();
+        closeMarkerEditor();
+      } else {
+        suppressNextClick = false;
+      }
+    } else {
+      suppressNextClick = false;
+    }
+    isSelectingZoom = false;
+    zoomSelectionActive = false;
+    zoomBoundingRect = null;
+    zoomDragStartViewportRatio = null;
+    zoomDragCurrentViewportRatio = null;
+    zoomDragCommitted = false;
+  };
+
+  const resetZoom = () => {
+    cleanupZoomListeners();
+    isSelectingZoom = false;
+    zoomSelectionActive = false;
+    zoomDragStartViewportRatio = null;
+    zoomDragCurrentViewportRatio = null;
+    zoomBoundingRect = null;
+    zoomDragCommitted = false;
+    suppressNextClick = false;
+    hoverViewportRatio = null;
+    hoverTimeLabel = null;
+    const fallbackDuration = effectiveDuration > 0 ? effectiveDuration : safeDuration;
+    viewportStart = 0;
+    viewportEnd = fallbackDuration;
+    hasManualZoom = false;
+    closeConfigPopup();
+    closeMarkerEditor();
+  };
+
+  const refreshPendingDerivedValues = () => {
+    pendingReactionSeconds = parseInputsToSeconds(
+      pendingReactionMinutesInput,
+      pendingReactionSecondsInput,
+      pendingReactionSeconds
+    );
+    pendingTargetSeconds = parseInputsToSeconds(
+      pendingTargetMinutesInput,
+      pendingTargetSecondsInput,
+      pendingTargetSeconds
+    );
+    if (pendingConfig) {
+      const nextRatio =
+        viewportSpan > 0 ? clamp01((pendingReactionSeconds - safeViewportStart) / viewportSpan) : 0;
+      pendingConfig = {
+        ...pendingConfig,
+        reactionTime: pendingReactionSeconds,
+        ratio: nextRatio
+      };
+    }
+  };
+
+  const refreshActiveDerivedValues = () => {
+    activeReactionSeconds = parseInputsToSeconds(
+      activeReactionMinutesInput,
+      activeReactionSecondsInput,
+      activeReactionSeconds
+    );
+    activeTargetSeconds = parseInputsToSeconds(
+      activeTargetMinutesInput,
+      activeTargetSecondsInput,
+      activeTargetSeconds
+    );
+    enforceActiveTargetLock();
+    if (activeMarker) {
+      const { initialTimeInReaction, initialTargetTime, initialState } = activeMarker;
+      const nextRatio =
+        viewportSpan > 0 ? clamp01((activeReactionSeconds - safeViewportStart) / viewportSpan) : 0;
+      activeMarker = {
+        ...activeMarker,
+        timeInReaction: activeReactionSeconds,
+        targetTime: activeTargetSeconds,
+        ratio: nextRatio,
+        initialTimeInReaction,
+        initialTargetTime,
+        initialState
+      };
+    }
+  };
+
+  const enforceActiveTargetLock = () => {
+    if (!activeMarker || Number(activeMarker.state) !== 2) {
+      return;
+    }
+    const derived = computeOriginalTimeForNewEvent(activeReactionSeconds, {
+      timeInReaction: activeMarker.initialTimeInReaction,
+      state: activeMarker.initialState
+    });
+    const safeDerived = Number.isFinite(derived) ? derived : 0;
+    if (Math.abs(safeDerived - activeTargetSeconds) > 0.0005) {
+      activeTargetSeconds = safeDerived;
+      const formatted = formatSecondsForInput(safeDerived);
+      activeTargetMinutesInput = formatted.minutes;
+      activeTargetSecondsInput = formatted.seconds;
+    }
+  };
+
+  const closeConfigPopup = () => {
+    pendingConfig = null;
+    pendingTargetMinutesInput = '0';
+    pendingTargetSecondsInput = '0.00';
+    pendingReactionMinutesInput = '0';
+    pendingReactionSecondsInput = '0.00';
+    pendingTargetSeconds = 0;
+    pendingReactionSeconds = 0;
+  };
+
+  const closeMarkerEditor = () => {
+    activeMarker = null;
+    activeTargetMinutesInput = '0';
+    activeTargetSecondsInput = '0.00';
+    activeReactionMinutesInput = '0';
+    activeReactionSecondsInput = '0.00';
+    activeTargetSeconds = 0;
+    activeReactionSeconds = 0;
+    activeMarkerIsDirty = false;
+  };
+
+  const handleTimelineClick = (event) => {
+    if (suppressNextClick) {
+      suppressNextClick = false;
+      return;
+    }
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    closeMarkerEditor();
+    const coordinates = getTimelineCoordinates(event);
+    if (!coordinates) return;
+    const reactionTime = coordinates.absoluteTime;
+    const targetTime = computeOriginalTimeForNewEvent(reactionTime);
+    hoverViewportRatio = coordinates.viewportRatio;
+    hoverTimeLabel = formatTimecode(reactionTime);
+    pendingConfig = {
+      ratio: coordinates.viewportRatio,
+      reactionTime,
+      targetTime
+    };
+    const reactionFormatted = formatSecondsForInput(reactionTime);
+    pendingReactionMinutesInput = reactionFormatted.minutes;
+    pendingReactionSecondsInput = reactionFormatted.seconds;
+    const targetFormatted = formatSecondsForInput(targetTime);
+    pendingTargetMinutesInput = targetFormatted.minutes;
+    pendingTargetSecondsInput = targetFormatted.seconds;
+    refreshPendingDerivedValues();
+  };
+
+  const handleTimelineKeydown = (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    if (effectiveDuration <= 0) return;
+    closeMarkerEditor();
+    const ratio = displayProgress;
+    const reactionTime = safeViewportStart + ratio * viewportSpan;
+    const targetTime = computeOriginalTimeForNewEvent(reactionTime);
+    pendingConfig = {
+      ratio,
+      reactionTime,
+      targetTime
+    };
+    const reactionFormatted = formatSecondsForInput(reactionTime);
+    pendingReactionMinutesInput = reactionFormatted.minutes;
+    pendingReactionSecondsInput = reactionFormatted.seconds;
+    const targetFormatted = formatSecondsForInput(targetTime);
+    pendingTargetMinutesInput = targetFormatted.minutes;
+    pendingTargetSecondsInput = targetFormatted.seconds;
+    refreshPendingDerivedValues();
+  };
+
+  const handleWindowKeydown = (event) => {
+    if (event.key === 'Escape') {
+      closeConfigPopup();
+      closeMarkerEditor();
+    }
+  };
+
+  const confirmConfigCreation = (state) => {
+    if (!pendingConfig) return;
+    dispatch('createPlayerConfig', {
+      state,
+      timeInReaction: pendingConfig.reactionTime,
+      targetTime: pendingTargetSeconds
+    });
+    closeConfigPopup();
+  };
+
+  const openMarkerEditor = (marker) => {
+    if (!marker) return;
+    pendingConfig = null;
+    hoverViewportRatio = null;
+    hoverTimeLabel = null;
+    activeMarker = {
+      id: marker.id,
+      ratio: marker.ratio,
+      timeInReaction: marker.timeInReaction,
+      targetTime: marker.targetTime,
+      state: marker.state,
+      initialTimeInReaction: marker.timeInReaction,
+      initialTargetTime: marker.targetTime,
+      initialState: marker.state
+    };
+    const reactionFormatted = formatSecondsForInput(marker.timeInReaction);
+    activeReactionMinutesInput = reactionFormatted.minutes;
+    activeReactionSecondsInput = reactionFormatted.seconds;
+    const targetFormatted = formatSecondsForInput(marker.targetTime);
+    activeTargetMinutesInput = targetFormatted.minutes;
+    activeTargetSecondsInput = targetFormatted.seconds;
+    activeMarkerIsDirty = false;
+    refreshActiveDerivedValues();
+    enforceActiveTargetLock();
+  };
+
+  const handleMarkerKeydown = (event, marker) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    event.stopPropagation();
+    openMarkerEditor(marker);
+  };
+
+  const confirmMarkerUpdate = (state) => {
+    if (!activeMarker) return;
+    dispatch('updatePlayerConfig', {
+      state,
+      timeInReaction: activeMarker.timeInReaction,
+      targetTime: activeTargetSeconds,
+      previousTimeInReaction: activeMarker.initialTimeInReaction
+    });
+    closeMarkerEditor();
+  };
+
+  const handleMarkerDelete = () => {
+    if (!activeMarker) return;
+    dispatch('deletePlayerConfig', {
+      timeInReaction: activeMarker.initialTimeInReaction
+    });
+    closeMarkerEditor();
+  };
+
+  const isMarkerActive = (marker) =>
+    !!activeMarker && Math.abs(marker.timeInReaction - activeMarker.initialTimeInReaction) < 0.001;
+
+  onDestroy(cleanupZoomListeners);
+</script>
+
+<svelte:window on:keydown={handleWindowKeydown} />
+
+<div class="flex flex-col gap-3">
+  <div class="flex items-center justify-between text-xs font-medium text-text-muted">
+    <span aria-label="Current time">{formatTimecode(safeCurrentTime)}</span>
+    <span aria-label="Total duration">{formatTimecode(safeDuration)}</span>
+  </div>
+  <div
+    class="relative rounded-xl border border-border-subtle/50 bg-surface/60 px-3 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+    on:mousemove={updateHover}
+    on:mouseleave={clearHover}
+    on:click={handleTimelineClick}
+    on:keydown={handleTimelineKeydown}
+    role="button"
+    tabindex="0"
+    aria-label="Reaction playback timeline"
+  >
+    {#if hoverIndicatorPosition && hoverTimeLabel && !pendingConfig && !activeMarker}
+      <div
+        class="pointer-events-none absolute -top-6 flex -translate-x-1/2 justify-center text-[10px] font-medium text-text-primary"
+        style={`left: ${hoverIndicatorPosition}`}
+        aria-hidden="true"
+      >
+        <span class="rounded-md border border-border-strong/60 bg-background/95 px-2 py-0.5 shadow-sm">
+          {hoverTimeLabel}
+        </span>
+      </div>
+    {/if}
+
+    <div class="flex flex-col gap-4">
+      {#each visibleTracks as track (track.id)}
+        <div class="flex items-center gap-3">
+          <span class="w-28 text-[11px] font-semibold uppercase tracking-wide text-text-muted">{track.label}</span>
+          <div
+            class="relative flex-1 py-2"
+            on:mousedown={startZoomSelection}
+          >
+            {#if zoomSelectionLeft && zoomSelectionWidth}
+              <div
+                class="pointer-events-none absolute top-0 bottom-0 z-10 rounded-full bg-accent-secondary/15"
+                style={`left: ${zoomSelectionLeft}; width: ${zoomSelectionWidth};`}
+                aria-hidden="true"
+              ></div>
+            {/if}
+            <div class="absolute left-0 right-0 top-1/2 z-0 h-2 -translate-y-1/2 rounded-full bg-border-subtle/40"></div>
+
+            {#if track.showProgress}
+              <div
+                class="absolute left-0 top-1/2 z-20 h-2 -translate-y-1/2 rounded-full bg-accent-primary/50 transition-[width] duration-200 ease-linear"
+                style={`width: ${indicatorPosition}`}
+                aria-hidden="true"
+              ></div>
+              <div
+                class="absolute top-1/2 z-30 h-4 w-4 -translate-y-1/2 -translate-x-1/2 rounded-full border border-white/30 bg-accent-primary shadow"
+                style={`left: ${indicatorPosition}`}
+                role="presentation"
+                aria-hidden="true"
+              ></div>
+            {:else}
+              <div
+                class="pointer-events-none absolute top-1/2 z-20 h-3 w-[2px] -translate-y-1/2 -translate-x-1/2 rounded-full bg-accent-primary/60 transition-transform duration-200 ease-linear"
+                style={`left: ${indicatorPosition}`}
+                aria-hidden="true"
+              ></div>
+            {/if}
+
+            {#each track.markers as marker (marker.id)}
+              <div
+                class="pointer-events-none absolute top-1/2 -translate-y-1/2 -translate-x-1/2"
+                style={`left: ${toViewportPosition(marker.timeInReaction)}`}
+              >
+                {#if marker.editable}
+                  <button
+                    type="button"
+                    class={`pointer-events-auto relative inline-flex h-4 w-4 hover:h-8 hover:w-8 hover:z-30 items-center justify-center rounded-full transition backdrop-blur-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 hover:z-30 focus-visible:z-30 ${MARKER_STYLES[marker.tone] ?? 'bg-background/80 text-text-muted'} ${isMarkerActive(marker) ? 'ring-2 ring-accent-primary/60' : ''}`}
+                    title={`${marker.label} at ${marker.timeLabel}`}
+                    aria-label={`${marker.label} at ${marker.timeLabel}`}
+                    on:click|stopPropagation={() => openMarkerEditor(marker)}
+                    on:keydown|stopPropagation={(event) => handleMarkerKeydown(event, marker)}
+                    on:mousedown|stopPropagation
+                  >
+                    <span class="sr-only">{marker.label} at {marker.timeLabel}</span>
+                    <svelte:component this={marker.icon} class="h-2 w-2 hover:h-4 hover:w-4 hover:z-30 transition-transform" aria-hidden="true" />
+                  </button>
+                {:else}
+                  <div
+                    class={`pointer-events-auto relative inline-flex min-w-[2.25rem] items-center justify-center rounded-full px-2 py-1 text-[10px] font-semibold leading-none transition hover:z-30 ${MARKER_STYLES[marker.tone] ?? 'bg-background/80 text-text-muted'}`}
+                    title={`${marker.label} at ${marker.timeLabel}`}
+                    aria-label={`${marker.label} at ${marker.timeLabel}`}
+                    on:mousedown|stopPropagation
+                  >
+                    {marker.displayValue}
+                  </div>
+                {/if}
+              </div>
+            {/each}
+          </div>
+        </div>
+      {/each}
+    </div>
+
+    {#if pendingConfig}
+      <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+      <div
+        class="pointer-events-auto absolute top-full mt-4 flex min-w-[18rem] w-max -translate-x-1/2 flex-col gap-2 rounded-lg border border-border-strong/60 bg-background/95 p-3 text-xs shadow-lg"
+        style={`left: ${(pendingConfig.ratio * 100).toFixed(3)}%`}
+        role="dialog"
+        aria-modal="false"
+        aria-label="New playback configuration"
+        on:click|stopPropagation
+        on:keydown|stopPropagation
+        tabindex="-1"
+      >
+        <div class="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-3 text-left">
+          <span class="text-xs text-text-muted whitespace-nowrap">Reaction at</span>
+          <div class="flex flex-nowrap items-end gap-3">
+            <div class="flex items-center gap-1">
+              <label class="sr-only" for={PENDING_REACTION_MINUTES_INPUT_ID}>Reaction minutes</label>
+              <input
+                id={PENDING_REACTION_MINUTES_INPUT_ID}
+                type="number"
+                min="0"
+                step="1"
+                inputmode="numeric"
+                class="w-16 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                value={pendingReactionMinutesInput}
+                on:input={(event) => {
+                  pendingReactionMinutesInput = event.currentTarget.value;
+                  refreshPendingDerivedValues();
+                }}
+              />
+              <span class="text-xs text-text-muted">min</span>
+            </div>
+            <div class="flex items-center gap-1">
+              <label class="sr-only" for={PENDING_REACTION_SECONDS_INPUT_ID}>Reaction seconds</label>
+              <input
+                id={PENDING_REACTION_SECONDS_INPUT_ID}
+                type="number"
+                min="0"
+                max="59.99"
+                step="0.01"
+                inputmode="decimal"
+                class="w-20 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                value={pendingReactionSecondsInput}
+                on:input={(event) => {
+                  pendingReactionSecondsInput = event.currentTarget.value;
+                  refreshPendingDerivedValues();
+                }}
+              />
+              <span class="text-xs text-text-muted">sec</span>
+            </div>
+          </div>
+          <span class="text-xs text-text-muted whitespace-nowrap">Original video at</span>
+          <div class="flex flex-nowrap items-end gap-3">
+            <div class="flex items-center gap-1">
+              <label class="sr-only" for={PENDING_TARGET_MINUTES_INPUT_ID}>Original minutes</label>
+              <input
+                id={PENDING_TARGET_MINUTES_INPUT_ID}
+                type="number"
+                min="0"
+                step="1"
+                inputmode="numeric"
+                class="w-16 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                value={pendingTargetMinutesInput}
+                on:input={(event) => {
+                  pendingTargetMinutesInput = event.currentTarget.value;
+                  refreshPendingDerivedValues();
+                }}
+              />
+              <span class="text-xs text-text-muted">min</span>
+            </div>
+            <div class="flex items-center gap-1">
+              <label class="sr-only" for={PENDING_TARGET_SECONDS_INPUT_ID}>Original seconds</label>
+              <input
+                id={PENDING_TARGET_SECONDS_INPUT_ID}
+                type="number"
+                min="0"
+                max="59.99"
+                step="0.01"
+                inputmode="decimal"
+                class="w-20 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                value={pendingTargetSecondsInput}
+                on:input={(event) => {
+                  pendingTargetSecondsInput = event.currentTarget.value;
+                  refreshPendingDerivedValues();
+                }}
+              />
+              <span class="text-xs text-text-muted">sec</span>
+            </div>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button
+            type="button"
+            class="flex-1 rounded-md border border-border-strong/70 bg-surface/90 px-2 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+            on:click|stopPropagation={() => confirmConfigCreation(1)}
+          >
+            Play original here
+          </button>
+          <button
+            type="button"
+            class="flex-1 rounded-md border border-border-strong/70 bg-surface/90 px-2 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+            on:click|stopPropagation={() => confirmConfigCreation(2)}
+          >
+            Pause original here
+          </button>
+        </div>
+        <button
+          type="button"
+          class="self-end rounded-md bg-transparent px-2 py-1 text-[11px] font-medium text-text-muted transition hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-subtle"
+          on:click|stopPropagation={closeConfigPopup}
+        >
+          Cancel
+        </button>
+      </div>
+    {/if}
+    {#if activeMarker}
+      <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+      <div
+        class="pointer-events-auto absolute top-full mt-4 flex min-w-[18rem] w-max -translate-x-1/2 flex-col gap-3 rounded-lg border border-border-strong/60 bg-background/95 p-3 text-xs shadow-lg"
+        style={`left: ${(activeMarker.ratio * 100).toFixed(3)}%`}
+        role="dialog"
+        aria-modal="false"
+        aria-label="Edit playback configuration"
+        on:click|stopPropagation
+        on:keydown|stopPropagation
+        tabindex="-1"
+      >
+        <div class="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-3 text-left">
+          <span class="text-xs text-text-muted whitespace-nowrap">Reaction at</span>
+          <div class="flex flex-nowrap items-end gap-3">
+            <div class="flex items-center gap-1">
+              <label class="sr-only" for={ACTIVE_REACTION_MINUTES_INPUT_ID}>Reaction minutes</label>
+              <input
+                id={ACTIVE_REACTION_MINUTES_INPUT_ID}
+                type="number"
+                min="0"
+                step="1"
+                inputmode="numeric"
+                class="w-16 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                value={activeReactionMinutesInput}
+                on:input={(event) => {
+                  activeReactionMinutesInput = event.currentTarget.value;
+                  activeMarkerIsDirty = true;
+                  refreshActiveDerivedValues();
+                }}
+              />
+              <span class="text-xs text-text-muted">min</span>
+            </div>
+            <div class="flex items-center gap-1">
+              <label class="sr-only" for={ACTIVE_REACTION_SECONDS_INPUT_ID}>Reaction seconds</label>
+              <input
+                id={ACTIVE_REACTION_SECONDS_INPUT_ID}
+                type="number"
+                min="0"
+                max="59.99"
+                step="0.01"
+                inputmode="decimal"
+                class="w-20 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                value={activeReactionSecondsInput}
+                on:input={(event) => {
+                  activeReactionSecondsInput = event.currentTarget.value;
+                  activeMarkerIsDirty = true;
+                  refreshActiveDerivedValues();
+                }}
+              />
+              <span class="text-xs text-text-muted">sec</span>
+            </div>
+          </div>
+          <span class="text-xs text-text-muted whitespace-nowrap">Original video at</span>
+          <div class="flex flex-nowrap items-end gap-3">
+            <div class="flex items-center gap-1">
+              <label class="sr-only" for={ACTIVE_TARGET_MINUTES_INPUT_ID}>Original minutes</label>
+              <input
+                id={ACTIVE_TARGET_MINUTES_INPUT_ID}
+                type="number"
+                min="0"
+                step="1"
+                inputmode="numeric"
+                class="w-16 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                value={activeTargetMinutesInput}
+                on:input={(event) => {
+                  activeTargetMinutesInput = event.currentTarget.value;
+                  activeMarkerIsDirty = true;
+                  refreshActiveDerivedValues();
+                }}
+              />
+              <span class="text-xs text-text-muted">min</span>
+            </div>
+            <div class="flex items-center gap-1">
+              <label class="sr-only" for={ACTIVE_TARGET_SECONDS_INPUT_ID}>Original seconds</label>
+              <input
+                id={ACTIVE_TARGET_SECONDS_INPUT_ID}
+                type="number"
+                min="0"
+                max="59.99"
+                step="0.01"
+                inputmode="decimal"
+                class="w-20 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                value={activeTargetSecondsInput}
+                on:input={(event) => {
+                  activeTargetSecondsInput = event.currentTarget.value;
+                  activeMarkerIsDirty = true;
+                  refreshActiveDerivedValues();
+                }}
+              />
+              <span class="text-xs text-text-muted">sec</span>
+            </div>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button
+            type="button"
+            class={`flex-1 rounded-md border bg-surface/90 px-2 py-1 font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 hover:border-accent-primary/50 hover:text-accent-primary ${(activeMarker.state === 1) ? 'border-accent-primary/60 text-accent-primary' : 'border-border-strong/70 text-text-primary'}`}
+            aria-pressed={activeMarker.state === 1}
+            on:click|stopPropagation={() => confirmMarkerUpdate(1)}
+          >
+            Play original here
+          </button>
+          <button
+            type="button"
+            class={`flex-1 rounded-md border bg-surface/90 px-2 py-1 font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 hover:border-accent-primary/50 hover:text-accent-primary ${(activeMarker.state === 2) ? 'border-accent-primary/60 text-accent-primary' : 'border-border-strong/70 text-text-primary'}`}
+            aria-pressed={activeMarker.state === 2}
+            on:click|stopPropagation={() => confirmMarkerUpdate(2)}
+          >
+            Pause original here
+          </button>
+        </div>
+        <div class="flex items-center justify-between gap-2">
+          <button
+            type="button"
+            class="rounded-md border border-danger/40 bg-danger/10 px-2 py-1 font-semibold text-danger transition hover:border-danger/60 hover:bg-danger/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/40"
+            on:click|stopPropagation={handleMarkerDelete}
+          >
+            Delete cue
+          </button>
+          <button
+            type="button"
+            class="rounded-md bg-transparent px-2 py-1 text-[11px] font-medium text-text-muted transition hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-subtle"
+            on:click|stopPropagation={closeMarkerEditor}
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    {/if}
+  </div>
+  {#if isZoomed}
+    <div class="flex justify-end pt-1">
+      <button
+        type="button"
+        class="inline-flex items-center rounded-md border border-border-subtle/60 bg-surface/80 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-text-muted transition hover:border-accent-primary/60 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+        on:click={resetZoom}
+      >
+        Reset zoom
+      </button>
+    </div>
+  {/if}
+  <span class="sr-only" aria-live="polite">
+    Timeline position {formatTimecode(safeCurrentTime)} of {formatTimecode(safeDuration)}.
+    {#if playMarkers.length}
+      Play cues: {#each playMarkers as marker, index}{marker.label} at {marker.timeLabel}{index < playMarkers.length - 1 ? '; ' : '.'}{/each}
+    {/if}
+    {#if pauseMarkers.length}
+      Pause cues: {#each pauseMarkers as marker, index}{marker.label} at {marker.timeLabel}{index < pauseMarkers.length - 1 ? '; ' : '.'}{/each}
+    {/if}
+    {#if playbackRateMarkers.length}
+      Speed changes: {#each playbackRateMarkers as marker, index}{marker.displayValue} at {marker.timeLabel}{index < playbackRateMarkers.length - 1 ? '; ' : '.'}{/each}
+    {/if}
+    {#if volumeMarkers.length}
+      Volume changes: {#each volumeMarkers as marker, index}{marker.displayValue} at {marker.timeLabel}{index < volumeMarkers.length - 1 ? '; ' : '.'}{/each}
+    {/if}
+  </span>
+</div>
