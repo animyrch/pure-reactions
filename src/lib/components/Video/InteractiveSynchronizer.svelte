@@ -45,6 +45,8 @@
     volume: 'border border-accent-primary/30 bg-accent-primary/10 text-accent-primary'
   };
 
+  const TIMELINE_REGION_SELECTOR = '[data-timeline-region="true"]';
+
   const MIN_ZOOM_RATIO = 0.01;
   const MIN_ZOOM_SPAN_SECONDS = 0.5;
 
@@ -69,6 +71,7 @@
   let activeMarkerIsDirty = false;
   let hoverViewportRatio = null;
   let hoverTimeLabel = null;
+  let hoverIndicatorLeftPx = null;
   let viewportInitialized = false;
   let viewportStart = 0;
   let viewportEnd = 0;
@@ -89,6 +92,7 @@
   let lastDuration = 0;
   let visibleTracks = [];
   let hasManualZoom = false;
+  let timelineContainer = null;
 
   const PENDING_TARGET_MINUTES_INPUT_ID = 'pending-target-minutes';
   const PENDING_TARGET_SECONDS_INPUT_ID = 'pending-target-seconds';
@@ -268,8 +272,10 @@
     hoverViewportRatio = null;
     hoverTimeLabel = null;
   }
-  $: hoverIndicatorPosition =
-    hoverViewportRatio !== null ? `${(hoverViewportRatio * 100).toFixed(3)}%` : null;
+  $: hoverIndicatorLeft =
+    Number.isFinite(hoverIndicatorLeftPx) && hoverIndicatorLeftPx !== null
+      ? `${hoverIndicatorLeftPx.toFixed(2)}px`
+      : null;
   $: maxPlayerEventTime = playerEventsSorted.length
     ? playerEventsSorted[playerEventsSorted.length - 1].timeInReaction
     : 0;
@@ -444,7 +450,17 @@
     if (viewportSpan <= 0) {
       return null;
     }
-    const rect = rectOverride ?? event.currentTarget?.getBoundingClientRect?.();
+    let rect = rectOverride;
+    const target = event?.target;
+    if (!rect && target?.closest) {
+      const matchedRegion = target.closest(TIMELINE_REGION_SELECTOR);
+      if (matchedRegion) {
+        rect = matchedRegion.getBoundingClientRect?.();
+      }
+    }
+    if (!rect) {
+      rect = event.currentTarget?.getBoundingClientRect?.();
+    }
     if (!rect || rect.width <= 0) {
       return null;
     }
@@ -461,24 +477,43 @@
     return {
       viewportRatio,
       absoluteTime: boundedAbsoluteTime,
-      overallRatio
+      overallRatio,
+      clientX,
+      regionRect: rect
     };
   };
 
   const updateHover = (event) => {
-    const coordinates = getTimelineCoordinates(event);
+    const timelineRegion = event?.target?.closest?.(TIMELINE_REGION_SELECTOR);
+    if (!timelineRegion) {
+      hoverViewportRatio = null;
+      hoverTimeLabel = null;
+      hoverIndicatorLeftPx = null;
+      return;
+    }
+    const regionRect = timelineRegion.getBoundingClientRect();
+    const coordinates = getTimelineCoordinates(event, regionRect);
     if (!coordinates) {
       hoverViewportRatio = null;
       hoverTimeLabel = null;
+      hoverIndicatorLeftPx = null;
       return;
     }
     hoverViewportRatio = coordinates.viewportRatio;
     hoverTimeLabel = formatTimecode(coordinates.absoluteTime);
+    const containerRect = timelineContainer?.getBoundingClientRect?.();
+    if (containerRect && containerRect.width > 0) {
+      const rawLeft = coordinates.clientX - containerRect.left;
+      hoverIndicatorLeftPx = Math.min(Math.max(rawLeft, 0), containerRect.width);
+    } else {
+      hoverIndicatorLeftPx = null;
+    }
   };
 
   const clearHover = () => {
     hoverViewportRatio = null;
     hoverTimeLabel = null;
+    hoverIndicatorLeftPx = null;
   };
 
   const cleanupZoomListeners = () => {
@@ -689,7 +724,13 @@
     event?.preventDefault?.();
     event?.stopPropagation?.();
     closeMarkerEditor();
-    const coordinates = getTimelineCoordinates(event);
+    const timelineRegion = event?.target?.closest?.(TIMELINE_REGION_SELECTOR);
+    if (!timelineRegion) {
+      hoverViewportRatio = null;
+      hoverTimeLabel = null;
+      return;
+    }
+  const coordinates = getTimelineCoordinates(event, timelineRegion.getBoundingClientRect());
     if (!coordinates) return;
     const reactionTime = coordinates.absoluteTime;
     const targetTime = computeOriginalTimeForNewEvent(reactionTime);
@@ -822,11 +863,12 @@
     role="button"
     tabindex="0"
     aria-label="Reaction playback timeline"
+    bind:this={timelineContainer}
   >
-    {#if hoverIndicatorPosition && hoverTimeLabel && !pendingConfig && !activeMarker}
+      {#if hoverIndicatorLeft && hoverTimeLabel && !pendingConfig && !activeMarker}
       <div
         class="pointer-events-none absolute -top-6 flex -translate-x-1/2 justify-center text-[10px] font-medium text-text-primary"
-        style={`left: ${hoverIndicatorPosition}`}
+          style={`left: ${hoverIndicatorLeft}`}
         aria-hidden="true"
       >
         <span class="rounded-md border border-border-strong/60 bg-background/95 px-2 py-0.5 shadow-sm">
@@ -841,6 +883,7 @@
           <span class="w-28 text-[11px] font-semibold uppercase tracking-wide text-text-muted">{track.label}</span>
           <div
             class="relative flex-1 py-2"
+            data-timeline-region="true"
             on:mousedown={startZoomSelection}
           >
             {#if zoomSelectionLeft && zoomSelectionWidth}
