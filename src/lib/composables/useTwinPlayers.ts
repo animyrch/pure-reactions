@@ -418,12 +418,26 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       );
       const rawConfigState = Number(config.state);
       const configState = Number.isFinite(rawConfigState) ? rawConfigState : -1;
-      const configTarget = Number(config.time ?? 0);
-      const targetMismatch = Number.isFinite(configTarget)
-        && (typeof lastOriginalTargetTime !== 'number' || Math.abs(lastOriginalTargetTime - configTarget) > 0.01);
+      const baseTargetTime = Number(config.time ?? 0);
+      const anchorTime = Number(config.closestSmallerTimeCode ?? currentEffective);
+      let computedTargetTime = Number.isFinite(baseTargetTime) ? baseTargetTime : Number.NaN;
+
+      if (
+        Number.isFinite(computedTargetTime)
+        && Number.isFinite(anchorTime)
+        && configState === YT.PlayerState.PLAYING
+      ) {
+        const deltaSinceAnchor = currentEffective - anchorTime;
+        if (Number.isFinite(deltaSinceAnchor)) {
+          computedTargetTime = computedTargetTime + Math.max(deltaSinceAnchor, 0);
+        }
+      }
+
+      const targetMismatch = Number.isFinite(computedTargetTime)
+        && (typeof lastOriginalTargetTime !== 'number' || Math.abs(lastOriginalTargetTime - computedTargetTime) > 0.01);
 
       if (workingState !== configState || targetMismatch) {
-        handleStateChangeInOriginalVideo(workingState, configState, configTarget);
+        handleStateChangeInOriginalVideo(workingState, configState, computedTargetTime);
         workingState = configState;
       }
 
