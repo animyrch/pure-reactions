@@ -214,6 +214,7 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
   let changingVolume = false;
   let changingState = false;
   let changingSpeed = false;
+  let lastOriginalTargetTime: number | undefined;
 
   toggleFullscreenBodyClass(initialUrlState.isFullscreen);
 
@@ -285,8 +286,20 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     get(state).playerReaction?.pauseVideo();
   };
 
+  const resetOriginalStateTracking = () => {
+    lastOriginalTargetTime = undefined;
+  };
+
   const goToSecondsInOriginalVideo = (seconds: number) => {
-    get(state).playerOriginal?.seekTo(seconds);
+    const normalized = Number(seconds);
+    if (!Number.isFinite(normalized)) {
+      return;
+    }
+    const { playerOriginal } = get(state);
+    if (playerOriginal && typeof playerOriginal.seekTo === 'function') {
+      playerOriginal.seekTo(normalized, true);
+      lastOriginalTargetTime = normalized;
+    }
   };
 
   const goToSecondsInReactionVideo = (seconds: number) => {
@@ -336,28 +349,88 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
   };
 
   const handleStateChangeInOriginalVideo = (previousState: number, nextState: number, targetTime: number) => {
-    if (previousState === nextState) {
-      return;
+    const resolvedState = typeof nextState === 'number' ? nextState : -1;
+    const normalizedTarget = Number(targetTime);
+    const targetChanged = Number.isFinite(normalizedTarget)
+      && (typeof lastOriginalTargetTime !== 'number' || Math.abs(lastOriginalTargetTime - normalizedTarget) > 0.01);
+
+    if (targetChanged) {
+      goToSecondsInOriginalVideo(normalizedTarget);
     }
-    if (nextState === YT.PlayerState.PLAYING) {
-      goToSecondsInOriginalVideo(targetTime);
+
+    if (resolvedState === YT.PlayerState.PLAYING) {
       startOriginalVideo();
-    } else if (nextState === YT.PlayerState.PAUSED || nextState === YT.PlayerState.BUFFERING) {
+    } else if (
+      resolvedState === YT.PlayerState.PAUSED
+      || resolvedState === YT.PlayerState.BUFFERING
+      || resolvedState === YT.PlayerState.CUED
+      || resolvedState === YT.PlayerState.ENDED
+    ) {
       pauseOriginalVideo();
+    }
+
+    if (Number.isFinite(normalizedTarget)) {
+      lastOriginalTargetTime = normalizedTarget;
     }
   };
 
-  const handleOriginalVideoState = (reactionCurrentTime: number) => {
-    const snapshot = get(state);
-    const config = getCurrentStateFromStateConfigs(
-      reactionCurrentTime,
-      window.playerConfigs,
-      snapshot.timeOffset
-    );
-    if (!changingState && config.state !== snapshot.currentStateOriginalVideo) {
-      changingState = true;
-      handleStateChangeInOriginalVideo(snapshot.currentStateOriginalVideo, config.state, config.time);
-      updateState({ currentStateOriginalVideo: config.state });
+  const handleOriginalVideoState = (reactionCurrentTime: number, previousReactionTime: number) => {
+    if (changingState) {
+      return;
+    }
+
+    changingState = true;
+    try {
+      const snapshot = get(state);
+      const timeline = Array.isArray(snapshot.stateTimeline) ? snapshot.stateTimeline : [];
+      const timeOffset = Number(snapshot.timeOffset || 0);
+      const previousEffective = Number.isFinite(previousReactionTime)
+        ? Number(previousReactionTime) - timeOffset
+        : Number(reactionCurrentTime) - timeOffset;
+      const currentEffective = Number(reactionCurrentTime) - timeOffset;
+      const movingForward = currentEffective >= previousEffective - 0.0001;
+
+      let workingState = snapshot.currentStateOriginalVideo;
+
+      if (movingForward && timeline.length) {
+        // Process every state event that fired between the previous and current samples.
+        const eventsInRange = timeline.filter((entry) => {
+          const eventTime = Number(entry?.t);
+          if (!Number.isFinite(eventTime)) {
+            return false;
+          }
+          return eventTime > previousEffective && eventTime <= currentEffective;
+        });
+
+        for (const entry of eventsInRange) {
+          const rawState = Number(entry?.state);
+          const desiredState = Number.isFinite(rawState) ? rawState : -1;
+          const desiredTarget = Number(entry?.targetTime ?? entry?.time ?? 0);
+          handleStateChangeInOriginalVideo(workingState, desiredState, desiredTarget);
+          workingState = desiredState;
+        }
+      }
+
+      const config = getCurrentStateFromStateConfigs(
+        reactionCurrentTime,
+        window.playerConfigs,
+        snapshot.timeOffset
+      );
+      const rawConfigState = Number(config.state);
+      const configState = Number.isFinite(rawConfigState) ? rawConfigState : -1;
+      const configTarget = Number(config.time ?? 0);
+      const targetMismatch = Number.isFinite(configTarget)
+        && (typeof lastOriginalTargetTime !== 'number' || Math.abs(lastOriginalTargetTime - configTarget) > 0.01);
+
+      if (workingState !== configState || targetMismatch) {
+        handleStateChangeInOriginalVideo(workingState, configState, configTarget);
+        workingState = configState;
+      }
+
+      if (workingState !== snapshot.currentStateOriginalVideo) {
+        updateState({ currentStateOriginalVideo: workingState });
+      }
+    } finally {
       changingState = false;
     }
   };
@@ -377,6 +450,7 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
         handleStateChangeInReactionVideo(reactionPlayerState, newReactionState);
         reactionPlayerState = newReactionState;
       }
+      const previousReactionTime = snapshot.reactionCurrentTime;
       const reactionCurrentTime = parseFloat(playerReaction.getCurrentTime().toFixed(1));
       const rawDuration = typeof playerReaction.getDuration === 'function' ? Number(playerReaction.getDuration()) : Number.NaN;
       console.log('Polling reaction time:', reactionCurrentTime, 'of', rawDuration);
@@ -395,7 +469,7 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       }
       handleOriginalVideoVolume(reactionCurrentTime);
       handleOriginalVideoSpeed(reactionCurrentTime);
-      handleOriginalVideoState(reactionCurrentTime);
+      handleOriginalVideoState(reactionCurrentTime, previousReactionTime);
     }, interval);
   };
 
@@ -430,12 +504,21 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       pauseOriginalVideo();
     }
     if (previousState === YT.PlayerState.BUFFERING && nextState === YT.PlayerState.PLAYING) {
-      const reactionCurrentTime = Number(get(state).playerReaction?.getCurrentTime().toFixed(1));
-      const closestConfig = getCurrentStateFromStateConfigs(reactionCurrentTime, window.playerConfigs);
-      const calculatedTimeForOriginalVideo = (reactionCurrentTime - closestConfig.closestSmallerTimeCode) + parseFloat(closestConfig.time);
-      goToSecondsInOriginalVideo(calculatedTimeForOriginalVideo);
-      if (closestConfig.state === YT.PlayerState.PLAYING) {
-        startOriginalVideo();
+      const snapshot = get(state);
+      const reactionCurrentTime = Number(snapshot.playerReaction?.getCurrentTime().toFixed(1));
+      const closestConfig = getCurrentStateFromStateConfigs(
+        reactionCurrentTime,
+        window.playerConfigs,
+        snapshot.timeOffset
+      );
+      const rawDesiredState = Number(closestConfig.state);
+      const desiredState = Number.isFinite(rawDesiredState)
+        ? rawDesiredState
+        : -1;
+      const calculatedTimeForOriginalVideo = (reactionCurrentTime - closestConfig.closestSmallerTimeCode) + parseFloat(String(closestConfig.time ?? 0));
+      handleStateChangeInOriginalVideo(snapshot.currentStateOriginalVideo, desiredState, calculatedTimeForOriginalVideo);
+      if (snapshot.currentStateOriginalVideo !== desiredState) {
+        updateState({ currentStateOriginalVideo: desiredState });
       }
     }
   };
@@ -554,6 +637,7 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     if (!reactionData) {
       setExpectedPlayerReadyCount(0);
       resetReactionDurationProbe();
+      resetOriginalStateTracking();
       updateState({
         isReactionMissing: true,
         playerOriginal: null,
@@ -585,6 +669,7 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     if (!originalVideoId) {
       setExpectedPlayerReadyCount(0);
       resetReactionDurationProbe();
+      resetOriginalStateTracking();
       updateState({
         isReactionMissing: true,
         reactionVideoId: reactionVideoId ?? '',
@@ -612,6 +697,7 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     playerReaction?.destroy?.();
 
     resetReactionDurationProbe();
+    resetOriginalStateTracking();
 
     const expectedPlayers = 1 + (reactionVideoId ? 1 : 0);
     setExpectedPlayerReadyCount(expectedPlayers);
@@ -1138,6 +1224,7 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     clearTimeout(playerReadyTimeout);
     clearInterval(pollInterval);
     resetReactionDurationProbe();
+    resetOriginalStateTracking();
     if (overlayElement) {
       overlayElement.style.pointerEvents = 'auto';
     }
