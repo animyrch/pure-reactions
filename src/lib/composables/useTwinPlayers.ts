@@ -420,21 +420,30 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       const configState = Number.isFinite(rawConfigState) ? rawConfigState : -1;
       const baseTargetTime = Number(config.time ?? 0);
       const anchorTime = Number(config.closestSmallerTimeCode ?? currentEffective);
+      const actualOriginalTime = typeof snapshot.playerOriginal?.getCurrentTime === 'function'
+        ? Number(snapshot.playerOriginal.getCurrentTime())
+        : Number.NaN;
       let computedTargetTime = Number.isFinite(baseTargetTime) ? baseTargetTime : Number.NaN;
 
-      if (
-        Number.isFinite(computedTargetTime)
-        && Number.isFinite(anchorTime)
-        && configState === YT.PlayerState.PLAYING
-      ) {
+      if (Number.isFinite(computedTargetTime) && Number.isFinite(anchorTime)) {
         const deltaSinceAnchor = currentEffective - anchorTime;
-        if (Number.isFinite(deltaSinceAnchor)) {
-          computedTargetTime = computedTargetTime + Math.max(deltaSinceAnchor, 0);
+        if (configState === YT.PlayerState.PLAYING && Number.isFinite(deltaSinceAnchor)) {
+          computedTargetTime += Math.max(deltaSinceAnchor, 0);
         }
       }
 
-      const targetMismatch = Number.isFinite(computedTargetTime)
-        && (typeof lastOriginalTargetTime !== 'number' || Math.abs(lastOriginalTargetTime - computedTargetTime) > 0.01);
+      const tolerance = configState === YT.PlayerState.PLAYING ? 0.35 : 0.01;
+
+      let targetMismatch = false;
+      if (Number.isFinite(computedTargetTime)) {
+        if (Number.isFinite(actualOriginalTime)) {
+          targetMismatch = Math.abs(actualOriginalTime - computedTargetTime) > tolerance;
+        } else if (typeof lastOriginalTargetTime === 'number') {
+          targetMismatch = Math.abs(lastOriginalTargetTime - computedTargetTime) > tolerance;
+        } else {
+          targetMismatch = true;
+        }
+      }
 
       if (workingState !== configState || targetMismatch) {
         handleStateChangeInOriginalVideo(workingState, configState, computedTargetTime);
@@ -443,6 +452,10 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
 
       if (workingState !== snapshot.currentStateOriginalVideo) {
         updateState({ currentStateOriginalVideo: workingState });
+      }
+
+      if (Number.isFinite(actualOriginalTime)) {
+        lastOriginalTargetTime = actualOriginalTime;
       }
     } finally {
       changingState = false;
