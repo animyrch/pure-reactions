@@ -25,7 +25,10 @@
     };
   </script>
   
-  <div class={`flex items-center w-full max-w-xs p-4 mb-4 rounded-lg shadow fixed top-5 right-5 ${currentType.outerIcon}`} role="alert">
+    <div
+        class={`flex items-center w-full max-w-xs p-4 mb-4 rounded-lg shadow fixed top-24 sm:top-28 right-5 z-50 ${currentType.outerIcon}`}
+        role="alert"
+    >
       <div class={`inline-flex items-center justify-center flex-shrink-0 w-8 h-8 rounded-lg ${currentType.innerIcon}`}>
           {#if toast.type === TOASTS.SUCCESS}
               <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
