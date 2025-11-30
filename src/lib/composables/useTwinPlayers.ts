@@ -82,6 +82,8 @@ type TwinPlayersState = {
   globalGain: number;
   introBufferTime: number;
   soundLevel: number;
+  isReactionMuteModeEnabled: boolean;
+  isReactionAutoMuted: boolean;
   pageSlug: string;
   isOutOfSync: boolean;
 };
@@ -223,6 +225,8 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     globalGain: 1,
     introBufferTime: 0,
     soundLevel: 100,
+    isReactionMuteModeEnabled: false,
+    isReactionAutoMuted: false,
     pageSlug: slug,
     isOutOfSync: false
   });
@@ -314,6 +318,92 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
 
   const pauseReactionVideo = () => {
     get(state).playerReaction?.pauseVideo();
+  };
+
+  const muteReactionAudio = (player?: any) => {
+    const reactionPlayer = player ?? get(state).playerReaction;
+    if (!reactionPlayer) {
+      return false;
+    }
+    try {
+      if (typeof reactionPlayer.mute === 'function') {
+        reactionPlayer.mute();
+      } else if (typeof reactionPlayer.setVolume === 'function') {
+        reactionPlayer.setVolume(0);
+      }
+      return true;
+    } catch (error) {
+      console.error('Failed to mute reaction player', error);
+      return false;
+    }
+  };
+
+  const unmuteReactionAudio = (player?: any) => {
+    const reactionPlayer = player ?? get(state).playerReaction;
+    if (!reactionPlayer) {
+      return false;
+    }
+    try {
+      if (typeof reactionPlayer.unMute === 'function') {
+        reactionPlayer.unMute();
+      } else if (typeof reactionPlayer.setVolume === 'function') {
+        reactionPlayer.setVolume(100);
+      }
+      return true;
+    } catch (error) {
+      console.error('Failed to unmute reaction player', error);
+      return false;
+    }
+  };
+
+  const enforceReactionMuteMode = (overrideOriginalState?: number) => {
+    const snapshot = get(state);
+    const reactionPlayer = snapshot.playerReaction;
+    if (!reactionPlayer) {
+      if (snapshot.isReactionAutoMuted) {
+        updateState({ isReactionAutoMuted: false });
+      }
+      return;
+    }
+
+    const playingState = typeof YT !== 'undefined' && typeof YT?.PlayerState?.PLAYING === 'number'
+      ? YT.PlayerState.PLAYING
+      : 1;
+
+    let originalState = typeof overrideOriginalState === 'number'
+      ? overrideOriginalState
+      : snapshot.currentStateOriginalVideo;
+
+    if (typeof originalState !== 'number' || Number.isNaN(originalState)) {
+      const rawPlayerState = typeof snapshot.playerOriginal?.getPlayerState === 'function'
+        ? snapshot.playerOriginal.getPlayerState()
+        : undefined;
+      if (typeof rawPlayerState === 'number') {
+        originalState = rawPlayerState;
+      }
+    }
+
+    const shouldMute = snapshot.isReactionMuteModeEnabled && originalState === playingState;
+    const isCurrentlyMuted = typeof reactionPlayer.isMuted === 'function'
+      ? reactionPlayer.isMuted()
+      : undefined;
+
+    if (shouldMute) {
+      if (!isCurrentlyMuted) {
+        const muted = muteReactionAudio(reactionPlayer);
+        if (muted && !snapshot.isReactionAutoMuted) {
+          updateState({ isReactionAutoMuted: true });
+        }
+      }
+      return;
+    }
+
+    if (snapshot.isReactionAutoMuted) {
+      const unmuted = unmuteReactionAudio(reactionPlayer);
+      if (unmuted) {
+        updateState({ isReactionAutoMuted: false });
+      }
+    }
   };
 
   const resetOriginalStateTracking = () => {
@@ -484,6 +574,8 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
         updateState({ currentStateOriginalVideo: workingState });
       }
 
+      enforceReactionMuteMode(workingState);
+
       if (Number.isFinite(actualOriginalTime)) {
         lastOriginalTargetTime = actualOriginalTime;
       }
@@ -598,6 +690,8 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
         probeReactionDuration();
       }
     }
+
+    enforceReactionMuteMode();
   };
 
   const startVideos = () => {
@@ -613,6 +707,7 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
   };
 
   const onStateChangeOriginal = (event: any) => {
+    enforceReactionMuteMode(typeof event?.data === 'number' ? event.data : undefined);
     if (event.data === YT.PlayerState.PLAYING) {
       console.log('Original video started playing');
       if (!originalVideoClicked) {
@@ -701,7 +796,9 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
         playerReaction: null,
         reactionCurrentTime: 0,
         reactionDuration: 0,
-        playerEventTimeline: []
+        playerEventTimeline: [],
+        isReactionMuteModeEnabled: false,
+        isReactionAutoMuted: false
       });
       return;
     }
@@ -735,7 +832,9 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
         playerReaction: null,
         reactionCurrentTime: 0,
         reactionDuration: 0,
-        playerEventTimeline: []
+        playerEventTimeline: [],
+        isReactionMuteModeEnabled: Boolean(reactionData?.muteReactionWhileOriginalPlays),
+        isReactionAutoMuted: false
       });
       return;
     }
@@ -816,6 +915,8 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       globalGain,
       introBufferTime: timeOffset,
       soundLevel,
+  isReactionMuteModeEnabled: Boolean(reactionData?.muteReactionWhileOriginalPlays),
+  isReactionAutoMuted: false,
       currentPlaybackRate,
       playerOriginal: newPlayerOriginal,
       playerReaction: newPlayerReaction,
@@ -824,6 +925,8 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       reactionCurrentTime: offsetStartTime || 0,
       reactionDuration: typeof newPlayerReaction?.getDuration === 'function' ? Number(newPlayerReaction.getDuration()) || 0 : 0
     });
+
+    enforceReactionMuteMode();
 
     await setPlaylistData(get(state).playlistDocumentId, youtubePlaylistId);
 
@@ -1043,6 +1146,13 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     const gain = Number(value) / 100;
     await updateFirebaseDocument({ globalGain: Number.isNaN(gain) ? 1.0 : gain });
     updateState({ globalGain: Number.isNaN(gain) ? 1.0 : gain, soundLevel: value });
+  };
+
+  const setReactionMuteMode = async (value: boolean) => {
+    const nextValue = Boolean(value);
+    await updateFirebaseDocument({ muteReactionWhileOriginalPlays: nextValue });
+    updateState({ isReactionMuteModeEnabled: nextValue });
+    enforceReactionMuteMode();
   };
 
   const roundReactionTime = (value: number) => Math.round(value * 10) / 10;
@@ -1443,6 +1553,7 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       setReactionVideoId,
       setIntroBufferTime,
       setSoundLevel,
+  setReactionMuteMode,
       createPlayerConfig,
       updatePlayerConfig,
       deletePlayerConfig,

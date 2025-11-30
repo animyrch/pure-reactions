@@ -70,6 +70,10 @@
     await actions.editActionEntryPoint(() => actions.setSoundLevel(value));
   };
 
+  const handleSetReactionMuteMode = async (value) => {
+    await actions.editActionEntryPoint(() => actions.setReactionMuteMode(value));
+  };
+
   const handleExitEditor = () => {
     if ($state.isEditModeOn) {
       actions.closeEditMode();
@@ -275,6 +279,7 @@
           isSettingReactionVideoId={isSettingReactionVideoId}
           introBufferTime={$state.introBufferTime}
           soundLevel={$state.soundLevel}
+          isReactionMuteModeEnabled={$state.isReactionMuteModeEnabled}
           playerConfigs={$state.playerConfigs}
           volumeConfigs={$state.volumeConfigs}
           stateTimeline={$state.stateTimeline}
@@ -290,6 +295,7 @@
           onSetReactionVideoId={handleSetReactionVideoId}
           onSetIntroBufferTime={handleSetIntroBufferTime}
           onSetSoundLevel={handleSetSoundLevel}
+          onSetReactionMuteMode={handleSetReactionMuteMode}
           onToggleFineTuneMode={actions.toggleFineTuneMode}
         />
       </div>

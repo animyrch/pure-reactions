@@ -13,6 +13,7 @@
   export let isSettingReactionVideoId = false;
   export let introBufferTime = 0;
   export let soundLevel = 100;
+  export let isReactionMuteModeEnabled = false;
   export let playerConfigs = {};
   export let volumeConfigs = {};
   export let stateTimeline = [];
@@ -29,6 +30,7 @@
   export let onSetReactionVideoId = () => {};
   export let onSetIntroBufferTime = () => {};
   export let onSetSoundLevel = () => {};
+  export let onSetReactionMuteMode = () => {};
   export let onToggleFineTuneMode = () => {};
 
   const SOUND_LEVEL_MIN = 0;
@@ -90,6 +92,10 @@
 
   const handleToggleFineTuneMode = () => {
     onToggleFineTuneMode();
+  };
+
+  const handleToggleReactionMuteMode = () => {
+    onSetReactionMuteMode(!isReactionMuteModeEnabled);
   };
 
   const handleCreatePlayerConfig = async (event) => {
@@ -220,6 +226,28 @@
             </CinematicButton>
           </div>
         </form>
+
+        <div class="flex flex-col gap-3 rounded-2xl border border-border-subtle bg-background/60 p-4">
+          <div>
+            <h3 class="text-base font-semibold text-text-primary">Reaction mute mode</h3>
+            <p class="text-sm text-text-muted">Mute your reaction audio whenever the original video plays.</p>
+          </div>
+          <div class="flex items-center justify-between gap-4">
+            <span class="text-sm text-text-secondary">{isReactionMuteModeEnabled ? 'Enabled' : 'Disabled'}</span>
+            <button
+              type="button"
+              class={`relative inline-flex h-7 w-12 items-center rounded-full border border-border-subtle transition duration-subtle ease-cinematic focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background ${isReactionMuteModeEnabled ? 'bg-accent-primary/80 border-accent-primary' : 'bg-surface/60 border-border-subtle'}`}
+              role="switch"
+              aria-checked={isReactionMuteModeEnabled}
+              aria-label={isReactionMuteModeEnabled ? 'Disable reaction mute mode' : 'Enable reaction mute mode'}
+              on:click={handleToggleReactionMuteMode}
+            >
+              <span
+                class={`inline-block h-6 w-6 transform rounded-full bg-surface shadow-surface transition duration-subtle ease-cinematic ${isReactionMuteModeEnabled ? 'translate-x-5' : 'translate-x-1'}`}
+              ></span>
+            </button>
+          </div>
+        </div>
       </div>
     </section>
   {/if}
