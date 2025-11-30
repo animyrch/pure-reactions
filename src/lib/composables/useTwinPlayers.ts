@@ -110,6 +110,36 @@ type DeletePlayerConfigParams = {
   timeInReaction: number;
 };
 
+type ReactionMetadataField =
+  | 'originalVideoTitle'
+  | 'reactionVideoTitle'
+  | 'originalVideoAuthor'
+  | 'reactionVideoAuthor';
+
+type VerifyVideoDetailsOptions = {
+  videoId?: string;
+  currentTitle?: string | null;
+  currentAuthor?: string | null;
+  titleField: 'originalVideoTitle' | 'reactionVideoTitle';
+  authorField: 'originalVideoAuthor' | 'reactionVideoAuthor';
+};
+
+type VerifyVideoDetailsResult = {
+  updates: Partial<Record<ReactionMetadataField, string>>;
+  title?: string;
+  author?: string;
+};
+
+type VerifyAndSyncMetadataParams = {
+  documentId?: string;
+  originalVideoId?: string;
+  reactionVideoId?: string;
+  currentOriginalTitle?: string | null;
+  currentOriginalAuthor?: string | null;
+  currentReactionTitle?: string | null;
+  currentReactionAuthor?: string | null;
+};
+
 export const CONTROLS_FADE_CLASS = 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100';
 
 const playerOptions = {
@@ -796,6 +826,16 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     });
 
     await setPlaylistData(get(state).playlistDocumentId, youtubePlaylistId);
+
+    await verifyAndSyncMetadata({
+      documentId: typeof reactionData?.id === 'string' ? reactionData.id : undefined,
+      originalVideoId,
+      reactionVideoId,
+      currentOriginalTitle: reactionData?.originalVideoTitle,
+      currentOriginalAuthor: reactionData?.originalVideoAuthor,
+      currentReactionTitle: reactionData?.reactionVideoTitle,
+      currentReactionAuthor: reactionData?.reactionVideoAuthor
+    });
   };
 
   const buildInterface = async (slugValue: string, { isUpdate = false }: { isUpdate?: boolean } = {}) => {
@@ -847,6 +887,132 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
   const getBasicDetailsReaction = async (videoId: string) => {
     const { videoAuthor, videoTitle } = await downloadBasicVideoDetails(videoId);
     return { videoAuthor, videoTitle };
+  };
+
+  const verifyVideoDetails = async ({
+    videoId,
+    currentTitle,
+    currentAuthor,
+    titleField,
+    authorField
+  }: VerifyVideoDetailsOptions): Promise<VerifyVideoDetailsResult> => {
+    const result: VerifyVideoDetailsResult = {
+      updates: {},
+      title: typeof currentTitle === 'string' ? currentTitle : undefined,
+      author: typeof currentAuthor === 'string' ? currentAuthor : undefined
+    };
+
+    if (!videoId) {
+      return result;
+    }
+
+    try {
+      const { videoAuthor, videoTitle } = await downloadBasicVideoDetails(videoId);
+      const sanitizedTitle = typeof videoTitle === 'string' ? videoTitle.trim() : undefined;
+      const sanitizedAuthor = typeof videoAuthor === 'string' ? videoAuthor.trim() : undefined;
+      const storedTitle = typeof currentTitle === 'string' ? currentTitle.trim() : undefined;
+      const storedAuthor = typeof currentAuthor === 'string' ? currentAuthor.trim() : undefined;
+
+      if (sanitizedTitle) {
+        result.title = sanitizedTitle;
+        if (sanitizedTitle !== storedTitle) {
+          result.updates[titleField] = sanitizedTitle;
+        }
+      }
+
+      if (sanitizedAuthor) {
+        result.author = sanitizedAuthor;
+        if (sanitizedAuthor !== storedAuthor) {
+          result.updates[authorField] = sanitizedAuthor;
+        }
+      }
+    } catch (error) {
+      console.error(`Failed to verify metadata for video ${videoId}`, error);
+    }
+
+    return result;
+  };
+
+  const verifyAndSyncMetadata = async ({
+    documentId,
+    originalVideoId,
+    reactionVideoId,
+    currentOriginalTitle,
+    currentOriginalAuthor,
+    currentReactionTitle,
+    currentReactionAuthor
+  }: VerifyAndSyncMetadataParams) => {
+    const resolvedDocumentId =
+      documentId ?? (typeof window !== 'undefined' ? (window as any)?.currentReactionDocumentId : undefined);
+
+    if (!resolvedDocumentId) {
+      return;
+    }
+
+    const [originalVerification, reactionVerification] = await Promise.all([
+      verifyVideoDetails({
+        videoId: originalVideoId,
+        currentTitle: currentOriginalTitle,
+        currentAuthor: currentOriginalAuthor,
+        titleField: 'originalVideoTitle',
+        authorField: 'originalVideoAuthor'
+      }),
+      verifyVideoDetails({
+        videoId: reactionVideoId,
+        currentTitle: currentReactionTitle,
+        currentAuthor: currentReactionAuthor,
+        titleField: 'reactionVideoTitle',
+        authorField: 'reactionVideoAuthor'
+      })
+    ]);
+
+    const metadataUpdates: Record<string, string> = {
+      ...originalVerification.updates,
+      ...reactionVerification.updates
+    };
+
+    if (Object.keys(metadataUpdates).length > 0) {
+      try {
+        await updateFirebaseDocument(metadataUpdates, resolvedDocumentId);
+      } catch (error) {
+        console.error('Failed to update reaction metadata in Firestore', error);
+      }
+    }
+
+    const snapshot = get(state);
+    if (snapshot.pageSlug !== resolvedDocumentId) {
+      return;
+    }
+
+    const partialUpdate: Partial<TwinPlayersState> = {};
+    const normalizedOriginalTitle = typeof currentOriginalTitle === 'string' ? currentOriginalTitle.trim() : undefined;
+    const normalizedOriginalAuthor = typeof currentOriginalAuthor === 'string' ? currentOriginalAuthor.trim() : undefined;
+    const normalizedReactionTitle = typeof currentReactionTitle === 'string' ? currentReactionTitle.trim() : undefined;
+    const normalizedReactionAuthor = typeof currentReactionAuthor === 'string' ? currentReactionAuthor.trim() : undefined;
+
+    const nextOriginalTitle = typeof originalVerification.title === 'string' ? originalVerification.title.trim() : undefined;
+    if (nextOriginalTitle && nextOriginalTitle !== normalizedOriginalTitle) {
+      partialUpdate.originalVideoTitle = nextOriginalTitle;
+    }
+
+    const nextOriginalAuthor = typeof originalVerification.author === 'string' ? originalVerification.author.trim() : undefined;
+    if (nextOriginalAuthor && nextOriginalAuthor !== normalizedOriginalAuthor) {
+      partialUpdate.originalVideoAuthor = nextOriginalAuthor;
+    }
+
+    const nextReactionTitle = typeof reactionVerification.title === 'string' ? reactionVerification.title.trim() : undefined;
+    if (nextReactionTitle && nextReactionTitle !== normalizedReactionTitle) {
+      partialUpdate.reactionVideoTitle = nextReactionTitle;
+    }
+
+    const nextReactionAuthor = typeof reactionVerification.author === 'string' ? reactionVerification.author.trim() : undefined;
+    if (nextReactionAuthor && nextReactionAuthor !== normalizedReactionAuthor) {
+      partialUpdate.reactionVideoAuthor = nextReactionAuthor;
+    }
+
+    if (Object.keys(partialUpdate).length > 0) {
+      updateState(partialUpdate);
+    }
   };
 
   const setReactionVideoId = async (value: string) => {

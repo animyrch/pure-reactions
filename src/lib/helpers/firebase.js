@@ -118,12 +118,17 @@ export const addToPlaylistDocument = async ({ reactionDocumentId, originalVideoI
     }
 };
 
-export const updateFirebaseDocument = async (dataToUpdate) => {
+export const updateFirebaseDocument = async (dataToUpdate, documentId) => {
     try {
         const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'updateFirebaseDocument');
+        const targetDocumentId = documentId || (typeof window !== 'undefined' ? window.currentReactionDocumentId : undefined);
+        if (!targetDocumentId) {
+            console.error('Error updating document: missing reaction document id');
+            return;
+        }
         const documentRef = doc(
             reactionsCollection,
-            window.currentReactionDocumentId
+            targetDocumentId
         );
         await updateDoc(documentRef, dataToUpdate);
     } catch (error) {
