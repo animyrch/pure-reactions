@@ -134,6 +134,8 @@
     let viewerCount = 0;
     let viewerLabel = 'viewers';
     let sessionUnsubscribe = null;
+    const YOUTUBE_IFRAME_API_SRC = 'https://www.youtube.com/iframe_api';
+    let youtubeApiReadyPromise;
 
     $: currentStageIndex = mapButtonStateToStageIndex(currentButtonGroupState);
 
@@ -178,6 +180,84 @@
             playlistItems = await fetchFirstPlaylistVideos(playlistId);
             playlistElements = playlistItems.map(item => item.snippet.resourceId.videoId);
         }
+    }
+
+    function injectYoutubeIframeApiScript() {
+        if (typeof document === 'undefined') {
+            return;
+        }
+        const existingScript = document.querySelector(`script[src="${YOUTUBE_IFRAME_API_SRC}"]`);
+        if (existingScript) {
+            return;
+        }
+        const tag = document.createElement('script');
+        tag.src = YOUTUBE_IFRAME_API_SRC;
+        const firstScriptTag = document.getElementsByTagName('script')[0];
+        if (firstScriptTag?.parentNode) {
+            firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+        } else {
+            document.head.appendChild(tag);
+        }
+    }
+
+    function waitForYoutubeIframeApiReady() {
+        if (typeof window === 'undefined') {
+            return Promise.resolve();
+        }
+
+        if (window.YT && typeof window.YT.Player === 'function') {
+            return Promise.resolve();
+        }
+
+        if (youtubeApiReadyPromise) {
+            return youtubeApiReadyPromise;
+        }
+
+        youtubeApiReadyPromise = new Promise((resolve, reject) => {
+            const previousCallback = window.onYouTubeIframeAPIReady;
+            let intervalId;
+            let timeoutId;
+
+            const cleanup = () => {
+                if (intervalId) {
+                    clearInterval(intervalId);
+                }
+                if (timeoutId) {
+                    clearTimeout(timeoutId);
+                }
+                if (window.onYouTubeIframeAPIReady === handleReady) {
+                    window.onYouTubeIframeAPIReady = previousCallback;
+                }
+            };
+
+            const resolveReady = () => {
+                cleanup();
+                resolve();
+            };
+
+            const handleReady = () => {
+                if (typeof previousCallback === 'function') {
+                    previousCallback();
+                }
+                resolveReady();
+            };
+
+            window.onYouTubeIframeAPIReady = handleReady;
+
+            intervalId = setInterval(() => {
+                if (window.YT && typeof window.YT.Player === 'function') {
+                    resolveReady();
+                }
+            }, 50);
+
+            timeoutId = setTimeout(() => {
+                cleanup();
+                youtubeApiReadyPromise = null;
+                reject(new Error('YouTube Iframe API failed to load.'));
+            }, 10000);
+        });
+
+        return youtubeApiReadyPromise;
     }
     // 4. The API will call this function when the video player is ready.
     function onPlayerReady(event) {
@@ -698,16 +778,17 @@
         if (isMobileDevice()) {
             handlePrivateRoute();
         }
-        const tag = document.createElement("script");
-        tag.src = "https://www.youtube.com/iframe_api";
-        const firstScriptTag = document.getElementsByTagName("div")[0];
-        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
-        setTimeout(() => {
+        injectYoutubeIframeApiScript();
+
+        try {
+            await waitForYoutubeIframeApiReady();
             loadYoutubePlayer();
-            loadPlaylist();
-        }, 1000);
+        } catch (error) {
+            console.error('Failed to initialise YouTube Iframe API:', error);
+        }
 
+        await loadPlaylist();
         await getBasicDetailsOriginal();
         if (playlistBufferTime) {
             onClickStartReaction();
