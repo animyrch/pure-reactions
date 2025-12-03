@@ -11,7 +11,7 @@
     export let startTime = 0;
     export let playlistBufferTime = 0;
     export let playlistItems = [];
-    export let playlistDocument;
+    export let playlistDocument = null;
 
     onMount(async () => {
         if (!playlistItems?.length && playlistId) {

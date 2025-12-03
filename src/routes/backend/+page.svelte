@@ -1,7 +1,7 @@
 <script>
     /* global YT */
     import Recorder from "$lib/components/Recorder.svelte";
-    import { onMount } from "svelte";
+    import { onDestroy, onMount, tick } from "svelte";
     import {
         createReactionDocument,
         updateFirebaseDocument,
@@ -14,6 +14,8 @@
     import PlaylistQueue from "$lib/components/Video/PlaylistQueue.svelte";
     import { isLoggedIn } from '$lib/stores/user';
     import { page } from '$app/stores';
+    import { get } from 'svelte/store';
+    import { afterNavigate } from '$app/navigation';
     import { Progressbar, Modal } from 'flowbite-svelte';
     import {
         BullhornSolid,
@@ -39,14 +41,14 @@
     const reactionConfigs = new Map();
     const volumeConfigs = new Map();
     const playbackRateConfigs = new Map();
-    const originalVideoId = $page.url.searchParams.get('id');
-    const playlistId = $page.url.searchParams.get('playlist');
-    const playlistBufferTime = $page.url.searchParams.get('playlistBufferTime');
+    let originalVideoId = '';
+    let playlistId = '';
+    let playlistBufferTime = '';
     let playlistItems = [];
-    const showRecorder = $page.url.searchParams.get('record');
-    let currentPlaylistDocumentId = $page.url.searchParams.get('playlistDocumentId') || '';
+    let showRecorder = false;
+    let currentPlaylistDocumentId = '';
     let playlistElements;
-    const existingSharedSessionId = $page.url.searchParams.get('sharedSessionId');
+    let sharedSessionId = '';
 
     const playerOptions = {
         autoplay: 0,
@@ -125,17 +127,73 @@
     let isBuffering = false;
     
     // Debug mode
-    let debugMode = $page.url.searchParams.get('debug') === 'true';
+    let debugMode = false;
+
+    // Navigation-aware derived params
+    $: {
+        const params = $page?.url?.searchParams;
+        if (params) {
+            const nextOriginalVideoId = params.get('id') || '';
+            if (nextOriginalVideoId !== originalVideoId) {
+                originalVideoId = nextOriginalVideoId;
+                hasInitialisedBackend = false;
+                autoStartedBufferVideoId = '';
+            }
+            const nextPlaylistId = params.get('playlist') || '';
+            if (nextPlaylistId !== playlistId) {
+                playlistId = nextPlaylistId;
+                hasInitialisedBackend = false;
+            }
+            const nextPlaylistBufferTime = params.get('playlistBufferTime') || '';
+            if (nextPlaylistBufferTime !== playlistBufferTime) {
+                playlistBufferTime = nextPlaylistBufferTime;
+                if (!nextPlaylistBufferTime) {
+                    autoStartedBufferVideoId = '';
+                }
+            }
+            showRecorder = params.has('record');
+            const nextPlaylistDocumentId = params.get('playlistDocumentId') || '';
+            if (nextPlaylistDocumentId !== currentPlaylistDocumentId) {
+                currentPlaylistDocumentId = nextPlaylistDocumentId;
+                hasInitialisedBackend = false;
+            }
+            const nextSharedSessionId = params.get('sharedSessionId') || '';
+            if (nextSharedSessionId && nextSharedSessionId !== sharedSessionId) {
+                sharedSessionId = nextSharedSessionId;
+            }
+            debugMode = params.get('debug') === 'true';
+        }
+    }
     
     // Shared session variables
-    let sharedSessionId = existingSharedSessionId;
     let shareUrl = '';
+    $: if (sharedSessionId && typeof window !== 'undefined') {
+        shareUrl = generateShareUrl(sharedSessionId);
+    }
     let showShareModal = false;
     let viewerCount = 0;
     let viewerLabel = 'viewers';
     let sessionUnsubscribe = null;
     const YOUTUBE_IFRAME_API_SRC = 'https://www.youtube.com/iframe_api';
+    const PLAYER_CONTAINER_ID = 'player-original';
+    const PLAYER_CONTAINER_SELECTOR = '#player-original';
     let youtubeApiReadyPromise;
+    let hasInitialisedBackend = false;
+    let isInitialisingBackend = false;
+    let lastInitialisedVideoId = '';
+    let autoStartedBufferVideoId = '';
+    let initialisationAbortController = null;
+    let cleanupIntervalId;
+    let afterNavigateUnsubscribe;
+    let loginUnsubscribe;
+    let isLoggedInSnapshot = false;
+    let lastSubscribedSessionId = '';
+
+    if (typeof window !== 'undefined') {
+        afterNavigateUnsubscribe = afterNavigate(() => {
+            triggerBackendInitialisation('after-navigate');
+        });
+    }
 
     $: currentStageIndex = mapButtonStateToStageIndex(currentButtonGroupState);
 
@@ -163,14 +221,32 @@
         });
     }
 
-    function loadYoutubePlayer() {
+    $: if (!sharedSessionId && sessionUnsubscribe) {
+        sessionUnsubscribe();
+        sessionUnsubscribe = null;
+    }
+
+    $: if (sharedSessionId && sharedSessionId !== lastSubscribedSessionId) {
+        lastSubscribedSessionId = sharedSessionId;
+        subscribeToSession();
+    }
+
+    function loadYoutubePlayer(videoIdParam = originalVideoId) {
+        if (!videoIdParam) {
+            console.error('Cannot load YouTube player without a video id.');
+            return;
+        }
+        console.log('Loading YouTube Player for video ID:', videoIdParam);
         isPlayerOriginalReady = false;
-        playerOriginal = new YT.Player("player-original", {
-            videoId: originalVideoId,
+        playerOriginal = new YT.Player(PLAYER_CONTAINER_ID, {
+            videoId: videoIdParam,
             playerVars: playerOptions,
             events: {
                 onReady: onPlayerReady,
                 onStateChange: onPlayerStateChange,
+                onError: (event) => {
+                    console.error('YouTube Player Error:', event.data);
+                }
             },
         });
     }
@@ -180,6 +256,100 @@
             playlistItems = await fetchFirstPlaylistVideos(playlistId);
             playlistElements = playlistItems.map(item => item.snippet.resourceId.videoId);
         }
+    }
+
+    const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    async function waitForPlayerMountpoint(signal, { maxAttempts = 40, delayMs = 50 } = {}) {
+        for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+            if (signal?.aborted) {
+                return false;
+            }
+            if (typeof document !== 'undefined' && document.querySelector(PLAYER_CONTAINER_SELECTOR)) {
+                return true;
+            }
+            await tick();
+            await wait(delayMs);
+        }
+        console.warn('YouTube player mountpoint not found after waiting.');
+        return false;
+    }
+
+    function resetPlayer() {
+        if (playerOriginal?.destroy) {
+            try {
+                playerOriginal.destroy();
+            } catch (error) {
+                console.warn('Failed to destroy YouTube player instance', error);
+            }
+        }
+        playerOriginal = null;
+        isPlayerOriginalReady = false;
+        isPlaying = false;
+        shouldStartWhenReady = false;
+    }
+
+    async function initialiseBackend(videoId, reason = 'unknown') {
+        if (!videoId || isInitialisingBackend) {
+            return;
+        }
+        initialisationAbortController?.abort();
+        const controller = new AbortController();
+        initialisationAbortController = controller;
+        isInitialisingBackend = true;
+        try {
+            injectYoutubeIframeApiScript();
+            await waitForYoutubeIframeApiReady();
+            if (controller.signal.aborted) {
+                return;
+            }
+            const mountReady = await waitForPlayerMountpoint(controller.signal);
+            if (!mountReady || controller.signal.aborted) {
+                return;
+            }
+            resetPlayer();
+            loadYoutubePlayer(videoId);
+            await loadPlaylist();
+            if (controller.signal.aborted) {
+                return;
+            }
+            await getBasicDetailsOriginal();
+            if (controller.signal.aborted) {
+                return;
+            }
+            if (playlistBufferTime && autoStartedBufferVideoId !== videoId) {
+                await onClickStartReaction();
+                autoStartedBufferVideoId = videoId;
+            }
+            if (sharedSessionId) {
+                shareUrl = generateShareUrl(sharedSessionId);
+                subscribeToSession();
+            }
+            hasInitialisedBackend = true;
+            lastInitialisedVideoId = videoId;
+        } catch (error) {
+            if (!controller.signal.aborted) {
+                console.error('Failed to initialise backend recorder flow', error, { reason });
+            }
+        } finally {
+            if (initialisationAbortController === controller) {
+                initialisationAbortController = null;
+            }
+            isInitialisingBackend = false;
+        }
+    }
+
+    function triggerBackendInitialisation(reason = 'direct') {
+        if (!isLoggedInSnapshot || !originalVideoId) {
+            return;
+        }
+        if (isInitialisingBackend) {
+            return;
+        }
+        if (hasInitialisedBackend && lastInitialisedVideoId === originalVideoId) {
+            return;
+        }
+        initialiseBackend(originalVideoId, reason);
     }
 
     function injectYoutubeIframeApiScript() {
@@ -774,34 +944,54 @@
         }
     ];
 
-    onMount(async () => {
+    onMount(() => {
         if (isMobileDevice()) {
             handlePrivateRoute();
         }
 
-        injectYoutubeIframeApiScript();
-
-        try {
-            await waitForYoutubeIframeApiReady();
-            loadYoutubePlayer();
-        } catch (error) {
-            console.error('Failed to initialise YouTube Iframe API:', error);
+        isLoggedInSnapshot = get(isLoggedIn);
+        if (isLoggedInSnapshot) {
+            triggerBackendInitialisation('mount');
         }
 
-        await loadPlaylist();
-        await getBasicDetailsOriginal();
-        if (playlistBufferTime) {
-            onClickStartReaction();
-        }
+        loginUnsubscribe = isLoggedIn.subscribe((value) => {
+            const wasLoggedIn = isLoggedInSnapshot;
+            isLoggedInSnapshot = value;
+            if (value) {
+                if (!wasLoggedIn) {
+                    triggerBackendInitialisation('login');
+                }
+            } else {
+                resetPlayer();
+                hasInitialisedBackend = false;
+                lastInitialisedVideoId = '';
+            }
+        });
 
-        if (sharedSessionId) {
-            shareUrl = generateShareUrl(sharedSessionId);
-            subscribeToSession();
-        }
-
-        // Clean up inactive sessions periodically
-        setInterval(cleanupInactiveSessions, 60 * 60 * 1000); // Every hour
+        cleanupIntervalId = setInterval(cleanupInactiveSessions, 60 * 60 * 1000);
     });
+
+    onDestroy(() => {
+        loginUnsubscribe?.();
+        loginUnsubscribe = undefined;
+        afterNavigateUnsubscribe?.();
+        afterNavigateUnsubscribe = undefined;
+        if (cleanupIntervalId) {
+            clearInterval(cleanupIntervalId);
+            cleanupIntervalId = undefined;
+        }
+        initialisationAbortController?.abort();
+        initialisationAbortController = null;
+        if (sessionUnsubscribe) {
+            sessionUnsubscribe();
+            sessionUnsubscribe = null;
+        }
+        resetPlayer();
+    });
+
+    $: if (isLoggedInSnapshot && originalVideoId && !hasInitialisedBackend && !isInitialisingBackend) {
+        triggerBackendInitialisation('reactive');
+    }
 
 
     // Clean up session when page is unloaded
