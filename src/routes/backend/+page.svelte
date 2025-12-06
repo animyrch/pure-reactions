@@ -822,7 +822,11 @@
             await updateFirebaseDocument({
                 stateTimeline,
                 volumeTimeline,
-                playbackTimeline
+                playbackTimeline,
+                // Remove legacy object-map formats now that arrays are saved
+                reactionConfigs: null,
+                volumeConfigs: null,
+                playbackRateConfigs: null
             });
         } catch (e) {
             console.error('Failed to persist array timelines', e);
