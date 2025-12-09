@@ -6,11 +6,14 @@
   import SubtleLoader from '$lib/components/design-system/SubtleLoader.svelte';
   import FullscreenChrome from '$lib/components/reaction/FullscreenChrome.svelte';
   import ControlDock from '$lib/components/reaction/ControlDock.svelte';
+  import MissingReactionPlaceholder from '$lib/components/reaction/MissingReactionPlaceholder.svelte';
   import { useTwinPlayers, CONTROLS_FADE_CLASS } from '$lib/composables/useTwinPlayers';
   import { reactionDial } from '$lib/stores/reactionDial';
   import { browser } from '$app/environment';
   import { goto } from '$app/navigation';
   import { onDestroy } from 'svelte';
+  import { showToast } from '$lib/stores/toast';
+  import { TOASTS } from '$lib/constants/toasts';
 
   export let data;
 
@@ -21,6 +24,38 @@
   $: stickyControlsClass = $state.isFullscreen ? CONTROLS_FADE_CLASS : 'opacity-100';
   $: overlayRef && actions.registerOverlayRef(overlayRef);
   $: actions.handleSlugChange($page.params.slug);
+
+  let isSettingReactionVideoId = false;
+  let reactionVideoIdError = '';
+
+  const handleSetReactionVideoId = async (value) => {
+    const trimmed = value?.trim?.() ?? '';
+    if (!trimmed) {
+      reactionVideoIdError = 'Enter a YouTube URL or ID before continuing.';
+      return;
+    }
+    reactionVideoIdError = '';
+    isSettingReactionVideoId = true;
+    try {
+      await actions.editActionEntryPoint(() => actions.setReactionVideoId(trimmed));
+    } catch (error) {
+      console.error('Failed to set reaction video ID', error);
+      reactionVideoIdError = 'We couldn\'t load that video. Double-check the link or ID and try again.';
+      if (browser) {
+        showToast('Unable to load that reaction video. Check the ID and try again.', TOASTS.WARNING);
+      }
+    } finally {
+      isSettingReactionVideoId = false;
+    }
+  };
+
+  const handleMissingReactionSubmit = async (event) => {
+    await handleSetReactionVideoId(event.detail.value);
+  };
+
+  $: if (!$state.isReactionMissing && reactionVideoIdError) {
+    reactionVideoIdError = '';
+  }
 
   const handlePlayStateChanged = (event) => {
     actions.handlePlayStateChange(event.detail.isPlaying);
@@ -60,7 +95,7 @@
 </div>
 
 <div class={`website-inner-container bg-background text-text-primary ${$state.isLoading ? 'hidden' : ''}`}>
-    {#if $state.isReactionMissing}
+    {#if $state.isReactionMissing && !$state.isUsersOwnVideo}
       <p class="mb-4 rounded-md bg-warning/10 px-4 py-3 text-sm text-warning">
   Warning: The reaction video id is missing. This reaction page will stay hidden until a video id is added in the
   <a class="underline" href={`/edit-reaction/${$state.pageSlug}`}>edit view</a>
@@ -104,6 +139,12 @@
                 <div id="player-reaction" class="absolute inset-0 h-full w-full"></div>
               </div>
             </div>
+          {:else if $state.isUsersOwnVideo}
+            <MissingReactionPlaceholder
+              loading={isSettingReactionVideoId}
+              error={reactionVideoIdError}
+              on:submit={handleMissingReactionSubmit}
+            />
           {/if}
         </div>
       {/if}
