@@ -803,11 +803,13 @@
             ? playlistElements[currentPlaylistIndex + 1]
             : undefined;
 
-        if (isPlaylistFlow && nextVideoId) {
+        // Always save reactionFinishTime for playlist flows
+        if (isPlaylistFlow) {
             updateFirebaseDocument({
                 "reactionFinishTime": reactionVideoTime,
             });
         }
+        
         // Also persist array-based timelines for efficient playback
         try {
             const stateTimeline = Array.from(reactionConfigs.entries())
@@ -831,13 +833,12 @@
         } catch (e) {
             console.error('Failed to persist array timelines', e);
         }
+        
         if (showRecorder) {
             stopRecording = true;
         }
-        if (!currentPlaylistDocumentId) {
-            goToReactionConfiguration();
-            return;
-        }
+        
+        // Update shared session state
         if (sharedSessionId) {
             try {
                 if (nextVideoId) {
@@ -856,13 +857,17 @@
                 console.error('Failed to update shared session at finish:', error);
             }
         }
-        if (!nextVideoId) {
-            goToReactionConfiguration();
+        
+        // If there's a next video, navigate to it (regardless of playlistDocumentId)
+        if (nextVideoId) {
+            const nextRoute = `/backend?id=${nextVideoId}&playlist=${playlistId}&playlistDocumentId=${currentPlaylistDocumentId}&playlistBufferTime=${reactionVideoTime}` + (sharedSessionId ? `&sharedSessionId=${sharedSessionId}` : '');
+            await goToRoute(nextRoute);
+            location.reload();
             return;
         }
-        const nextRoute = `/backend?id=${nextVideoId}&playlist=${playlistId}&playlistDocumentId=${currentPlaylistDocumentId}&playlistBufferTime=${reactionVideoTime}` + (sharedSessionId ? `&sharedSessionId=${sharedSessionId}` : '');
-        await goToRoute(nextRoute);
-        location.reload();
+        
+        // No next video - go to reaction configuration
+        goToReactionConfiguration();
     };
 
     const onClickShareSession = () => {
