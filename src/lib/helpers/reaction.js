@@ -34,19 +34,21 @@ const findLastEventAtOrBefore = (timelineArray, t) => {
 export const getCurrentVolumeFromVolumeConfigs = (currentTime, volumeConfigsOrTimeline, globalGain = 1.0, timeOffset = 0) => {
     const DEFAULT_VOLUME_LEVEL = 100;
     const effectiveTime = Number(currentTime) - Number(timeOffset || 0);
+    const normalizedGain = Number.isFinite(Number(globalGain)) ? Number(globalGain) : 1.0;
 
     // New format: array of { t: number, volume: number }
     if (Array.isArray(volumeConfigsOrTimeline)) {
         const ev = findLastEventAtOrBefore(volumeConfigsOrTimeline, effectiveTime);
         const base = ev && typeof ev.volume === 'number' ? ev.volume : DEFAULT_VOLUME_LEVEL;
-        return clamp(base * Number(globalGain || 1.0), 0, 200);
+        return clamp(base * normalizedGain, 0, 200);
     }
 
     // Old format: object map keyed by time string
     const closestSmallerTimeCode = getClosestSmallerKey(volumeConfigsOrTimeline, effectiveTime);
-    return closestSmallerTimeCode !== -Infinity
+    const base = closestSmallerTimeCode !== -Infinity
         ? volumeConfigsOrTimeline[closestSmallerTimeCode.toFixed(1)]?.volume ?? DEFAULT_VOLUME_LEVEL
         : DEFAULT_VOLUME_LEVEL;
+    return clamp(base * normalizedGain, 0, 200);
 };
 
 // Backward-compatible: accepts either an object map (old) or an array of { t, state, targetTime } (new)
