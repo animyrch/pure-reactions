@@ -9,16 +9,24 @@
     export let originalVideoTitle;
     export let reactionVideoAuthor;
     export let playlistId;
+    export let itemType = 'reaction';
+    export let setTitle = '';
+    export let setSlug = '';
     export let interactive = false;
 
-    const reactionRedirectionPath = `/reaction/${reactionPageId}${playlistId ? `?playlistId=${playlistId}` : ''}`;
+    const isSet = itemType === 'set';
+    const reactionRedirectionPath = isSet 
+        ? `/set/${setSlug || reactionPageId}`
+        : `/reaction/${reactionPageId}${playlistId ? `?playlistId=${playlistId}` : ''}`;
     const originalAlt = originalVideoTitle ? `Original: ${originalVideoTitle}` : 'Original video thumbnail';
     const reactionAlt = reactionVideoTitle ? `Reaction: ${reactionVideoTitle}` : 'Reaction video thumbnail';
-    const linkLabel = reactionVideoTitle
-        ? `Open reaction: ${reactionVideoTitle}`
-        : originalVideoTitle
-            ? `Open reaction: ${originalVideoTitle}`
-            : undefined;
+    const linkLabel = isSet
+        ? `Open set: ${setTitle}`
+        : reactionVideoTitle
+            ? `Open reaction: ${reactionVideoTitle}`
+            : originalVideoTitle
+                ? `Open reaction: ${originalVideoTitle}`
+                : undefined;
 
     const thumbnailVariants = [
         { key: 'mqdefault', width: 320 },
@@ -49,7 +57,7 @@
     let isOriginalLoaded = false;
     let isReactionLoaded = false;
 
-    $: skeletonVisible = !(isOriginalLoaded && isReactionLoaded);
+    $: skeletonVisible = isSet ? false : !(isOriginalLoaded && isReactionLoaded);
 
     const handleOriginalLoad = () => {
         isOriginalLoaded = true;
@@ -63,6 +71,7 @@
 <div
     class="thumbnail-card group flex flex-col gap-sm rounded-md bg-surface p-sm text-text-primary shadow-surface transition duration-deliberate ease-cinematic hover:shadow-elevated focus-within:ring-2 focus-within:ring-focus focus-within:ring-offset-2 focus-within:ring-offset-background"
     data-interactive={interactive ? 'true' : undefined}
+    class:is-set={isSet}
 >
     <a
         class="thumbnail-link block focus-visible:outline-none"
@@ -70,32 +79,56 @@
         aria-label={linkLabel}
     >
         <div class="thumbnail-shell">
+            {#if isSet}
+                <div class="set-badge">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 7V4h3"/>
+                        <path d="M20 4h-3v3"/>
+                        <path d="M4 17v3h3"/>
+                        <path d="M20 20h-3v-3"/>
+                        <rect x="9" y="9" width="6" height="6"/>
+                    </svg>
+                    <span>SET</span>
+                </div>
+            {/if}
             <div class="thumbnail-wrapper">
-                <div class="thumbnail-skeleton" class:hidden={!skeletonVisible} aria-hidden="true"></div>
-                <picture class="thumbnail-image original" class:loaded={isOriginalLoaded}>
-                    {#if originalWebpSrcSet}
-                        <source
-                            type="image/webp"
-                            srcset={originalWebpSrcSet}
-                            sizes="(max-width: 640px) 100vw, 640px"
+                {#if isSet}
+                    <div class="set-placeholder">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 7V4h3"/>
+                            <path d="M20 4h-3v3"/>
+                            <path d="M4 17v3h3"/>
+                            <path d="M20 20h-3v-3"/>
+                            <rect x="9" y="9" width="6" height="6"/>
+                        </svg>
+                        <p class="set-placeholder-text">Reaction Collection</p>
+                    </div>
+                {:else}
+                    <div class="thumbnail-skeleton" class:hidden={!skeletonVisible} aria-hidden="true"></div>
+                    <picture class="thumbnail-image original" class:loaded={isOriginalLoaded}>
+                        {#if originalWebpSrcSet}
+                            <source
+                                type="image/webp"
+                                srcset={originalWebpSrcSet}
+                                sizes="(max-width: 640px) 100vw, 640px"
+                            />
+                        {/if}
+                        {#if originalJpegSrcSet}
+                            <source
+                                type="image/jpeg"
+                                srcset={originalJpegSrcSet}
+                                sizes="(max-width: 640px) 100vw, 640px"
+                            />
+                        {/if}
+                        <img
+                            src={buildYouTubeSrc(originalVideoId, 'mqdefault')}
+                            alt={originalAlt}
+                            loading="lazy"
+                            decoding="async"
+                            on:load={handleOriginalLoad}
                         />
-                    {/if}
-                    {#if originalJpegSrcSet}
-                        <source
-                            type="image/jpeg"
-                            srcset={originalJpegSrcSet}
-                            sizes="(max-width: 640px) 100vw, 640px"
-                        />
-                    {/if}
-                    <img
-                        src={buildYouTubeSrc(originalVideoId, 'mqdefault')}
-                        alt={originalAlt}
-                        loading="lazy"
-                        decoding="async"
-                        on:load={handleOriginalLoad}
-                    />
-                </picture>
-                <picture class="thumbnail-image reaction" class:loaded={isReactionLoaded}>
+                    </picture>
+                    <picture class="thumbnail-image reaction" class:loaded={isReactionLoaded}>
                     {#if reactionWebpSrcSet}
                         <source
                             type="image/webp"
@@ -118,6 +151,7 @@
                         on:load={handleReactionLoad}
                     />
                 </picture>
+                {/if}
             </div>
         </div>
     </a>
@@ -126,23 +160,27 @@
         <a
             class="min-w-0 flex-1 rounded-sm focus-visible:outline-none focus-visible:underline"
             href={reactionRedirectionPath}
-            title={reactionVideoTitle || originalVideoTitle}
+            title={isSet ? setTitle : (reactionVideoTitle || originalVideoTitle)}
         >
             <p class="truncate text-sm font-semibold text-text-primary">
-                {reactionVideoTitle || originalVideoTitle}
+                {isSet ? setTitle : (reactionVideoTitle || originalVideoTitle)}
             </p>
-            {#if reactionVideoAuthor}
+            {#if !isSet && reactionVideoAuthor}
                 <VideoAuthor
                     videoAuthor={reactionVideoAuthor}
                     showLinks={false}
                     isReactor
                 />
+            {:else if isSet}
+                <p class="text-xs text-text-muted">Collection of reactions</p>
             {/if}
         </a>
-        <ThumbnailContext
-            reactionPageId={reactionPageId}
-            reactionVideoAuthor={reactionVideoAuthor}
-        />
+        {#if !isSet}
+            <ThumbnailContext
+                reactionPageId={reactionPageId}
+                reactionVideoAuthor={reactionVideoAuthor}
+            />
+        {/if}
     </div>
 </div>
 
@@ -154,9 +192,39 @@
         position: relative;
         overflow: visible;
     }
+    .thumbnail-card.is-set {
+        border: 2px solid rgba(99, 102, 241, 0.3);
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(139, 92, 246, 0.05));
+    }
+    .thumbnail-card.is-set:hover {
+        border-color: rgba(99, 102, 241, 0.5);
+        box-shadow: 0 8px 32px rgba(99, 102, 241, 0.15);
+    }
     .thumbnail-shell {
         position: relative;
         border-radius: 0.5rem;
+    }
+    .set-badge {
+        position: absolute;
+        top: 0.5rem;
+        left: 0.5rem;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.375rem 0.625rem;
+        background: rgba(99, 102, 241, 0.95);
+        color: white;
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        border-radius: 0.375rem;
+        backdrop-filter: blur(8px);
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+    }
+    .set-badge svg {
+        width: 14px;
+        height: 14px;
     }
     .thumbnail-wrapper {
         position: relative;
@@ -165,6 +233,26 @@
         overflow: hidden;
         background: linear-gradient(135deg, rgba(15, 17, 21, 0.9), rgba(25, 29, 36, 0.8));
         contain: layout paint style;
+    }
+    .set-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.15));
+        color: rgba(167, 139, 250, 0.9);
+    }
+    .set-placeholder svg {
+        opacity: 0.8;
+    }
+    .set-placeholder-text {
+        font-size: 0.875rem;
+        font-weight: 600;
+        letter-spacing: 0.025em;
+        opacity: 0.9;
     }
     .thumbnail-skeleton {
         position: absolute;

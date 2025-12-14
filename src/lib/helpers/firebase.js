@@ -230,13 +230,42 @@ export const getReactionsByPage = async (lastDoc, limitBy, sortBy, follows) => {
         lastVisible = querySnapshot.docs[querySnapshot.docs.length-1];
         reactions = querySnapshot.docs.map((doc) => ({
             id: doc.id,
-            data: doc.data()
+            data: doc.data(),
+            type: 'reaction'
         }));
     } catch (error) {
         console.error('Error getting paged documents: ', error);
     }
     return {
         reactions,
+        lastVisible
+    };
+};
+
+export const getSetsByPage = async (lastDoc, limitBy) => {
+    let sets = [];
+    let lastVisible = null;
+    try {
+        const setsCollection = createCollection(db, COLLECTION_SETS, 'getSetsByPage');
+        let baseQuery = query(setsCollection,
+            orderBy('createdAt', 'desc')
+        );
+        if (lastDoc) {
+            baseQuery = query(baseQuery, startAfter(lastDoc));
+        }
+        baseQuery = query(baseQuery, limit(limitBy));
+        const querySnapshot = await getDocs(baseQuery);
+        lastVisible = querySnapshot.docs[querySnapshot.docs.length-1];
+        sets = querySnapshot.docs.map((doc) => ({
+            id: doc.id,
+            data: doc.data(),
+            type: 'set'
+        }));
+    } catch (error) {
+        console.error('Error getting paged set documents: ', error);
+    }
+    return {
+        sets,
         lastVisible
     };
 };
