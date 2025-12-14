@@ -152,11 +152,11 @@
     }
     .thumbnail-card {
         position: relative;
+        overflow: visible;
     }
     .thumbnail-shell {
         position: relative;
         border-radius: 0.5rem;
-        overflow: hidden;
     }
     .thumbnail-wrapper {
         position: relative;

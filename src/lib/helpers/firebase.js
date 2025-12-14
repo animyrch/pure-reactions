@@ -31,6 +31,7 @@ import {
     COLLECTION_REACTION_BINOMES,
     COLLECTION_USER_DATA,
     COLLECTION_PLAYLISTS,
+    COLLECTION_SETS,
     app, db
 } from "$lib/constants/firebase";
 import { showToast } from '$lib/stores/toast';
@@ -42,6 +43,15 @@ export const auth = getAuth(app);
 const createCollection = (db, params, caller) => {
     return collection(db, params);
 };
+
+export const slugifySetName = (value) =>
+    (value || '')
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 80);
 
 export const createReactionDocument = async ({
     originalVideoId,
@@ -88,6 +98,44 @@ export const createPlaylistDocument = async ({ reactionDocumentId, originalVideo
     } catch (error) {
         console.error("Error adding document:", error);
         throw error; // Ensure errors are properly propagated
+    }
+};
+
+export const createSetDocument = async ({ slug, title, description, items, userId }) => {
+    const sanitizedSlug = slugifySetName(slug);
+    if (!userId) {
+        throw new Error('User must be logged in to create a set.');
+    }
+    if (!sanitizedSlug) {
+        throw new Error('Set slug is required.');
+    }
+
+    const setsCollection = createCollection(db, COLLECTION_SETS, 'createSetDocument');
+    const setRef = doc(setsCollection, sanitizedSlug);
+
+    try {
+        const existingSnap = await getDoc(setRef);
+        const existingOwner = existingSnap?.data?.().ownerId;
+
+        if (existingSnap.exists() && existingOwner && existingOwner !== userId) {
+            throw new Error('You cannot overwrite a set owned by another user.');
+        }
+
+        const payload = {
+            slug: sanitizedSlug,
+            title: title?.trim?.() || '',
+            description: description?.trim?.() || '',
+            items: Array.isArray(items) ? items : [],
+            ownerId: userId,
+            createdAt: existingSnap.exists() ? existingSnap.data()?.createdAt ?? serverTimestamp() : serverTimestamp(),
+            updatedAt: serverTimestamp()
+        };
+
+        await setDoc(setRef, payload, { merge: false });
+        return sanitizedSlug;
+    } catch (error) {
+        console.error('Error creating set document: ', error);
+        throw error;
     }
 };
 
@@ -238,6 +286,134 @@ export const getPlaylist = async (playlistId) => {
     }
     catch (error) {
         console.error('Error getting playlist: ', error);
+    }
+};
+
+export const getSetBySlug = async (slug) => {
+    if (!slug) {
+        return null;
+    }
+
+    try {
+        const setsCollection = createCollection(db, COLLECTION_SETS, 'getSetBySlug');
+        const setRef = doc(setsCollection, slug);
+        const snapshot = await getDoc(setRef);
+
+        if (snapshot.exists()) {
+            return {
+                id: snapshot.id,
+                data: snapshot.data()
+            };
+        }
+        return null;
+    } catch (error) {
+        console.error('Error getting set by slug: ', error);
+        return null;
+    }
+};
+
+export const getUserSets = async (userId) => {
+    if (!userId) return [];
+    try {
+        const setsCollection = createCollection(db, COLLECTION_SETS, 'getUserSets');
+        const queryRef = query(setsCollection, where('ownerId', '==', userId), orderBy('createdAt', 'desc'));
+        const snapshot = await getDocs(queryRef);
+        return snapshot.docs.map((docSnapshot) => ({ id: docSnapshot.id, data: docSnapshot.data() }));
+    } catch (error) {
+        console.error('Error fetching user sets: ', error);
+        return [];
+    }
+};
+
+export const upsertReactionIntoSet = async ({ nameOrSlug, reactionId, userId }) => {
+    const slugFromName = slugifySetName(nameOrSlug);
+    if (!reactionId) {
+        throw new Error('Reaction id missing.');
+    }
+    if (!userId) {
+        throw new Error('User must be logged in to update sets.');
+    }
+    if (!slugFromName) {
+        throw new Error('Set name is required.');
+    }
+
+    const setsCollection = createCollection(db, COLLECTION_SETS, 'upsertReactionIntoSet');
+    const setRef = doc(setsCollection, slugFromName);
+
+    try {
+        const snap = await getDoc(setRef);
+        const existingData = snap.exists() ? snap.data() : {};
+        const existingOwner = existingData?.ownerId;
+
+        if (existingOwner && existingOwner !== userId) {
+            throw new Error('You cannot modify a set owned by another user.');
+        }
+
+        const existingItems = Array.isArray(existingData?.items) ? existingData.items : [];
+        const alreadyIncluded = existingItems.some((item) => item?.type === 'reaction' && item?.id === reactionId);
+        const nextItems = alreadyIncluded
+            ? existingItems
+            : [...existingItems, { type: 'reaction', id: reactionId }];
+
+        const payload = {
+            slug: slugFromName,
+            title: existingData?.title || nameOrSlug,
+            description: existingData?.description || '',
+            items: nextItems,
+            ownerId: userId,
+            createdAt: snap.exists() ? existingData?.createdAt || serverTimestamp() : serverTimestamp(),
+            updatedAt: serverTimestamp()
+        };
+
+        await setDoc(setRef, payload, { merge: false });
+        return { slug: slugFromName, created: !snap.exists() };
+    } catch (error) {
+        console.error('Error adding reaction to set: ', error);
+        throw error;
+    }
+};
+
+export const removeReactionFromSet = async ({ setSlug, reactionId, userId }) => {
+    if (!reactionId) {
+        throw new Error('Reaction id missing.');
+    }
+    if (!userId) {
+        throw new Error('User must be logged in to update sets.');
+    }
+    if (!setSlug) {
+        throw new Error('Set slug is required.');
+    }
+
+    const setsCollection = createCollection(db, COLLECTION_SETS, 'removeReactionFromSet');
+    const setRef = doc(setsCollection, setSlug);
+
+    try {
+        const snap = await getDoc(setRef);
+        if (!snap.exists()) {
+            throw new Error('Set not found.');
+        }
+
+        const existingData = snap.data();
+        const existingOwner = existingData?.ownerId;
+
+        if (existingOwner !== userId) {
+            throw new Error('You cannot modify a set owned by another user.');
+        }
+
+        const existingItems = Array.isArray(existingData?.items) ? existingData.items : [];
+        const nextItems = existingItems.filter((item) => !(item?.type === 'reaction' && item?.id === reactionId));
+
+        const payload = {
+            ...existingData,
+            items: nextItems,
+            updatedAt: serverTimestamp()
+        };
+
+        await setDoc(setRef, payload, { merge: false });
+        return { slug: setSlug };
+    } catch (error) {
+        console.error('Error removing reaction from set: ', error);
+        throw error;
     }
 };
 

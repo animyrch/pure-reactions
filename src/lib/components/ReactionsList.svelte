@@ -1,5 +1,6 @@
 <script>
     import ReactionsListElement from '$lib/components/ReactionsListElement.svelte';
+    import PlaylistsListElement from "$lib/components/PlaylistsListElement.svelte";
 
     export let reactions = [];
     export let loading = false;
@@ -42,10 +43,10 @@
             box-shadow 320ms cubic-bezier(0.33, 1, 0.68, 1);
     }
 
-    .card-shell:focus-within {
+    /* .card-shell:focus-within {
         transform: translateY(-2px);
         box-shadow: 0 16px 32px rgba(5, 8, 12, 0.28);
-    }
+    } this breaks thumbnail context*/
 
     .skeleton {
         display: flex;

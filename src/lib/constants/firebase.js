@@ -6,6 +6,7 @@ import { getFirestore } from "firebase/firestore/lite";
 export const COLLECTION_REACTION_BINOMES = env.PUBLIC_FIREBASE_COLLECTION_REACTION_BINOMES;
 export const COLLECTION_USER_DATA = env.PUBLIC_FIREBASE_COLLECTION_USER_DATA;
 export const COLLECTION_PLAYLISTS = env.PUBLIC_FIREBASE_COLLECTION_PLAYLISTS;
+export const COLLECTION_SETS = env.PUBLIC_FIREBASE_COLLECTION_SETS;
 export const FIREBASE_CONFIG = {
     apiKey: "AIzaSyBqsnKIBnbRJqkpyOynZGLySf28AuqmOiE",
     authDomain: "pure-reactions.firebaseapp.com",

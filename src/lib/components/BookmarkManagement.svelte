@@ -27,17 +27,13 @@
         <ReactionAction
             buttonText={actionLabel}
             on:change={isBookmarked ? onUnbookmarkReactionBinome : onBookmarkReactionBinome}
-            className="w-full justify-start gap-2 text-sm font-medium hover:text-accent-primary focus-visible:ring-0 focus-visible:outline-none focus-visible:text-accent-primary"
+            className="w-full justify-start rounded-sm px-sm py-1 text-left text-text-primary hover:text-accent-primary focus-visible:ring-0 focus-visible:outline-none focus-visible:text-accent-primary"
         >
-            <span class="flex gap-2">
-                {#if isBookmarked}
-                    <span>Remove Bookmark</span>
-                    <BookmarkSolid class="h-4 w-4 text-accent-primary" aria-hidden="true" />
-                {:else}
-                    <span>Add Bookmark</span>
-                    <BookmarkOutline class="h-4 w-4 text-text-primary" aria-hidden="true" />
-                {/if}
-            </span>
+            {#if isBookmarked}
+                Remove Bookmark
+            {:else}
+                Add Bookmark
+            {/if}
         </ReactionAction>
     {:else}
         <ReactionAction
