@@ -10,11 +10,12 @@
 
     const loadReactions = async () => {
         isLoading = true; 
-		reactions = []
-        reactions = await getReactionsByIds($userExtraDataStore.userExtraData?.bookmarks);
+		reactions = [];
+        const result = await getReactionsByIds($userExtraDataStore.userExtraData?.bookmarks);
+        reactions = Array.isArray(result) ? result : [];
         isLoading = false; 
 	};
-    $: if ($userExtraDataStore.userExtraData?.bookmarks) {
+    $: if ($userExtraDataStore.userExtraData?.bookmarks && $userExtraDataStore.userExtraData.bookmarks.length > 0) {
         loadReactions();
     }
 </script>

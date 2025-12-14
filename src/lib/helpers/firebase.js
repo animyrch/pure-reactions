@@ -593,13 +593,12 @@ export const getReactionsByIds = async (reactionIds) => {
             if (reactionSnapshot.exists()) {
                 const reactionFound = { id: reactionSnapshot.id, data: { ...reactionSnapshot.data() } };
                 reactions.push(reactionFound);
-            } else {
-                return {};
             }
         }
         return reactions;
     } catch (error) {
         console.error('Error getting documents filtered by reaction video ids: ', error);
+        return [];
     }
     return reactions;
 };
