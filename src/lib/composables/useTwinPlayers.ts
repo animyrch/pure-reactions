@@ -1,5 +1,6 @@
 import { onDestroy, onMount } from 'svelte';
 import { get, writable } from 'svelte/store';
+import { goto } from '$app/navigation';
 import {
   getCurrentPlaybackRateFromConfigs,
   getCurrentStateFromStateConfigs,
@@ -1030,6 +1031,38 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     return typeof queue[nextIndex] === 'string' ? queue[nextIndex] : null;
   };
 
+  const hasNextInQueue = async () => {
+    const snapshot = get(state);
+    if (!snapshot.queueSlug) return false;
+    const nextIndex = (Number(snapshot.queueIndex) || 0) + 1;
+    const nextId = await getNextReactionIdInQueue(snapshot.queueSlug, nextIndex);
+    return Boolean(nextId);
+  };
+
+  const navigateToNextReactionInQueue = async () => {
+    const snapshot = get(state);
+    const queueSlug = snapshot.queueSlug;
+    if (!queueSlug) {
+      return { ok: false as const, reason: 'missing-queue' as const };
+    }
+
+    const nextIndex = (Number(snapshot.queueIndex) || 0) + 1;
+    const nextReactionDocumentId = await getNextReactionIdInQueue(queueSlug, nextIndex);
+    if (!nextReactionDocumentId) {
+      return { ok: false as const, reason: 'end-of-queue' as const };
+    }
+
+    const url = new URL(typeof window !== 'undefined' ? window.location.href : 'https://purereactions.com');
+    url.pathname = `/reaction/${nextReactionDocumentId}`;
+    url.searchParams.set('queueSlug', queueSlug);
+    url.searchParams.set('queueIndex', String(nextIndex));
+    url.searchParams.set('queueReactionId', nextReactionDocumentId);
+    url.searchParams.set('queueAutoPlay', 'true');
+    url.searchParams.delete('isFullscreen');
+    await goto(url.pathname + url.search);
+    return { ok: true as const, reason: 'navigated' as const };
+  };
+
   const loadNextReactionInQueue = () => {
     const snapshot = get(state);
     const queueSlug = snapshot.queueSlug;
@@ -1620,6 +1653,8 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
   return {
     state,
     actions: {
+      hasNextInQueue,
+      navigateToNextReactionInQueue,
       toggleAutoPlaylist,
       toggleCinematicBars,
       handlePlayStateChange,

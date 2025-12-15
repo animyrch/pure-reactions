@@ -28,6 +28,39 @@
 
   let isSettingReactionVideoId = false;
   let reactionVideoIdError = '';
+  let queueHasNext = false;
+  let queueHasNextLoading = false;
+
+  const refreshQueueHasNext = async () => {
+    if (!$state.queueSlug) {
+      queueHasNext = false;
+      return;
+    }
+    queueHasNextLoading = true;
+    try {
+      queueHasNext = await actions.hasNextInQueue();
+    } catch (error) {
+      console.error('Failed to check next queue item', error);
+      queueHasNext = false;
+    } finally {
+      queueHasNextLoading = false;
+    }
+  };
+
+  const handleGoToNextInQueue = async () => {
+    if (!$state.queueSlug) return;
+    try {
+      const result = await actions.navigateToNextReactionInQueue();
+      if (!result?.ok && result?.reason === 'end-of-queue' && browser) {
+        showToast('End of queue.', TOASTS.INFO);
+      }
+    } catch (error) {
+      console.error('Failed to navigate to next queue item', error);
+      if (browser) {
+        showToast('Unable to open the next queue item.', TOASTS.WARNING);
+      }
+    }
+  };
 
   const handleSetReactionVideoId = async (value) => {
     const trimmed = value?.trim?.() ?? '';
@@ -63,6 +96,7 @@
   };
 
   $: if (browser && !$state.isLoading) {
+    refreshQueueHasNext();
     reactionDial.updateContext({
       isUsersOwnVideo: $state.isUsersOwnVideo,
       canShowEditModeButton: $state.canShowEditModeButton,
@@ -172,7 +206,19 @@
         {#if $state.queueSlug}
           <div class="mb-4 flex items-center justify-between">
             <QueueProgressPill queueSlug={$state.queueSlug} index={$state.queueIndex} />
-            <span class="text-xs text-text-muted"></span>
+            {#if queueHasNext}
+              <button
+                type="button"
+                class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-text-primary backdrop-blur transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 disabled:cursor-not-allowed disabled:opacity-50"
+                on:click={handleGoToNextInQueue}
+                disabled={queueHasNextLoading}
+                aria-label="Go to next item in queue"
+                title="Next in queue"
+              >
+                Next
+                <span class="text-text-muted" aria-hidden="true">→</span>
+              </button>
+            {/if}
           </div>
         {/if}
 
