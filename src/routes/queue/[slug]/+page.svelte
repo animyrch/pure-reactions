@@ -278,29 +278,20 @@
                                         aria-current={entry.reactionId === currentSetReactionId ? 'true' : undefined}
                                         aria-label={`Watch ${entry.reaction?.data?.reactionVideoTitle || entry.reaction?.data?.originalVideoTitle || 'reaction'} (item ${entry.index + 1} of ${queueEntries.length})`}
                                     >
-                                        <span class="queue-index">{entry.index + 1}</span>
-                                        <span class="queue-title">
-                                            {entry.reaction?.data?.reactionVideoTitle || entry.reaction?.data?.originalVideoTitle || 'Untitled reaction'}
-                                        </span>
-                                        <span class="queue-meta">
-                                            {#if entry.sourceType === 'playlist'}
-                                                Playlist
-                                            {:else}
-                                                Reaction
-                                            {/if}
-                                        </span>
+                                        <QueueBinomeCard
+                                            item={{
+                                                type: 'reaction',
+                                                id: entry.reactionId,
+                                                reaction: entry.reaction
+                                            }}
+                                            index={entry.index}
+                                        />
                                     </a>
                                 </li>
                             {/each}
                         </ol>
                     </section>
                 {/if}
-
-                <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    {#each resolvedItems as item, index (item.key)}
-                        <QueueBinomeCard {item} {index} />
-                    {/each}
-                </div>
             {/if}
         {/if}
     </div>
@@ -367,7 +358,7 @@
 
     .queue {
         display: grid;
-        gap: 0.5rem;
+        gap: 0.85rem;
         padding: 0;
         margin: 0;
         list-style: none;
@@ -386,23 +377,16 @@
     }
 
     .queue-item {
-        display: grid;
-        grid-template-columns: 2.25rem 1fr auto;
-        align-items: center;
-        gap: 0.75rem;
-        padding: 0.75rem 0.85rem;
-        border-radius: 0.9rem;
-        background: rgba(0, 0, 0, 0.22);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        transition: background 200ms ease, transform 200ms ease, border-color 200ms ease;
+        display: block;
         text-decoration: none;
         color: inherit;
+        border-radius: 0.95rem;
+        transition: transform 200ms ease, filter 200ms ease;
     }
 
     .queue-item:hover {
         transform: translateY(-1px);
-        background: rgba(0, 0, 0, 0.3);
-        border-color: rgba(255, 255, 255, 0.12);
+        filter: brightness(1.02);
     }
 
     .queue-item:focus-visible {
@@ -411,43 +395,7 @@
     }
 
     .queue-item[aria-current='true'] {
-        border-color: rgba(67, 217, 173, 0.6);
-        background: rgba(67, 217, 173, 0.08);
-    }
-
-    .queue-index {
-        display: inline-flex;
-        width: 2rem;
-        height: 2rem;
-        align-items: center;
-        justify-content: center;
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.06);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        color: rgba(245, 247, 250, 0.92);
-        font-size: 0.85rem;
-        font-weight: 600;
-    }
-
-    .queue-title {
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        font-size: 0.95rem;
-        font-weight: 600;
-        color: rgba(245, 247, 250, 0.92);
-    }
-
-    .queue-meta {
-        font-size: 0.75rem;
-        color: rgba(205, 211, 224, 0.78);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        background: rgba(255, 255, 255, 0.04);
-        padding: 0.2rem 0.55rem;
-        border-radius: 999px;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        font-weight: 600;
+        outline: 2px solid rgba(67, 217, 173, 0.55);
+        outline-offset: 4px;
     }
 </style>

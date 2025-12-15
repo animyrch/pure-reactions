@@ -18,7 +18,6 @@
     $: playlistId = isPlaylist ? item?.playlist?.id : reactionData?.playlistId;
 
     $: hasData = Boolean(reactionPageId && reactionData);
-    $: cardLabel = item?.label || (isPlaylist ? 'Playlist reaction' : 'Reaction binome');
     $: binomeCount = item?.playlist?.data?.reactionBinomeIds?.length ?? 0;
     $: subtitle = isPlaylist
         ? `${binomeCount} binome${binomeCount === 1 ? '' : 's'} in playlist`
@@ -31,7 +30,7 @@
 <div class="queue-card">
     <div class="flex items-center justify-between text-[11px] uppercase tracking-[0.2em] text-text-muted">
         <span aria-hidden="true">#{index + 1}</span>
-        <span class="badge">{cardLabel}</span>
+        <span></span>
     </div>
 
     {#if hasData}
@@ -45,15 +44,6 @@
             {playlistId}
             interactive
         />
-        <div class="mt-3 space-y-1">
-            <p class="truncate text-sm font-semibold text-text-primary" title={title}>{title}</p>
-            <p class="text-xs text-text-muted" title={subtitle}>{subtitle}</p>
-        </div>
-    {:else}
-        <div class="fallback">
-            <p class="text-sm font-semibold text-text-primary">Missing binome data</p>
-            <p class="text-xs text-text-muted">Add a valid id to this queue item to render a thumbnail.</p>
-        </div>
     {/if}
 </div>
 
