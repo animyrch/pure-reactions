@@ -10,18 +10,18 @@
     export let reactionVideoAuthor;
     export let playlistId;
     export let itemType = 'reaction';
-    export let setTitle = '';
-    export let setSlug = '';
+    export let queueTitle = '';
+    export let queueSlug = '';
     export let interactive = false;
 
-    const isSet = itemType === 'set';
-    const reactionRedirectionPath = isSet 
-        ? `/set/${setSlug || reactionPageId}`
+    const isQueue = itemType === 'queue';
+    const reactionRedirectionPath = isQueue 
+        ? `/queue/${queueSlug || reactionPageId}`
         : `/reaction/${reactionPageId}${playlistId ? `?playlistId=${playlistId}` : ''}`;
     const originalAlt = originalVideoTitle ? `Original: ${originalVideoTitle}` : 'Original video thumbnail';
     const reactionAlt = reactionVideoTitle ? `Reaction: ${reactionVideoTitle}` : 'Reaction video thumbnail';
-    const linkLabel = isSet
-        ? `Open set: ${setTitle}`
+    const linkLabel = isQueue
+        ? `Open queue: ${queueTitle}`
         : reactionVideoTitle
             ? `Open reaction: ${reactionVideoTitle}`
             : originalVideoTitle
@@ -57,7 +57,7 @@
     let isOriginalLoaded = false;
     let isReactionLoaded = false;
 
-    $: skeletonVisible = isSet ? false : !(isOriginalLoaded && isReactionLoaded);
+    $: skeletonVisible = isQueue ? false : !(isOriginalLoaded && isReactionLoaded);
 
     const handleOriginalLoad = () => {
         isOriginalLoaded = true;
@@ -71,7 +71,7 @@
 <div
     class="thumbnail-card group flex flex-col gap-sm rounded-md bg-surface p-sm text-text-primary shadow-surface transition duration-deliberate ease-cinematic hover:shadow-elevated focus-within:ring-2 focus-within:ring-focus focus-within:ring-offset-2 focus-within:ring-offset-background"
     data-interactive={interactive ? 'true' : undefined}
-    class:is-set={isSet}
+    class:is-queue={isQueue}
 >
     <a
         class="thumbnail-link block focus-visible:outline-none"
@@ -79,8 +79,8 @@
         aria-label={linkLabel}
     >
         <div class="thumbnail-shell">
-            {#if isSet}
-                <div class="set-badge">
+            {#if isQueue}
+                <div class="queue-badge">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M4 7V4h3"/>
                         <path d="M20 4h-3v3"/>
@@ -88,12 +88,12 @@
                         <path d="M20 20h-3v-3"/>
                         <rect x="9" y="9" width="6" height="6"/>
                     </svg>
-                    <span>SET</span>
+                    <span>QUEUE</span>
                 </div>
             {/if}
             <div class="thumbnail-wrapper">
-                {#if isSet}
-                    <div class="set-placeholder">
+                {#if isQueue}
+                    <div class="queue-placeholder">
                         <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M4 7V4h3"/>
                             <path d="M20 4h-3v3"/>
@@ -101,7 +101,7 @@
                             <path d="M20 20h-3v-3"/>
                             <rect x="9" y="9" width="6" height="6"/>
                         </svg>
-                        <p class="set-placeholder-text">Reaction Collection</p>
+                        <p class="queue-placeholder-text">Reaction Queue</p>
                     </div>
                 {:else}
                     <div class="thumbnail-skeleton" class:hidden={!skeletonVisible} aria-hidden="true"></div>
@@ -160,22 +160,22 @@
         <a
             class="min-w-0 flex-1 rounded-sm focus-visible:outline-none focus-visible:underline"
             href={reactionRedirectionPath}
-            title={isSet ? setTitle : (reactionVideoTitle || originalVideoTitle)}
+            title={isQueue ? queueTitle : (reactionVideoTitle || originalVideoTitle)}
         >
             <p class="truncate text-sm font-semibold text-text-primary">
-                {isSet ? setTitle : (reactionVideoTitle || originalVideoTitle)}
+                {isQueue ? queueTitle : (reactionVideoTitle || originalVideoTitle)}
             </p>
-            {#if !isSet && reactionVideoAuthor}
+            {#if !isQueue && reactionVideoAuthor}
                 <VideoAuthor
                     videoAuthor={reactionVideoAuthor}
                     showLinks={false}
                     isReactor
                 />
-            {:else if isSet}
+            {:else if isQueue}
                 <p class="text-xs text-text-muted">Collection of reactions</p>
             {/if}
         </a>
-        {#if !isSet}
+        {#if !isQueue}
             <ThumbnailContext
                 reactionPageId={reactionPageId}
                 reactionVideoAuthor={reactionVideoAuthor}
@@ -184,76 +184,68 @@
     </div>
 </div>
 
-<style>
-    a {
-        text-decoration: none;
-    }
-    .thumbnail-card {
-        position: relative;
-        overflow: visible;
-    }
-    .thumbnail-card.is-set {
-        border: 2px solid rgba(99, 102, 241, 0.3);
-        background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(139, 92, 246, 0.05));
-    }
-    .thumbnail-card.is-set:hover {
-        border-color: rgba(99, 102, 241, 0.5);
-        box-shadow: 0 8px 32px rgba(99, 102, 241, 0.15);
-    }
-    .thumbnail-shell {
-        position: relative;
-        border-radius: 0.5rem;
-    }
-    .set-badge {
-        position: absolute;
-        top: 0.5rem;
-        left: 0.5rem;
-        z-index: 10;
-        display: flex;
-        align-items: center;
-        gap: 0.375rem;
-        padding: 0.375rem 0.625rem;
-        background: rgba(99, 102, 241, 0.95);
-        color: white;
-        font-size: 0.75rem;
-        font-weight: 600;
-        letter-spacing: 0.05em;
-        border-radius: 0.375rem;
-        backdrop-filter: blur(8px);
-        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
-    }
-    .set-badge svg {
-        width: 14px;
-        height: 14px;
-    }
-    .thumbnail-wrapper {
-        position: relative;
-        aspect-ratio: 16 / 9;
-        border-radius: 0.5rem;
-        overflow: hidden;
-        background: linear-gradient(135deg, rgba(15, 17, 21, 0.9), rgba(25, 29, 36, 0.8));
-        contain: layout paint style;
-    }
-    .set-placeholder {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 0.75rem;
-        background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.15));
-        color: rgba(167, 139, 250, 0.9);
-    }
-    .set-placeholder svg {
-        opacity: 0.8;
-    }
-    .set-placeholder-text {
-        font-size: 0.875rem;
-        font-weight: 600;
-        letter-spacing: 0.025em;
-        opacity: 0.9;
-    }
+    <style>
+        a {
+            text-decoration: none;
+        }
+        .thumbnail-card {
+            position: relative;
+            overflow: visible;
+        }
+        .thumbnail-card.is-queue {
+            border: 2px solid rgba(99, 102, 241, 0.3);
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(139, 92, 246, 0.05));
+        }
+        .thumbnail-card.is-queue:hover {
+            border-color: rgba(99, 102, 241, 0.5);
+            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.15);
+        }
+        .queue-badge {
+            position: absolute;
+            top: 0.5rem;
+            left: 0.5rem;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.375rem 0.625rem;
+            background: rgba(99, 102, 241, 0.95);
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+        }
+        .queue-badge svg {
+            width: 14px;
+            height: 14px;
+        }
+        .thumbnail-wrapper {
+            position: relative;
+            aspect-ratio: 16 / 9;
+            overflow: hidden;
+            background: linear-gradient(135deg, rgba(15, 17, 21, 0.9), rgba(25, 29, 36, 0.8));
+            border-radius: 0.5rem;
+        }
+        .queue-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.15));
+            color: rgba(167, 139, 250, 0.9);
+        }
+        .queue-placeholder svg {
+            opacity: 0.8;
+        }
+        .queue-placeholder-text {
+            font-size: 0.875rem;
+            font-weight: 600;
+            letter-spacing: 0.025em;
+            opacity: 0.9;
+        }
     .thumbnail-skeleton {
         position: absolute;
         inset: 0;

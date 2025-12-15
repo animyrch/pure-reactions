@@ -8,7 +8,8 @@ import {
 import {
   getReaction,
   updateFirebaseDocument,
-  getPlaylist
+  getPlaylist,
+  getQueueBySlug
 } from '$lib/helpers/firebase';
 import {
   downloadBasicVideoDetails,
@@ -57,6 +58,9 @@ type TwinPlayersState = {
   hasNextIndexInPlaylist: boolean;
   currentIndexInPlaylist: number;
   isPlaylistAutoPlay: boolean;
+  queueSlug?: string | null;
+  queueIndex: number;
+  isQueueAutoPlay: boolean;
   showCinematicBars: boolean;
   isFullscreen: boolean;
   isControlSurfaceVisible: boolean;
@@ -200,6 +204,9 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     hasNextIndexInPlaylist: false,
     currentIndexInPlaylist: 0,
     isPlaylistAutoPlay: false,
+    queueSlug: initialUrlState.queueSlug,
+    queueIndex: Number.isFinite(initialUrlState.queueIndex as number) ? (initialUrlState.queueIndex as number) : 0,
+    isQueueAutoPlay: Boolean(initialUrlState.queueAutoPlay),
     showCinematicBars: false,
     isFullscreen: initialUrlState.isFullscreen,
     isControlSurfaceVisible: false,
@@ -590,7 +597,14 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     let reactionPlayerState = YT?.PlayerState?.UNSTARTED ?? -1;
     pollInterval = setInterval(() => {
       const snapshot = get(state);
-      const { playerReaction, playerOriginal, reactionFinishTime, hasNextIndexInPlaylist, isPlaylistAutoPlay } = snapshot;
+      const {
+        playerReaction,
+        playerOriginal,
+        reactionFinishTime,
+        hasNextIndexInPlaylist,
+        isPlaylistAutoPlay,
+        isQueueAutoPlay
+      } = snapshot;
       if (!playerReaction || !playerOriginal) {
         return;
       }
@@ -613,6 +627,9 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
         clearInterval(pollInterval);
         if (isPlaylistAutoPlay && hasNextIndexInPlaylist) {
           loadNextReactionInPlaylist();
+        }
+        if (isQueueAutoPlay) {
+          loadNextReactionInQueue();
         }
         return;
       }
@@ -725,6 +742,9 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       if (get(state).hasNextIndexInPlaylist) {
         loadNextReactionInPlaylist();
       }
+    }
+    if (event.data === YT.PlayerState.ENDED && get(state).isQueueAutoPlay) {
+      loadNextReactionInQueue();
     }
     if (event.data === YT.PlayerState.PLAYING) {
       if (!reactionVideoClicked) {
@@ -985,6 +1005,70 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
         reactionDuration: 0
       });
     });
+  };
+
+  const getNextReactionIdInQueue = async (queueSlug: string, nextIndex: number) => {
+    const queueDefinition = await getQueueBySlug(queueSlug);
+    const items = Array.isArray(queueDefinition?.data?.items) ? queueDefinition.data.items : [];
+    if (!items.length) {
+      return null;
+    }
+
+    const queue: string[] = [];
+    for (const item of items) {
+      if (item?.type === 'reaction' && item?.id) {
+        queue.push(item.id);
+        continue;
+      }
+      if (item?.type === 'playlist' && item?.id) {
+        const playlistDoc = await getPlaylist(item.id);
+        const ids = Array.isArray(playlistDoc?.reactionBinomeIds) ? playlistDoc.reactionBinomeIds : [];
+        ids.filter(Boolean).forEach((reactionId: string) => queue.push(reactionId));
+      }
+    }
+
+    return typeof queue[nextIndex] === 'string' ? queue[nextIndex] : null;
+  };
+
+  const loadNextReactionInQueue = () => {
+    const snapshot = get(state);
+    const queueSlug = snapshot.queueSlug;
+    if (!snapshot.isQueueAutoPlay || !queueSlug) {
+      return;
+    }
+
+    const nextIndex = (Number(snapshot.queueIndex) || 0) + 1;
+    getNextReactionIdInQueue(queueSlug, nextIndex)
+      .then((nextReactionDocumentId) => {
+        if (!nextReactionDocumentId) {
+          return;
+        }
+
+        buildInterface(nextReactionDocumentId, { isUpdate: true }).then(() => {
+          updateState({ queueIndex: nextIndex });
+          if (typeof window !== 'undefined') {
+            const url = new URL(window.location.href);
+            url.pathname = `/reaction/${nextReactionDocumentId}`;
+            url.searchParams.set('queueSlug', queueSlug);
+            url.searchParams.set('queueIndex', String(nextIndex));
+            url.searchParams.set('queueReactionId', nextReactionDocumentId);
+            url.searchParams.set('queueAutoPlay', 'true');
+            window.history.pushState({}, '', url.toString());
+          }
+          originalVideoClicked = false;
+          reactionVideoClicked = false;
+          updateState({
+            bothVideosStarted: false,
+            currentStateOriginalVideo: -1,
+            currentVolumeOriginalVideo: 100,
+            reactionCurrentTime: 0,
+            reactionDuration: 0
+          });
+        });
+      })
+      .catch((error) => {
+        console.error('Failed to load next reaction in queue', error);
+      });
   };
 
   const getBasicDetailsReaction = async (videoId: string) => {
@@ -1570,12 +1654,24 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
 
 function getInitialUrlState() {
   if (typeof window === 'undefined') {
-    return { isFullscreen: false, playlistId: null as string | null };
+    return {
+      isFullscreen: false,
+      playlistId: null as string | null,
+      queueSlug: null as string | null,
+      queueIndex: null as number | null,
+      queueAutoPlay: false
+    };
   }
   const url = new URL(window.location.href);
   const params = new URLSearchParams(url.search);
+  const queueSlug = params.get('queueSlug');
+  const queueIndexRaw = params.get('queueIndex');
+  const queueAutoPlayRaw = params.get('queueAutoPlay');
   return {
     isFullscreen: params.get('isFullscreen') === 'true',
-    playlistId: params.get('playlistId')
+    playlistId: params.get('playlistId'),
+    queueSlug,
+    queueIndex: queueIndexRaw ? Number(queueIndexRaw) : null,
+    queueAutoPlay: queueAutoPlayRaw === 'true'
   };
 }

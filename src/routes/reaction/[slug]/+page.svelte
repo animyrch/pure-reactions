@@ -7,6 +7,7 @@
   import FullscreenChrome from '$lib/components/reaction/FullscreenChrome.svelte';
   import ControlDock from '$lib/components/reaction/ControlDock.svelte';
   import MissingReactionPlaceholder from '$lib/components/reaction/MissingReactionPlaceholder.svelte';
+  import QueueProgressPill from '$lib/components/reaction/QueueProgressPill.svelte';
   import { useTwinPlayers, CONTROLS_FADE_CLASS } from '$lib/composables/useTwinPlayers';
   import { reactionDial } from '$lib/stores/reactionDial';
   import { browser } from '$app/environment';
@@ -168,6 +169,13 @@
 
     {#if !$state.isFullscreen}
       <div class="mx-auto w-full px-4 pt-6 sm:px-6 lg:px-10">
+        {#if $state.queueSlug}
+          <div class="mb-4 flex items-center justify-between">
+            <QueueProgressPill queueSlug={$state.queueSlug} index={$state.queueIndex} />
+            <span class="text-xs text-text-muted"></span>
+          </div>
+        {/if}
+
         <CreatorDetails
           originalVideoAuthor={$state.originalVideoAuthor}
           originalVideoTitle={$state.originalVideoTitle}

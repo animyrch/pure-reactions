@@ -31,7 +31,7 @@ import {
     COLLECTION_REACTION_BINOMES,
     COLLECTION_USER_DATA,
     COLLECTION_PLAYLISTS,
-    COLLECTION_SETS,
+    COLLECTION_QUEUES,
     app, db
 } from "$lib/constants/firebase";
 import { showToast } from '$lib/stores/toast';
@@ -44,7 +44,7 @@ const createCollection = (db, params, caller) => {
     return collection(db, params);
 };
 
-export const slugifySetName = (value) =>
+export const slugifyQueueName = (value) =>
     (value || '')
         .toString()
         .trim()
@@ -101,24 +101,24 @@ export const createPlaylistDocument = async ({ reactionDocumentId, originalVideo
     }
 };
 
-export const createSetDocument = async ({ slug, title, description, items, userId }) => {
-    const sanitizedSlug = slugifySetName(slug);
+export const createQueueDocument = async ({ slug, title, description, items, userId }) => {
+    const sanitizedSlug = slugifyQueueName(slug);
     if (!userId) {
-        throw new Error('User must be logged in to create a set.');
+        throw new Error('User must be logged in to create a queue.');
     }
     if (!sanitizedSlug) {
-        throw new Error('Set slug is required.');
+        throw new Error('Queue slug is required.');
     }
 
-    const setsCollection = createCollection(db, COLLECTION_SETS, 'createSetDocument');
-    const setRef = doc(setsCollection, sanitizedSlug);
+    const queuesCollection = createCollection(db, COLLECTION_QUEUES, 'createQueueDocument');
+    const queueRef = doc(queuesCollection, sanitizedSlug);
 
     try {
-        const existingSnap = await getDoc(setRef);
+        const existingSnap = await getDoc(queueRef);
         const existingOwner = existingSnap?.data?.().ownerId;
 
         if (existingSnap.exists() && existingOwner && existingOwner !== userId) {
-            throw new Error('You cannot overwrite a set owned by another user.');
+            throw new Error('You cannot overwrite a queue owned by another user.');
         }
 
         const payload = {
@@ -131,10 +131,10 @@ export const createSetDocument = async ({ slug, title, description, items, userI
             updatedAt: serverTimestamp()
         };
 
-        await setDoc(setRef, payload, { merge: false });
+        await setDoc(queueRef, payload, { merge: false });
         return sanitizedSlug;
     } catch (error) {
-        console.error('Error creating set document: ', error);
+        console.error('Error creating queue document: ', error);
         throw error;
     }
 };
@@ -242,12 +242,12 @@ export const getReactionsByPage = async (lastDoc, limitBy, sortBy, follows) => {
     };
 };
 
-export const getSetsByPage = async (lastDoc, limitBy) => {
-    let sets = [];
+export const getQueuesByPage = async (lastDoc, limitBy) => {
+    let queues = [];
     let lastVisible = null;
     try {
-        const setsCollection = createCollection(db, COLLECTION_SETS, 'getSetsByPage');
-        let baseQuery = query(setsCollection,
+        const queuesCollection = createCollection(db, COLLECTION_QUEUES, 'getQueuesByPage');
+        let baseQuery = query(queuesCollection,
             orderBy('createdAt', 'desc')
         );
         if (lastDoc) {
@@ -256,16 +256,16 @@ export const getSetsByPage = async (lastDoc, limitBy) => {
         baseQuery = query(baseQuery, limit(limitBy));
         const querySnapshot = await getDocs(baseQuery);
         lastVisible = querySnapshot.docs[querySnapshot.docs.length-1];
-        sets = querySnapshot.docs.map((doc) => ({
+        queues = querySnapshot.docs.map((doc) => ({
             id: doc.id,
             data: doc.data(),
-            type: 'set'
+            type: 'queue'
         }));
     } catch (error) {
-        console.error('Error getting paged set documents: ', error);
+        console.error('Error getting paged queue documents: ', error);
     }
     return {
-        sets,
+        queues,
         lastVisible
     };
 };
@@ -318,15 +318,15 @@ export const getPlaylist = async (playlistId) => {
     }
 };
 
-export const getSetBySlug = async (slug) => {
+export const getQueueBySlug = async (slug) => {
     if (!slug) {
         return null;
     }
 
     try {
-        const setsCollection = createCollection(db, COLLECTION_SETS, 'getSetBySlug');
-        const setRef = doc(setsCollection, slug);
-        const snapshot = await getDoc(setRef);
+        const queuesCollection = createCollection(db, COLLECTION_QUEUES, 'getQueueBySlug');
+        const queueRef = doc(queuesCollection, slug);
+        const snapshot = await getDoc(queueRef);
 
         if (snapshot.exists()) {
             return {
@@ -336,46 +336,46 @@ export const getSetBySlug = async (slug) => {
         }
         return null;
     } catch (error) {
-        console.error('Error getting set by slug: ', error);
+        console.error('Error getting queue by slug: ', error);
         return null;
     }
 };
 
-export const getUserSets = async (userId) => {
+export const getUserQueues = async (userId) => {
     if (!userId) return [];
     try {
-        const setsCollection = createCollection(db, COLLECTION_SETS, 'getUserSets');
-        const queryRef = query(setsCollection, where('ownerId', '==', userId), orderBy('createdAt', 'desc'));
+        const queuesCollection = createCollection(db, COLLECTION_QUEUES, 'getUserQueues');
+        const queryRef = query(queuesCollection, where('ownerId', '==', userId), orderBy('createdAt', 'desc'));
         const snapshot = await getDocs(queryRef);
         return snapshot.docs.map((docSnapshot) => ({ id: docSnapshot.id, data: docSnapshot.data() }));
     } catch (error) {
-        console.error('Error fetching user sets: ', error);
+        console.error('Error fetching user queues: ', error);
         return [];
     }
 };
 
-export const upsertReactionIntoSet = async ({ nameOrSlug, reactionId, userId }) => {
-    const slugFromName = slugifySetName(nameOrSlug);
+export const upsertReactionIntoQueue = async ({ nameOrSlug, reactionId, userId }) => {
+    const slugFromName = slugifyQueueName(nameOrSlug);
     if (!reactionId) {
         throw new Error('Reaction id missing.');
     }
     if (!userId) {
-        throw new Error('User must be logged in to update sets.');
+        throw new Error('User must be logged in to update queues.');
     }
     if (!slugFromName) {
-        throw new Error('Set name is required.');
+        throw new Error('Queue name is required.');
     }
 
-    const setsCollection = createCollection(db, COLLECTION_SETS, 'upsertReactionIntoSet');
-    const setRef = doc(setsCollection, slugFromName);
+    const queuesCollection = createCollection(db, COLLECTION_QUEUES, 'upsertReactionIntoQueue');
+    const queueRef = doc(queuesCollection, slugFromName);
 
     try {
-        const snap = await getDoc(setRef);
+        const snap = await getDoc(queueRef);
         const existingData = snap.exists() ? snap.data() : {};
         const existingOwner = existingData?.ownerId;
 
         if (existingOwner && existingOwner !== userId) {
-            throw new Error('You cannot modify a set owned by another user.');
+            throw new Error('You cannot modify a queue owned by another user.');
         }
 
         const existingItems = Array.isArray(existingData?.items) ? existingData.items : [];
@@ -394,39 +394,39 @@ export const upsertReactionIntoSet = async ({ nameOrSlug, reactionId, userId }) 
             updatedAt: serverTimestamp()
         };
 
-        await setDoc(setRef, payload, { merge: false });
+        await setDoc(queueRef, payload, { merge: false });
         return { slug: slugFromName, created: !snap.exists() };
     } catch (error) {
-        console.error('Error adding reaction to set: ', error);
+        console.error('Error adding reaction to queue: ', error);
         throw error;
     }
 };
 
-export const removeReactionFromSet = async ({ setSlug, reactionId, userId }) => {
+export const removeReactionFromQueue = async ({ queueSlug, reactionId, userId }) => {
     if (!reactionId) {
         throw new Error('Reaction id missing.');
     }
     if (!userId) {
-        throw new Error('User must be logged in to update sets.');
+        throw new Error('User must be logged in to update queues.');
     }
-    if (!setSlug) {
-        throw new Error('Set slug is required.');
+    if (!queueSlug) {
+        throw new Error('Queue slug is required.');
     }
 
-    const setsCollection = createCollection(db, COLLECTION_SETS, 'removeReactionFromSet');
-    const setRef = doc(setsCollection, setSlug);
+    const queuesCollection = createCollection(db, COLLECTION_QUEUES, 'removeReactionFromQueue');
+    const queueRef = doc(queuesCollection, queueSlug);
 
     try {
-        const snap = await getDoc(setRef);
+        const snap = await getDoc(queueRef);
         if (!snap.exists()) {
-            throw new Error('Set not found.');
+            throw new Error('Queue not found.');
         }
 
         const existingData = snap.data();
         const existingOwner = existingData?.ownerId;
 
         if (existingOwner !== userId) {
-            throw new Error('You cannot modify a set owned by another user.');
+            throw new Error('You cannot modify a queue owned by another user.');
         }
 
         const existingItems = Array.isArray(existingData?.items) ? existingData.items : [];
@@ -438,13 +438,14 @@ export const removeReactionFromSet = async ({ setSlug, reactionId, userId }) => 
             updatedAt: serverTimestamp()
         };
 
-        await setDoc(setRef, payload, { merge: false });
-        return { slug: setSlug };
+        await setDoc(queueRef, payload, { merge: false });
+        return { slug: queueSlug };
     } catch (error) {
-        console.error('Error removing reaction from set: ', error);
+        console.error('Error removing reaction from queue: ', error);
         throw error;
     }
 };
+
 
 export const getUserPlaylists = async (userId) => {
     let playlists = [];

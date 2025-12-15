@@ -28,7 +28,7 @@
     $: title = reactionVideoTitle || originalVideoTitle || cardLabel;
 </script>
 
-<div class="set-card">
+<div class="queue-card">
     <div class="flex items-center justify-between text-[11px] uppercase tracking-[0.2em] text-text-muted">
         <span aria-hidden="true">#{index + 1}</span>
         <span class="badge">{cardLabel}</span>
@@ -52,13 +52,13 @@
     {:else}
         <div class="fallback">
             <p class="text-sm font-semibold text-text-primary">Missing binome data</p>
-            <p class="text-xs text-text-muted">Add a valid id to this set item to render a thumbnail.</p>
+            <p class="text-xs text-text-muted">Add a valid id to this queue item to render a thumbnail.</p>
         </div>
     {/if}
 </div>
 
 <style>
-    .set-card {
+    .queue-card {
         display: flex;
         flex-direction: column;
         gap: 0.75rem;
@@ -69,8 +69,8 @@
         box-shadow: 0 18px 40px rgba(5, 8, 12, 0.32);
     }
 
-    .set-card:hover,
-    .set-card:focus-within {
+    .queue-card:hover,
+    .queue-card:focus-within {
         transform: translateY(-2px);
         box-shadow: 0 22px 48px rgba(5, 8, 12, 0.38);
         transition: transform 200ms ease, box-shadow 200ms ease;

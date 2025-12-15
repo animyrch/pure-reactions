@@ -1,7 +1,7 @@
 <!-- src/App.svelte -->
 
 <script>
-	import { getReactionsByPage, getSetsByPage } from '$lib/helpers/firebase';
+	import { getReactionsByPage, getQueuesByPage } from '$lib/helpers/firebase';
     import ReactionsList from '$lib/components/ReactionsList.svelte';
     import ReactionsSorting from '$lib/components/Navigation/ReactionsSorting.svelte';
 	import { page } from '$app/stores';
@@ -13,30 +13,30 @@
 	let reactions = [];
 	let isLoading = false;
 	let lastReactionDoc = null;
-	let lastSetDoc = null;
+	let lastQueueDoc = null;
 	let initialLoad = true;
 	const pageSize = 9;
-	const setPageSize = 3; // Include fewer sets to maintain balance
+	const queuePageSize = 3; // Include fewer queues to maintain balance
 
 	const loadReactions = async () => {
 		const sortBy = $page.url.searchParams.get('sortBy') || SORTINGS.NEW;
 		const follows = $userExtraDataStore.userExtraData?.follows;
 		
-		// Fetch reactions and sets in parallel
-		const [reactionsResponse, setsResponse] = await Promise.all([
+		// Fetch reactions and queues in parallel
+		const [reactionsResponse, queuesResponse] = await Promise.all([
 			getReactionsByPage(lastReactionDoc, pageSize, sortBy, follows),
-			getSetsByPage(lastSetDoc, setPageSize)
+			getQueuesByPage(lastQueueDoc, queuePageSize)
 		]);
 		
 		lastReactionDoc = reactionsResponse.lastVisible;
-		lastSetDoc = setsResponse.lastVisible;
+		lastQueueDoc = queuesResponse.lastVisible;
 		
-		// For sets, we'll use a generic placeholder - the actual thumbnails will be 
-		// fetched when rendering if needed, or we can show a set-specific placeholder
-		const hydratedSets = setsResponse.sets;
+		// For queues, we'll use a generic placeholder - the actual thumbnails will be
+		// fetched when rendering if needed, or we can show a queue-specific placeholder
+		const hydratedQueues = queuesResponse.queues;
 		
 		// Merge and sort by creation date
-		const newItems = [...reactionsResponse.reactions, ...hydratedSets]
+		const newItems = [...reactionsResponse.reactions, ...hydratedQueues]
 			.sort((a, b) => {
 				const aTime = a.data?.createdAt?.toMillis?.() || 0;
 				const bTime = b.data?.createdAt?.toMillis?.() || 0;

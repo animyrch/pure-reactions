@@ -12,13 +12,13 @@
     const reactionVideoAuthor = reaction?.data?.reactionVideoAuthor;
     const originalVideoTitle = reaction?.data?.originalVideoTitle;
     const playlistId = reaction?.data?.playlistId;
-    const setTitle = reaction?.data?.title;
-    const setSlug = reaction?.data?.slug;
+    const queueTitle = reaction?.data?.title;
+    const queueSlug = reaction?.data?.slug;
 
     let rootEl;
     let isVisible = false;
 
-    const headline = reactionVideoTitle || originalVideoTitle || setTitle || 'Untitled reaction';
+    const headline = reactionVideoTitle || originalVideoTitle || queueTitle || 'Untitled reaction';
     const authorLabel = reactionVideoAuthor ? `by ${reactionVideoAuthor}` : 'Reaction';
 </script>
 
@@ -32,8 +32,8 @@
         {reactionVideoAuthor}
         {playlistId}
         {itemType}
-        {setTitle}
-        {setSlug}
+        queueTitle={queueTitle}
+        queueSlug={queueSlug}
         interactive
     />
 </div>

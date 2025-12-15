@@ -9,7 +9,7 @@
 	import ReactionAction from '$lib/components/ReactionAction.svelte';
 	import BookmarkManagement from '../BookmarkManagement.svelte';
 	import { TOASTS } from '$lib/constants/toasts';
-	import { getUserSets, upsertReactionIntoSet, removeReactionFromSet } from '$lib/helpers/firebase';
+	import { getUserQueues, upsertReactionIntoQueue, removeReactionFromQueue } from '$lib/helpers/firebase';
 	import { handlePrivateRoute } from '$lib/helpers/routing';
 	import { showToast } from '$lib/stores/toast';
 	import { currentUser } from '$lib/stores/user';
@@ -20,30 +20,29 @@
 	const fallbackSuffix = Math.random().toString(36).slice(2, 8);
 	const menuOpenEventName = 'thumbnail-context-open';
 
-	let userSets = [];
-	let selectedSetSlug = '';
-	let newSetName = '';
+	let userQueues = [];
+	let selectedQueueSlug = '';
+	let newQueueName = '';
 	let statusMessage = '';
-	let isLoadingSets = false;
-	let isSavingSet = false;
-	let hasLoadedSets = false;
+	let isLoadingQueues = false;
+	let isSavingQueue = false;
+	let hasLoadedQueues = false;
 	let isOpen = false;
-	let isSetsSectionOpen = false;
+	let isQueuesSectionOpen = false;
 	let menuEl;
 
 	$: buttonId = reactionPageId ? `offset-${reactionPageId}` : `offset-fallback-${fallbackSuffix}`;
-	$: selectId = `set-select-${buttonId}`;
-	$: inputId = `set-new-${buttonId}`;
+	$: inputId = `queue-new-${buttonId}`;
 	$: authedUserId = $page?.data?.userId || $currentUser?.uid;
-	$: setsWithReaction = userSets.map((set) => {
-		const items = Array.isArray(set?.data?.items) ? set.data.items : [];
+	$: queuesWithReaction = userQueues.map((queue) => {
+		const items = Array.isArray(queue?.data?.items) ? queue.data.items : [];
 		const hasReaction = items.some((item) => item?.type === 'reaction' && item?.id === reactionPageId);
-		return { ...set, hasReaction };
+		return { ...queue, hasReaction };
 	});
 
-	// Auto-load sets once the user id becomes available or when menu opens
-	$: if (authedUserId && !hasLoadedSets && !isLoadingSets && isOpen) {
-		loadUserSets(false);
+	// Auto-load queues once the user id becomes available or when menu opens
+	$: if (authedUserId && !hasLoadedQueues && !isLoadingQueues && isOpen) {
+		loadUserQueues(false);
 	}
 
 	const handleOpenYoutubePage = () => {
@@ -64,98 +63,98 @@
 		return uid || null;
 	};
 
-	const loadUserSets = async (redirectOnFail = false) => {
+	const loadUserQueues = async (redirectOnFail = false) => {
 		const uid = ensureUserId(redirectOnFail);
 		if (!uid) {
-			statusMessage = 'Sign in to manage sets.';
+			statusMessage = 'Sign in to manage queues.';
 			return;
 		}
-		isLoadingSets = true;
+		isLoadingQueues = true;
 		statusMessage = '';
 		try {
-			userSets = await getUserSets(uid);
-			if (!selectedSetSlug && userSets?.[0]?.id) {
-				selectedSetSlug = userSets[0].id;
+			userQueues = await getUserQueues(uid);
+			if (!selectedQueueSlug && userQueues?.[0]?.id) {
+				selectedQueueSlug = userQueues[0].id;
 			}
-			hasLoadedSets = true;
+			hasLoadedQueues = true;
 		} catch (error) {
-			console.error('Failed to fetch sets', error);
-			statusMessage = 'Could not load your sets.';
+			console.error('Failed to fetch queues', error);
+			statusMessage = 'Could not load your queues.';
 		} finally {
-			isLoadingSets = false;
+			isLoadingQueues = false;
 		}
 	};
 
-	const handleAddToSet = async () => {
+	const handleAddToQueue = async () => {
 		const uid = ensureUserId(true);
 		if (!uid) return;
 
-		const targetName = newSetName?.trim();
+		const targetName = newQueueName?.trim();
 		if (!targetName) {
-			statusMessage = 'Enter a new set name.';
+			statusMessage = 'Enter a new queue name.';
 			return;
 		}
 
-		isSavingSet = true;
+		isSavingQueue = true;
 		statusMessage = '';
 		try {
-			const result = await upsertReactionIntoSet({
+			const result = await upsertReactionIntoQueue({
 				nameOrSlug: targetName,
 				reactionId: reactionPageId,
 				userId: uid
 			});
 
 			if (result?.created) {
-				showToast('Set created and reaction added.', TOASTS.SUCCESS);
-				await loadUserSets(false);
-				newSetName = '';
+				showToast('Queue created and reaction added.', TOASTS.SUCCESS);
+				await loadUserQueues(false);
+				newQueueName = '';
 			} else {
-				showToast('Reaction added to set.', TOASTS.SUCCESS);
+				showToast('Reaction added to queue.', TOASTS.SUCCESS);
 			}
 		} catch (error) {
-			console.error('Failed to add reaction to set', error);
-			statusMessage = error?.message || 'Could not add to set.';
+			console.error('Failed to add reaction to queue', error);
+			statusMessage = error?.message || 'Could not add to queue.';
 			showToast(statusMessage, TOASTS.ERROR);
 		} finally {
-			isSavingSet = false;
+			isSavingQueue = false;
 		}
 	};
 
-	const handleToggleSetMembership = async (setSlug, currentlyHasReaction) => {
+	const handleToggleQueueMembership = async (queueSlug, currentlyHasReaction) => {
 		const uid = ensureUserId(true);
 		if (!uid) return;
 
-		isSavingSet = true;
+		isSavingQueue = true;
 		statusMessage = '';
 		try {
 			if (currentlyHasReaction) {
-				await removeReactionFromSet({
-					setSlug,
+				await removeReactionFromQueue({
+					queueSlug,
 					reactionId: reactionPageId,
 					userId: uid
 				});
-				showToast('Reaction removed from set.', TOASTS.SUCCESS);
+				showToast('Reaction removed from queue.', TOASTS.SUCCESS);
 			} else {
-				await upsertReactionIntoSet({
-					nameOrSlug: setSlug,
+				await upsertReactionIntoQueue({
+					nameOrSlug: queueSlug,
 					reactionId: reactionPageId,
 					userId: uid
 				});
-				showToast('Reaction added to set.', TOASTS.SUCCESS);
+				showToast('Reaction added to queue.', TOASTS.SUCCESS);
 			}
-			await loadUserSets(false);
+			await loadUserQueues(false);
 		} catch (error) {
-			console.error('Failed to update set membership', error);
-			statusMessage = error?.message || 'Could not update set.';
+			console.error('Failed to update queue membership', error);
+			statusMessage = error?.message || 'Could not update queue.';
 			showToast(statusMessage, TOASTS.ERROR);
 		} finally {
-			isSavingSet = false;
+			isSavingQueue = false;
 		}
 	};
 
 	const closeMenu = () => {
 		isOpen = false;
-		isSetsSectionOpen = false;
+		isQueuesSectionOpen = false;
 	};
 
 	const toggleMenu = (event) => {
@@ -167,8 +166,8 @@
 		}
 
 		// Opportunistic load when opening the menu
-		if (!isOpen && authedUserId && !hasLoadedSets && !isLoadingSets) {
-			loadUserSets(false);
+		if (!isOpen && authedUserId && !hasLoadedQueues && !isLoadingQueues) {
+			loadUserQueues(false);
 		}
 	};
 
@@ -192,7 +191,7 @@
 	};
 
 	onMount(() => {
-		loadUserSets(false);
+		loadUserQueues(false);
 		window.addEventListener('click', handleClickOutside);
 		window.addEventListener('keydown', handleEscape);
 		window.addEventListener(menuOpenEventName, handleAnotherMenuOpen);
@@ -247,20 +246,20 @@
 				<button
 					type="button"
 					class="flex w-full items-center justify-between rounded-sm px-2 py-1 text-left text-sm font-semibold uppercase tracking-[0.2em] text-text-muted hover:text-text-primary"
-					on:click={() => (isSetsSectionOpen = !isSetsSectionOpen)}
-					aria-expanded={isSetsSectionOpen}
+					on:click={() => (isQueuesSectionOpen = !isQueuesSectionOpen)}
+					aria-expanded={isQueuesSectionOpen}
 					aria-controls={`sets-panel-${buttonId}`}
 				>
-					<span>Sets</span>
-					<span class="text-base">{isSetsSectionOpen ? '▾' : '▸'}</span>
+					<span>Queues</span>
+					<span class="text-base">{isQueuesSectionOpen ? '▾' : '▸'}</span>
 				</button>
 
-				{#if isSetsSectionOpen}
+				{#if isQueuesSectionOpen}
 					<div id={`sets-panel-${buttonId}`} class="mt-2" transition:slide>
 						<div class="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.2em] text-text-muted">
-							<span>Add to set</span>
-							{#if !hasLoadedSets && !isLoadingSets}
-								<button class="text-[11px] font-semibold text-accent-primary" type="button" on:click={() => loadUserSets(true)}>
+							<span>Add to queue</span>
+							{#if !hasLoadedQueues && !isLoadingQueues}
+								<button class="text-[11px] font-semibold text-accent-primary" type="button" on:click={() => loadUserQueues(true)}>
 									Load
 								</button>
 							{/if}
@@ -270,29 +269,29 @@
 							<p class="mt-2 text-xs text-warning">{statusMessage}</p>
 						{/if}
 
-						{#if isLoadingSets}
-							<p class="mt-2 text-xs text-text-muted">Loading your sets…</p>
+						{#if isLoadingQueues}
+							<p class="mt-2 text-xs text-text-muted">Loading your queues…</p>
 						{:else}
 							{#if authedUserId}
 								<div class="mt-2 flex items-center justify-between">
-									<p class="text-xs text-text-muted">Your sets</p>
-									<button class="text-[11px] font-semibold text-accent-primary" type="button" on:click={() => loadUserSets(false)} disabled={isLoadingSets}>
+									<p class="text-xs text-text-muted">Your queues</p>
+									<button class="text-[11px] font-semibold text-accent-primary" type="button" on:click={() => loadUserQueues(false)} disabled={isLoadingQueues}>
 										Refresh
 									</button>
 								</div>
 
-								{#if setsWithReaction?.length}
+								{#if queuesWithReaction?.length}
 									<div class="mt-1 space-y-1">
-										{#each setsWithReaction as set}
+										{#each queuesWithReaction as queue}
 											<button
 												type="button"
 												class="flex w-full items-center justify-between rounded-sm px-2 py-1.5 text-left text-sm text-text-primary transition-colors hover:bg-white/5"
-												on:click={() => handleToggleSetMembership(set.id, set.hasReaction)}
-												disabled={isSavingSet}
+												on:click={() => handleToggleQueueMembership(queue.id, queue.hasReaction)}
+												disabled={isSavingQueue}
 											>
-												<span class="truncate">{set?.data?.title || set.id}</span>
+												<span class="truncate">{queue?.data?.title || queue.id}</span>
 												<span class="ml-2 flex-shrink-0">
-													{#if set.hasReaction}
+													{#if queue.hasReaction}
 														<span class="text-accent-primary">✓</span>
 													{:else}
 														<span class="text-text-muted">+</span>
@@ -302,28 +301,28 @@
 										{/each}
 									</div>
 								{:else}
-									<p class="mt-2 text-xs text-text-muted">No sets yet. Create one below.</p>
+									<p class="mt-2 text-xs text-text-muted">No queues yet. Create one below.</p>
 								{/if}
 
-								<label class="mt-3 block text-xs text-text-muted" for={inputId}>Create new set</label>
+								<label class="mt-3 block text-xs text-text-muted" for={inputId}>Create new queue</label>
 								<input
 									id={inputId}
 									class="w-full rounded-sm border border-white/10 bg-white/5 p-2 text-sm text-text-primary"
-									placeholder="New set name"
-									bind:value={newSetName}
+									placeholder="New queue name"
+									bind:value={newQueueName}
 								/>
 
 								<button
 									class="mt-2 w-full rounded-sm bg-accent-primary px-3 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
 									type="button"
-									on:click={handleAddToSet}
-									disabled={isSavingSet || !newSetName?.trim()}
+									on:click={handleAddToQueue}
+									disabled={isSavingQueue || !newQueueName?.trim()}
 								>
-									{isSavingSet ? 'Saving…' : 'Create & add to set'}
+									{isSavingQueue ? 'Saving…' : 'Create & add to queue'}
 								</button>
 							{:else}
 								<button class="mt-2 w-full rounded-sm bg-accent-primary px-3 py-2 text-sm font-semibold text-white" type="button" on:click={() => handlePrivateRoute()}>
-									Sign in to save to a set
+									Sign in to save to a queue
 								</button>
 							{/if}
 						{/if}

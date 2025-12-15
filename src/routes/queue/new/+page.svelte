@@ -4,7 +4,7 @@
     import { get } from 'svelte/store';
     import { currentUser } from '$lib/stores/user';
     import { handlePrivateRoute } from '$lib/helpers/routing';
-    import { createSetDocument } from '$lib/helpers/firebase';
+    import { createQueueDocument } from '$lib/helpers/firebase';
     import { showToast } from '$lib/stores/toast';
     import { TOASTS } from '$lib/constants/toasts';
 
@@ -85,18 +85,18 @@
 
         isSubmitting = true;
         try {
-            await createSetDocument({
+            await createQueueDocument({
                 slug,
                 title: setForm.title,
                 description: setForm.description,
                 items: filteredItems,
                 userId
             });
-            showToast('Set saved', TOASTS.SUCCESS);
-            await goto(`/set/${slug}`);
+            showToast('Queue saved', TOASTS.SUCCESS);
+            await goto(`/queue/${slug}`);
         } catch (error) {
-            console.error('Failed to create set', error);
-            errorMessage = error?.message || 'Could not save the set.';
+            console.error('Failed to create queue', error);
+            errorMessage = error?.message || 'Could not save the queue.';
         } finally {
             isSubmitting = false;
         }
@@ -104,15 +104,15 @@
 </script>
 
 <svelte:head>
-    <title>Create set • Pure Reactions</title>
+    <title>Create queue • Pure Reactions</title>
 </svelte:head>
 
 <main class="set-new-page bg-background text-text-primary">
     <div class="mx-auto max-w-3xl px-4 py-10 sm:py-14">
         <div class="mb-8 space-y-2">
-            <p class="text-xs uppercase tracking-[0.35em] text-text-muted">Create set</p>
-            <h1 class="text-3xl font-semibold md:text-4xl">New set</h1>
-            <p class="text-sm text-text-muted">Sets are user-owned collections of reaction binomes or playlists. Anyone can view them; only you can create or overwrite yours.</p>
+            <p class="text-xs uppercase tracking-[0.35em] text-text-muted">Create queue</p>
+            <h1 class="text-3xl font-semibold md:text-4xl">New queue</h1>
+            <p class="text-sm text-text-muted">Queues are user-owned collections of reaction binomes or playlists. Anyone can view them; only you can create or overwrite yours.</p>
         </div>
 
         <div class="space-y-8 rounded-2xl border border-white/10 bg-white/5 p-6 shadow-elevated">
@@ -125,7 +125,7 @@
                         bind:value={setForm.slug}
                         autocomplete="off"
                     />
-                    <p class="hint">Used in the URL: /set/&lt;slug&gt;. Must be unique.</p>
+                    <p class="hint">Used in the URL: /queue/&lt;slug&gt;. Must be unique.</p>
                 </label>
                 <label class="field">
                     <span>Title</span>
@@ -186,7 +186,7 @@
 
             <div class="flex justify-end">
                 <button class="btn primary" type="button" on:click={handleSubmit} disabled={isSubmitting}>
-                    {isSubmitting ? 'Saving…' : 'Save set'}
+                    {isSubmitting ? 'Saving…' : 'Save queue'}
                 </button>
             </div>
         </div>
