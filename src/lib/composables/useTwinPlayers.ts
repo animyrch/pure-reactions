@@ -249,7 +249,7 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
   let escListener: ((event: KeyboardEvent) => void) | undefined;
   let pendingPlayerReadyCount = 0;
   let playerReadyTimeout: ReturnType<typeof setTimeout> | undefined;
-  
+
   const YOUTUBE_IFRAME_API_SRC = 'https://www.youtube.com/iframe_api';
   let youtubeApiReadyPromise: Promise<void> | null = null;
 
@@ -857,9 +857,9 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     playlistFetchPromise = (async () => {
       const playlistItems = await fetchFirstPlaylistVideos(youtubePlaylistId);
       const playlistDocument = await getPlaylist(playlistId);
-  const filteredItems = playlistItems.filter((item: any) => playlistDocument.originalVideoIds.includes(item.snippet.resourceId.videoId));
+      const filteredItems = playlistItems.filter((item: any) => playlistDocument.originalVideoIds.includes(item.snippet.resourceId.videoId));
       const snapshot = get(state);
-  const currentIndex = filteredItems.findIndex((item: any) => item.snippet.resourceId.videoId === snapshot.originalVideoId);
+      const currentIndex = filteredItems.findIndex((item: any) => item.snippet.resourceId.videoId === snapshot.originalVideoId);
       updateState({
         playlistItems: filteredItems,
         playlistDocument,
@@ -1007,8 +1007,8 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       globalGain,
       introBufferTime: timeOffset,
       soundLevel,
-  isReactionMuteModeEnabled: Boolean(reactionData?.muteReactionWhileOriginalPlays),
-  isReactionAutoMuted: false,
+      isReactionMuteModeEnabled: Boolean(reactionData?.muteReactionWhileOriginalPlays),
+      isReactionAutoMuted: false,
       currentPlaybackRate,
       playerOriginal: newPlayerOriginal,
       playerReaction: newPlayerReaction,
@@ -1698,7 +1698,7 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
         console.error('Failed to initialize reaction player:', error);
       }
     };
-    
+
     init();
   });
 
@@ -1744,9 +1744,10 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       closeEditMode,
       toggleFineTuneMode,
       setReactionVideoId,
+      seekTo: goToSecondsInReactionVideo,
       setIntroBufferTime,
       setSoundLevel,
-  setReactionMuteMode,
+      setReactionMuteMode,
       createPlayerConfig,
       updatePlayerConfig,
       deletePlayerConfig,
