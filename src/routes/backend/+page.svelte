@@ -186,8 +186,7 @@
     let viewerLabel = "viewers";
     let sessionUnsubscribe = null;
     const YOUTUBE_IFRAME_API_SRC = "https://www.youtube.com/iframe_api";
-    const PLAYER_CONTAINER_ID = "player-original";
-    const PLAYER_CONTAINER_SELECTOR = "#player-original";
+    let playerContainerNode;
     let youtubeApiReadyPromise;
     let hasInitialisedBackend = false;
     let isInitialisingBackend = false;
@@ -255,6 +254,10 @@
             console.error("Cannot load YouTube player without a video id.");
             return;
         }
+        if (!playerContainerNode) {
+            console.error("Player container node not available.");
+            return;
+        }
         console.log("Loading YouTube Player for video ID:", videoIdParam);
         isPlayerOriginalReady = false;
 
@@ -263,7 +266,7 @@
             playerReadyResolve = resolve;
         });
 
-        playerOriginal = new YT.Player(PLAYER_CONTAINER_ID, {
+        playerOriginal = new YT.Player(playerContainerNode, {
             videoId: videoIdParam,
             playerVars: playerOptions,
             events: {
@@ -298,10 +301,7 @@
             if (signal?.aborted) {
                 return false;
             }
-            if (
-                typeof document !== "undefined" &&
-                document.querySelector(PLAYER_CONTAINER_SELECTOR)
-            ) {
+            if (typeof document !== "undefined" && playerContainerNode) {
                 return true;
             }
             await tick();
@@ -1362,7 +1362,7 @@
                                 ></div>
                             {/if}
                             <div
-                                id="player-original"
+                                bind:this={playerContainerNode}
                                 class="h-full w-full"
                             ></div>
                             <div
