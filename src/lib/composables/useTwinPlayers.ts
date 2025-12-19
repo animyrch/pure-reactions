@@ -1,4 +1,4 @@
-import { onDestroy, onMount } from 'svelte';
+import { onDestroy, onMount, tick } from 'svelte';
 import { get, writable } from 'svelte/store';
 import { goto } from '$app/navigation';
 import {
@@ -249,6 +249,9 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
   let escListener: ((event: KeyboardEvent) => void) | undefined;
   let pendingPlayerReadyCount = 0;
   let playerReadyTimeout: ReturnType<typeof setTimeout> | undefined;
+  
+  const YOUTUBE_IFRAME_API_SRC = 'https://www.youtube.com/iframe_api';
+  let youtubeApiReadyPromise: Promise<void> | null = null;
 
   let originalVideoClicked = false;
   let reactionVideoClicked = false;
@@ -768,14 +771,82 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     writeAutoPlayCookie(nextValue, snapshot.playlistDocumentId);
   };
 
-  const loadYouTubeAPI = () => {
+  const injectYoutubeIframeApiScript = () => {
     if (typeof document === 'undefined') {
       return;
     }
+    const existingScript = document.querySelector(`script[src="${YOUTUBE_IFRAME_API_SRC}"]`);
+    if (existingScript) {
+      return;
+    }
     const tag = document.createElement('script');
-    tag.src = 'https://www.youtube.com/iframe_api';
-    const firstScriptTag = document.getElementsByTagName('div')[0];
-    firstScriptTag?.parentNode?.insertBefore(tag, firstScriptTag);
+    tag.src = YOUTUBE_IFRAME_API_SRC;
+    const firstScriptTag = document.getElementsByTagName('script')[0];
+    if (firstScriptTag?.parentNode) {
+      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+    } else {
+      document.head.appendChild(tag);
+    }
+  };
+
+  const waitForYoutubeIframeApiReady = () => {
+    if (typeof window === 'undefined') {
+      return Promise.resolve();
+    }
+
+    if (window.YT && typeof window.YT.Player === 'function') {
+      return Promise.resolve();
+    }
+
+    if (youtubeApiReadyPromise) {
+      return youtubeApiReadyPromise;
+    }
+
+    youtubeApiReadyPromise = new Promise((resolve, reject) => {
+      const previousCallback = (window as any).onYouTubeIframeAPIReady;
+      let intervalId: ReturnType<typeof setInterval>;
+      let timeoutId: ReturnType<typeof setTimeout>;
+
+      const cleanup = () => {
+        if (intervalId) {
+          clearInterval(intervalId);
+        }
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+        if ((window as any).onYouTubeIframeAPIReady === handleReady) {
+          (window as any).onYouTubeIframeAPIReady = previousCallback;
+        }
+      };
+
+      const resolveReady = () => {
+        cleanup();
+        resolve();
+      };
+
+      const handleReady = () => {
+        if (typeof previousCallback === 'function') {
+          previousCallback();
+        }
+        resolveReady();
+      };
+
+      (window as any).onYouTubeIframeAPIReady = handleReady;
+
+      intervalId = setInterval(() => {
+        if (window.YT && typeof window.YT.Player === 'function') {
+          resolveReady();
+        }
+      }, 50);
+
+      timeoutId = setTimeout(() => {
+        cleanup();
+        youtubeApiReadyPromise = null;
+        reject(new Error('YouTube Iframe API failed to load.'));
+      }, 10000);
+    });
+
+    return youtubeApiReadyPromise;
   };
 
   const setPlaylistData = async (playlistId: string | null | undefined, youtubePlaylistId?: string) => {
@@ -1618,14 +1689,17 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       scheduleHideControls();
     }
 
-    if (typeof YT === 'undefined' || typeof YT.Player === 'undefined') {
-      loadYouTubeAPI();
-      (window as any).onYouTubeIframeAPIReady = async () => {
+    const init = async () => {
+      try {
+        injectYoutubeIframeApiScript();
+        await waitForYoutubeIframeApiReady();
         await buildInterface(get(state).pageSlug);
-      };
-    } else {
-      buildInterface(get(state).pageSlug);
-    }
+      } catch (error) {
+        console.error('Failed to initialize reaction player:', error);
+      }
+    };
+    
+    init();
   });
 
   onDestroy(() => {
