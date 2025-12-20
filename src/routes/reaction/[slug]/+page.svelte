@@ -206,6 +206,16 @@
                 class="absolute inset-0 h-full w-full"
               ></div>
             </div>
+            {#if $state.showCinematicBars}
+              <div
+                class="pointer-events-none absolute inset-x-0 top-0 h-[12%] bg-gradient-to-b from-black via-black/80 to-transparent"
+                aria-hidden="true"
+              ></div>
+              <div
+                class="pointer-events-none absolute inset-x-0 bottom-0 h-[12%] bg-gradient-to-t from-black via-black/80 to-transparent"
+                aria-hidden="true"
+              ></div>
+            {/if}
           </div>
         {:else if $state.isUsersOwnVideo}
           <MissingReactionPlaceholder

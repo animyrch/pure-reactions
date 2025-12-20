@@ -155,7 +155,7 @@
 >
     {#if !bothVideosStarted}
         <p
-            class="max-w-md rounded-md bg-overlay/80 px-md py-sm text-center text-sm text-text-secondary backdrop-blur"
+            class="max-w-lg rounded-md bg-overlay/80 px-md py-sm text-center text-sm text-text-secondary backdrop-blur"
         >
             Tap or click each video once to sync playback, then use the controls
             here.

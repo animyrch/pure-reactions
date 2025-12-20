@@ -208,7 +208,7 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     queueSlug: initialUrlState.queueSlug,
     queueIndex: Number.isFinite(initialUrlState.queueIndex as number) ? (initialUrlState.queueIndex as number) : 0,
     isQueueAutoPlay: Boolean(initialUrlState.queueAutoPlay),
-    showCinematicBars: false,
+    showCinematicBars: true,
     isFullscreen: initialUrlState.isFullscreen,
     isControlSurfaceVisible: false,
     isExitButtonExpanded: false,
