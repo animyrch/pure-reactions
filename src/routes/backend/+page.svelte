@@ -161,8 +161,14 @@
             showRecorder = params.has("record");
             const nextPlaylistDocumentId =
                 params.get("playlistDocumentId") || "";
-            if (!currentPlaylistDocumentId && nextPlaylistDocumentId !== currentPlaylistDocumentId) {
-                console.log("setting playlist document id", nextPlaylistDocumentId);
+            if (
+                !currentPlaylistDocumentId &&
+                nextPlaylistDocumentId !== currentPlaylistDocumentId
+            ) {
+                console.log(
+                    "setting playlist document id",
+                    nextPlaylistDocumentId,
+                );
                 currentPlaylistDocumentId = nextPlaylistDocumentId;
                 hasInitialisedBackend = false;
             }
@@ -1051,12 +1057,11 @@
         // No next video - go to reaction configuration
         else if (currentPlaylistDocumentId) {
             goToRoute(
-                `/batch-config?playlistDocumentId=${currentPlaylistDocumentId}`,
+                `/batch-edit?playlistDocumentId=${currentPlaylistDocumentId}`,
             );
             return;
         }
         goToReactionConfiguration();
-
     };
 
     const onClickShareSession = () => {

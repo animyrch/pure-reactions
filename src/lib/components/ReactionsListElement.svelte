@@ -1,25 +1,22 @@
 <script>
-    import { onMount } from 'svelte';
     import ReactionThumbnail from '$lib/components/ReactionThumbnail.svelte';
 
     export let reaction;
 
-    const itemType = reaction?.type || 'reaction';
+    const playlistId = reaction?.data?.playlistId;
+    const itemType = reaction?.type === 'queue'
+        ? 'queue'
+        : playlistId
+          ? 'playlist'
+          : reaction?.type || 'reaction';
     const reactionPageId = reaction?.id;
     const reactionVideoId = reaction?.data?.reactionVideoId;
     const originalVideoId = reaction?.data?.originalVideoId;
     const reactionVideoTitle = reaction?.data?.reactionVideoTitle;
     const reactionVideoAuthor = reaction?.data?.reactionVideoAuthor;
     const originalVideoTitle = reaction?.data?.originalVideoTitle;
-    const playlistId = reaction?.data?.playlistId;
     const queueTitle = reaction?.data?.title;
     const queueSlug = reaction?.data?.slug;
-
-    let rootEl;
-    let isVisible = false;
-
-    const headline = reactionVideoTitle || originalVideoTitle || queueTitle || 'Untitled reaction';
-    const authorLabel = reactionVideoAuthor ? `by ${reactionVideoAuthor}` : 'Reaction';
 </script>
 
 <div>

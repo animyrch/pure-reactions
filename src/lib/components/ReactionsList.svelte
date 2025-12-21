@@ -1,6 +1,5 @@
 <script>
     import ReactionsListElement from '$lib/components/ReactionsListElement.svelte';
-    import PlaylistsListElement from "$lib/components/PlaylistsListElement.svelte";
 
     export let reactions = [];
     export let loading = false;

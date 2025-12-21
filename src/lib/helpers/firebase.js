@@ -172,15 +172,14 @@ export const updateFirebaseDocument = async (dataToUpdate, documentId) => {
         const targetDocumentId = documentId || (typeof window !== 'undefined' ? window.currentReactionDocumentId : undefined);
         if (!targetDocumentId) {
             console.error('Error updating document: missing reaction document id');
-            return;
+            return false;
         }
-        const documentRef = doc(
-            reactionsCollection,
-            targetDocumentId
-        );
+        const documentRef = doc(reactionsCollection, targetDocumentId);
         await updateDoc(documentRef, dataToUpdate);
+        return true;
     } catch (error) {
         console.error('Error updating document: ', error);
+        return false;
     }
 };
 

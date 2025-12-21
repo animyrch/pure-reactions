@@ -28,6 +28,8 @@
     let selectedReactionIds = new Set();
     let batchReactionInput = "";
     let isApplying = false;
+    let isPublishingBatch = false;
+    let publishingReactionIds = new Set();
 
     // Load data on mount
     onMount(async () => {
@@ -124,11 +126,16 @@
                 isPublished: false, // Reset published state maybe? Or keep as is. usually editing resets it.
             };
 
-            const updatePromises = Array.from(selectedReactionIds).map((id) =>
-                updateFirebaseDocument(updates, id),
+            const updateResults = await Promise.all(
+                Array.from(selectedReactionIds).map((id) =>
+                    updateFirebaseDocument(updates, id),
+                ),
             );
 
-            await Promise.all(updatePromises);
+            const allSucceeded = updateResults.every(Boolean);
+            if (!allSucceeded) {
+                throw new Error('One or more updates failed');
+            }
 
             // Update local state
             reactions = reactions.map((r) => {
@@ -159,6 +166,105 @@
             );
         } else {
             goto("/");
+        }
+    }
+
+    const canPublishReaction = (reaction) => Boolean(reaction?.reactionVideoId);
+
+    async function setReactionPublishState(reactionId, nextIsPublished) {
+        if (publishingReactionIds.has(reactionId)) return;
+        const target = reactions.find((r) => r.id === reactionId);
+        if (!target) return;
+
+        if (nextIsPublished && !canPublishReaction(target)) {
+            showToast(
+                "Can't publish: missing reaction video",
+                TOASTS.WARNING,
+            );
+            return;
+        }
+
+        publishingReactionIds.add(reactionId);
+        publishingReactionIds = publishingReactionIds;
+
+        try {
+            const ok = await updateFirebaseDocument(
+                { isPublished: nextIsPublished },
+                reactionId,
+            );
+            if (!ok) {
+                showToast(
+                    "Failed to update publish status",
+                    TOASTS.ERROR,
+                );
+                return;
+            }
+            reactions = reactions.map((r) =>
+                r.id === reactionId ? { ...r, isPublished: nextIsPublished } : r,
+            );
+            showToast(
+                nextIsPublished ? "Published" : "Unpublished",
+                TOASTS.SUCCESS,
+            );
+        } finally {
+            publishingReactionIds.delete(reactionId);
+            publishingReactionIds = publishingReactionIds;
+        }
+    }
+
+    async function applyPublishStateToSelected(nextIsPublished) {
+        if (selectedReactionIds.size === 0) {
+            showToast("Please select at least one item", TOASTS.WARNING);
+            return;
+        }
+
+        isPublishingBatch = true;
+        try {
+            const selectedIds = Array.from(selectedReactionIds);
+
+            let skipped = 0;
+            const eligibleIds = selectedIds.filter((id) => {
+                if (!nextIsPublished) return true;
+                const reaction = reactions.find((r) => r.id === id);
+                if (reaction && canPublishReaction(reaction)) return true;
+                skipped += 1;
+                return false;
+            });
+
+            const results = await Promise.all(
+                eligibleIds.map((id) =>
+                    updateFirebaseDocument({ isPublished: nextIsPublished }, id),
+                ),
+            );
+
+            const succeededIds = eligibleIds.filter((_, index) => results[index]);
+            const failedCount = eligibleIds.length - succeededIds.length;
+
+            if (succeededIds.length) {
+                const succeededSet = new Set(succeededIds);
+                reactions = reactions.map((r) =>
+                    succeededSet.has(r.id)
+                        ? { ...r, isPublished: nextIsPublished }
+                        : r,
+                );
+            }
+
+            if (failedCount > 0) {
+                showToast(
+                    `Some updates failed (${failedCount})`,
+                    TOASTS.ERROR,
+                );
+            } else {
+                const suffix = skipped ? ` (skipped ${skipped} missing)` : "";
+                showToast(
+                    `${nextIsPublished ? "Published" : "Unpublished"} ${
+                        succeededIds.length
+                    }${suffix}`,
+                    TOASTS.SUCCESS,
+                );
+            }
+        } finally {
+            isPublishingBatch = false;
         }
     }
 </script>
@@ -236,6 +342,31 @@
                     below. Use this if you recorded one long video for the
                     entire playlist.
                 </p>
+
+                <div class="mt-5 flex flex-wrap gap-3">
+                    <button
+                        on:click={() => applyPublishStateToSelected(true)}
+                        disabled={isApplying || isPublishingBatch || selectedReactionIds.size === 0}
+                        class="flex items-center justify-center gap-2 rounded-xl bg-emerald-500/10 px-5 py-2.5 text-sm font-semibold text-emerald-300 transition hover:bg-emerald-500/20 disabled:opacity-50 disabled:hover:bg-emerald-500/10"
+                    >
+                        {#if isPublishingBatch}
+                            <SubtleLoader size="sm" />
+                        {:else}
+                            <span>Publish {selectedReactionIds.size} Selected</span>
+                        {/if}
+                    </button>
+                    <button
+                        on:click={() => applyPublishStateToSelected(false)}
+                        disabled={isApplying || isPublishingBatch || selectedReactionIds.size === 0}
+                        class="flex items-center justify-center gap-2 rounded-xl bg-slate-800 px-5 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-slate-700 disabled:opacity-50 disabled:hover:bg-slate-800"
+                    >
+                        {#if isPublishingBatch}
+                            <SubtleLoader size="sm" />
+                        {:else}
+                            <span>Unpublish {selectedReactionIds.size} Selected</span>
+                        {/if}
+                    </button>
+                </div>
             </section>
 
             <!-- Table -->
@@ -263,6 +394,7 @@
                                     >Reaction Video</th
                                 >
                                 <th class="px-6 py-4 tracking-wider">Status</th>
+                                <th class="px-6 py-4 tracking-wider">Publish</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-800/50">
@@ -339,6 +471,50 @@
                                                 <span>Missing</span>
                                             </div>
                                         {/if}
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center gap-3">
+                                            {#if reaction.isPublished}
+                                                <span
+                                                    class="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300"
+                                                >
+                                                    Published
+                                                </span>
+                                            {:else}
+                                                <span
+                                                    class="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-300"
+                                                >
+                                                    Unpublished
+                                                </span>
+                                            {/if}
+
+                                            {#if publishingReactionIds.has(reaction.id)}
+                                                <SubtleLoader size="sm" />
+                                            {:else if reaction.isPublished}
+                                                <button
+                                                    on:click={() =>
+                                                        setReactionPublishState(
+                                                            reaction.id,
+                                                            false,
+                                                        )}
+                                                    class="rounded-lg bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:bg-slate-700"
+                                                >
+                                                    Unpublish
+                                                </button>
+                                            {:else}
+                                                <button
+                                                    on:click={() =>
+                                                        setReactionPublishState(
+                                                            reaction.id,
+                                                            true,
+                                                        )}
+                                                    disabled={!reaction.reactionVideoId}
+                                                    class="rounded-lg bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-500/20 disabled:opacity-50 disabled:hover:bg-emerald-500/10"
+                                                >
+                                                    Publish
+                                                </button>
+                                            {/if}
+                                        </div>
                                     </td>
                                 </tr>
                             {/each}

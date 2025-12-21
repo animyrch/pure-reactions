@@ -120,6 +120,14 @@
           if (!browser) return;
           goto(`/edit-reaction/${$state.pageSlug}`);
         },
+        editPlaylist: $state.playlistDocumentId
+          ? () => {
+              if (!browser) return;
+              goto(
+                `/batch-edit?playlistDocumentId=${$state.playlistDocumentId}`,
+              );
+            }
+          : null,
         closeEditMode: null,
         setIsPublished: actions.setIsPublished,
         setIsUnpublished: actions.setIsUnpublished,

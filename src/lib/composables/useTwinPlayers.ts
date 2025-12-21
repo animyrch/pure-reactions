@@ -1691,8 +1691,13 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
 
     const init = async () => {
       try {
+        await tick();
         injectYoutubeIframeApiScript();
         await waitForYoutubeIframeApiReady();
+        if (!document.getElementById('player-original')) {
+          console.warn('Player element not found, skipping initialization');
+          return;
+        }
         await buildInterface(get(state).pageSlug);
       } catch (error) {
         console.error('Failed to initialize reaction player:', error);

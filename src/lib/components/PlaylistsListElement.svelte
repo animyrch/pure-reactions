@@ -1,6 +1,6 @@
 <script>
     import ReactionThumbnail from "$lib/components/ReactionThumbnail.svelte";
-    
+
     export let playlist;
     const reaction = playlist.firstReactionBinomeData;
     const reactionPageId = playlist.data?.reactionBinomeIds?.[0];
@@ -21,5 +21,6 @@
         {originalVideoTitle}
         {reactionVideoAuthor}
         {playlistId}
+        itemType="playlist"
     />
 </div>
