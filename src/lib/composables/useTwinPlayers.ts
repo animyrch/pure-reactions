@@ -1330,6 +1330,19 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     updateState({ timeOffset: parsed, introBufferTime: parsed });
   };
 
+  const setReactionFinishTime = async (value: number) => {
+    const parsed = Number(value);
+    if (Number.isNaN(parsed)) {
+      return;
+    }
+    const snapshot = get(state);
+    if (!snapshot.youtubePlaylistId) {
+      return;
+    }
+    await updateFirebaseDocument({ reactionFinishTime: parsed });
+    updateState({ reactionFinishTime: parsed });
+  };
+
   const setSoundLevel = async (value: number) => {
     const gain = Number(value) / 100;
     await updateFirebaseDocument({ globalGain: Number.isNaN(gain) ? 1.0 : gain });
@@ -1751,6 +1764,7 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       setReactionVideoId,
       seekTo: goToSecondsInReactionVideo,
       setIntroBufferTime,
+      setReactionFinishTime,
       setSoundLevel,
       setReactionMuteMode,
       createPlayerConfig,

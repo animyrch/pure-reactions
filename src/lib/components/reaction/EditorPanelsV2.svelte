@@ -8,10 +8,12 @@
   export let isReactionMissing = false;
   export let isEditModeOn = false;
   export let isFineTuneModeOn = false;
+  export let isPlaylist = false;
   export let reactionVideoId = '';
   export let reactionVideoIdError = '';
   export let isSettingReactionVideoId = false;
   export let introBufferTime = 0;
+  export let reactionFinishTime = 0;
   export let soundLevel = 100;
   export let isReactionMuteModeEnabled = false;
   export let playerConfigs = {};
@@ -29,6 +31,7 @@
 
   export let onSetReactionVideoId = () => {};
   export let onSetIntroBufferTime = () => {};
+  export let onSetReactionFinishTime = () => {};
   export let onSetSoundLevel = () => {};
   export let onSetReactionMuteMode = () => {};
   export let onToggleFineTuneMode = () => {};
@@ -39,10 +42,12 @@
 
   let reactionVideoIdValue = reactionVideoId ?? '';
   let introBufferTimeValue = introBufferTime?.toString?.() ?? '';
+  let reactionFinishTimeValue = reactionFinishTime?.toString?.() ?? '';
   let soundLevelValue = Number.isFinite(soundLevel) ? soundLevel : 100;
 
   let lastReactionVideoIdProp = reactionVideoId;
   let lastIntroBufferTimeProp = introBufferTime;
+  let lastReactionFinishTimeProp = reactionFinishTime;
   let lastSoundLevelProp = soundLevel;
 
   $: if (reactionVideoId !== lastReactionVideoIdProp) {
@@ -53,6 +58,11 @@
   $: if (introBufferTime !== lastIntroBufferTimeProp) {
     lastIntroBufferTimeProp = introBufferTime;
     introBufferTimeValue = introBufferTime?.toString?.() ?? '';
+  }
+
+  $: if (reactionFinishTime !== lastReactionFinishTimeProp) {
+    lastReactionFinishTimeProp = reactionFinishTime;
+    reactionFinishTimeValue = reactionFinishTime?.toString?.() ?? '';
   }
 
   $: if (soundLevel !== lastSoundLevelProp) {
@@ -68,6 +78,10 @@
   $: isIntroBufferTimeValid = !Number.isNaN(parsedIntroBufferTimeValue);
   $: isIntroBufferTimeDirty = isIntroBufferTimeValid && parsedIntroBufferTimeValue !== introBufferTime;
 
+  $: parsedReactionFinishTimeValue = Number.parseFloat(reactionFinishTimeValue);
+  $: isReactionFinishTimeValid = !Number.isNaN(parsedReactionFinishTimeValue);
+  $: isReactionFinishTimeDirty = isReactionFinishTimeValid && parsedReactionFinishTimeValue !== reactionFinishTime;
+
   $: isSoundLevelDirty = Number.isFinite(soundLevelValue) && soundLevelValue !== soundLevel;
 
   const handleReactionVideoSubmit = () => {
@@ -78,6 +92,11 @@
   const handleIntroBufferSubmit = () => {
     if (!isIntroBufferTimeValid) return;
     onSetIntroBufferTime(parsedIntroBufferTimeValue);
+  };
+
+  const handleReactionFinishTimeSubmit = () => {
+    if (!isReactionFinishTimeValid) return;
+    onSetReactionFinishTime(parsedReactionFinishTimeValue);
   };
 
   const handleSoundLevelSubmit = () => {
@@ -202,6 +221,28 @@
             </CinematicButton>
           </div>
         </form>
+
+        {#if isPlaylist}
+          <form class="flex flex-col gap-4 md:flex-row md:items-center" on:submit|preventDefault={handleReactionFinishTimeSubmit}>
+            <div class="flex-1">
+              <AccessibleInput
+                id="reaction-finish-time"
+                label="Reaction finish time (seconds)"
+                type="number"
+                min="0"
+                step="0.1"
+                bind:value={reactionFinishTimeValue}
+                helperText="Stop the reaction video once it reaches this timestamp (playlist reactions only)."
+                required
+              />
+            </div>
+            <div class="flex-none">
+              <CinematicButton type="submit" size="sm" variant="secondary" disabled={!isReactionFinishTimeDirty}>
+                <span>Save finish time</span>
+              </CinematicButton>
+            </div>
+          </form>
+        {/if}
 
         <form class="flex flex-col gap-4" on:submit|preventDefault={handleSoundLevelSubmit}>
           <div class="flex w-full flex-col gap-2">

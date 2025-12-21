@@ -1380,19 +1380,6 @@
                             <div
                                 class="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/70 via-slate-950/10 to-transparent"
                             ></div>
-                            <div
-                                class="pointer-events-none absolute bottom-5 left-6 flex items-center gap-3 text-sm font-mono text-slate-200"
-                            >
-                                <span
-                                    class="text-xs uppercase tracking-[0.3em] text-slate-500"
-                                    >Timeline</span
-                                >
-                                <span
-                                    class="rounded-full bg-slate-950/60 px-3 py-1 text-base font-semibold text-white"
-                                >
-                                    {currentTimeDisplay}
-                                </span>
-                            </div>
                         </div>
                     </div>
 

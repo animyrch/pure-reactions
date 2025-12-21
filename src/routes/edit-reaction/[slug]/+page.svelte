@@ -17,7 +17,6 @@
   import { TOASTS } from '$lib/constants/toasts';
 
   export let data;
-  // console.log('Edit Reaction Page Data:', data);
   const { state, actions } = useTwinPlayers({ data });
 
   let overlayRef;
@@ -64,6 +63,10 @@
 
   const handleSetIntroBufferTime = async (value) => {
     await actions.editActionEntryPoint(() => actions.setIntroBufferTime(value));
+  };
+
+  const handleSetReactionFinishTime = async (value) => {
+    await actions.editActionEntryPoint(() => actions.setReactionFinishTime(value));
   };
 
   const handleSetSoundLevel = async (value) => {
@@ -274,10 +277,12 @@
           isReactionMissing={$state.isReactionMissing}
           isEditModeOn={$state.isEditModeOn}
           isFineTuneModeOn={$state.isFineTuneModeOn}
+          isPlaylist={Boolean($state.youtubePlaylistId)}
           reactionVideoId={$state.reactionVideoId}
           reactionVideoIdError={reactionVideoIdError}
           isSettingReactionVideoId={isSettingReactionVideoId}
           introBufferTime={$state.introBufferTime}
+          reactionFinishTime={$state.reactionFinishTime}
           soundLevel={$state.soundLevel}
           isReactionMuteModeEnabled={$state.isReactionMuteModeEnabled}
           playerConfigs={$state.playerConfigs}
@@ -294,6 +299,7 @@
           onDeletePlayerConfig={actions.deletePlayerConfig}
           onSetReactionVideoId={handleSetReactionVideoId}
           onSetIntroBufferTime={handleSetIntroBufferTime}
+          onSetReactionFinishTime={handleSetReactionFinishTime}
           onSetSoundLevel={handleSetSoundLevel}
           onSetReactionMuteMode={handleSetReactionMuteMode}
           onToggleFineTuneMode={actions.toggleFineTuneMode}
