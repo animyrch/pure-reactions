@@ -100,6 +100,9 @@
   let pendingVolumeInput = '100';
   let pendingPlaybackRateInput = '1';
 
+  let activeVolumeInput = '100';
+  let activePlaybackRateInput = '1';
+
   const PENDING_TARGET_MINUTES_INPUT_ID = 'pending-target-minutes';
   const PENDING_TARGET_SECONDS_INPUT_ID = 'pending-target-seconds';
   const ACTIVE_TARGET_MINUTES_INPUT_ID = 'active-target-minutes';
@@ -217,6 +220,7 @@
       const targetTime = sanitizeNumber(event?.targetTime ?? event?.time, 0);
       return {
         id: event?.id ?? `player-marker-${index}`,
+        trackId: 'player',
         label: markerMeta.label,
         tone: markerMeta.tone,
         position: `${(normalized * 100).toFixed(3)}%`,
@@ -241,6 +245,7 @@
       const displayValue = formatRateDisplay(rate);
       return {
         id: event?.id ?? `speed-marker-${index}`,
+        trackId: 'speed',
         label: `Playback speed ${displayValue}`,
         tone: 'speed',
         position: `${(normalized * 100).toFixed(3)}%`,
@@ -249,7 +254,7 @@
         timeInReaction,
         rate,
         displayValue,
-        editable: false
+        editable: true
       };
     })
     .filter(Boolean);
@@ -262,6 +267,7 @@
       const displayValue = formatVolumeDisplay(volume);
       return {
         id: event?.id ?? `volume-marker-${index}`,
+        trackId: 'volume',
         label: `Volume ${displayValue}`,
         tone: 'volume',
         position: `${(normalized * 100).toFixed(3)}%`,
@@ -270,7 +276,7 @@
         timeInReaction,
         volume,
         displayValue,
-        editable: false
+        editable: true
       };
     })
     .filter(Boolean);
@@ -395,9 +401,13 @@
   }
 
   $: if (activeMarker && !activeMarkerIsDirty) {
-    const exists = playerMarkers.some(
-      (marker) => Math.abs(marker.timeInReaction - activeMarker.initialTimeInReaction) < 0.001
-    );
+    const markerList =
+      activeMarker.trackId === 'volume'
+        ? volumeMarkers
+        : activeMarker.trackId === 'speed'
+          ? playbackRateMarkers
+          : playerMarkers;
+    const exists = markerList.some((marker) => Math.abs(marker.timeInReaction - activeMarker.initialTimeInReaction) < 0.001);
     if (!exists) {
       closeMarkerEditor();
     }
@@ -670,7 +680,7 @@
     );
     enforceActiveTargetLock();
     if (activeMarker) {
-      const { initialTimeInReaction, initialTargetTime, initialState } = activeMarker;
+      const { initialTimeInReaction, initialTargetTime, initialState, initialVolume, initialRate } = activeMarker;
       const nextRatio =
         viewportSpan > 0 ? clamp01((activeReactionSeconds - safeViewportStart) / viewportSpan) : 0;
       activeMarker = {
@@ -680,7 +690,9 @@
         ratio: nextRatio,
         initialTimeInReaction,
         initialTargetTime,
-        initialState
+        initialState,
+        initialVolume,
+        initialRate
       };
     }
   };
@@ -723,6 +735,8 @@
     activeTargetSeconds = 0;
     activeReactionSeconds = 0;
     activeMarkerIsDirty = false;
+    activeVolumeInput = '100';
+    activePlaybackRateInput = '1';
   };
 
   const handleTimelineClick = (event) => {
@@ -845,25 +859,85 @@
     pendingConfig = null;
     hoverViewportRatio = null;
     hoverTimeLabel = null;
+    const trackId = marker.trackId ?? 'player';
+    const markerTargetTime = Number.isFinite(marker.targetTime) ? marker.targetTime : 0;
+    const markerState = typeof marker.state === 'number' && Number.isFinite(marker.state) ? marker.state : 0;
     activeMarker = {
       id: marker.id,
+      trackId,
       ratio: marker.ratio,
       timeInReaction: marker.timeInReaction,
-      targetTime: marker.targetTime,
-      state: marker.state,
+      targetTime: markerTargetTime,
+      state: markerState,
+      volume: marker.volume,
+      rate: marker.rate,
       initialTimeInReaction: marker.timeInReaction,
-      initialTargetTime: marker.targetTime,
-      initialState: marker.state
+      initialTargetTime: markerTargetTime,
+      initialState: markerState,
+      initialVolume: marker.volume,
+      initialRate: marker.rate
     };
     const reactionFormatted = formatSecondsForInput(marker.timeInReaction);
     activeReactionMinutesInput = reactionFormatted.minutes;
     activeReactionSecondsInput = reactionFormatted.seconds;
-    const targetFormatted = formatSecondsForInput(marker.targetTime);
-    activeTargetMinutesInput = targetFormatted.minutes;
-    activeTargetSecondsInput = targetFormatted.seconds;
+
+    if (trackId === 'player') {
+      const targetFormatted = formatSecondsForInput(markerTargetTime);
+      activeTargetMinutesInput = targetFormatted.minutes;
+      activeTargetSecondsInput = targetFormatted.seconds;
+    } else {
+      activeTargetMinutesInput = '0';
+      activeTargetSecondsInput = '0.00';
+      activeTargetSeconds = 0;
+    }
+
+    if (trackId === 'volume') {
+      const initialVolume = Number.isFinite(marker.volume) ? marker.volume : 100;
+      activeVolumeInput = String(Math.round(Math.min(Math.max(initialVolume, 0), 100)));
+    }
+
+    if (trackId === 'speed') {
+      const initialRate = Number.isFinite(marker.rate) && marker.rate > 0 ? marker.rate : 1;
+      activePlaybackRateInput = String(Math.round(initialRate * 100) / 100);
+    }
     activeMarkerIsDirty = false;
     refreshActiveDerivedValues();
-    enforceActiveTargetLock();
+  };
+
+  const confirmVolumeUpdate = () => {
+    if (!activeMarker) return;
+    const volume = Math.round(Math.min(Math.max(Number.parseFloat(activeVolumeInput), 0), 100));
+    dispatch('updateVolumeConfig', {
+      timeInReaction: activeMarker.timeInReaction,
+      volume,
+      previousTimeInReaction: activeMarker.initialTimeInReaction
+    });
+    closeMarkerEditor();
+  };
+
+  const confirmPlaybackRateUpdate = () => {
+    if (!activeMarker) return;
+    const rateCandidate = Number.parseFloat(activePlaybackRateInput);
+    const rate = Number.isFinite(rateCandidate) && rateCandidate > 0 ? rateCandidate : 1;
+    dispatch('updatePlaybackRateConfig', {
+      timeInReaction: activeMarker.timeInReaction,
+      rate,
+      previousTimeInReaction: activeMarker.initialTimeInReaction
+    });
+    closeMarkerEditor();
+  };
+
+  const handleActiveMarkerDelete = () => {
+    if (!activeMarker) return;
+    if (activeMarker.trackId === 'volume') {
+      dispatch('deleteVolumeConfig', { timeInReaction: activeMarker.initialTimeInReaction });
+    } else if (activeMarker.trackId === 'speed') {
+      dispatch('deletePlaybackRateConfig', { timeInReaction: activeMarker.initialTimeInReaction });
+    } else {
+      handleMarkerDelete();
+      return;
+    }
+    closeMarkerEditor();
   };
 
   const handleMarkerKeydown = (event, marker) => {
@@ -978,7 +1052,7 @@
                 {#if marker.editable}
                   <button
                     type="button"
-                    class={`pointer-events-auto relative inline-flex h-4 w-4 hover:h-8 hover:w-8 hover:z-30 items-center justify-center rounded-full transition backdrop-blur-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 hover:z-30 focus-visible:z-30 ${MARKER_STYLES[marker.tone] ?? 'bg-background/80 text-text-muted'} ${isMarkerActive(marker) ? 'ring-2 ring-accent-primary/60' : ''}`}
+                    class={`pointer-events-auto relative inline-flex items-center justify-center rounded-full transition backdrop-blur-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 hover:z-30 focus-visible:z-30 ${marker.icon ? 'h-4 w-4 hover:h-8 hover:w-8 hover:z-30' : 'min-w-[2.25rem] px-2 py-1 text-[10px] font-semibold leading-none'} ${MARKER_STYLES[marker.tone] ?? 'bg-background/80 text-text-muted'} ${isMarkerActive(marker) ? 'ring-2 ring-accent-primary/60' : ''}`}
                     title={`${marker.label} at ${marker.timeLabel}`}
                     aria-label={`${marker.label} at ${marker.timeLabel}`}
                     data-marker-interaction="true"
@@ -987,7 +1061,11 @@
                     on:mousedown|stopPropagation
                   >
                     <span class="sr-only">{marker.label} at {marker.timeLabel}</span>
-                    <svelte:component this={marker.icon} class="h-2 w-2 hover:h-4 hover:w-4 hover:z-30 transition-transform" aria-hidden="true" />
+                    {#if marker.icon}
+                      <svelte:component this={marker.icon} class="h-2 w-2 hover:h-4 hover:w-4 hover:z-30 transition-transform" aria-hidden="true" />
+                    {:else}
+                      <span aria-hidden="true">{marker.displayValue}</span>
+                    {/if}
                   </button>
                 {:else}
                   <div
@@ -1184,7 +1262,11 @@
         style={`left: ${(activeMarker.ratio * 100).toFixed(3)}%`}
         role="dialog"
         aria-modal="false"
-        aria-label="Edit playback configuration"
+        aria-label={activeMarker.trackId === 'volume'
+          ? 'Edit volume cue'
+          : activeMarker.trackId === 'speed'
+            ? 'Edit playback speed cue'
+            : 'Edit playback cue'}
         on:click|stopPropagation
         on:keydown|stopPropagation
         tabindex="-1"
@@ -1230,70 +1312,130 @@
               <span class="text-xs text-text-muted">sec</span>
             </div>
           </div>
-          <span class="text-xs text-text-muted whitespace-nowrap">Original video at</span>
-          <div class="flex flex-nowrap items-end gap-3">
-            <div class="flex items-center gap-1">
-              <label class="sr-only" for={ACTIVE_TARGET_MINUTES_INPUT_ID}>Original minutes</label>
-              <input
-                id={ACTIVE_TARGET_MINUTES_INPUT_ID}
-                type="number"
-                min="0"
-                step="1"
-                inputmode="numeric"
-                class="w-16 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
-                value={activeTargetMinutesInput}
-                on:input={(event) => {
-                  activeTargetMinutesInput = event.currentTarget.value;
-                  activeMarkerIsDirty = true;
-                  refreshActiveDerivedValues();
-                }}
-              />
-              <span class="text-xs text-text-muted">min</span>
+          {#if activeMarker.trackId === 'player'}
+            <span class="text-xs text-text-muted whitespace-nowrap">Original video at</span>
+            <div class="flex flex-nowrap items-end gap-3">
+              <div class="flex items-center gap-1">
+                <label class="sr-only" for={ACTIVE_TARGET_MINUTES_INPUT_ID}>Original minutes</label>
+                <input
+                  id={ACTIVE_TARGET_MINUTES_INPUT_ID}
+                  type="number"
+                  min="0"
+                  step="1"
+                  inputmode="numeric"
+                  class="w-16 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                  value={activeTargetMinutesInput}
+                  on:input={(event) => {
+                    activeTargetMinutesInput = event.currentTarget.value;
+                    activeMarkerIsDirty = true;
+                    refreshActiveDerivedValues();
+                  }}
+                />
+                <span class="text-xs text-text-muted">min</span>
+              </div>
+              <div class="flex items-center gap-1">
+                <label class="sr-only" for={ACTIVE_TARGET_SECONDS_INPUT_ID}>Original seconds</label>
+                <input
+                  id={ACTIVE_TARGET_SECONDS_INPUT_ID}
+                  type="number"
+                  min="0"
+                  max="59.99"
+                  step="0.01"
+                  inputmode="decimal"
+                  class="w-20 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                  value={activeTargetSecondsInput}
+                  on:input={(event) => {
+                    activeTargetSecondsInput = event.currentTarget.value;
+                    activeMarkerIsDirty = true;
+                    refreshActiveDerivedValues();
+                  }}
+                />
+                <span class="text-xs text-text-muted">sec</span>
+              </div>
             </div>
-            <div class="flex items-center gap-1">
-              <label class="sr-only" for={ACTIVE_TARGET_SECONDS_INPUT_ID}>Original seconds</label>
-              <input
-                id={ACTIVE_TARGET_SECONDS_INPUT_ID}
-                type="number"
-                min="0"
-                max="59.99"
-                step="0.01"
-                inputmode="decimal"
-                class="w-20 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
-                value={activeTargetSecondsInput}
-                on:input={(event) => {
-                  activeTargetSecondsInput = event.currentTarget.value;
+          {/if}
+        </div>
+        {#if activeMarker.trackId === 'player'}
+          <div class="flex flex-wrap gap-2">
+            <button
+              type="button"
+              class={`flex-1 rounded-md border bg-surface/90 px-2 py-1 font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 hover:border-accent-primary/50 hover:text-accent-primary ${(activeMarker.state === 1) ? 'border-accent-primary/60 text-accent-primary' : 'border-border-strong/70 text-text-primary'}`}
+              aria-pressed={activeMarker.state === 1}
+              on:click|stopPropagation={() => confirmMarkerUpdate(1)}
+            >
+              Play original here
+            </button>
+            <button
+              type="button"
+              class={`flex-1 rounded-md border bg-surface/90 px-2 py-1 font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 hover:border-accent-primary/50 hover:text-accent-primary ${(activeMarker.state === 2) ? 'border-accent-primary/60 text-accent-primary' : 'border-border-strong/70 text-text-primary'}`}
+              aria-pressed={activeMarker.state === 2}
+              on:click|stopPropagation={() => confirmMarkerUpdate(2)}
+            >
+              Pause original here
+            </button>
+          </div>
+        {:else if activeMarker.trackId === 'speed'}
+          <div class="flex flex-col gap-2">
+            <label class="text-[11px] font-semibold uppercase tracking-wide text-text-muted" for="active-playback-rate">
+              Playback speed
+            </label>
+            <div class="flex gap-2">
+              <select
+                id="active-playback-rate"
+                class="flex-1 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                bind:value={activePlaybackRateInput}
+                on:change={() => {
                   activeMarkerIsDirty = true;
-                  refreshActiveDerivedValues();
                 }}
-              />
-              <span class="text-xs text-text-muted">sec</span>
+              >
+                {#each PLAYBACK_RATE_OPTIONS as option}
+                  <option value={option.toString()}>{formatRateDisplay(option)}</option>
+                {/each}
+              </select>
+              <button
+                type="button"
+                class="rounded-md border border-border-strong/70 bg-surface/90 px-3 py-1 font-semibold text-text-primary transition hover:border-accent-secondary/60 hover:text-accent-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                on:click|stopPropagation={confirmPlaybackRateUpdate}
+              >
+                Set speed
+              </button>
             </div>
           </div>
-        </div>
-        <div class="flex flex-wrap gap-2">
-          <button
-            type="button"
-            class={`flex-1 rounded-md border bg-surface/90 px-2 py-1 font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 hover:border-accent-primary/50 hover:text-accent-primary ${(activeMarker.state === 1) ? 'border-accent-primary/60 text-accent-primary' : 'border-border-strong/70 text-text-primary'}`}
-            aria-pressed={activeMarker.state === 1}
-            on:click|stopPropagation={() => confirmMarkerUpdate(1)}
-          >
-            Play original here
-          </button>
-          <button
-            type="button"
-            class={`flex-1 rounded-md border bg-surface/90 px-2 py-1 font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 hover:border-accent-primary/50 hover:text-accent-primary ${(activeMarker.state === 2) ? 'border-accent-primary/60 text-accent-primary' : 'border-border-strong/70 text-text-primary'}`}
-            aria-pressed={activeMarker.state === 2}
-            on:click|stopPropagation={() => confirmMarkerUpdate(2)}
-          >
-            Pause original here
-          </button>
-        </div>
+        {:else if activeMarker.trackId === 'volume'}
+          <div class="flex flex-col gap-2">
+            <label class="text-[11px] font-semibold uppercase tracking-wide text-text-muted" for="active-volume">
+              Volume level
+            </label>
+            <div class="flex gap-2">
+              <input
+                id="active-volume"
+                type="number"
+                min="0"
+                max="100"
+                step="1"
+                inputmode="numeric"
+                class="flex-1 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                bind:value={activeVolumeInput}
+                on:input={() => {
+                  activeMarkerIsDirty = true;
+                }}
+              />
+              <span class="self-center text-xs text-text-muted">%</span>
+              <button
+                type="button"
+                class="rounded-md border border-border-strong/70 bg-surface/90 px-3 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                on:click|stopPropagation={confirmVolumeUpdate}
+              >
+                Set volume
+              </button>
+            </div>
+          </div>
+        {/if}
         <div class="flex items-center justify-between gap-2">
           <button
             type="button"
             class="rounded-md border border-danger/40 bg-danger/10 px-2 py-1 font-semibold text-danger transition hover:border-danger/60 hover:bg-danger/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/40"
-            on:click|stopPropagation={handleMarkerDelete}
+            on:click|stopPropagation={handleActiveMarkerDelete}
           >
             Delete cue
           </button>

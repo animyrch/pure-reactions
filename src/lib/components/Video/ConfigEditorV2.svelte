@@ -66,9 +66,9 @@
     return YOUTUBE_STATE_LABELS[state] ?? `State ${state}`;
   };
 
-  const normalizeVolumeEvents = () => {
-    if (Array.isArray(volumeTimeline) && volumeTimeline.length) {
-      return volumeTimeline
+  const normalizeVolumeEvents = (timeline, configs) => {
+    if (Array.isArray(timeline) && timeline.length) {
+      return timeline
         .map((event, index) => {
           const timeInReaction = parseSeconds(event?.t);
           const volume = Number.parseFloat(event?.volume);
@@ -83,7 +83,7 @@
         .filter(Boolean);
     }
 
-    return Object.entries(volumeConfigs ?? {})
+    return Object.entries(configs ?? {})
       .map(([timeKey, value], index) => {
         const timeInReaction = parseSeconds(timeKey);
         const volume = Number.parseFloat(value?.volume ?? value);
@@ -98,9 +98,9 @@
       .filter(Boolean);
   };
 
-  const normalizePlayerEvents = () => {
-    if (Array.isArray(stateTimeline) && stateTimeline.length) {
-      return stateTimeline
+  const normalizePlayerEvents = (timeline, configs) => {
+    if (Array.isArray(timeline) && timeline.length) {
+      return timeline
         .map((event, index) => {
           const timeInReaction = parseSeconds(event?.t);
           const state = Number.parseFloat(event?.state);
@@ -117,7 +117,7 @@
         .filter(Boolean);
     }
 
-    return Object.entries(playerConfigs ?? {})
+    return Object.entries(configs ?? {})
       .map(([timeKey, value], index) => {
         const timeInReaction = parseSeconds(timeKey);
         const state = Number.parseFloat(value?.state ?? value);
@@ -134,9 +134,9 @@
       .filter(Boolean);
   };
 
-  const normalizePlaybackEvents = () => {
-    if (Array.isArray(playbackRateTimeline) && playbackRateTimeline.length) {
-      return playbackRateTimeline
+  const normalizePlaybackEvents = (timeline, configs) => {
+    if (Array.isArray(timeline) && timeline.length) {
+      return timeline
         .map((event, index) => {
           const timeInReaction = parseSeconds(event?.t);
           const rate = Number.parseFloat(event?.rate);
@@ -151,7 +151,7 @@
         .filter(Boolean);
     }
 
-    return Object.entries(playbackRateConfigs ?? {})
+    return Object.entries(configs ?? {})
       .map(([timeKey, value], index) => {
         const timeInReaction = parseSeconds(timeKey);
         const rate = Number.parseFloat(value?.rate ?? value);
@@ -166,12 +166,12 @@
       .filter(Boolean);
   };
 
-  $: volumeEvents = normalizeVolumeEvents();
-  $: normalizedPlayerEvents = normalizePlayerEvents();
+  $: volumeEvents = normalizeVolumeEvents(volumeTimeline, volumeConfigs);
+  $: normalizedPlayerEvents = normalizePlayerEvents(stateTimeline, playerConfigs);
   $: playerEvents = Array.isArray(playerEventTimeline) && playerEventTimeline.length
     ? playerEventTimeline
     : normalizedPlayerEvents;
-  $: playbackEvents = normalizePlaybackEvents();
+  $: playbackEvents = normalizePlaybackEvents(playbackRateTimeline, playbackRateConfigs);
 
   $: timelineEntries = [...volumeEvents, ...playerEvents, ...playbackEvents]
     .sort((a, b) => a.timeInReaction - b.timeInReaction);
@@ -214,8 +214,14 @@
       volumeEvents={volumeEvents}
       playbackRateEvents={playbackEvents}
       on:createPlayerConfig={(event) => dispatch('createPlayerConfig', event.detail)}
+      on:createVolumeConfig={(event) => dispatch('createVolumeConfig', event.detail)}
+      on:createPlaybackRateConfig={(event) => dispatch('createPlaybackRateConfig', event.detail)}
       on:updatePlayerConfig={(event) => dispatch('updatePlayerConfig', event.detail)}
       on:deletePlayerConfig={(event) => dispatch('deletePlayerConfig', event.detail)}
+      on:updateVolumeConfig={(event) => dispatch('updateVolumeConfig', event.detail)}
+      on:deleteVolumeConfig={(event) => dispatch('deleteVolumeConfig', event.detail)}
+      on:updatePlaybackRateConfig={(event) => dispatch('updatePlaybackRateConfig', event.detail)}
+      on:deletePlaybackRateConfig={(event) => dispatch('deletePlaybackRateConfig', event.detail)}
     />
   </div>
 </div>

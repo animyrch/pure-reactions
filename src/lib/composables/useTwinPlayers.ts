@@ -106,11 +106,41 @@ type CreatePlayerConfigParams = {
   state: number;
 };
 
+type CreateVolumeConfigParams = {
+  timeInReaction: number;
+  volume: number;
+};
+
+type CreatePlaybackRateConfigParams = {
+  timeInReaction: number;
+  rate: number;
+};
+
 type UpdatePlayerConfigParams = {
   timeInReaction: number;
   targetTime?: number;
   state?: number;
   previousTimeInReaction?: number;
+};
+
+type UpdateVolumeConfigParams = {
+  timeInReaction: number;
+  volume?: number;
+  previousTimeInReaction?: number;
+};
+
+type DeleteVolumeConfigParams = {
+  timeInReaction: number;
+};
+
+type UpdatePlaybackRateConfigParams = {
+  timeInReaction: number;
+  rate?: number;
+  previousTimeInReaction?: number;
+};
+
+type DeletePlaybackRateConfigParams = {
+  timeInReaction: number;
 };
 
 type DeletePlayerConfigParams = {
@@ -1359,6 +1389,9 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
   const roundReactionTime = (value: number) => Math.round(value * 10) / 10;
   const roundTargetTime = (value: number) => Math.round(value * 100) / 100;
 
+  const roundVolume = (value: number) => Math.round(Math.min(Math.max(value, 0), 100));
+  const roundPlaybackRate = (value: number) => Math.round(value * 100) / 100;
+
   const timelineArrayToMap = (timeline: any[] = []) => {
     const map = new Map<string, { t: number; state: number; targetTime: number }>();
     for (const entry of timeline) {
@@ -1414,6 +1447,99 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     });
   };
 
+  const volumeTimelineArrayToMap = (timeline: any[] = []) => {
+    const map = new Map<string, { t: number; volume: number }>();
+    for (const entry of timeline) {
+      if (!entry) continue;
+      const rawReactionTime = Number(entry?.t);
+      if (!Number.isFinite(rawReactionTime)) continue;
+      const roundedReactionTime = roundReactionTime(Math.max(0, rawReactionTime));
+      const rawVolumeValue = Number(entry?.volume ?? entry?.value);
+      const sanitizedVolume = Number.isFinite(rawVolumeValue) ? roundVolume(rawVolumeValue) : 100;
+      map.set(roundedReactionTime.toFixed(3), {
+        t: roundedReactionTime,
+        volume: sanitizedVolume
+      });
+    }
+    return map;
+  };
+
+  const persistVolumeTimelineMap = async (map: Map<string, { t: number; volume: number }>) => {
+    const normalizedTimeline = Array.from(map.values()).sort((a, b) => a.t - b.t);
+    const nextVolumeConfigs = Object.fromEntries(
+      normalizedTimeline.map((entry) => [
+        Number(entry.t).toFixed(1),
+        {
+          volume: roundVolume(Number(entry.volume ?? 100))
+        }
+      ])
+    );
+
+    await updateFirebaseDocument({
+      volumeTimeline: normalizedTimeline.map((entry) => ({
+        t: Number(entry.t),
+        volume: roundVolume(Number(entry.volume ?? 100))
+      })),
+      volumeConfigs: nextVolumeConfigs
+    });
+
+    if (typeof window !== 'undefined') {
+      (window as any).volumeConfigs = normalizedTimeline;
+    }
+
+    updateState({
+      volumeTimeline: normalizedTimeline,
+      volumeConfigs: nextVolumeConfigs
+    });
+  };
+
+  const playbackTimelineArrayToMap = (timeline: any[] = []) => {
+    const map = new Map<string, { t: number; rate: number }>();
+    for (const entry of timeline) {
+      if (!entry) continue;
+      const rawReactionTime = Number(entry?.t);
+      if (!Number.isFinite(rawReactionTime)) continue;
+      const roundedReactionTime = roundReactionTime(Math.max(0, rawReactionTime));
+      const rawRateValue = Number(entry?.rate ?? entry?.value);
+      const sanitizedRate =
+        Number.isFinite(rawRateValue) && rawRateValue > 0 ? roundPlaybackRate(rawRateValue) : 1;
+      map.set(roundedReactionTime.toFixed(3), {
+        t: roundedReactionTime,
+        rate: sanitizedRate
+      });
+    }
+    return map;
+  };
+
+  const persistPlaybackTimelineMap = async (map: Map<string, { t: number; rate: number }>) => {
+    const normalizedTimeline = Array.from(map.values()).sort((a, b) => a.t - b.t);
+    const nextPlaybackRateConfigs = Object.fromEntries(
+      normalizedTimeline.map((entry) => [
+        Number(entry.t).toFixed(1),
+        {
+          rate: roundPlaybackRate(Number(entry.rate ?? 1))
+        }
+      ])
+    );
+
+    await updateFirebaseDocument({
+      playbackTimeline: normalizedTimeline.map((entry) => ({
+        t: Number(entry.t),
+        rate: roundPlaybackRate(Number(entry.rate ?? 1))
+      })),
+      playbackRateConfigs: nextPlaybackRateConfigs
+    });
+
+    if (typeof window !== 'undefined') {
+      (window as any).playbackRateConfigs = normalizedTimeline;
+    }
+
+    updateState({
+      playbackRateTimeline: normalizedTimeline,
+      playbackRateConfigs: nextPlaybackRateConfigs
+    });
+  };
+
   const createPlayerConfig = async ({ timeInReaction, targetTime, state: rawState }: CreatePlayerConfigParams) => {
     const snapshot = get(state);
     const sanitizedReactionTime = Number.isFinite(timeInReaction) ? Math.max(0, timeInReaction) : 0;
@@ -1435,6 +1561,49 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       await persistPlayerTimelineMap(timelineMap);
     } catch (error) {
       console.error('Failed to create player config', error);
+      throw error;
+    }
+  };
+
+  const createVolumeConfig = async ({ timeInReaction, volume }: CreateVolumeConfigParams) => {
+    const snapshot = get(state);
+    const sanitizedReactionTime = Number.isFinite(timeInReaction) ? Math.max(0, timeInReaction) : 0;
+    const roundedReactionTime = roundReactionTime(sanitizedReactionTime);
+    const roundedVolume = roundVolume(Number.isFinite(volume) ? volume : 100);
+
+    const existingTimeline = Array.isArray(snapshot.volumeTimeline) ? snapshot.volumeTimeline : [];
+    const timelineMap = volumeTimelineArrayToMap(existingTimeline);
+    timelineMap.set(roundedReactionTime.toFixed(3), {
+      t: roundedReactionTime,
+      volume: roundedVolume
+    });
+
+    try {
+      await persistVolumeTimelineMap(timelineMap);
+    } catch (error) {
+      console.error('Failed to create volume config', error);
+      throw error;
+    }
+  };
+
+  const createPlaybackRateConfig = async ({ timeInReaction, rate }: CreatePlaybackRateConfigParams) => {
+    const snapshot = get(state);
+    const sanitizedReactionTime = Number.isFinite(timeInReaction) ? Math.max(0, timeInReaction) : 0;
+    const roundedReactionTime = roundReactionTime(sanitizedReactionTime);
+    const sanitizedRate = Number.isFinite(rate) && rate > 0 ? rate : 1;
+    const roundedRate = roundPlaybackRate(sanitizedRate);
+
+    const existingTimeline = Array.isArray(snapshot.playbackRateTimeline) ? snapshot.playbackRateTimeline : [];
+    const timelineMap = playbackTimelineArrayToMap(existingTimeline);
+    timelineMap.set(roundedReactionTime.toFixed(3), {
+      t: roundedReactionTime,
+      rate: roundedRate
+    });
+
+    try {
+      await persistPlaybackTimelineMap(timelineMap);
+    } catch (error) {
+      console.error('Failed to create playback rate config', error);
       throw error;
     }
   };
@@ -1510,6 +1679,140 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       await persistPlayerTimelineMap(timelineMap);
     } catch (error) {
       console.error('Failed to delete player config', error);
+      throw error;
+    }
+  };
+
+  const updateVolumeConfig = async ({ timeInReaction, volume, previousTimeInReaction }: UpdateVolumeConfigParams) => {
+    const snapshot = get(state);
+    const existingTimeline = Array.isArray(snapshot.volumeTimeline) ? snapshot.volumeTimeline : [];
+    const timelineMap = volumeTimelineArrayToMap(existingTimeline);
+
+    const sanitizedReactionTime = Number.isFinite(timeInReaction) ? Math.max(0, timeInReaction) : 0;
+    const roundedReactionTime = roundReactionTime(sanitizedReactionTime);
+    const sanitizedPreviousTime =
+      typeof previousTimeInReaction === 'number' && Number.isFinite(previousTimeInReaction)
+        ? Math.max(0, previousTimeInReaction)
+        : sanitizedReactionTime;
+    const roundedPreviousTime = roundReactionTime(sanitizedPreviousTime);
+    const previousKey = roundedPreviousTime.toFixed(3);
+    const nextKey = roundedReactionTime.toFixed(3);
+
+    const currentEntry = timelineMap.get(previousKey);
+    if (!currentEntry) {
+      return;
+    }
+
+    const resolvedVolume =
+      typeof volume === 'number' && Number.isFinite(volume)
+        ? volume
+        : Number(currentEntry?.volume ?? 100);
+    const roundedVolume = roundVolume(resolvedVolume);
+
+    if (nextKey !== previousKey) {
+      timelineMap.delete(previousKey);
+    }
+
+    timelineMap.set(nextKey, {
+      t: roundedReactionTime,
+      volume: roundedVolume
+    });
+
+    try {
+      await persistVolumeTimelineMap(timelineMap);
+    } catch (error) {
+      console.error('Failed to update volume config', error);
+      throw error;
+    }
+  };
+
+  const deleteVolumeConfig = async ({ timeInReaction }: DeleteVolumeConfigParams) => {
+    const snapshot = get(state);
+    const existingTimeline = Array.isArray(snapshot.volumeTimeline) ? snapshot.volumeTimeline : [];
+    const timelineMap = volumeTimelineArrayToMap(existingTimeline);
+
+    const sanitizedReactionTime = Number.isFinite(timeInReaction) ? Math.max(0, timeInReaction) : 0;
+    const key = roundReactionTime(sanitizedReactionTime).toFixed(3);
+
+    if (!timelineMap.has(key)) {
+      return;
+    }
+
+    timelineMap.delete(key);
+
+    try {
+      await persistVolumeTimelineMap(timelineMap);
+    } catch (error) {
+      console.error('Failed to delete volume config', error);
+      throw error;
+    }
+  };
+
+  const updatePlaybackRateConfig = async ({
+    timeInReaction,
+    rate,
+    previousTimeInReaction
+  }: UpdatePlaybackRateConfigParams) => {
+    const snapshot = get(state);
+    const existingTimeline = Array.isArray(snapshot.playbackRateTimeline) ? snapshot.playbackRateTimeline : [];
+    const timelineMap = playbackTimelineArrayToMap(existingTimeline);
+
+    const sanitizedReactionTime = Number.isFinite(timeInReaction) ? Math.max(0, timeInReaction) : 0;
+    const roundedReactionTime = roundReactionTime(sanitizedReactionTime);
+    const sanitizedPreviousTime =
+      typeof previousTimeInReaction === 'number' && Number.isFinite(previousTimeInReaction)
+        ? Math.max(0, previousTimeInReaction)
+        : sanitizedReactionTime;
+    const roundedPreviousTime = roundReactionTime(sanitizedPreviousTime);
+    const previousKey = roundedPreviousTime.toFixed(3);
+    const nextKey = roundedReactionTime.toFixed(3);
+
+    const currentEntry = timelineMap.get(previousKey);
+    if (!currentEntry) {
+      return;
+    }
+
+    const resolvedRate =
+      typeof rate === 'number' && Number.isFinite(rate) && rate > 0
+        ? rate
+        : Number(currentEntry?.rate ?? 1);
+    const roundedRate = roundPlaybackRate(resolvedRate);
+
+    if (nextKey !== previousKey) {
+      timelineMap.delete(previousKey);
+    }
+
+    timelineMap.set(nextKey, {
+      t: roundedReactionTime,
+      rate: roundedRate
+    });
+
+    try {
+      await persistPlaybackTimelineMap(timelineMap);
+    } catch (error) {
+      console.error('Failed to update playback rate config', error);
+      throw error;
+    }
+  };
+
+  const deletePlaybackRateConfig = async ({ timeInReaction }: DeletePlaybackRateConfigParams) => {
+    const snapshot = get(state);
+    const existingTimeline = Array.isArray(snapshot.playbackRateTimeline) ? snapshot.playbackRateTimeline : [];
+    const timelineMap = playbackTimelineArrayToMap(existingTimeline);
+
+    const sanitizedReactionTime = Number.isFinite(timeInReaction) ? Math.max(0, timeInReaction) : 0;
+    const key = roundReactionTime(sanitizedReactionTime).toFixed(3);
+
+    if (!timelineMap.has(key)) {
+      return;
+    }
+
+    timelineMap.delete(key);
+
+    try {
+      await persistPlaybackTimelineMap(timelineMap);
+    } catch (error) {
+      console.error('Failed to delete playback rate config', error);
       throw error;
     }
   };
@@ -1768,8 +2071,14 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       setSoundLevel,
       setReactionMuteMode,
       createPlayerConfig,
+      createVolumeConfig,
+      createPlaybackRateConfig,
       updatePlayerConfig,
       deletePlayerConfig,
+      updateVolumeConfig,
+      deleteVolumeConfig,
+      updatePlaybackRateConfig,
+      deletePlaybackRateConfig,
       setIsPublished,
       setIsUnpublished,
       openWithFullscreen,

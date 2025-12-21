@@ -295,8 +295,14 @@
           reactionDuration={$state.reactionDuration}
           playerEventTimeline={$state.playerEventTimeline}
           onCreatePlayerConfig={actions.createPlayerConfig}
+          onCreateVolumeConfig={actions.createVolumeConfig}
+          onCreatePlaybackRateConfig={actions.createPlaybackRateConfig}
           onUpdatePlayerConfig={actions.updatePlayerConfig}
           onDeletePlayerConfig={actions.deletePlayerConfig}
+          onUpdateVolumeConfig={actions.updateVolumeConfig}
+          onDeleteVolumeConfig={actions.deleteVolumeConfig}
+          onUpdatePlaybackRateConfig={actions.updatePlaybackRateConfig}
+          onDeletePlaybackRateConfig={actions.deletePlaybackRateConfig}
           onSetReactionVideoId={handleSetReactionVideoId}
           onSetIntroBufferTime={handleSetIntroBufferTime}
           onSetReactionFinishTime={handleSetReactionFinishTime}

@@ -26,8 +26,14 @@
   export let reactionDuration = 0;
   export let playerEventTimeline = [];
   export let onCreatePlayerConfig = async () => {};
+  export let onCreateVolumeConfig = async () => {};
+  export let onCreatePlaybackRateConfig = async () => {};
   export let onUpdatePlayerConfig = async () => {};
   export let onDeletePlayerConfig = async () => {};
+  export let onUpdateVolumeConfig = async () => {};
+  export let onDeleteVolumeConfig = async () => {};
+  export let onUpdatePlaybackRateConfig = async () => {};
+  export let onDeletePlaybackRateConfig = async () => {};
 
   export let onSetReactionVideoId = () => {};
   export let onSetIntroBufferTime = () => {};
@@ -129,6 +135,30 @@
     }
   };
 
+  const handleCreateVolumeConfig = async (event) => {
+    const detail = event?.detail;
+    if (!detail) return;
+    try {
+      await onCreateVolumeConfig(detail);
+      showToast('Volume cue added.', TOASTS.SUCCESS);
+    } catch (error) {
+      console.error('Failed to add volume config', error);
+      showToast('Unable to add that volume cue. Try again.', TOASTS.WARNING);
+    }
+  };
+
+  const handleCreatePlaybackRateConfig = async (event) => {
+    const detail = event?.detail;
+    if (!detail) return;
+    try {
+      await onCreatePlaybackRateConfig(detail);
+      showToast('Playback speed cue added.', TOASTS.SUCCESS);
+    } catch (error) {
+      console.error('Failed to add playback rate config', error);
+      showToast('Unable to add that speed cue. Try again.', TOASTS.WARNING);
+    }
+  };
+
   const handleUpdatePlayerConfig = async (event) => {
     const detail = event?.detail;
     if (!detail) return;
@@ -150,6 +180,54 @@
     } catch (error) {
       console.error('Failed to delete playback config', error);
       showToast('Unable to remove that cue. Try again.', TOASTS.WARNING);
+    }
+  };
+
+  const handleUpdateVolumeConfig = async (event) => {
+    const detail = event?.detail;
+    if (!detail) return;
+    try {
+      await onUpdateVolumeConfig(detail);
+      showToast('Volume cue updated.', TOASTS.SUCCESS);
+    } catch (error) {
+      console.error('Failed to update volume config', error);
+      showToast('Unable to update that volume cue. Try again.', TOASTS.WARNING);
+    }
+  };
+
+  const handleDeleteVolumeConfig = async (event) => {
+    const detail = event?.detail;
+    if (!detail) return;
+    try {
+      await onDeleteVolumeConfig(detail);
+      showToast('Volume cue removed.', TOASTS.SUCCESS);
+    } catch (error) {
+      console.error('Failed to delete volume config', error);
+      showToast('Unable to remove that volume cue. Try again.', TOASTS.WARNING);
+    }
+  };
+
+  const handleUpdatePlaybackRateConfig = async (event) => {
+    const detail = event?.detail;
+    if (!detail) return;
+    try {
+      await onUpdatePlaybackRateConfig(detail);
+      showToast('Playback speed cue updated.', TOASTS.SUCCESS);
+    } catch (error) {
+      console.error('Failed to update playback rate config', error);
+      showToast('Unable to update that speed cue. Try again.', TOASTS.WARNING);
+    }
+  };
+
+  const handleDeletePlaybackRateConfig = async (event) => {
+    const detail = event?.detail;
+    if (!detail) return;
+    try {
+      await onDeletePlaybackRateConfig(detail);
+      showToast('Playback speed cue removed.', TOASTS.SUCCESS);
+    } catch (error) {
+      console.error('Failed to delete playback rate config', error);
+      showToast('Unable to remove that speed cue. Try again.', TOASTS.WARNING);
     }
   };
 </script>
@@ -319,8 +397,14 @@
               reactionDuration={reactionDuration}
               playerEventTimeline={playerEventTimeline}
               on:createPlayerConfig={handleCreatePlayerConfig}
+              on:createVolumeConfig={handleCreateVolumeConfig}
+              on:createPlaybackRateConfig={handleCreatePlaybackRateConfig}
               on:updatePlayerConfig={handleUpdatePlayerConfig}
               on:deletePlayerConfig={handleDeletePlayerConfig}
+              on:updateVolumeConfig={handleUpdateVolumeConfig}
+              on:deleteVolumeConfig={handleDeleteVolumeConfig}
+              on:updatePlaybackRateConfig={handleUpdatePlaybackRateConfig}
+              on:deletePlaybackRateConfig={handleDeletePlaybackRateConfig}
             />
           </div>
         </div>
