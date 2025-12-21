@@ -46,6 +46,7 @@
   };
 
   const TIMELINE_REGION_SELECTOR = '[data-timeline-region="true"]';
+  const MARKER_INTERACTION_SELECTOR = '[data-marker-interaction="true"]';
 
   const MIN_ZOOM_RATIO = 0.01;
   const MIN_ZOOM_SPAN_SECONDS = 0.5;
@@ -93,6 +94,11 @@
   let visibleTracks = [];
   let hasManualZoom = false;
   let timelineContainer = null;
+
+  const PLAYBACK_RATE_OPTIONS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+
+  let pendingVolumeInput = '100';
+  let pendingPlaybackRateInput = '1';
 
   const PENDING_TARGET_MINUTES_INPUT_ID = 'pending-target-minutes';
   const PENDING_TARGET_SECONDS_INPUT_ID = 'pending-target-seconds';
@@ -530,6 +536,7 @@
     if (event.defaultPrevented) return;
     if (viewportSpan <= 0) return;
     if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+    if (event?.target?.closest?.(MARKER_INTERACTION_SELECTOR)) return;
     const rect = event.currentTarget?.getBoundingClientRect?.();
     if (!rect || rect.width <= 0) return;
     const coordinates = getTimelineCoordinates(event, rect);
@@ -703,6 +710,8 @@
     pendingReactionSecondsInput = '0.00';
     pendingTargetSeconds = 0;
     pendingReactionSeconds = 0;
+    pendingVolumeInput = '100';
+    pendingPlaybackRateInput = '1';
   };
 
   const closeMarkerEditor = () => {
@@ -721,6 +730,9 @@
       suppressNextClick = false;
       return;
     }
+    if (event?.target?.closest?.(MARKER_INTERACTION_SELECTOR)) {
+      return;
+    }
     event?.preventDefault?.();
     event?.stopPropagation?.();
     closeMarkerEditor();
@@ -730,7 +742,8 @@
       hoverTimeLabel = null;
       return;
     }
-  const coordinates = getTimelineCoordinates(event, timelineRegion.getBoundingClientRect());
+    const trackId = timelineRegion?.dataset?.trackId ?? 'play';
+    const coordinates = getTimelineCoordinates(event, timelineRegion.getBoundingClientRect());
     if (!coordinates) return;
     const reactionTime = coordinates.absoluteTime;
     const targetTime = computeOriginalTimeForNewEvent(reactionTime);
@@ -739,7 +752,8 @@
     pendingConfig = {
       ratio: coordinates.viewportRatio,
       reactionTime,
-      targetTime
+      targetTime,
+      trackId
     };
     const reactionFormatted = formatSecondsForInput(reactionTime);
     pendingReactionMinutesInput = reactionFormatted.minutes;
@@ -747,6 +761,19 @@
     const targetFormatted = formatSecondsForInput(targetTime);
     pendingTargetMinutesInput = targetFormatted.minutes;
     pendingTargetSecondsInput = targetFormatted.seconds;
+
+    const previousVolumeEvent = [...volumeEventsSorted]
+      .filter((entry) => Number.isFinite(entry?.timeInReaction) && entry.timeInReaction <= reactionTime)
+      .pop();
+    const initialVolume = Number.isFinite(previousVolumeEvent?.volume) ? previousVolumeEvent.volume : 100;
+    pendingVolumeInput = String(Math.round(Math.min(Math.max(initialVolume, 0), 100)));
+
+    const previousRateEvent = [...playbackRateEventsSorted]
+      .filter((entry) => Number.isFinite(entry?.timeInReaction) && entry.timeInReaction <= reactionTime)
+      .pop();
+    const initialRate = Number.isFinite(previousRateEvent?.rate) ? previousRateEvent.rate : 1;
+    pendingPlaybackRateInput = String(Math.round(initialRate * 100) / 100);
+
     refreshPendingDerivedValues();
   };
 
@@ -761,7 +788,8 @@
     pendingConfig = {
       ratio,
       reactionTime,
-      targetTime
+      targetTime,
+      trackId: 'play'
     };
     const reactionFormatted = formatSecondsForInput(reactionTime);
     pendingReactionMinutesInput = reactionFormatted.minutes;
@@ -769,6 +797,8 @@
     const targetFormatted = formatSecondsForInput(targetTime);
     pendingTargetMinutesInput = targetFormatted.minutes;
     pendingTargetSecondsInput = targetFormatted.seconds;
+    pendingVolumeInput = '100';
+    pendingPlaybackRateInput = '1';
     refreshPendingDerivedValues();
   };
 
@@ -785,6 +815,27 @@
       state,
       timeInReaction: pendingConfig.reactionTime,
       targetTime: pendingTargetSeconds
+    });
+    closeConfigPopup();
+  };
+
+  const confirmVolumeCreation = () => {
+    if (!pendingConfig) return;
+    const volume = Math.round(Math.min(Math.max(Number.parseFloat(pendingVolumeInput), 0), 100));
+    dispatch('createVolumeConfig', {
+      timeInReaction: pendingConfig.reactionTime,
+      volume
+    });
+    closeConfigPopup();
+  };
+
+  const confirmPlaybackRateCreation = () => {
+    if (!pendingConfig) return;
+    const rateCandidate = Number.parseFloat(pendingPlaybackRateInput);
+    const rate = Number.isFinite(rateCandidate) && rateCandidate > 0 ? rateCandidate : 1;
+    dispatch('createPlaybackRateConfig', {
+      timeInReaction: pendingConfig.reactionTime,
+      rate
     });
     closeConfigPopup();
   };
@@ -884,7 +935,11 @@
           <div
             class="relative flex-1 py-2"
             data-timeline-region="true"
+            data-track-id={track.id}
             on:mousedown={startZoomSelection}
+            role="button"
+            aria-label={`${track.label} timeline`}
+            tabindex="-1"
           >
             {#if zoomSelectionLeft && zoomSelectionWidth}
               <div
@@ -926,6 +981,7 @@
                     class={`pointer-events-auto relative inline-flex h-4 w-4 hover:h-8 hover:w-8 hover:z-30 items-center justify-center rounded-full transition backdrop-blur-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 hover:z-30 focus-visible:z-30 ${MARKER_STYLES[marker.tone] ?? 'bg-background/80 text-text-muted'} ${isMarkerActive(marker) ? 'ring-2 ring-accent-primary/60' : ''}`}
                     title={`${marker.label} at ${marker.timeLabel}`}
                     aria-label={`${marker.label} at ${marker.timeLabel}`}
+                    data-marker-interaction="true"
                     on:click|stopPropagation={() => openMarkerEditor(marker)}
                     on:keydown|stopPropagation={(event) => handleMarkerKeydown(event, marker)}
                     on:mousedown|stopPropagation
@@ -938,7 +994,7 @@
                     class={`pointer-events-auto relative inline-flex min-w-[2.25rem] items-center justify-center rounded-full px-2 py-1 text-[10px] font-semibold leading-none transition hover:z-30 ${MARKER_STYLES[marker.tone] ?? 'bg-background/80 text-text-muted'}`}
                     title={`${marker.label} at ${marker.timeLabel}`}
                     aria-label={`${marker.label} at ${marker.timeLabel}`}
-                    on:mousedown|stopPropagation
+                    data-marker-interaction="true"
                   >
                     {marker.displayValue}
                   </div>
@@ -1040,22 +1096,78 @@
             </div>
           </div>
         </div>
-        <div class="flex flex-wrap gap-2">
-          <button
-            type="button"
-            class="flex-1 rounded-md border border-border-strong/70 bg-surface/90 px-2 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
-            on:click|stopPropagation={() => confirmConfigCreation(1)}
-          >
-            Play original here
-          </button>
-          <button
-            type="button"
-            class="flex-1 rounded-md border border-border-strong/70 bg-surface/90 px-2 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
-            on:click|stopPropagation={() => confirmConfigCreation(2)}
-          >
-            Pause original here
-          </button>
-        </div>
+        {#if pendingConfig.trackId === 'play' || pendingConfig.trackId === 'pause'}
+          <div class="flex flex-wrap gap-2">
+            {#if pendingConfig.trackId === 'play'}
+              <button
+                type="button"
+                class="flex-1 rounded-md border border-border-strong/70 bg-surface/90 px-2 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                on:click|stopPropagation={() => confirmConfigCreation(1)}
+              >
+                Play original here
+              </button>
+            {/if}
+            {#if pendingConfig.trackId === 'pause'}
+              <button
+                type="button"
+                class="flex-1 rounded-md border border-border-strong/70 bg-surface/90 px-2 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                on:click|stopPropagation={() => confirmConfigCreation(2)}
+              >
+                Pause original here
+              </button>
+            {/if}
+          </div>
+        {:else if pendingConfig.trackId === 'speed'}
+          <div class="flex flex-col gap-2">
+            <label class="text-[11px] font-semibold uppercase tracking-wide text-text-muted" for="pending-playback-rate">
+              Playback speed
+            </label>
+            <div class="flex gap-2">
+              <select
+                id="pending-playback-rate"
+                class="flex-1 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                bind:value={pendingPlaybackRateInput}
+              >
+                {#each PLAYBACK_RATE_OPTIONS as option}
+                  <option value={option.toString()}>{formatRateDisplay(option)}</option>
+                {/each}
+              </select>
+              <button
+                type="button"
+                class="rounded-md border border-border-strong/70 bg-surface/90 px-3 py-1 font-semibold text-text-primary transition hover:border-accent-secondary/60 hover:text-accent-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                on:click|stopPropagation={confirmPlaybackRateCreation}
+              >
+                Set speed
+              </button>
+            </div>
+          </div>
+        {:else if pendingConfig.trackId === 'volume'}
+          <div class="flex flex-col gap-2">
+            <label class="text-[11px] font-semibold uppercase tracking-wide text-text-muted" for="pending-volume">
+              Volume level
+            </label>
+            <div class="flex gap-2">
+              <input
+                id="pending-volume"
+                type="number"
+                min="0"
+                max="100"
+                step="1"
+                inputmode="numeric"
+                class="flex-1 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                bind:value={pendingVolumeInput}
+              />
+              <span class="self-center text-xs text-text-muted">%</span>
+              <button
+                type="button"
+                class="rounded-md border border-border-strong/70 bg-surface/90 px-3 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                on:click|stopPropagation={confirmVolumeCreation}
+              >
+                Set volume
+              </button>
+            </div>
+          </div>
+        {/if}
         <button
           type="button"
           class="self-end rounded-md bg-transparent px-2 py-1 text-[11px] font-medium text-text-muted transition hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-subtle"
