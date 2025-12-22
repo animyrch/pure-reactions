@@ -1280,7 +1280,7 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
         if (typeof nextOriginalVideoId === 'string' && typeof window !== 'undefined') {
           const url = new URL(window.location.href);
           url.searchParams.set('item', nextOriginalVideoId);
-          window.history.pushState({}, '', url.toString());
+          window.history.pushState(window.history.state, '', url.toString());
         }
 
         originalVideoClicked = false;
@@ -1299,7 +1299,7 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       if (typeof window !== 'undefined') {
         const url = new URL(window.location.href);
         url.pathname = `/reaction/${nextReactionDocumentId}`;
-        window.history.pushState({}, '', url.toString());
+        window.history.pushState(window.history.state, '', url.toString());
       }
       originalVideoClicked = false;
       reactionVideoClicked = false;
@@ -1391,7 +1391,7 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
             url.searchParams.set('queueIndex', String(nextIndex));
             url.searchParams.set('queueReactionId', nextReactionDocumentId);
             url.searchParams.set('queueAutoPlay', 'true');
-            window.history.pushState({}, '', url.toString());
+            window.history.pushState(window.history.state, '', url.toString());
           }
           originalVideoClicked = false;
           reactionVideoClicked = false;

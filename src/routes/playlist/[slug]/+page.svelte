@@ -1,6 +1,7 @@
 <script>
   import { page } from "$app/stores";
   import { browser } from "$app/environment";
+  import { goto } from "$app/navigation";
   import { onDestroy, onMount } from "svelte";
   import CreatorDetails from "$lib/components/Video/CreatorDetails.svelte";
   import PlaylistQueue from "$lib/components/Video/PlaylistQueue.svelte";
@@ -28,6 +29,9 @@
   let playlistDocumentLocal = null;
   let playlistInitError = "";
 
+  $: playlistOwnerId = ($state.playlistDocument ?? playlistDocumentLocal)?.reactorId;
+  $: isPlaylistOwner = Boolean(data?.userId && playlistOwnerId && playlistOwnerId === data.userId);
+
   const normalizeSelectedOriginalId = (playlistDoc, selectedOriginalId) => {
     const originals = Array.isArray(playlistDoc?.originalVideoIds)
       ? playlistDoc.originalVideoIds
@@ -50,9 +54,9 @@
       url.searchParams.delete("item");
     }
     if (replace) {
-      window.history.replaceState({}, "", url.toString());
+      window.history.replaceState(window.history.state, "", url.toString());
     } else {
-      window.history.pushState({}, "", url.toString());
+      window.history.pushState(window.history.state, "", url.toString());
     }
   };
 
@@ -112,42 +116,24 @@
     if (!playlistSlug) return;
 
     await loadSelectedReaction({ preserveReactionTime: false });
-
-    reactionDial.updateContext({
-      isUsersOwnVideo: $state.isUsersOwnVideo,
-      canShowEditModeButton: $state.canShowEditModeButton,
-      canShowCloseEditModeButton: $state.canShowCloseEditModeButton,
-      isPublished: $state.isPublished,
-      isReactionMissing: $state.isReactionMissing,
-      isFullscreen: $state.isFullscreen,
-      handlers: {
-        enterEditMode: null,
-        editPlaylist: playlistSlug
-          ? () => {
-              if (!browser) return;
-              window.location.href = `/batch-edit?playlistDocumentId=${playlistSlug}`;
-            }
-          : null,
-        closeEditMode: null,
-        setIsPublished: actions.setIsPublished,
-        setIsUnpublished: actions.setIsUnpublished,
-        openWithFullscreen: actions.openWithFullscreen,
-        openWithHalfscreen: actions.openWithHalfscreen,
-      },
-    });
   });
 
   $: if (browser && playlistSlug) {
     // Keep dial context in sync as playback state changes.
     reactionDial.updateContext({
-      isUsersOwnVideo: $state.isUsersOwnVideo,
-      canShowEditModeButton: $state.canShowEditModeButton,
-      canShowCloseEditModeButton: $state.canShowCloseEditModeButton,
+      isUsersOwnVideo: isPlaylistOwner,
+      canShowEditModeButton: isPlaylistOwner,
+      canShowCloseEditModeButton: false,
       isPublished: $state.isPublished,
       isReactionMissing: $state.isReactionMissing,
       isFullscreen: $state.isFullscreen,
       handlers: {
-        enterEditMode: null,
+        enterEditMode: isPlaylistOwner
+          ? () => {
+              if (!browser) return;
+              goto(`/edit-reaction/${$state.pageSlug}`);
+            }
+          : null,
         editPlaylist: playlistSlug
           ? () => {
               if (!browser) return;
