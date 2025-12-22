@@ -100,6 +100,10 @@ type UseTwinPlayersOptions = {
   };
 };
 
+type LoadReactionInPlaceOptions = {
+  preserveReactionTime?: boolean;
+};
+
 type CreatePlayerConfigParams = {
   timeInReaction: number;
   targetTime: number;
@@ -900,6 +904,12 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     await playlistFetchPromise;
   };
 
+  const setPlaylistDocumentId = async (playlistDocumentId: string | null) => {
+    updateState({ playlistDocumentId });
+    const snapshot = get(state);
+    await setPlaylistData(playlistDocumentId, snapshot.youtubePlaylistId);
+  };
+
   const updateUIElements = (slugValue: string) => {
     updateState({ pageSlug: slugValue });
     if (typeof window !== 'undefined') {
@@ -1076,6 +1086,177 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     }
   };
 
+  const loadReactionInPlace = async (nextReactionDocumentId: string, options: LoadReactionInPlaceOptions = {}) => {
+    if (!nextReactionDocumentId) {
+      return;
+    }
+
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    await tick();
+    injectYoutubeIframeApiScript();
+    await waitForYoutubeIframeApiReady();
+
+    const snapshotBefore = get(state);
+    const preserveReactionTime = Boolean(options.preserveReactionTime);
+    const previousReactionTime =
+      preserveReactionTime && typeof snapshotBefore.playerReaction?.getCurrentTime === 'function'
+        ? Number(snapshotBefore.playerReaction.getCurrentTime()) || 0
+        : undefined;
+    const previousReactionVideoId = snapshotBefore.reactionVideoId;
+
+    if (!snapshotBefore.playerOriginal || !document.getElementById('player-original')) {
+      await buildInterface(nextReactionDocumentId, { isUpdate: true });
+      updateUIElements(nextReactionDocumentId);
+      return;
+    }
+
+    (window as any).currentReactionDocumentId = nextReactionDocumentId;
+    const reactionData = await getReaction(nextReactionDocumentId);
+    if (!reactionData) {
+      await setUpVideos(reactionData);
+      updateUIElements(nextReactionDocumentId);
+      return;
+    }
+
+    const {
+      playerConfigs,
+      volumeConfigs,
+      playbackRateConfigs,
+      stateTimeline,
+      volumeTimeline,
+      playbackRateTimeline
+    } = deriveTimelines(reactionData);
+
+    window.playerConfigs = reactionData['stateTimeline'] || reactionData['reactionConfigs'];
+    window.volumeConfigs = reactionData['volumeTimeline'] || reactionData['volumeConfigs'];
+    window.playbackRateConfigs = reactionData['playbackTimeline'] || reactionData['playbackRateConfigs'];
+
+    const normalizedPlayerEvents = buildPlayerEventTimeline(stateTimeline);
+
+    const reactionVideoId = reactionData['reactionVideoId'] ?? '';
+    const originalVideoId = reactionData['originalVideoId'];
+    const youtubePlaylistId = reactionData['youtubePlaylistId'];
+
+    const offsetStartTime = reactionData['offsetStartTime'] ?? 0;
+    const reactionFinishTime = parseFloat(reactionData['reactionFinishTime']) || 100000;
+    const timeOffset = reactionData['timeOffset'] || 0;
+    const globalGainValue = reactionData['globalGain'];
+    const globalGain = typeof globalGainValue === 'number' && !Number.isNaN(globalGainValue) ? globalGainValue : 1.0;
+    const soundLevel = Math.max(0, Math.min(200, Math.round(globalGain * 100)));
+    const currentPlaybackRate = getCurrentPlaybackRateFromConfigs(offsetStartTime || 0, window.playbackRateConfigs, timeOffset);
+
+    const canReuseReactionPlayer =
+      Boolean(snapshotBefore.playerReaction) &&
+      Boolean(reactionVideoId) &&
+      reactionVideoId === previousReactionVideoId &&
+      Boolean(document.getElementById('player-reaction'));
+
+    if (!canReuseReactionPlayer && snapshotBefore.playerReaction?.destroy) {
+      snapshotBefore.playerReaction.destroy();
+    }
+
+    const shouldCreateReactionPlayer = Boolean(reactionVideoId) && !canReuseReactionPlayer;
+    setExpectedPlayerReadyCount(shouldCreateReactionPlayer ? 1 : 0);
+
+    let nextPlayerReaction: any = snapshotBefore.playerReaction;
+    if (shouldCreateReactionPlayer) {
+      try {
+        nextPlayerReaction = new YT.Player('player-reaction', {
+          videoId: reactionVideoId,
+          playerVars: playerOptions,
+          ...iframeOptionDefault,
+          events: {
+            onReady: onPlayerReady,
+            onStateChange: onStateChangeReaction
+          }
+        });
+      } catch (error) {
+        console.error('Failed to initialise reaction YouTube player', error);
+        nextPlayerReaction = null;
+        setExpectedPlayerReadyCount(0);
+      }
+    }
+
+    if (originalVideoId && typeof snapshotBefore.playerOriginal?.loadVideoById === 'function') {
+      try {
+        snapshotBefore.playerOriginal.loadVideoById(originalVideoId);
+      } catch (error) {
+        console.error('Failed to load original video by id', error);
+      }
+    }
+
+    updateState({
+      isPublished: reactionData.isPublished,
+      isReactionMissing: !reactionVideoId,
+      reactorId: reactionData['reactorId'],
+      isUsersOwnVideo: reactionData['reactorId'] === userId,
+      canShowEditModeButton: reactionData['reactorId'] === userId,
+      playerConfigs,
+      volumeConfigs,
+      playbackRateConfigs,
+      stateTimeline,
+      volumeTimeline,
+      playbackRateTimeline,
+      playerEventTimeline: normalizedPlayerEvents,
+      reactionVideoId,
+      originalVideoId,
+      reactionVideoAuthor: reactionData?.reactionVideoAuthor,
+      reactionVideoTitle: reactionData?.reactionVideoTitle,
+      originalVideoAuthor: reactionData?.originalVideoAuthor,
+      originalVideoTitle: reactionData?.originalVideoTitle,
+      youtubePlaylistId,
+      offsetStartTime,
+      reactionFinishTime,
+      timeOffset,
+      globalGain,
+      introBufferTime: timeOffset,
+      soundLevel,
+      isReactionMuteModeEnabled: Boolean(reactionData?.muteReactionWhileOriginalPlays),
+      isReactionAutoMuted: false,
+      currentPlaybackRate,
+      playerOriginal: snapshotBefore.playerOriginal,
+      playerReaction: nextPlayerReaction,
+      currentStateOriginalVideo: -1,
+      currentVolumeOriginalVideo: 100,
+      reactionCurrentTime: typeof previousReactionTime === 'number' ? previousReactionTime : offsetStartTime || 0,
+      reactionDuration:
+        typeof nextPlayerReaction?.getDuration === 'function' ? Number(nextPlayerReaction.getDuration()) || 0 : snapshotBefore.reactionDuration
+    });
+
+    enforceReactionMuteMode();
+    await setPlaylistData(get(state).playlistDocumentId, youtubePlaylistId);
+
+    if (typeof previousReactionTime === 'number' && typeof nextPlayerReaction?.seekTo === 'function' && !canReuseReactionPlayer) {
+      try {
+        nextPlayerReaction.seekTo(previousReactionTime, true);
+      } catch {
+        // ignore
+      }
+    }
+
+    try {
+      await tick();
+      syncVideos();
+    } catch {
+      // ignore
+    }
+
+    updateUIElements(nextReactionDocumentId);
+
+    await verifyAndSyncMetadata({
+      documentId: typeof reactionData?.id === 'string' ? reactionData.id : undefined,
+      originalVideoId,
+      reactionVideoId,
+      currentOriginalTitle: reactionData?.originalVideoTitle,
+      currentOriginalAuthor: reactionData?.originalVideoAuthor,
+      currentReactionTitle: reactionData?.reactionVideoTitle,
+      currentReactionAuthor: reactionData?.reactionVideoAuthor
+    });
+  };
+
   const loadNextReactionInPlaylist = () => {
     const snapshot = get(state);
     const { hasNextIndexInPlaylist, playlistDocument, currentIndexInPlaylist, playlistItems } = snapshot;
@@ -1084,6 +1265,29 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     }
     const nextIndex = currentIndexInPlaylist + 1;
     const nextReactionDocumentId = playlistDocument.reactionBinomeIds[nextIndex];
+
+    const isPlaylistPage = typeof window !== 'undefined' && window.location?.pathname?.startsWith('/playlist/');
+    if (isPlaylistPage) {
+      const nextOriginalVideoId = playlistDocument.originalVideoIds?.[nextIndex];
+      loadReactionInPlace(nextReactionDocumentId, { preserveReactionTime: true }).then(() => {
+        const updatedIndex = nextIndex;
+        const hasNext = updatedIndex < playlistItems.length - 1;
+        updateState({
+          currentIndexInPlaylist: updatedIndex,
+          hasNextIndexInPlaylist: hasNext
+        });
+
+        if (typeof nextOriginalVideoId === 'string' && typeof window !== 'undefined') {
+          const url = new URL(window.location.href);
+          url.searchParams.set('item', nextOriginalVideoId);
+          window.history.pushState({}, '', url.toString());
+        }
+
+        originalVideoClicked = false;
+        reactionVideoClicked = false;
+      });
+      return;
+    }
 
     buildInterface(nextReactionDocumentId, { isUpdate: true }).then(() => {
       const updatedIndex = nextIndex;
@@ -2014,7 +2218,12 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
           console.warn('Player element not found, skipping initialization');
           return;
         }
-        await buildInterface(get(state).pageSlug);
+        const initialSlug = get(state).pageSlug;
+        if (!initialSlug) {
+          finalizeLoadingState();
+          return;
+        }
+        await buildInterface(initialSlug);
       } catch (error) {
         console.error('Failed to initialize reaction player:', error);
       }
@@ -2085,6 +2294,8 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       openWithHalfscreen,
       editActionEntryPoint,
       handleSlugChange,
+      loadReactionInPlace,
+      setPlaylistDocumentId,
       registerOverlayRef
     }
   };

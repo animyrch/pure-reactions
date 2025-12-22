@@ -12,6 +12,7 @@
     export let playlistBufferTime = 0;
     export let playlistItems = [];
     export let playlistDocument = null;
+    export let onSelect = null;
 
     onMount(async () => {
         if (!playlistItems?.length && playlistId) {
@@ -27,6 +28,7 @@
     {#each playlistItems as playlistItem, index (index)}
         <div key={playlistItem?.playlistId}>
                 <PlaylistQueueItem
+                    {index}
                     {playlistItem}
                     {currentlyViewed}
                     {playlistId}
@@ -35,6 +37,7 @@
                     {startTime}
                     {playlistBufferTime}
                     targetReactionDocumentId={playlistDocument?.reactionBinomeIds?.[index]}
+                    {onSelect}
                 />
         </div>
     {/each}
