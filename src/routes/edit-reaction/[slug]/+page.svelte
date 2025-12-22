@@ -65,6 +65,10 @@
     await actions.editActionEntryPoint(() => actions.setIntroBufferTime(value));
   };
 
+  const handleSetOffsetStartTime = async (value) => {
+    await actions.editActionEntryPoint(() => actions.setOffsetStartTime(value));
+  };
+
   const handleSetReactionFinishTime = async (value) => {
     await actions.editActionEntryPoint(() => actions.setReactionFinishTime(value));
   };
@@ -281,6 +285,7 @@
           reactionVideoId={$state.reactionVideoId}
           reactionVideoIdError={reactionVideoIdError}
           isSettingReactionVideoId={isSettingReactionVideoId}
+          offsetStartTime={$state.offsetStartTime}
           introBufferTime={$state.introBufferTime}
           reactionFinishTime={$state.reactionFinishTime}
           soundLevel={$state.soundLevel}
@@ -304,6 +309,7 @@
           onUpdatePlaybackRateConfig={actions.updatePlaybackRateConfig}
           onDeletePlaybackRateConfig={actions.deletePlaybackRateConfig}
           onSetReactionVideoId={handleSetReactionVideoId}
+          onSetOffsetStartTime={handleSetOffsetStartTime}
           onSetIntroBufferTime={handleSetIntroBufferTime}
           onSetReactionFinishTime={handleSetReactionFinishTime}
           onSetSoundLevel={handleSetSoundLevel}

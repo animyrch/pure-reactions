@@ -1555,6 +1555,15 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     });
   };
 
+  const setOffsetStartTime = async (value: number) => {
+    const parsed = Math.max(0, Math.floor(Number(value)));
+    if (!Number.isFinite(parsed)) {
+      return;
+    }
+    await updateFirebaseDocument({ offsetStartTime: parsed });
+    updateState({ offsetStartTime: parsed, reactionCurrentTime: parsed });
+  };
+
   const setIntroBufferTime = async (value: number) => {
     const parsed = Number(value);
     if (Number.isNaN(parsed)) {
@@ -2274,6 +2283,7 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       closeEditMode,
       toggleFineTuneMode,
       setReactionVideoId,
+      setOffsetStartTime,
       seekTo: goToSecondsInReactionVideo,
       setIntroBufferTime,
       setReactionFinishTime,

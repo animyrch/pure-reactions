@@ -12,6 +12,7 @@
   export let reactionVideoId = '';
   export let reactionVideoIdError = '';
   export let isSettingReactionVideoId = false;
+  export let offsetStartTime = 0;
   export let introBufferTime = 0;
   export let reactionFinishTime = 0;
   export let soundLevel = 100;
@@ -36,6 +37,7 @@
   export let onDeletePlaybackRateConfig = async () => {};
 
   export let onSetReactionVideoId = () => {};
+  export let onSetOffsetStartTime = () => {};
   export let onSetIntroBufferTime = () => {};
   export let onSetReactionFinishTime = () => {};
   export let onSetSoundLevel = () => {};
@@ -47,11 +49,14 @@
   const SOUND_LEVEL_STEP = 1;
 
   let reactionVideoIdValue = reactionVideoId ?? '';
+  let offsetStartMinutesValue = '0';
+  let offsetStartSecondsValue = '0';
   let introBufferTimeValue = introBufferTime?.toString?.() ?? '';
   let reactionFinishTimeValue = reactionFinishTime?.toString?.() ?? '';
   let soundLevelValue = Number.isFinite(soundLevel) ? soundLevel : 100;
 
   let lastReactionVideoIdProp = reactionVideoId;
+  let lastOffsetStartTimeProp = offsetStartTime;
   let lastIntroBufferTimeProp = introBufferTime;
   let lastReactionFinishTimeProp = reactionFinishTime;
   let lastSoundLevelProp = soundLevel;
@@ -59,6 +64,21 @@
   $: if (reactionVideoId !== lastReactionVideoIdProp) {
     lastReactionVideoIdProp = reactionVideoId;
     reactionVideoIdValue = reactionVideoId ?? '';
+  }
+
+  const syncOffsetStartInputs = (value) => {
+    const seconds = Math.max(0, Math.floor(Number(value) || 0));
+    const minutesPart = Math.floor(seconds / 60);
+    const secondsPart = seconds % 60;
+    offsetStartMinutesValue = String(minutesPart);
+    offsetStartSecondsValue = String(secondsPart);
+  };
+
+  syncOffsetStartInputs(offsetStartTime);
+
+  $: if (offsetStartTime !== lastOffsetStartTimeProp) {
+    lastOffsetStartTimeProp = offsetStartTime;
+    syncOffsetStartInputs(offsetStartTime);
   }
 
   $: if (introBufferTime !== lastIntroBufferTimeProp) {
@@ -84,6 +104,17 @@
   $: isIntroBufferTimeValid = !Number.isNaN(parsedIntroBufferTimeValue);
   $: isIntroBufferTimeDirty = isIntroBufferTimeValid && parsedIntroBufferTimeValue !== introBufferTime;
 
+  $: parsedOffsetStartMinutes = Number.parseInt(offsetStartMinutesValue, 10);
+  $: parsedOffsetStartSeconds = Number.parseInt(offsetStartSecondsValue, 10);
+  $: isOffsetStartValid =
+    Number.isFinite(parsedOffsetStartMinutes) &&
+    parsedOffsetStartMinutes >= 0 &&
+    Number.isFinite(parsedOffsetStartSeconds) &&
+    parsedOffsetStartSeconds >= 0 &&
+    parsedOffsetStartSeconds <= 59;
+  $: nextOffsetStartTimeSeconds = isOffsetStartValid ? (parsedOffsetStartMinutes * 60 + parsedOffsetStartSeconds) : 0;
+  $: isOffsetStartDirty = isOffsetStartValid && nextOffsetStartTimeSeconds !== Math.floor(offsetStartTime || 0);
+
   $: parsedReactionFinishTimeValue = Number.parseFloat(reactionFinishTimeValue);
   $: isReactionFinishTimeValid = !Number.isNaN(parsedReactionFinishTimeValue);
   $: isReactionFinishTimeDirty = isReactionFinishTimeValid && parsedReactionFinishTimeValue !== reactionFinishTime;
@@ -98,6 +129,14 @@
   const handleIntroBufferSubmit = () => {
     if (!isIntroBufferTimeValid) return;
     onSetIntroBufferTime(parsedIntroBufferTimeValue);
+  };
+
+  const handleOffsetStartSubmit = () => {
+    if (!isOffsetStartValid) {
+      showToast('Enter a valid start time (mm:ss).', TOASTS.WARNING);
+      return;
+    }
+    onSetOffsetStartTime(nextOffsetStartTimeSeconds);
   };
 
   const handleReactionFinishTimeSubmit = () => {
@@ -280,6 +319,41 @@
       </header>
 
       <div class="mt-6 flex flex-col gap-6">
+        <form class="flex flex-col gap-4" on:submit|preventDefault={handleOffsetStartSubmit}>
+          <div>
+            <h3 class="text-sm font-medium text-text-secondary">Reaction start time</h3>
+            <p class="mt-1 text-sm text-text-muted">When you start playback, the reaction video will begin from this timestamp.</p>
+          </div>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <AccessibleInput
+              id="reaction-offset-minutes"
+              label="Minutes"
+              type="number"
+              min="0"
+              step="1"
+              bind:value={offsetStartMinutesValue}
+              required
+            />
+            <AccessibleInput
+              id="reaction-offset-seconds"
+              label="Seconds"
+              type="number"
+              min="0"
+              max="59"
+              step="1"
+              bind:value={offsetStartSecondsValue}
+              required
+            />
+          </div>
+
+          <div class="flex justify-end">
+            <CinematicButton type="submit" size="sm" variant="secondary" disabled={!isOffsetStartDirty}>
+              <span>Save start time</span>
+            </CinematicButton>
+          </div>
+        </form>
+
         <form class="flex flex-col gap-4 md:flex-row md:items-center" on:submit|preventDefault={handleIntroBufferSubmit}>
           <div class="flex-1">
             <AccessibleInput
