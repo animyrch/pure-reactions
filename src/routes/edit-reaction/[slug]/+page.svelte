@@ -292,8 +292,10 @@
           isReactionMuteModeEnabled={$state.isReactionMuteModeEnabled}
           playerConfigs={$state.playerConfigs}
           volumeConfigs={$state.volumeConfigs}
+          reactionVolumeConfigs={$state.reactionVolumeConfigs}
           stateTimeline={$state.stateTimeline}
           volumeTimeline={$state.volumeTimeline}
+          reactionVolumeTimeline={$state.reactionVolumeTimeline}
           playbackRateConfigs={$state.playbackRateConfigs}
           playbackRateTimeline={$state.playbackRateTimeline}
           reactionCurrentTime={$state.reactionCurrentTime}
@@ -301,11 +303,14 @@
           playerEventTimeline={$state.playerEventTimeline}
           onCreatePlayerConfig={actions.createPlayerConfig}
           onCreateVolumeConfig={actions.createVolumeConfig}
+          onCreateReactionVolumeConfig={actions.createReactionVolumeConfig}
           onCreatePlaybackRateConfig={actions.createPlaybackRateConfig}
           onUpdatePlayerConfig={actions.updatePlayerConfig}
           onDeletePlayerConfig={actions.deletePlayerConfig}
           onUpdateVolumeConfig={actions.updateVolumeConfig}
           onDeleteVolumeConfig={actions.deleteVolumeConfig}
+          onUpdateReactionVolumeConfig={actions.updateReactionVolumeConfig}
+          onDeleteReactionVolumeConfig={actions.deleteReactionVolumeConfig}
           onUpdatePlaybackRateConfig={actions.updatePlaybackRateConfig}
           onDeletePlaybackRateConfig={actions.deletePlaybackRateConfig}
           onSetReactionVideoId={handleSetReactionVideoId}

@@ -6,9 +6,11 @@
   const dispatch = createEventDispatcher();
 
   export let volumeConfigs = {};
+  export let reactionVolumeConfigs = {};
   export let playerConfigs = {};
   export let stateTimeline = [];
   export let volumeTimeline = [];
+  export let reactionVolumeTimeline = [];
   export let playbackRateConfigs = {};
   export let playbackRateTimeline = [];
   export let reactionCurrentTime = 0;
@@ -167,18 +169,20 @@
   };
 
   $: volumeEvents = normalizeVolumeEvents(volumeTimeline, volumeConfigs);
+  $: reactionVolumeEvents = normalizeVolumeEvents(reactionVolumeTimeline, reactionVolumeConfigs);
   $: normalizedPlayerEvents = normalizePlayerEvents(stateTimeline, playerConfigs);
   $: playerEvents = Array.isArray(playerEventTimeline) && playerEventTimeline.length
     ? playerEventTimeline
     : normalizedPlayerEvents;
   $: playbackEvents = normalizePlaybackEvents(playbackRateTimeline, playbackRateConfigs);
 
-  $: timelineEntries = [...volumeEvents, ...playerEvents, ...playbackEvents]
+  $: timelineEntries = [...volumeEvents, ...reactionVolumeEvents, ...playerEvents, ...playbackEvents]
     .sort((a, b) => a.timeInReaction - b.timeInReaction);
 
   $: summary = {
     total: timelineEntries.length,
     volume: volumeEvents.length,
+    reactionVolume: reactionVolumeEvents.length,
     player: playerEvents.length,
     speed: playbackEvents.length,
     spanStart: timelineEntries[0]?.timeInReaction ?? null,
@@ -212,14 +216,18 @@
       duration={reactionDuration}
       playerEvents={playerEvents}
       volumeEvents={volumeEvents}
+      reactionVolumeEvents={reactionVolumeEvents}
       playbackRateEvents={playbackEvents}
       on:createPlayerConfig={(event) => dispatch('createPlayerConfig', event.detail)}
       on:createVolumeConfig={(event) => dispatch('createVolumeConfig', event.detail)}
+      on:createReactionVolumeConfig={(event) => dispatch('createReactionVolumeConfig', event.detail)}
       on:createPlaybackRateConfig={(event) => dispatch('createPlaybackRateConfig', event.detail)}
       on:updatePlayerConfig={(event) => dispatch('updatePlayerConfig', event.detail)}
       on:deletePlayerConfig={(event) => dispatch('deletePlayerConfig', event.detail)}
       on:updateVolumeConfig={(event) => dispatch('updateVolumeConfig', event.detail)}
       on:deleteVolumeConfig={(event) => dispatch('deleteVolumeConfig', event.detail)}
+      on:updateReactionVolumeConfig={(event) => dispatch('updateReactionVolumeConfig', event.detail)}
+      on:deleteReactionVolumeConfig={(event) => dispatch('deleteReactionVolumeConfig', event.detail)}
       on:updatePlaybackRateConfig={(event) => dispatch('updatePlaybackRateConfig', event.detail)}
       on:deletePlaybackRateConfig={(event) => dispatch('deletePlaybackRateConfig', event.detail)}
     />

@@ -6,6 +6,7 @@
   export let duration = 0;
   export let playerEvents = [];
   export let volumeEvents = [];
+  export let reactionVolumeEvents = [];
   export let playbackRateEvents = [];
 
   const clamp01 = (value) => {
@@ -201,6 +202,16 @@
         .filter((event) => Number.isFinite(event.timeInReaction) && Number.isFinite(event.volume))
         .sort((a, b) => a.timeInReaction - b.timeInReaction)
     : [];
+  $: reactionVolumeEventsSorted = Array.isArray(reactionVolumeEvents)
+    ? [...reactionVolumeEvents]
+        .map((event) => ({
+          ...event,
+          timeInReaction: sanitizeNumber(event?.timeInReaction ?? event?.t),
+          volume: Number.parseFloat(event?.volume ?? event?.value)
+        }))
+        .filter((event) => Number.isFinite(event.timeInReaction) && Number.isFinite(event.volume))
+        .sort((a, b) => a.timeInReaction - b.timeInReaction)
+    : [];
   $: playbackRateEventsSorted = Array.isArray(playbackRateEvents)
     ? [...playbackRateEvents]
         .map((event) => ({
@@ -280,6 +291,28 @@
       };
     })
     .filter(Boolean);
+  $: reactionVolumeMarkers = reactionVolumeEventsSorted
+    .map((event, index) => {
+      const timeInReaction = event.timeInReaction;
+      const volume = event.volume;
+      if (!Number.isFinite(timeInReaction) || !Number.isFinite(volume)) return null;
+      const normalized = effectiveDuration <= 0 ? 0 : clamp01(timeInReaction / effectiveDuration);
+      const displayValue = formatVolumeDisplay(volume);
+      return {
+        id: event?.id ?? `reaction-volume-marker-${index}`,
+        trackId: 'reactionVolume',
+        label: `Reaction volume ${displayValue}`,
+        tone: 'volume',
+        position: `${(normalized * 100).toFixed(3)}%`,
+        ratio: normalized,
+        timeLabel: formatTimecode(timeInReaction),
+        timeInReaction,
+        volume,
+        displayValue,
+        editable: true
+      };
+    })
+    .filter(Boolean);
   $: if (effectiveDuration <= 0) {
     hoverViewportRatio = null;
     hoverTimeLabel = null;
@@ -294,10 +327,18 @@
   $: maxVolumeEventTime = volumeEventsSorted.length
     ? volumeEventsSorted[volumeEventsSorted.length - 1].timeInReaction
     : 0;
+  $: maxReactionVolumeEventTime = reactionVolumeEventsSorted.length
+    ? reactionVolumeEventsSorted[reactionVolumeEventsSorted.length - 1].timeInReaction
+    : 0;
   $: maxPlaybackRateEventTime = playbackRateEventsSorted.length
     ? playbackRateEventsSorted[playbackRateEventsSorted.length - 1].timeInReaction
     : 0;
-  $: maxEventTime = Math.max(maxPlayerEventTime, maxVolumeEventTime, maxPlaybackRateEventTime);
+  $: maxEventTime = Math.max(
+    maxPlayerEventTime,
+    maxVolumeEventTime,
+    maxReactionVolumeEventTime,
+    maxPlaybackRateEventTime
+  );
   $: effectiveDuration = safeDuration > 0 ? safeDuration : Math.max(maxEventTime, safeCurrentTime);
   $: if (!viewportInitialized && effectiveDuration > 0) {
     viewportInitialized = true;
@@ -329,8 +370,15 @@
     },
     {
       id: 'volume',
-      label: 'Volume level',
+      label: 'Volume Original',
       markers: volumeMarkers,
+      showProgress: false,
+      interactive: false
+    },
+    {
+      id: 'reactionVolume',
+      label: 'Volume Reaction',
+      markers: reactionVolumeMarkers,
       showProgress: false,
       interactive: false
     }
@@ -404,6 +452,8 @@
     const markerList =
       activeMarker.trackId === 'volume'
         ? volumeMarkers
+        : activeMarker.trackId === 'reactionVolume'
+          ? reactionVolumeMarkers
         : activeMarker.trackId === 'speed'
           ? playbackRateMarkers
           : playerMarkers;
@@ -776,7 +826,8 @@
     pendingTargetMinutesInput = targetFormatted.minutes;
     pendingTargetSecondsInput = targetFormatted.seconds;
 
-    const previousVolumeEvent = [...volumeEventsSorted]
+    const volumeSource = trackId === 'reactionVolume' ? reactionVolumeEventsSorted : volumeEventsSorted;
+    const previousVolumeEvent = [...volumeSource]
       .filter((entry) => Number.isFinite(entry?.timeInReaction) && entry.timeInReaction <= reactionTime)
       .pop();
     const initialVolume = Number.isFinite(previousVolumeEvent?.volume) ? previousVolumeEvent.volume : 100;
@@ -843,6 +894,16 @@
     closeConfigPopup();
   };
 
+  const confirmReactionVolumeCreation = () => {
+    if (!pendingConfig) return;
+    const volume = Math.round(Math.min(Math.max(Number.parseFloat(pendingVolumeInput), 0), 100));
+    dispatch('createReactionVolumeConfig', {
+      timeInReaction: pendingConfig.reactionTime,
+      volume
+    });
+    closeConfigPopup();
+  };
+
   const confirmPlaybackRateCreation = () => {
     if (!pendingConfig) return;
     const rateCandidate = Number.parseFloat(pendingPlaybackRateInput);
@@ -891,7 +952,7 @@
       activeTargetSeconds = 0;
     }
 
-    if (trackId === 'volume') {
+    if (trackId === 'volume' || trackId === 'reactionVolume') {
       const initialVolume = Number.isFinite(marker.volume) ? marker.volume : 100;
       activeVolumeInput = String(Math.round(Math.min(Math.max(initialVolume, 0), 100)));
     }
@@ -915,6 +976,17 @@
     closeMarkerEditor();
   };
 
+  const confirmReactionVolumeUpdate = () => {
+    if (!activeMarker) return;
+    const volume = Math.round(Math.min(Math.max(Number.parseFloat(activeVolumeInput), 0), 100));
+    dispatch('updateReactionVolumeConfig', {
+      timeInReaction: activeMarker.timeInReaction,
+      volume,
+      previousTimeInReaction: activeMarker.initialTimeInReaction
+    });
+    closeMarkerEditor();
+  };
+
   const confirmPlaybackRateUpdate = () => {
     if (!activeMarker) return;
     const rateCandidate = Number.parseFloat(activePlaybackRateInput);
@@ -931,6 +1003,8 @@
     if (!activeMarker) return;
     if (activeMarker.trackId === 'volume') {
       dispatch('deleteVolumeConfig', { timeInReaction: activeMarker.initialTimeInReaction });
+    } else if (activeMarker.trackId === 'reactionVolume') {
+      dispatch('deleteReactionVolumeConfig', { timeInReaction: activeMarker.initialTimeInReaction });
     } else if (activeMarker.trackId === 'speed') {
       dispatch('deletePlaybackRateConfig', { timeInReaction: activeMarker.initialTimeInReaction });
     } else {
@@ -1219,10 +1293,10 @@
               </button>
             </div>
           </div>
-        {:else if pendingConfig.trackId === 'volume'}
+        {:else if pendingConfig.trackId === 'volume' || pendingConfig.trackId === 'reactionVolume'}
           <div class="flex flex-col gap-2">
             <label class="text-[11px] font-semibold uppercase tracking-wide text-text-muted" for="pending-volume">
-              Volume level
+              {pendingConfig.trackId === 'reactionVolume' ? 'Reaction volume' : 'Original volume'}
             </label>
             <div class="flex gap-2">
               <input
@@ -1239,7 +1313,10 @@
               <button
                 type="button"
                 class="rounded-md border border-border-strong/70 bg-surface/90 px-3 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
-                on:click|stopPropagation={confirmVolumeCreation}
+                on:click|stopPropagation={() =>
+                  pendingConfig?.trackId === 'reactionVolume'
+                    ? confirmReactionVolumeCreation()
+                    : confirmVolumeCreation()}
               >
                 Set volume
               </button>
@@ -1262,7 +1339,7 @@
         style={`left: ${(activeMarker.ratio * 100).toFixed(3)}%`}
         role="dialog"
         aria-modal="false"
-        aria-label={activeMarker.trackId === 'volume'
+        aria-label={activeMarker.trackId === 'volume' || activeMarker.trackId === 'reactionVolume'
           ? 'Edit volume cue'
           : activeMarker.trackId === 'speed'
             ? 'Edit playback speed cue'
@@ -1401,10 +1478,10 @@
               </button>
             </div>
           </div>
-        {:else if activeMarker.trackId === 'volume'}
+        {:else if activeMarker.trackId === 'volume' || activeMarker.trackId === 'reactionVolume'}
           <div class="flex flex-col gap-2">
             <label class="text-[11px] font-semibold uppercase tracking-wide text-text-muted" for="active-volume">
-              Volume level
+              {activeMarker.trackId === 'reactionVolume' ? 'Reaction volume' : 'Original volume'}
             </label>
             <div class="flex gap-2">
               <input
@@ -1424,7 +1501,10 @@
               <button
                 type="button"
                 class="rounded-md border border-border-strong/70 bg-surface/90 px-3 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
-                on:click|stopPropagation={confirmVolumeUpdate}
+                on:click|stopPropagation={() =>
+                  activeMarker?.trackId === 'reactionVolume'
+                    ? confirmReactionVolumeUpdate()
+                    : confirmVolumeUpdate()}
               >
                 Set volume
               </button>

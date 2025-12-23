@@ -30,6 +30,7 @@ declare global {
   interface Window {
     playerConfigs: Record<string, any> | any[];
     volumeConfigs: Record<string, any> | any[];
+    reactionVolumeConfigs: Record<string, any> | any[];
     playbackRateConfigs: Record<string, any> | any[];
   }
 }
@@ -71,14 +72,17 @@ type TwinPlayersState = {
   bothVideosStarted: boolean;
   playerConfigs: Record<string, any>;
   volumeConfigs: Record<string, any>;
+  reactionVolumeConfigs: Record<string, any>;
   playbackRateConfigs: Record<string, any>;
   stateTimeline: any[];
   volumeTimeline: any[];
+  reactionVolumeTimeline: any[];
   playbackRateTimeline: any[];
   playerEventTimeline: any[];
   currentPlaybackRate: number;
   currentStateOriginalVideo: number;
   currentVolumeOriginalVideo: number;
+  currentVolumeReactionVideo: number;
   reactionCurrentTime: number;
   reactionDuration: number;
   offsetStartTime: number;
@@ -115,6 +119,11 @@ type CreateVolumeConfigParams = {
   volume: number;
 };
 
+type CreateReactionVolumeConfigParams = {
+  timeInReaction: number;
+  volume: number;
+};
+
 type CreatePlaybackRateConfigParams = {
   timeInReaction: number;
   rate: number;
@@ -133,7 +142,17 @@ type UpdateVolumeConfigParams = {
   previousTimeInReaction?: number;
 };
 
+type UpdateReactionVolumeConfigParams = {
+  timeInReaction: number;
+  volume?: number;
+  previousTimeInReaction?: number;
+};
+
 type DeleteVolumeConfigParams = {
+  timeInReaction: number;
+};
+
+type DeleteReactionVolumeConfigParams = {
   timeInReaction: number;
 };
 
@@ -251,14 +270,17 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     bothVideosStarted: false,
     playerConfigs: {},
     volumeConfigs: {},
+    reactionVolumeConfigs: {},
     playbackRateConfigs: {},
     stateTimeline: [],
     volumeTimeline: [],
+    reactionVolumeTimeline: [],
     playbackRateTimeline: [],
     playerEventTimeline: [],
     currentPlaybackRate: 1,
     currentStateOriginalVideo: -1,
     currentVolumeOriginalVideo: 100,
+    currentVolumeReactionVideo: 100,
     reactionCurrentTime: 0,
     reactionDuration: 0,
     offsetStartTime: 0,
@@ -291,6 +313,7 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
   let reactionVideoClicked = false;
   let playlistFetchPromise: Promise<void> | undefined;
   let changingVolume = false;
+  let changingReactionVolume = false;
   let changingState = false;
   let changingSpeed = false;
   let lastOriginalTargetTime: number | undefined;
@@ -447,6 +470,10 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       const unmuted = unmuteReactionAudio(reactionPlayer);
       if (unmuted) {
         updateState({ isReactionAutoMuted: false });
+        const reactionCurrentTime = Number(snapshot.playerReaction?.getCurrentTime?.().toFixed?.(1));
+        if (Number.isFinite(reactionCurrentTime)) {
+          handleReactionVideoVolume(reactionCurrentTime);
+        }
       }
     }
   };
@@ -475,6 +502,10 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     get(state).playerOriginal?.setVolume?.(volume);
   };
 
+  const setVolumeForReactionVideo = (volume: number) => {
+    get(state).playerReaction?.setVolume?.(volume);
+  };
+
   const setPlaybackRateForOriginalVideo = (rate: number) => {
     const original = get(state).playerOriginal;
     if (original && typeof original.setPlaybackRate === 'function') {
@@ -495,6 +526,37 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       setVolumeForOriginalVideo(newVolume);
       updateState({ currentVolumeOriginalVideo: newVolume });
       changingVolume = false;
+    }
+  };
+
+  const handleReactionVideoVolume = (reactionCurrentTime: number) => {
+    const snapshot = get(state);
+    const reactionPlayer = snapshot.playerReaction;
+    if (!reactionPlayer) {
+      return;
+    }
+
+    const playingState = typeof YT !== 'undefined' && typeof YT?.PlayerState?.PLAYING === 'number'
+      ? YT.PlayerState.PLAYING
+      : 1;
+
+    const shouldMute = snapshot.isReactionMuteModeEnabled && snapshot.currentStateOriginalVideo === playingState;
+    if (shouldMute || snapshot.isReactionAutoMuted) {
+      return;
+    }
+
+    const newVolume = getCurrentVolumeFromVolumeConfigs(
+      reactionCurrentTime,
+      (window as any).reactionVolumeConfigs,
+      1.0,
+      snapshot.timeOffset
+    );
+
+    if (!changingReactionVolume && snapshot.currentVolumeReactionVideo !== newVolume) {
+      changingReactionVolume = true;
+      setVolumeForReactionVideo(newVolume);
+      updateState({ currentVolumeReactionVideo: newVolume });
+      changingReactionVolume = false;
     }
   };
 
@@ -672,6 +734,7 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
         return;
       }
       handleOriginalVideoVolume(reactionCurrentTime);
+      handleReactionVideoVolume(reactionCurrentTime);
       handleOriginalVideoSpeed(reactionCurrentTime);
       handleOriginalVideoState(reactionCurrentTime, previousReactionTime);
     }, interval);
@@ -938,14 +1001,17 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     const {
       playerConfigs,
       volumeConfigs,
+      reactionVolumeConfigs,
       playbackRateConfigs,
       stateTimeline,
       volumeTimeline,
+      reactionVolumeTimeline,
       playbackRateTimeline
     } = deriveTimelines(reactionData);
 
     window.playerConfigs = reactionData['stateTimeline'] || reactionData['reactionConfigs'];
     window.volumeConfigs = reactionData['volumeTimeline'] || reactionData['volumeConfigs'];
+    (window as any).reactionVolumeConfigs = reactionData['reactionVolumeTimeline'] || reactionData['reactionVolumeConfigs'];
     window.playbackRateConfigs = reactionData['playbackTimeline'] || reactionData['playbackRateConfigs'];
 
     const normalizedPlayerEvents = buildPlayerEventTimeline(stateTimeline);
@@ -1029,9 +1095,11 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       canShowEditModeButton: reactionData['reactorId'] === userId,
       playerConfigs,
       volumeConfigs,
+      reactionVolumeConfigs,
       playbackRateConfigs,
       stateTimeline,
       volumeTimeline,
+      reactionVolumeTimeline,
       playbackRateTimeline,
       playerEventTimeline: normalizedPlayerEvents,
       reactionVideoId,
@@ -1124,14 +1192,17 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     const {
       playerConfigs,
       volumeConfigs,
+      reactionVolumeConfigs,
       playbackRateConfigs,
       stateTimeline,
       volumeTimeline,
+      reactionVolumeTimeline,
       playbackRateTimeline
     } = deriveTimelines(reactionData);
 
     window.playerConfigs = reactionData['stateTimeline'] || reactionData['reactionConfigs'];
     window.volumeConfigs = reactionData['volumeTimeline'] || reactionData['volumeConfigs'];
+    (window as any).reactionVolumeConfigs = reactionData['reactionVolumeTimeline'] || reactionData['reactionVolumeConfigs'];
     window.playbackRateConfigs = reactionData['playbackTimeline'] || reactionData['playbackRateConfigs'];
 
     const normalizedPlayerEvents = buildPlayerEventTimeline(stateTimeline);
@@ -1196,9 +1267,11 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       canShowEditModeButton: reactionData['reactorId'] === userId,
       playerConfigs,
       volumeConfigs,
+      reactionVolumeConfigs,
       playbackRateConfigs,
       stateTimeline,
       volumeTimeline,
+      reactionVolumeTimeline,
       playbackRateTimeline,
       playerEventTimeline: normalizedPlayerEvents,
       reactionVideoId,
@@ -1221,6 +1294,7 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       playerReaction: nextPlayerReaction,
       currentStateOriginalVideo: -1,
       currentVolumeOriginalVideo: 100,
+      currentVolumeReactionVideo: 100,
       bothVideosStarted: preserveReactionTime ? snapshotBefore.bothVideosStarted : false,
       reactionCurrentTime: typeof previousReactionTime === 'number' ? previousReactionTime : offsetStartTime || 0,
       reactionDuration:
@@ -1715,6 +1789,35 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     });
   };
 
+  const persistReactionVolumeTimelineMap = async (map: Map<string, { t: number; volume: number }>) => {
+    const normalizedTimeline = Array.from(map.values()).sort((a, b) => a.t - b.t);
+    const nextVolumeConfigs = Object.fromEntries(
+      normalizedTimeline.map((entry) => [
+        Number(entry.t).toFixed(1),
+        {
+          volume: roundVolume(Number(entry.volume ?? 100))
+        }
+      ])
+    );
+
+    await updateFirebaseDocument({
+      reactionVolumeTimeline: normalizedTimeline.map((entry) => ({
+        t: Number(entry.t),
+        volume: roundVolume(Number(entry.volume ?? 100))
+      })),
+      reactionVolumeConfigs: nextVolumeConfigs
+    });
+
+    if (typeof window !== 'undefined') {
+      (window as any).reactionVolumeConfigs = normalizedTimeline;
+    }
+
+    updateState({
+      reactionVolumeTimeline: normalizedTimeline,
+      reactionVolumeConfigs: nextVolumeConfigs
+    });
+  };
+
   const playbackTimelineArrayToMap = (timeline: any[] = []) => {
     const map = new Map<string, { t: number; rate: number }>();
     for (const entry of timeline) {
@@ -1804,6 +1907,27 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       await persistVolumeTimelineMap(timelineMap);
     } catch (error) {
       console.error('Failed to create volume config', error);
+      throw error;
+    }
+  };
+
+  const createReactionVolumeConfig = async ({ timeInReaction, volume }: CreateReactionVolumeConfigParams) => {
+    const snapshot = get(state);
+    const sanitizedReactionTime = Number.isFinite(timeInReaction) ? Math.max(0, timeInReaction) : 0;
+    const roundedReactionTime = roundReactionTime(sanitizedReactionTime);
+    const roundedVolume = roundVolume(Number.isFinite(volume) ? volume : 100);
+
+    const existingTimeline = Array.isArray(snapshot.reactionVolumeTimeline) ? snapshot.reactionVolumeTimeline : [];
+    const timelineMap = volumeTimelineArrayToMap(existingTimeline);
+    timelineMap.set(roundedReactionTime.toFixed(3), {
+      t: roundedReactionTime,
+      volume: roundedVolume
+    });
+
+    try {
+      await persistReactionVolumeTimelineMap(timelineMap);
+    } catch (error) {
+      console.error('Failed to create reaction volume config', error);
       throw error;
     }
   };
@@ -1948,6 +2072,53 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     }
   };
 
+  const updateReactionVolumeConfig = async ({
+    timeInReaction,
+    volume,
+    previousTimeInReaction
+  }: UpdateReactionVolumeConfigParams) => {
+    const snapshot = get(state);
+    const existingTimeline = Array.isArray(snapshot.reactionVolumeTimeline) ? snapshot.reactionVolumeTimeline : [];
+    const timelineMap = volumeTimelineArrayToMap(existingTimeline);
+
+    const sanitizedReactionTime = Number.isFinite(timeInReaction) ? Math.max(0, timeInReaction) : 0;
+    const roundedReactionTime = roundReactionTime(sanitizedReactionTime);
+    const sanitizedPreviousTime =
+      typeof previousTimeInReaction === 'number' && Number.isFinite(previousTimeInReaction)
+        ? Math.max(0, previousTimeInReaction)
+        : sanitizedReactionTime;
+    const roundedPreviousTime = roundReactionTime(sanitizedPreviousTime);
+    const previousKey = roundedPreviousTime.toFixed(3);
+    const nextKey = roundedReactionTime.toFixed(3);
+
+    const currentEntry = timelineMap.get(previousKey);
+    if (!currentEntry) {
+      return;
+    }
+
+    const resolvedVolume =
+      typeof volume === 'number' && Number.isFinite(volume)
+        ? volume
+        : Number(currentEntry?.volume ?? 100);
+    const roundedVolume = roundVolume(resolvedVolume);
+
+    if (nextKey !== previousKey) {
+      timelineMap.delete(previousKey);
+    }
+
+    timelineMap.set(nextKey, {
+      t: roundedReactionTime,
+      volume: roundedVolume
+    });
+
+    try {
+      await persistReactionVolumeTimelineMap(timelineMap);
+    } catch (error) {
+      console.error('Failed to update reaction volume config', error);
+      throw error;
+    }
+  };
+
   const deleteVolumeConfig = async ({ timeInReaction }: DeleteVolumeConfigParams) => {
     const snapshot = get(state);
     const existingTimeline = Array.isArray(snapshot.volumeTimeline) ? snapshot.volumeTimeline : [];
@@ -1966,6 +2137,28 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       await persistVolumeTimelineMap(timelineMap);
     } catch (error) {
       console.error('Failed to delete volume config', error);
+      throw error;
+    }
+  };
+
+  const deleteReactionVolumeConfig = async ({ timeInReaction }: DeleteReactionVolumeConfigParams) => {
+    const snapshot = get(state);
+    const existingTimeline = Array.isArray(snapshot.reactionVolumeTimeline) ? snapshot.reactionVolumeTimeline : [];
+    const timelineMap = volumeTimelineArrayToMap(existingTimeline);
+
+    const sanitizedReactionTime = Number.isFinite(timeInReaction) ? Math.max(0, timeInReaction) : 0;
+    const key = roundReactionTime(sanitizedReactionTime).toFixed(3);
+
+    if (!timelineMap.has(key)) {
+      return;
+    }
+
+    timelineMap.delete(key);
+
+    try {
+      await persistReactionVolumeTimelineMap(timelineMap);
+    } catch (error) {
+      console.error('Failed to delete reaction volume config', error);
       throw error;
     }
   };
@@ -2313,11 +2506,14 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       setReactionMuteMode,
       createPlayerConfig,
       createVolumeConfig,
+      createReactionVolumeConfig,
       createPlaybackRateConfig,
       updatePlayerConfig,
       deletePlayerConfig,
       updateVolumeConfig,
       deleteVolumeConfig,
+      updateReactionVolumeConfig,
+      deleteReactionVolumeConfig,
       updatePlaybackRateConfig,
       deletePlaybackRateConfig,
       setIsPublished,

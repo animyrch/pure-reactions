@@ -43,10 +43,12 @@ function mapTimelineEntries(entries: [string, unknown][], mapper: (value: unknow
 export function deriveTimelines(obtainedData: ReactionDocument) {
   const rawStateTimeline = obtainedData?.['stateTimeline'];
   const rawVolumeTimeline = obtainedData?.['volumeTimeline'];
+  const rawReactionVolumeTimeline = obtainedData?.['reactionVolumeTimeline'];
   const rawPlaybackTimeline = obtainedData?.['playbackTimeline'];
 
   const reactionConfigs = obtainedData?.['reactionConfigs'];
   const volumeConfigsRaw = obtainedData?.['volumeConfigs'];
+  const reactionVolumeConfigsRaw = obtainedData?.['reactionVolumeConfigs'];
   const playbackRateConfigsRaw = obtainedData?.['playbackRateConfigs'];
 
   const playerConfigs = (!reactionConfigs && Array.isArray(rawStateTimeline))
@@ -71,6 +73,17 @@ export function deriveTimelines(obtainedData: ReactionDocument) {
         ])
       )
     : (volumeConfigsRaw as Record<string, unknown> | undefined) ?? {};
+
+  const reactionVolumeConfigs = (!reactionVolumeConfigsRaw && Array.isArray(rawReactionVolumeTimeline))
+    ? Object.fromEntries(
+        (rawReactionVolumeTimeline as TimelineEvent[]).map((event) => [
+          Number(event?.['t']).toFixed(1),
+          {
+            volume: event?.['volume']
+          }
+        ])
+      )
+    : (reactionVolumeConfigsRaw as Record<string, unknown> | undefined) ?? {};
 
   const playbackRateConfigs = (!playbackRateConfigsRaw && Array.isArray(rawPlaybackTimeline))
     ? Object.fromEntries(
@@ -102,6 +115,15 @@ export function deriveTimelines(obtainedData: ReactionDocument) {
         })
       );
 
+  const reactionVolumeTimeline = Array.isArray(rawReactionVolumeTimeline) && rawReactionVolumeTimeline.length
+    ? rawReactionVolumeTimeline
+    : mapTimelineEntries(
+        Object.entries(reactionVolumeConfigs),
+        (value) => ({
+          volume: Number((value as Record<string, unknown>)?.['volume'] ?? 100)
+        })
+      );
+
   const playbackRateTimeline = Array.isArray(rawPlaybackTimeline) && rawPlaybackTimeline.length
     ? rawPlaybackTimeline
     : mapTimelineEntries(
@@ -114,9 +136,11 @@ export function deriveTimelines(obtainedData: ReactionDocument) {
   return {
     playerConfigs,
     volumeConfigs,
+    reactionVolumeConfigs,
     playbackRateConfigs,
     stateTimeline,
     volumeTimeline,
+    reactionVolumeTimeline,
     playbackRateTimeline
   };
 }

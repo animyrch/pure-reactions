@@ -19,8 +19,10 @@
   export let isReactionMuteModeEnabled = false;
   export let playerConfigs = {};
   export let volumeConfigs = {};
+  export let reactionVolumeConfigs = {};
   export let stateTimeline = [];
   export let volumeTimeline = [];
+  export let reactionVolumeTimeline = [];
   export let playbackRateConfigs = {};
   export let playbackRateTimeline = [];
   export let reactionCurrentTime = 0;
@@ -28,11 +30,14 @@
   export let playerEventTimeline = [];
   export let onCreatePlayerConfig = async () => {};
   export let onCreateVolumeConfig = async () => {};
+  export let onCreateReactionVolumeConfig = async () => {};
   export let onCreatePlaybackRateConfig = async () => {};
   export let onUpdatePlayerConfig = async () => {};
   export let onDeletePlayerConfig = async () => {};
   export let onUpdateVolumeConfig = async () => {};
+  export let onUpdateReactionVolumeConfig = async () => {};
   export let onDeleteVolumeConfig = async () => {};
+  export let onDeleteReactionVolumeConfig = async () => {};
   export let onUpdatePlaybackRateConfig = async () => {};
   export let onDeletePlaybackRateConfig = async () => {};
 
@@ -186,6 +191,18 @@
     }
   };
 
+  const handleCreateReactionVolumeConfig = async (event) => {
+    const detail = event?.detail;
+    if (!detail) return;
+    try {
+      await onCreateReactionVolumeConfig(detail);
+      showToast('Reaction volume cue added.', TOASTS.SUCCESS);
+    } catch (error) {
+      console.error('Failed to add reaction volume config', error);
+      showToast('Unable to add that reaction volume cue. Try again.', TOASTS.WARNING);
+    }
+  };
+
   const handleCreatePlaybackRateConfig = async (event) => {
     const detail = event?.detail;
     if (!detail) return;
@@ -234,6 +251,18 @@
     }
   };
 
+  const handleUpdateReactionVolumeConfig = async (event) => {
+    const detail = event?.detail;
+    if (!detail) return;
+    try {
+      await onUpdateReactionVolumeConfig(detail);
+      showToast('Reaction volume cue updated.', TOASTS.SUCCESS);
+    } catch (error) {
+      console.error('Failed to update reaction volume config', error);
+      showToast('Unable to update that reaction volume cue. Try again.', TOASTS.WARNING);
+    }
+  };
+
   const handleDeleteVolumeConfig = async (event) => {
     const detail = event?.detail;
     if (!detail) return;
@@ -243,6 +272,18 @@
     } catch (error) {
       console.error('Failed to delete volume config', error);
       showToast('Unable to remove that volume cue. Try again.', TOASTS.WARNING);
+    }
+  };
+
+  const handleDeleteReactionVolumeConfig = async (event) => {
+    const detail = event?.detail;
+    if (!detail) return;
+    try {
+      await onDeleteReactionVolumeConfig(detail);
+      showToast('Reaction volume cue removed.', TOASTS.SUCCESS);
+    } catch (error) {
+      console.error('Failed to delete reaction volume config', error);
+      showToast('Unable to remove that reaction volume cue. Try again.', TOASTS.WARNING);
     }
   };
 
@@ -463,8 +504,10 @@
             <ConfigEditorV2
               {playerConfigs}
               {volumeConfigs}
+              {reactionVolumeConfigs}
               {stateTimeline}
               {volumeTimeline}
+              {reactionVolumeTimeline}
               {playbackRateConfigs}
               {playbackRateTimeline}
               reactionCurrentTime={reactionCurrentTime}
@@ -472,11 +515,14 @@
               playerEventTimeline={playerEventTimeline}
               on:createPlayerConfig={handleCreatePlayerConfig}
               on:createVolumeConfig={handleCreateVolumeConfig}
+              on:createReactionVolumeConfig={handleCreateReactionVolumeConfig}
               on:createPlaybackRateConfig={handleCreatePlaybackRateConfig}
               on:updatePlayerConfig={handleUpdatePlayerConfig}
               on:deletePlayerConfig={handleDeletePlayerConfig}
               on:updateVolumeConfig={handleUpdateVolumeConfig}
               on:deleteVolumeConfig={handleDeleteVolumeConfig}
+              on:updateReactionVolumeConfig={handleUpdateReactionVolumeConfig}
+              on:deleteReactionVolumeConfig={handleDeleteReactionVolumeConfig}
               on:updatePlaybackRateConfig={handleUpdatePlaybackRateConfig}
               on:deletePlaybackRateConfig={handleDeletePlaybackRateConfig}
             />
