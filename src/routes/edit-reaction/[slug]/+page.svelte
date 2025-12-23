@@ -86,6 +86,17 @@
       actions.closeEditMode();
     }
     if (!browser) return;
+
+    if ($state.playlistDocumentId) {
+      const playlistSlug = $state.playlistDocumentId;
+      const originalVideoId = $state.originalVideoId;
+      const itemQuery = originalVideoId
+        ? `?item=${encodeURIComponent(originalVideoId)}`
+        : '';
+      goto(`/playlist/${playlistSlug}${itemQuery}`);
+      return;
+    }
+
     goto(`/reaction/${$state.pageSlug}`);
   };
 
