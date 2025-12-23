@@ -1161,7 +1161,7 @@
     {#if pendingConfig}
       <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
       <div
-        class="pointer-events-auto absolute top-full mt-4 flex min-w-[18rem] w-max -translate-x-1/2 flex-col gap-2 rounded-lg border border-border-strong/60 bg-background/95 p-3 text-xs shadow-lg"
+        class="pointer-events-auto absolute top-full mt-4 flex min-w-[18rem] w-max -translate-x-1/2 flex-col gap-2 rounded-lg border border-border-strong/60 bg-background/95 p-3 text-xs shadow-lg z-10"
         style={`left: ${(pendingConfig.ratio * 100).toFixed(3)}%`}
         role="dialog"
         aria-modal="false"
