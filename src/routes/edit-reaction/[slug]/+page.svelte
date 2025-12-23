@@ -90,11 +90,13 @@
     if (playlistSlug) {
       const originalVideoId = $state.originalVideoId ?? itemFromUrl;
       const itemQuery = originalVideoId ? `?item=${encodeURIComponent(originalVideoId)}` : '';
-      goto(`/playlist/${playlistSlug}${itemQuery}`);
+      // Hard navigate to ensure a fresh player state.
+      window.location.assign(`/playlist/${playlistSlug}${itemQuery}`);
       return;
     }
 
-    goto(`/reaction/${$state.pageSlug}`);
+    // Hard navigate to ensure a fresh player state.
+    window.location.assign(`/reaction/${$state.pageSlug}`);
   };
 
   let hasCheckedOwnership = false;

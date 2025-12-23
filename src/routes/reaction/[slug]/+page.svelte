@@ -130,7 +130,8 @@
       handlers: {
         enterEditMode: () => {
           if (!browser) return;
-          goto(getEditReactionHref());
+          // Hard navigate so editor always starts from a clean player state.
+          window.location.assign(getEditReactionHref());
         },
         editPlaylist: $state.playlistDocumentId
           ? () => {
@@ -168,6 +169,7 @@
       Warning: The reaction video id is missing. This reaction page will stay
       hidden until a video id is added in the
       <a class="underline" href={getEditReactionHref()}
+        data-sveltekit-reload
         >edit view</a
       >
       and published again.

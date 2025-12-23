@@ -137,7 +137,8 @@
               if (playlistId) query.set('playlistId', playlistId);
               if (item) query.set('item', item);
               const suffix = query.toString() ? `?${query.toString()}` : '';
-              goto(`/edit-reaction/${$state.pageSlug}${suffix}`);
+              // Hard navigate so editor always starts from a clean player state.
+              window.location.assign(`/edit-reaction/${$state.pageSlug}${suffix}`);
             }
           : null,
         editPlaylist: playlistSlug

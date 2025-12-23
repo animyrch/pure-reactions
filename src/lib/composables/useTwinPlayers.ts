@@ -813,8 +813,6 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       if (typeof event?.target?.setPlaybackRate === 'function') {
         event.target.setPlaybackRate(1);
       }
-      pollVideoCurrentTime();
-
       if (!durationProbeTimeout) {
         resetReactionDurationProbe();
         probeReactionDuration();
@@ -841,11 +839,19 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     if (event.data === YT.PlayerState.PLAYING) {
       console.log('Original video started playing');
       if (!originalVideoClicked) {
-        pauseOriginalVideo();
+        // Pause the actual player instance that emitted the event.
+        // On fast client-side navigations, state.playerOriginal may not yet be updated
+        // when the first PLAYING event fires, which can bypass the "click both players" gate.
+        event?.target?.pauseVideo?.();
         originalVideoClicked = true;
       }
-      if (!get(state).bothVideosStarted && originalVideoClicked && reactionVideoClicked) {
-        startVideos();
+      const snapshot = get(state);
+      if (!snapshot.bothVideosStarted) {
+        if (originalVideoClicked && reactionVideoClicked) {
+          startVideos();
+        }
+        // Do not allow syncing/polling before the gate is satisfied.
+        return;
       }
     }
   };
@@ -861,13 +867,20 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     }
     if (event.data === YT.PlayerState.PLAYING) {
       if (!reactionVideoClicked) {
-        pauseReactionVideo();
+        // Same reasoning as original player: pause the emitting instance.
+        event?.target?.pauseVideo?.();
         reactionVideoClicked = true;
       }
       const snapshot = get(state);
-      if (!snapshot.bothVideosStarted && originalVideoClicked && reactionVideoClicked) {
-        startVideos();
-      } else if (snapshot.playerReaction && snapshot.playerOriginal) {
+      if (!snapshot.bothVideosStarted) {
+        if (originalVideoClicked && reactionVideoClicked) {
+          startVideos();
+        }
+        // Do not start polling until both videos are explicitly started.
+        return;
+      }
+
+      if (snapshot.playerReaction && snapshot.playerOriginal) {
         pollVideoCurrentTime();
       }
     }
@@ -1062,6 +1075,10 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     playerOriginal?.destroy?.();
     playerReaction?.destroy?.();
 
+    // Reset the click-to-start gate whenever we recreate players.
+    originalVideoClicked = false;
+    reactionVideoClicked = false;
+
     resetReactionDurationProbe();
     resetOriginalStateTracking();
 
@@ -1134,6 +1151,7 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       playerReaction: newPlayerReaction,
       currentStateOriginalVideo: -1,
       currentVolumeOriginalVideo: 100,
+      bothVideosStarted: false,
       reactionCurrentTime: offsetStartTime || 0,
       reactionDuration: typeof newPlayerReaction?.getDuration === 'function' ? Number(newPlayerReaction.getDuration()) || 0 : 0
     });
@@ -1186,6 +1204,11 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
         ? Number(snapshotBefore.playerReaction.getCurrentTime()) || 0
         : undefined;
     const previousReactionVideoId = snapshotBefore.reactionVideoId;
+
+    if (!preserveReactionTime) {
+      originalVideoClicked = false;
+      reactionVideoClicked = false;
+    }
 
     if (!snapshotBefore.playerOriginal || !document.getElementById('player-original')) {
       await buildInterface(nextReactionDocumentId, { isUpdate: true });
@@ -2469,6 +2492,17 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
   });
 
   onDestroy(() => {
+    // Ensure embedded YouTube players are torn down when leaving the route.
+    // Without this, client-side navigation from edit -> reaction can leave behind
+    // active player instances and cause inconsistent start/sync behavior.
+    try {
+      const snapshot = get(state);
+      snapshot.playerOriginal?.destroy?.();
+      snapshot.playerReaction?.destroy?.();
+    } catch (error) {
+      console.warn('Failed to destroy YouTube players on teardown', error);
+    }
+
     if (typeof document !== 'undefined') {
       document.body.classList.remove('reaction-fullscreen');
     }
