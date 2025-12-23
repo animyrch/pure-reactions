@@ -106,6 +106,18 @@
     actions.handlePlayStateChange(event.detail.isPlaying);
   };
 
+  const getEditReactionHref = () => {
+    const query = new URLSearchParams();
+    if ($state.playlistDocumentId) {
+      query.set('playlistId', $state.playlistDocumentId);
+      if ($state.originalVideoId) {
+        query.set('item', $state.originalVideoId);
+      }
+    }
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    return `/edit-reaction/${$state.pageSlug}${suffix}`;
+  };
+
   $: if (browser && !$state.isLoading) {
     refreshQueueHasNext();
     reactionDial.updateContext({
@@ -118,7 +130,7 @@
       handlers: {
         enterEditMode: () => {
           if (!browser) return;
-          goto(`/edit-reaction/${$state.pageSlug}`);
+          goto(getEditReactionHref());
         },
         editPlaylist: $state.playlistDocumentId
           ? () => {
@@ -155,7 +167,7 @@
     <p class="mb-4 rounded-md bg-warning/10 px-4 py-3 text-sm text-warning">
       Warning: The reaction video id is missing. This reaction page will stay
       hidden until a video id is added in the
-      <a class="underline" href={`/edit-reaction/${$state.pageSlug}`}
+      <a class="underline" href={getEditReactionHref()}
         >edit view</a
       >
       and published again.

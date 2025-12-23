@@ -87,12 +87,13 @@
     }
     if (!browser) return;
 
-    if ($state.playlistDocumentId) {
-      const playlistSlug = $state.playlistDocumentId;
-      const originalVideoId = $state.originalVideoId;
-      const itemQuery = originalVideoId
-        ? `?item=${encodeURIComponent(originalVideoId)}`
-        : '';
+    const playlistSlugFromUrl = $page.url.searchParams.get('playlistId');
+    const itemFromUrl = $page.url.searchParams.get('item');
+    const playlistSlug = $state.playlistDocumentId ?? playlistSlugFromUrl;
+
+    if (playlistSlug) {
+      const originalVideoId = $state.originalVideoId ?? itemFromUrl;
+      const itemQuery = originalVideoId ? `?item=${encodeURIComponent(originalVideoId)}` : '';
       goto(`/playlist/${playlistSlug}${itemQuery}`);
       return;
     }

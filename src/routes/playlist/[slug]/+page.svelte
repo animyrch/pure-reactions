@@ -131,7 +131,13 @@
         enterEditMode: isPlaylistOwner
           ? () => {
               if (!browser) return;
-              goto(`/edit-reaction/${$state.pageSlug}`);
+              const playlistId = playlistSlug;
+              const item = $state.originalVideoId || $page.url.searchParams.get('item');
+              const query = new URLSearchParams();
+              if (playlistId) query.set('playlistId', playlistId);
+              if (item) query.set('item', item);
+              const suffix = query.toString() ? `?${query.toString()}` : '';
+              goto(`/edit-reaction/${$state.pageSlug}${suffix}`);
             }
           : null,
         editPlaylist: playlistSlug
