@@ -2,7 +2,7 @@
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
   import { browser } from '$app/environment';
-  import { onDestroy, tick } from 'svelte';
+  import { onDestroy } from 'svelte';
   import CreatorDetails from '$lib/components/Video/CreatorDetails.svelte';
   import PlaylistQueue from '$lib/components/Video/PlaylistQueue.svelte';
   import SubtleLoader from '$lib/components/design-system/SubtleLoader.svelte';
@@ -20,10 +20,6 @@
   const { state, actions } = useTwinPlayers({ data });
 
   let overlayRef;
-  let editSectionRef;
-  let hasScrolledToEditor = false;
-  let isScrollPending = false;
-  let scrollFrame;
 
   $: stickyControlsClass = $state.isFullscreen ? CONTROLS_FADE_CLASS : 'opacity-100';
   $: overlayRef && actions.registerOverlayRef(overlayRef);
@@ -119,31 +115,6 @@
     actions.enterEditMode();
   }
 
-  // Bring the editor controls into view once the layout is ready.
-  const scrollEditorIntoView = async () => {
-    if (isScrollPending) return;
-    isScrollPending = true;
-    await tick();
-    if (!editSectionRef) {
-      isScrollPending = false;
-      return;
-    }
-    scrollFrame = requestAnimationFrame(() => {
-      if (!editSectionRef) {
-        isScrollPending = false;
-        return;
-      }
-      editSectionRef.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      hasScrolledToEditor = true;
-      isScrollPending = false;
-      scrollFrame = undefined;
-    });
-  };
-
-  $: if (!hasScrolledToEditor && browser && !$state.isLoading && !$state.isFullscreen && editSectionRef) {
-    scrollEditorIntoView();
-  }
-
   $: if (browser && !$state.isLoading) {
     reactionDial.updateContext({
       isUsersOwnVideo: $state.isUsersOwnVideo,
@@ -164,9 +135,6 @@
   }
 
   onDestroy(() => {
-    if (browser && scrollFrame && typeof cancelAnimationFrame === 'function') {
-      cancelAnimationFrame(scrollFrame);
-    }
     reactionDial.reset();
   });
 </script>
@@ -190,6 +158,55 @@
         >
           <span>View Live Page</span>
         </CinematicButton>
+      </div>
+    </div>
+
+    <div class="mx-auto w-full px-4 sm:px-6 lg:px-10">
+      <div class="mt-6 rounded-2xl bg-surface/80 p-6 shadow-elevated">
+        <EditorPanelsV2
+          isReactionMissing={$state.isReactionMissing}
+          isEditModeOn={$state.isEditModeOn}
+          isFineTuneModeOn={$state.isFineTuneModeOn}
+          isPlaylist={Boolean($state.youtubePlaylistId)}
+          reactionVideoId={$state.reactionVideoId}
+          reactionVideoIdError={reactionVideoIdError}
+          isSettingReactionVideoId={isSettingReactionVideoId}
+          offsetStartTime={$state.offsetStartTime}
+          introBufferTime={$state.introBufferTime}
+          reactionFinishTime={$state.reactionFinishTime}
+          soundLevel={$state.soundLevel}
+          isReactionMuteModeEnabled={$state.isReactionMuteModeEnabled}
+          playerConfigs={$state.playerConfigs}
+          volumeConfigs={$state.volumeConfigs}
+          reactionVolumeConfigs={$state.reactionVolumeConfigs}
+          stateTimeline={$state.stateTimeline}
+          volumeTimeline={$state.volumeTimeline}
+          reactionVolumeTimeline={$state.reactionVolumeTimeline}
+          playbackRateConfigs={$state.playbackRateConfigs}
+          playbackRateTimeline={$state.playbackRateTimeline}
+          reactionCurrentTime={$state.reactionCurrentTime}
+          reactionDuration={$state.reactionDuration}
+          playerEventTimeline={$state.playerEventTimeline}
+          onCreatePlayerConfig={actions.createPlayerConfig}
+          onCreateVolumeConfig={actions.createVolumeConfig}
+          onCreateReactionVolumeConfig={actions.createReactionVolumeConfig}
+          onCreatePlaybackRateConfig={actions.createPlaybackRateConfig}
+          onUpdatePlayerConfig={actions.updatePlayerConfig}
+          onDeletePlayerConfig={actions.deletePlayerConfig}
+          onUpdateVolumeConfig={actions.updateVolumeConfig}
+          onDeleteVolumeConfig={actions.deleteVolumeConfig}
+          onUpdateReactionVolumeConfig={actions.updateReactionVolumeConfig}
+          onDeleteReactionVolumeConfig={actions.deleteReactionVolumeConfig}
+          onUpdatePlaybackRateConfig={actions.updatePlaybackRateConfig}
+          onDeletePlaybackRateConfig={actions.deletePlaybackRateConfig}
+          onSetReactionVideoId={handleSetReactionVideoId}
+          onSetOffsetStartTime={handleSetOffsetStartTime}
+          onSetIntroBufferTime={handleSetIntroBufferTime}
+          onSetReactionFinishTime={handleSetReactionFinishTime}
+          onSetSoundLevel={handleSetSoundLevel}
+          onSetReactionMuteMode={handleSetReactionMuteMode}
+          onToggleFineTuneMode={actions.toggleFineTuneMode}
+        />
       </div>
     </div>
   {/if}
@@ -284,56 +301,6 @@
           />
         </div>
       {/if}
-
-      <div
-        class="mt-10 rounded-2xl bg-surface/80 p-6 shadow-elevated"
-        bind:this={editSectionRef}
-      >
-        <EditorPanelsV2
-          isReactionMissing={$state.isReactionMissing}
-          isEditModeOn={$state.isEditModeOn}
-          isFineTuneModeOn={$state.isFineTuneModeOn}
-          isPlaylist={Boolean($state.youtubePlaylistId)}
-          reactionVideoId={$state.reactionVideoId}
-          reactionVideoIdError={reactionVideoIdError}
-          isSettingReactionVideoId={isSettingReactionVideoId}
-          offsetStartTime={$state.offsetStartTime}
-          introBufferTime={$state.introBufferTime}
-          reactionFinishTime={$state.reactionFinishTime}
-          soundLevel={$state.soundLevel}
-          isReactionMuteModeEnabled={$state.isReactionMuteModeEnabled}
-          playerConfigs={$state.playerConfigs}
-          volumeConfigs={$state.volumeConfigs}
-          reactionVolumeConfigs={$state.reactionVolumeConfigs}
-          stateTimeline={$state.stateTimeline}
-          volumeTimeline={$state.volumeTimeline}
-          reactionVolumeTimeline={$state.reactionVolumeTimeline}
-          playbackRateConfigs={$state.playbackRateConfigs}
-          playbackRateTimeline={$state.playbackRateTimeline}
-          reactionCurrentTime={$state.reactionCurrentTime}
-          reactionDuration={$state.reactionDuration}
-          playerEventTimeline={$state.playerEventTimeline}
-          onCreatePlayerConfig={actions.createPlayerConfig}
-          onCreateVolumeConfig={actions.createVolumeConfig}
-          onCreateReactionVolumeConfig={actions.createReactionVolumeConfig}
-          onCreatePlaybackRateConfig={actions.createPlaybackRateConfig}
-          onUpdatePlayerConfig={actions.updatePlayerConfig}
-          onDeletePlayerConfig={actions.deletePlayerConfig}
-          onUpdateVolumeConfig={actions.updateVolumeConfig}
-          onDeleteVolumeConfig={actions.deleteVolumeConfig}
-          onUpdateReactionVolumeConfig={actions.updateReactionVolumeConfig}
-          onDeleteReactionVolumeConfig={actions.deleteReactionVolumeConfig}
-          onUpdatePlaybackRateConfig={actions.updatePlaybackRateConfig}
-          onDeletePlaybackRateConfig={actions.deletePlaybackRateConfig}
-          onSetReactionVideoId={handleSetReactionVideoId}
-          onSetOffsetStartTime={handleSetOffsetStartTime}
-          onSetIntroBufferTime={handleSetIntroBufferTime}
-          onSetReactionFinishTime={handleSetReactionFinishTime}
-          onSetSoundLevel={handleSetSoundLevel}
-          onSetReactionMuteMode={handleSetReactionMuteMode}
-          onToggleFineTuneMode={actions.toggleFineTuneMode}
-        />
-      </div>
     </div>
   {/if}
 </div>
