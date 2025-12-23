@@ -56,8 +56,9 @@
   let reactionVideoIdValue = reactionVideoId ?? '';
   let offsetStartMinutesValue = '0';
   let offsetStartSecondsValue = '0';
+  let reactionFinishMinutesValue = '0';
+  let reactionFinishSecondsValue = '0';
   let introBufferTimeValue = introBufferTime?.toString?.() ?? '';
-  let reactionFinishTimeValue = reactionFinishTime?.toString?.() ?? '';
   let soundLevelValue = Number.isFinite(soundLevel) ? soundLevel : 100;
 
   let lastReactionVideoIdProp = reactionVideoId;
@@ -81,6 +82,17 @@
 
   syncOffsetStartInputs(offsetStartTime);
 
+  const syncReactionFinishInputs = (value) => {
+    const seconds = Math.max(0, Number(value) || 0);
+    const floored = Math.floor(seconds);
+    const minutesPart = Math.floor(floored / 60);
+    const secondsPart = floored % 60;
+    reactionFinishMinutesValue = String(minutesPart);
+    reactionFinishSecondsValue = String(secondsPart);
+  };
+
+  syncReactionFinishInputs(reactionFinishTime);
+
   $: if (offsetStartTime !== lastOffsetStartTimeProp) {
     lastOffsetStartTimeProp = offsetStartTime;
     syncOffsetStartInputs(offsetStartTime);
@@ -93,7 +105,7 @@
 
   $: if (reactionFinishTime !== lastReactionFinishTimeProp) {
     lastReactionFinishTimeProp = reactionFinishTime;
-    reactionFinishTimeValue = reactionFinishTime?.toString?.() ?? '';
+    syncReactionFinishInputs(reactionFinishTime);
   }
 
   $: if (soundLevel !== lastSoundLevelProp) {
@@ -120,9 +132,20 @@
   $: nextOffsetStartTimeSeconds = isOffsetStartValid ? (parsedOffsetStartMinutes * 60 + parsedOffsetStartSeconds) : 0;
   $: isOffsetStartDirty = isOffsetStartValid && nextOffsetStartTimeSeconds !== Math.floor(offsetStartTime || 0);
 
-  $: parsedReactionFinishTimeValue = Number.parseFloat(reactionFinishTimeValue);
-  $: isReactionFinishTimeValid = !Number.isNaN(parsedReactionFinishTimeValue);
-  $: isReactionFinishTimeDirty = isReactionFinishTimeValid && parsedReactionFinishTimeValue !== reactionFinishTime;
+  $: parsedReactionFinishMinutes = Number.parseInt(reactionFinishMinutesValue, 10);
+  $: parsedReactionFinishSeconds = Number.parseFloat(reactionFinishSecondsValue);
+  $: isReactionFinishTimeValid =
+    Number.isFinite(parsedReactionFinishMinutes) &&
+    parsedReactionFinishMinutes >= 0 &&
+    Number.isFinite(parsedReactionFinishSeconds) &&
+    parsedReactionFinishSeconds >= 0 &&
+    parsedReactionFinishSeconds < 60;
+  $: nextReactionFinishTimeSeconds = isReactionFinishTimeValid
+    ? (parsedReactionFinishMinutes * 60 + parsedReactionFinishSeconds)
+    : 0;
+  $: isReactionFinishTimeDirty =
+    isReactionFinishTimeValid &&
+    Math.abs(nextReactionFinishTimeSeconds - Number(reactionFinishTime || 0)) > 0.0001;
 
   $: isSoundLevelDirty = Number.isFinite(soundLevelValue) && soundLevelValue !== soundLevel;
 
@@ -145,8 +168,11 @@
   };
 
   const handleReactionFinishTimeSubmit = () => {
-    if (!isReactionFinishTimeValid) return;
-    onSetReactionFinishTime(parsedReactionFinishTimeValue);
+    if (!isReactionFinishTimeValid) {
+      showToast('Enter a valid finish time (mm:ss).', TOASTS.WARNING);
+      return;
+    }
+    onSetReactionFinishTime(nextReactionFinishTimeSeconds);
   };
 
   const handleSoundLevelSubmit = () => {
@@ -360,40 +386,79 @@
       </header>
 
       <div class="mt-6 flex flex-col gap-6">
-        <form class="flex flex-col gap-4" on:submit|preventDefault={handleOffsetStartSubmit}>
-          <div>
-            <h3 class="text-sm font-medium text-text-secondary">Reaction start time</h3>
-            <p class="mt-1 text-sm text-text-muted">When you start playback, the reaction video will begin from this timestamp.</p>
-          </div>
+        <div class="grid gap-6 lg:grid-cols-2">
+          <form class="flex flex-col gap-4" on:submit|preventDefault={handleOffsetStartSubmit}>
+            <div>
+              <h3 class="text-sm font-medium text-text-secondary">Reaction start time</h3>
+              <p class="mt-1 text-sm text-text-muted">When you start playback, the reaction video will begin from this timestamp.</p>
+            </div>
 
-          <div class="grid gap-4 sm:grid-cols-2">
-            <AccessibleInput
-              id="reaction-offset-minutes"
-              label="Minutes"
-              type="number"
-              min="0"
-              step="1"
-              bind:value={offsetStartMinutesValue}
-              required
-            />
-            <AccessibleInput
-              id="reaction-offset-seconds"
-              label="Seconds"
-              type="number"
-              min="0"
-              max="59"
-              step="1"
-              bind:value={offsetStartSecondsValue}
-              required
-            />
-          </div>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <AccessibleInput
+                id="reaction-offset-minutes"
+                label="Minutes"
+                type="number"
+                min="0"
+                step="1"
+                bind:value={offsetStartMinutesValue}
+                required
+              />
+              <AccessibleInput
+                id="reaction-offset-seconds"
+                label="Seconds"
+                type="number"
+                min="0"
+                max="59"
+                step="1"
+                bind:value={offsetStartSecondsValue}
+                required
+              />
+            </div>
 
-          <div class="flex justify-end">
-            <CinematicButton type="submit" size="sm" variant="secondary" disabled={!isOffsetStartDirty}>
-              <span>Save start time</span>
-            </CinematicButton>
-          </div>
-        </form>
+            <div class="flex justify-end">
+              <CinematicButton type="submit" size="sm" variant="secondary" disabled={!isOffsetStartDirty}>
+                <span>Save start time</span>
+              </CinematicButton>
+            </div>
+          </form>
+
+          {#if isPlaylist}
+            <form class="flex flex-col gap-4" on:submit|preventDefault={handleReactionFinishTimeSubmit}>
+              <div>
+                <h3 class="text-sm font-medium text-text-secondary">Reaction finish time</h3>
+                <p class="mt-1 text-sm text-text-muted">Stop the reaction video once it reaches this timestamp (playlist reactions only).</p>
+              </div>
+
+              <div class="grid gap-4 sm:grid-cols-2">
+                <AccessibleInput
+                  id="reaction-finish-minutes"
+                  label="Minutes"
+                  type="number"
+                  min="0"
+                  step="1"
+                  bind:value={reactionFinishMinutesValue}
+                  required
+                />
+                <AccessibleInput
+                  id="reaction-finish-seconds"
+                  label="Seconds"
+                  type="number"
+                  min="0"
+                  max="59.9"
+                  step="0.1"
+                  bind:value={reactionFinishSecondsValue}
+                  required
+                />
+              </div>
+
+              <div class="flex justify-end">
+                <CinematicButton type="submit" size="sm" variant="secondary" disabled={!isReactionFinishTimeDirty}>
+                  <span>Save finish time</span>
+                </CinematicButton>
+              </div>
+            </form>
+          {/if}
+        </div>
 
         <form class="flex flex-col gap-4 md:flex-row md:items-center" on:submit|preventDefault={handleIntroBufferSubmit}>
           <div class="flex-1">
@@ -414,29 +479,6 @@
             </CinematicButton>
           </div>
         </form>
-
-        {#if isPlaylist}
-          <form class="flex flex-col gap-4 md:flex-row md:items-center" on:submit|preventDefault={handleReactionFinishTimeSubmit}>
-            <div class="flex-1">
-              <AccessibleInput
-                id="reaction-finish-time"
-                label="Reaction finish time (seconds)"
-                type="number"
-                min="0"
-                step="0.1"
-                bind:value={reactionFinishTimeValue}
-                helperText="Stop the reaction video once it reaches this timestamp (playlist reactions only)."
-                required
-              />
-            </div>
-            <div class="flex-none">
-              <CinematicButton type="submit" size="sm" variant="secondary" disabled={!isReactionFinishTimeDirty}>
-                <span>Save finish time</span>
-              </CinematicButton>
-            </div>
-          </form>
-        {/if}
-
         <form class="flex flex-col gap-4" on:submit|preventDefault={handleSoundLevelSubmit}>
           <div class="flex w-full flex-col gap-2">
             <div class="flex items-center justify-between">
