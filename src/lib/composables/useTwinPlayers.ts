@@ -1221,6 +1221,7 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       playerReaction: nextPlayerReaction,
       currentStateOriginalVideo: -1,
       currentVolumeOriginalVideo: 100,
+      bothVideosStarted: preserveReactionTime ? snapshotBefore.bothVideosStarted : false,
       reactionCurrentTime: typeof previousReactionTime === 'number' ? previousReactionTime : offsetStartTime || 0,
       reactionDuration:
         typeof nextPlayerReaction?.getDuration === 'function' ? Number(nextPlayerReaction.getDuration()) || 0 : snapshotBefore.reactionDuration
@@ -1228,6 +1229,14 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
 
     enforceReactionMuteMode();
     await setPlaylistData(get(state).playlistDocumentId, youtubePlaylistId);
+
+    if (!preserveReactionTime && canReuseReactionPlayer && typeof nextPlayerReaction?.seekTo === 'function') {
+      try {
+        nextPlayerReaction.seekTo(Number(offsetStartTime) || 0, true);
+      } catch {
+        // ignore
+      }
+    }
 
     if (typeof previousReactionTime === 'number' && typeof nextPlayerReaction?.seekTo === 'function' && !canReuseReactionPlayer) {
       try {
@@ -1269,7 +1278,7 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     const isPlaylistPage = typeof window !== 'undefined' && window.location?.pathname?.startsWith('/playlist/');
     if (isPlaylistPage) {
       const nextOriginalVideoId = playlistDocument.originalVideoIds?.[nextIndex];
-      loadReactionInPlace(nextReactionDocumentId, { preserveReactionTime: true }).then(() => {
+      loadReactionInPlace(nextReactionDocumentId, { preserveReactionTime: false }).then(() => {
         const updatedIndex = nextIndex;
         const hasNext = updatedIndex < playlistItems.length - 1;
         updateState({
@@ -2064,15 +2073,28 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
 
   const handlePlayStateChange = (isPlaying: boolean) => {
     if (isPlaying) {
+      const snapshot = get(state);
+      if (!snapshot.bothVideosStarted) {
+        goToSecondsInReactionVideo(snapshot.offsetStartTime || 0);
+        setPlaybackRateForOriginalVideo(snapshot.currentPlaybackRate);
+        updateState({ bothVideosStarted: true });
+      }
       startReactionVideo();
       handleStateChangeInReactionVideo(YT.PlayerState.PAUSED, YT.PlayerState.PLAYING);
-    } else {
-      pauseOriginalVideo();
-      pauseReactionVideo();
+      return;
     }
+
+    pauseOriginalVideo();
+    pauseReactionVideo();
   };
 
   const syncVideos = () => {
+    const snapshot = get(state);
+    if (!snapshot.bothVideosStarted) {
+      goToSecondsInReactionVideo(snapshot.offsetStartTime || 0);
+      setPlaybackRateForOriginalVideo(snapshot.currentPlaybackRate);
+      updateState({ bothVideosStarted: true });
+    }
     pauseOriginalVideo();
     pauseReactionVideo();
     startReactionVideo();
