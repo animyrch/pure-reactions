@@ -609,6 +609,11 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     changingState = true;
     try {
       const snapshot = get(state);
+      const reactionPlayerState = typeof snapshot.playerReaction?.getPlayerState === 'function'
+        ? snapshot.playerReaction.getPlayerState()
+        : undefined;
+      const isReactionPlaying = reactionPlayerState === YT?.PlayerState?.PLAYING;
+      const shouldHoldOriginalWhilePaused = snapshot.isFineTuneModeOn && !isReactionPlaying;
       const timeline = Array.isArray(snapshot.stateTimeline) ? snapshot.stateTimeline : [];
       const timeOffset = Number(snapshot.timeOffset || 0);
       const previousEffective = Number.isFinite(previousReactionTime)
@@ -631,7 +636,10 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
 
         for (const entry of eventsInRange) {
           const rawState = Number(entry?.state);
-          const desiredState = Number.isFinite(rawState) ? rawState : -1;
+          let desiredState = Number.isFinite(rawState) ? rawState : -1;
+          if (shouldHoldOriginalWhilePaused && desiredState === YT.PlayerState.PLAYING) {
+            desiredState = YT.PlayerState.PAUSED;
+          }
           const desiredTarget = Number(entry?.targetTime ?? entry?.time ?? 0);
           handleStateChangeInOriginalVideo(workingState, desiredState, desiredTarget);
           workingState = desiredState;
@@ -645,6 +653,10 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       );
       const rawConfigState = Number(config.state);
       const configState = Number.isFinite(rawConfigState) ? rawConfigState : -1;
+      const effectiveConfigState =
+        shouldHoldOriginalWhilePaused && configState === YT.PlayerState.PLAYING
+          ? YT.PlayerState.PAUSED
+          : configState;
       const baseTargetTime = Number(config.time ?? 0);
       const anchorTime = Number(config.closestSmallerTimeCode ?? currentEffective);
       const actualOriginalTime = typeof snapshot.playerOriginal?.getCurrentTime === 'function'
@@ -654,12 +666,12 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
 
       if (Number.isFinite(computedTargetTime) && Number.isFinite(anchorTime)) {
         const deltaSinceAnchor = currentEffective - anchorTime;
-        if (configState === YT.PlayerState.PLAYING && Number.isFinite(deltaSinceAnchor)) {
+        if (effectiveConfigState === YT.PlayerState.PLAYING && Number.isFinite(deltaSinceAnchor)) {
           computedTargetTime += Math.max(deltaSinceAnchor, 0);
         }
       }
 
-      const tolerance = configState === YT.PlayerState.PLAYING ? 0.35 : 0.01;
+      const tolerance = effectiveConfigState === YT.PlayerState.PLAYING ? 0.35 : 0.01;
 
       let targetMismatch = false;
       if (Number.isFinite(computedTargetTime)) {
@@ -672,9 +684,9 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
         }
       }
 
-      if (workingState !== configState || targetMismatch) {
-        handleStateChangeInOriginalVideo(workingState, configState, computedTargetTime);
-        workingState = configState;
+      if (workingState !== effectiveConfigState || targetMismatch) {
+        handleStateChangeInOriginalVideo(workingState, effectiveConfigState, computedTargetTime);
+        workingState = effectiveConfigState;
       }
 
       if (workingState !== snapshot.currentStateOriginalVideo) {
