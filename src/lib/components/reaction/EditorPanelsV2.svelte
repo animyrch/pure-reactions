@@ -73,22 +73,23 @@
   }
 
   const syncOffsetStartInputs = (value) => {
-    const seconds = Math.max(0, Math.floor(Number(value) || 0));
-    const minutesPart = Math.floor(seconds / 60);
-    const secondsPart = seconds % 60;
+    const totalSeconds = Math.max(0, Number(value) || 0);
+    const minutesPart = Math.floor(totalSeconds / 60);
+    const secondsPartRaw = totalSeconds - minutesPart * 60;
+    const secondsPart = Math.round(secondsPartRaw * 10) / 10; // 1 decimal
     offsetStartMinutesValue = String(minutesPart);
-    offsetStartSecondsValue = String(secondsPart);
+    offsetStartSecondsValue = Number.isInteger(secondsPart) ? String(secondsPart) : secondsPart.toFixed(1);
   };
 
   syncOffsetStartInputs(offsetStartTime);
 
   const syncReactionFinishInputs = (value) => {
-    const seconds = Math.max(0, Number(value) || 0);
-    const floored = Math.floor(seconds);
-    const minutesPart = Math.floor(floored / 60);
-    const secondsPart = floored % 60;
+    const totalSeconds = Math.max(0, Number(value) || 0);
+    const minutesPart = Math.floor(totalSeconds / 60);
+    const secondsPartRaw = totalSeconds - minutesPart * 60;
+    const secondsPart = Math.round(secondsPartRaw * 10) / 10; // 1 decimal
     reactionFinishMinutesValue = String(minutesPart);
-    reactionFinishSecondsValue = String(secondsPart);
+    reactionFinishSecondsValue = Number.isInteger(secondsPart) ? String(secondsPart) : secondsPart.toFixed(1);
   };
 
   syncReactionFinishInputs(reactionFinishTime);
@@ -122,15 +123,17 @@
   $: isIntroBufferTimeDirty = isIntroBufferTimeValid && parsedIntroBufferTimeValue !== introBufferTime;
 
   $: parsedOffsetStartMinutes = Number.parseInt(offsetStartMinutesValue, 10);
-  $: parsedOffsetStartSeconds = Number.parseInt(offsetStartSecondsValue, 10);
+  $: parsedOffsetStartSeconds = Number.parseFloat(offsetStartSecondsValue);
   $: isOffsetStartValid =
     Number.isFinite(parsedOffsetStartMinutes) &&
     parsedOffsetStartMinutes >= 0 &&
     Number.isFinite(parsedOffsetStartSeconds) &&
     parsedOffsetStartSeconds >= 0 &&
-    parsedOffsetStartSeconds <= 59;
+    parsedOffsetStartSeconds < 60;
   $: nextOffsetStartTimeSeconds = isOffsetStartValid ? (parsedOffsetStartMinutes * 60 + parsedOffsetStartSeconds) : 0;
-  $: isOffsetStartDirty = isOffsetStartValid && nextOffsetStartTimeSeconds !== Math.floor(offsetStartTime || 0);
+  $: isOffsetStartDirty =
+    isOffsetStartValid &&
+    Math.abs(nextOffsetStartTimeSeconds - Number(offsetStartTime || 0)) > 0.0001;
 
   $: parsedReactionFinishMinutes = Number.parseInt(reactionFinishMinutesValue, 10);
   $: parsedReactionFinishSeconds = Number.parseFloat(reactionFinishSecondsValue);
@@ -408,8 +411,8 @@
                 label="Seconds"
                 type="number"
                 min="0"
-                max="59"
-                step="1"
+                max="59.9"
+                step="0.1"
                 bind:value={offsetStartSecondsValue}
                 required
               />
