@@ -1197,7 +1197,7 @@
                 type="number"
                 min="0"
                 max="59.99"
-                step="0.01"
+                step="0.5"
                 inputmode="decimal"
                 class="w-20 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
                 value={pendingReactionSecondsInput}
@@ -1235,7 +1235,7 @@
                 type="number"
                 min="0"
                 max="59.99"
-                step="0.01"
+                step="0.5"
                 inputmode="decimal"
                 class="w-20 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
                 value={pendingTargetSecondsInput}
@@ -1376,7 +1376,7 @@
                 type="number"
                 min="0"
                 max="59.99"
-                step="0.01"
+                step="0.5"
                 inputmode="decimal"
                 class="w-20 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
                 value={activeReactionSecondsInput}
@@ -1417,7 +1417,7 @@
                   type="number"
                   min="0"
                   max="59.99"
-                  step="0.01"
+                  step="0.5"
                   inputmode="decimal"
                   class="w-20 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
                   value={activeTargetSecondsInput}
