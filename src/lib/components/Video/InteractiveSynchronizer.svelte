@@ -1076,7 +1076,21 @@
       </div>
     {/if}
 
-    <div class="flex flex-col gap-4">
+    <!-- Replace the tracks wrapper with a relative wrapper that has room for the global indicator -->
+    <div class="relative flex flex-col gap-4 pt-6">
+      <!-- Global current-time indicator (aligned to the region column: w-28 + gap-3) -->
+      <div
+        class="pointer-events-none absolute left-[calc(7rem+0.75rem)] right-0 top-0 h-6"
+        aria-hidden="true"
+      >
+        <div
+          class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2"
+          style={`left: ${indicatorPosition}`}
+        >
+          <div class="h-3 w-3 rounded-full border border-white/30 bg-accent-primary shadow"></div>
+        </div>
+      </div>
+
       {#each visibleTracks as track (track.id)}
         <div class="flex items-center gap-3">
           <span class="w-28 text-[11px] font-semibold uppercase tracking-wide text-text-muted">{track.label}</span>
@@ -1097,26 +1111,6 @@
               ></div>
             {/if}
             <div class="absolute left-0 right-0 top-1/2 z-0 h-2 -translate-y-1/2 rounded-full bg-border-subtle/40"></div>
-
-            {#if track.showProgress}
-              <div
-                class="absolute left-0 top-1/2 z-20 h-2 -translate-y-1/2 rounded-full bg-accent-primary/50 transition-[width] duration-200 ease-linear"
-                style={`width: ${indicatorPosition}`}
-                aria-hidden="true"
-              ></div>
-              <div
-                class="absolute top-1/2 z-30 h-4 w-4 -translate-y-1/2 -translate-x-1/2 rounded-full border border-white/30 bg-accent-primary shadow"
-                style={`left: ${indicatorPosition}`}
-                role="presentation"
-                aria-hidden="true"
-              ></div>
-            {:else}
-              <div
-                class="pointer-events-none absolute top-1/2 z-20 h-3 w-[2px] -translate-y-1/2 -translate-x-1/2 rounded-full bg-accent-primary/60 transition-transform duration-200 ease-linear"
-                style={`left: ${indicatorPosition}`}
-                aria-hidden="true"
-              ></div>
-            {/if}
 
             {#each track.markers as marker (marker.id)}
               <div
