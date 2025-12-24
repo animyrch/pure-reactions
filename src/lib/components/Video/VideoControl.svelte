@@ -30,14 +30,42 @@
     let pendingSeekTime = null;
     let pendingSeekTimeout;
 
+    let seekRaf = 0;
+    let queuedSeekTime = null;
+
     const dispatch = createEventDispatcher();
 
+    // Re-add these (they were present before; glassBase is required by glassClasses)
     const buttonBase =
         "inline-flex h-16 w-16 items-center justify-center rounded-full text-text-primary transition duration-subtle ease-cinematic hover:bg-elevated/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.97]";
     const tooltipBase =
         "pointer-events-none absolute -bottom-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-sm bg-overlay px-xs py-[2px] text-[0.65rem] uppercase tracking-wide text-text-primary opacity-0 transition duration-subtle ease-cinematic";
     const glassBase =
         "controls-glass transition-opacity duration-500 ease-cinematic";
+
+    const clearPendingSeek = () => {
+        pendingSeekTime = null;
+        if (pendingSeekTimeout) clearTimeout(pendingSeekTimeout);
+        pendingSeekTimeout = null;
+    };
+
+    const armPendingSeek = (time) => {
+        pendingSeekTime = time;
+        if (pendingSeekTimeout) clearTimeout(pendingSeekTimeout);
+        pendingSeekTimeout = setTimeout(clearPendingSeek, 1200);
+    };
+
+    const queueSeekDispatch = (time) => {
+        queuedSeekTime = time;
+        if (seekRaf) return;
+        seekRaf = requestAnimationFrame(() => {
+            seekRaf = 0;
+            const t = queuedSeekTime;
+            queuedSeekTime = null;
+            if (t == null) return;
+            dispatch("seek", { time: t });
+        });
+    };
 
     const clearHideTimeout = () => {
         if (hideTimeout) {
@@ -125,11 +153,18 @@
 
     function handleSeekInput(event) {
         isDragging = true;
-        localTime = clampNumber(
+        const time = clampNumber(
             parseFloat(event.currentTarget.value),
             safeSeekMin,
             safeSeekMax
         );
+
+        localTime = time;
+
+        // Keep UI locked + actually seek while dragging/clicking.
+        armPendingSeek(time);
+        queueSeekDispatch(time);
+
         scheduleHide(); // keep awake
     }
 
@@ -140,15 +175,13 @@
             safeSeekMax
         );
 
-        // Keep the UI locked to the chosen value until currentTime updates.
-        pendingSeekTime = time;
-        if (pendingSeekTimeout) clearTimeout(pendingSeekTimeout);
-        pendingSeekTimeout = setTimeout(clearPendingSeek, 1200);
-
         localTime = time;
         isDragging = false;
 
-        dispatch("seek", { time });
+        // Finalize seek (in case some UAs only commit on change).
+        armPendingSeek(time);
+        queueSeekDispatch(time);
+
         scheduleHide();
     }
 
@@ -162,6 +195,7 @@
     onDestroy(() => {
         clearHideTimeout();
         clearPendingSeek();
+        if (seekRaf) cancelAnimationFrame(seekRaf);
     });
 
     function togglePlayState() {
