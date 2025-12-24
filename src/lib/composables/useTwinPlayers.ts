@@ -495,7 +495,27 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
   };
 
   const goToSecondsInReactionVideo = (seconds: number) => {
-    get(state).playerReaction?.seekTo(seconds);
+    const normalized = Number(seconds);
+    if (!Number.isFinite(normalized)) {
+      return;
+    }
+
+    const snapshot = get(state);
+    const rawMin = Number(snapshot.offsetStartTime);
+    const seekMin = Number.isFinite(rawMin) && rawMin >= 0 ? rawMin : 0;
+
+    const rawDuration = Number(snapshot.reactionDuration);
+    const durationCap = Number.isFinite(rawDuration) && rawDuration > 0 ? rawDuration : Number.POSITIVE_INFINITY;
+
+    const rawFinish = Number(snapshot.reactionFinishTime);
+    const finishCap = Number.isFinite(rawFinish) && rawFinish > 0 ? rawFinish : Number.POSITIVE_INFINITY;
+
+    const seekMax = Math.max(seekMin, Math.min(durationCap, finishCap));
+    const clamped = seekMax === Number.POSITIVE_INFINITY
+      ? Math.max(normalized, seekMin)
+      : Math.min(Math.max(normalized, seekMin), seekMax);
+
+    snapshot.playerReaction?.seekTo?.(clamped, true);
   };
 
   const setVolumeForOriginalVideo = (volume: number) => {

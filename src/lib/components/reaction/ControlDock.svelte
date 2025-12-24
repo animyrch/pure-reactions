@@ -16,7 +16,9 @@
 
   export let currentTime = 0;
   export let duration = 0;
-  export let onSeek = (time) => {};
+  export let seekMin = 0;
+  export let seekMax;
+  export let onSeek = (_time) => {};
 </script>
 
 <div
@@ -33,6 +35,8 @@
       {isFullscreen}
       {currentTime}
       {duration}
+      {seekMin}
+      {seekMax}
       on:playStateChanged={onPlayStateChanged}
       on:syncVideos={onSyncVideos}
       on:toggleAutoPlaylist={onToggleAutoPlaylist}

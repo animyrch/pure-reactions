@@ -273,6 +273,11 @@
         onToggleAutoPlaylist={actions.toggleAutoPlaylist}
         onToggleBars={actions.toggleCinematicBars}
         onEnterFullscreen={actions.openWithFullscreen}
+        currentTime={$state.reactionCurrentTime}
+        duration={$state.reactionDuration}
+        seekMin={$state.offsetStartTime || 0}
+        seekMax={Math.min($state.reactionFinishTime || 0, $state.reactionDuration || 0)}
+        onSeek={actions.seekTo}
       />
     {/if}
   </section>

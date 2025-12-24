@@ -16,6 +16,8 @@
     export let isFullscreen = false;
     export let currentTime = 0;
     export let duration = 0;
+    export let seekMin = 0;
+    export let seekMax;
 
     let isPlaying = true;
     let isInteracting = false;
@@ -24,6 +26,10 @@
     let localTime = 0;
     let hideTimeout;
     let containerRef;
+
+    let pendingSeekTime = null;
+    let pendingSeekTimeout;
+
     const dispatch = createEventDispatcher();
 
     const buttonBase =
@@ -82,19 +88,66 @@
         });
     }
 
-    $: if (!isDragging) {
+    $: if (!isDragging && pendingSeekTime == null) {
         localTime = currentTime;
+    }
+
+    $: if (pendingSeekTime != null && Number.isFinite(currentTime)) {
+        // Clear once the parent/video time "catches up" to the user's requested seek.
+        if (Math.abs(currentTime - pendingSeekTime) <= 0.25) {
+            clearPendingSeek();
+        }
+    }
+
+    const clampNumber = (value, min, max) => {
+        const normalized = Number(value);
+        if (!Number.isFinite(normalized)) return min;
+        return Math.min(Math.max(normalized, min), max);
+    };
+
+    $: safeSeekMin = Number.isFinite(seekMin) && seekMin >= 0 ? seekMin : 0;
+    $: safeDuration = Number.isFinite(duration) && duration > 0 ? duration : 0;
+    $: safeSeekMaxCandidate =
+        Number.isFinite(seekMax) && seekMax > 0 ? seekMax : safeDuration;
+    $: safeSeekMax =
+        safeSeekMaxCandidate >= safeSeekMin
+            ? safeSeekMaxCandidate
+            : safeSeekMin;
+
+    $: if (safeSeekMax > safeSeekMin) {
+        const clamped = clampNumber(localTime, safeSeekMin, safeSeekMax);
+        if (localTime !== clamped) {
+            localTime = clamped;
+        }
+    } else {
+        localTime = safeSeekMin;
     }
 
     function handleSeekInput(event) {
         isDragging = true;
-        localTime = parseFloat(event.currentTarget.value);
+        localTime = clampNumber(
+            parseFloat(event.currentTarget.value),
+            safeSeekMin,
+            safeSeekMax
+        );
         scheduleHide(); // keep awake
     }
 
     function handleSeekChange(event) {
+        const time = clampNumber(
+            parseFloat(event.currentTarget.value),
+            safeSeekMin,
+            safeSeekMax
+        );
+
+        // Keep the UI locked to the chosen value until currentTime updates.
+        pendingSeekTime = time;
+        if (pendingSeekTimeout) clearTimeout(pendingSeekTimeout);
+        pendingSeekTimeout = setTimeout(clearPendingSeek, 1200);
+
+        localTime = time;
         isDragging = false;
-        const time = parseFloat(event.currentTarget.value);
+
         dispatch("seek", { time });
         scheduleHide();
     }
@@ -108,6 +161,7 @@
 
     onDestroy(() => {
         clearHideTimeout();
+        clearPendingSeek();
     });
 
     function togglePlayState() {
@@ -201,18 +255,19 @@
                 >
                 <input
                     type="range"
-                    min="0"
-                    max={duration || 100}
+                    min={safeSeekMin}
+                    max={safeSeekMax}
                     step="0.1"
                     value={localTime}
                     class="scrubber-range w-full cursor-pointer"
                     on:input={handleSeekInput}
                     on:change={handleSeekChange}
+                    disabled={safeSeekMax <= safeSeekMin}
                     aria-label="Seek reaction video"
                 />
                 <span
                     class="text-xs tabular-nums text-text-muted font-medium min-w-[32px] hidden sm:block"
-                    >{formatTime(duration)}</span
+                    >{formatTime(safeSeekMax)}</span
                 >
             </div>
 
