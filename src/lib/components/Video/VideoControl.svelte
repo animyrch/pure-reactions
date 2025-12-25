@@ -285,7 +285,7 @@
             <div class="flex flex-1 items-center px-3 gap-3">
                 <span
                     class="text-xs tabular-nums text-text-muted font-medium min-w-[32px] text-right hidden sm:block"
-                    >{formatTime(currentTime)}</span
+                    >{formatTime(localTime)}</span
                 >
                 <input
                     type="range"
@@ -421,38 +421,62 @@
         -webkit-appearance: none;
         appearance: none;
         background: transparent;
-        height: 4px;
-        border-radius: 2px;
-        background: rgba(255, 255, 255, 0.2);
-        transition: height 0.2s ease;
+        height: 28px;
+        cursor: pointer;
+        touch-action: manipulation;
+    }
+
+    .scrubber-range:focus {
+        outline: none;
+    }
+
+    .scrubber-range::-webkit-slider-runnable-track {
+        height: 8px;
+        border-radius: 999px;
+        @apply bg-border-subtle/60;
+    }
+
+    .scrubber-range::-moz-range-track {
+        height: 8px;
+        border-radius: 999px;
+        @apply bg-border-subtle/60;
     }
 
     .scrubber-range::-webkit-slider-thumb {
         -webkit-appearance: none;
-        height: 12px;
-        width: 12px;
-        border-radius: 50%;
-        background: white;
-        cursor: pointer;
-        margin-top: -4px; /* centers thumb on track */
+        height: 20px;
+        width: 20px;
+        border-radius: 999px;
+        margin-top: -6px; /* centers thumb on 8px track */
+        @apply bg-text-primary border border-border-strong/60;
         transition: transform 0.1s ease;
     }
 
     .scrubber-range::-moz-range-thumb {
-        height: 12px;
-        width: 12px;
-        border-radius: 50%;
-        background: white;
+        height: 20px;
+        width: 20px;
+        border-radius: 999px;
+        @apply bg-text-primary border border-border-strong/60;
         cursor: pointer;
-        border: none;
         transition: transform 0.1s ease;
     }
 
-    .scrubber-range:hover {
-        background: rgba(255, 255, 255, 0.3);
+    .scrubber-range::-moz-range-progress {
+        height: 8px;
+        border-radius: 999px;
+        @apply bg-border-strong/70;
     }
 
-    .scrubber-range:hover::-webkit-slider-thumb {
-        transform: scale(1.2);
+    .scrubber-range:hover::-webkit-slider-runnable-track {
+        @apply bg-border-strong/60;
+    }
+
+    .scrubber-range:hover::-moz-range-track {
+        @apply bg-border-strong/60;
+    }
+
+    .scrubber-range:hover::-webkit-slider-thumb,
+    .scrubber-range:hover::-moz-range-thumb {
+        transform: scale(1.06);
     }
 </style>
