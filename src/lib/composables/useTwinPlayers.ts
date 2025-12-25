@@ -1082,7 +1082,10 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       return;
     }
     const youtubePlaylistId = reactionData['youtubePlaylistId'];
-    const offsetStartTime = reactionData['offsetStartTime'] ?? 0;
+    const rawOffsetStartTime = Number(reactionData['offsetStartTime'] ?? 0);
+    const offsetStartTime = Number.isFinite(rawOffsetStartTime) && rawOffsetStartTime >= 0
+      ? Math.round(rawOffsetStartTime * 10) / 10
+      : 0;
     const reactionFinishTime = parseFloat(reactionData['reactionFinishTime']) || 100000;
     const timeOffset = reactionData['timeOffset'] || 0;
     const globalGainValue = reactionData['globalGain'];
@@ -1266,7 +1269,10 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     const originalVideoId = reactionData['originalVideoId'];
     const youtubePlaylistId = reactionData['youtubePlaylistId'];
 
-    const offsetStartTime = reactionData['offsetStartTime'] ?? 0;
+    const rawOffsetStartTime = Number(reactionData['offsetStartTime'] ?? 0);
+    const offsetStartTime = Number.isFinite(rawOffsetStartTime) && rawOffsetStartTime >= 0
+      ? Math.round(rawOffsetStartTime * 10) / 10
+      : 0;
     const reactionFinishTime = parseFloat(reactionData['reactionFinishTime']) || 100000;
     const timeOffset = reactionData['timeOffset'] || 0;
     const globalGainValue = reactionData['globalGain'];
@@ -1694,12 +1700,16 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
   };
 
   const setOffsetStartTime = async (value: number) => {
-    const parsed = Math.max(0, Math.floor(Number(value)));
+    const parsed = Number(value);
     if (!Number.isFinite(parsed)) {
       return;
     }
-    await updateFirebaseDocument({ offsetStartTime: parsed });
-    updateState({ offsetStartTime: parsed, reactionCurrentTime: parsed });
+
+    const clamped = Math.max(0, parsed);
+    const rounded = Math.round(clamped * 10) / 10;
+
+    await updateFirebaseDocument({ offsetStartTime: rounded });
+    updateState({ offsetStartTime: rounded, reactionCurrentTime: rounded });
   };
 
   const setIntroBufferTime = async (value: number) => {
