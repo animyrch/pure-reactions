@@ -71,6 +71,7 @@
   let pendingReactionSeconds = 0;
   let activeReactionSeconds = 0;
   let activeMarkerIsDirty = false;
+  let shouldLockActivePauseTarget = false;
   let hoverViewportRatio = null;
   let hoverTimeLabel = null;
   let hoverIndicatorLeftPx = null;
@@ -489,6 +490,20 @@
     return candidate;
   };
 
+  $: {
+    if (!activeMarker || activeMarker.trackId !== 'player') {
+      shouldLockActivePauseTarget = false;
+    } else if (Number(activeMarker.state) !== 2) {
+      shouldLockActivePauseTarget = false;
+    } else {
+      const previous = findPreviousPlayerEvent(activeReactionSeconds, {
+        timeInReaction: activeMarker.initialTimeInReaction,
+        state: activeMarker.initialState
+      });
+      shouldLockActivePauseTarget = Number(previous?.state) === 1;
+    }
+  }
+
   const computeOriginalTimeForNewEvent = (reactionTime, exclude) => {
     const previous = findPreviousPlayerEvent(reactionTime, exclude);
     if (!previous) return 0;
@@ -748,7 +763,7 @@
   };
 
   const enforceActiveTargetLock = () => {
-    if (!activeMarker || Number(activeMarker.state) !== 2) {
+    if (!shouldLockActivePauseTarget) {
       return;
     }
     const derived = computeOriginalTimeForNewEvent(activeReactionSeconds, {
@@ -1394,7 +1409,9 @@
                   min="0"
                   step="1"
                   inputmode="numeric"
-                  class="w-16 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                  class={`w-16 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 ${shouldLockActivePauseTarget ? 'cursor-not-allowed opacity-60' : ''}`}
+                  readonly={shouldLockActivePauseTarget}
+                  disabled={shouldLockActivePauseTarget}
                   value={activeTargetMinutesInput}
                   on:input={(event) => {
                     activeTargetMinutesInput = event.currentTarget.value;
@@ -1413,7 +1430,9 @@
                   max="59.99"
                   step="0.5"
                   inputmode="decimal"
-                  class="w-20 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                  class={`w-20 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 ${shouldLockActivePauseTarget ? 'cursor-not-allowed opacity-60' : ''}`}
+                  readonly={shouldLockActivePauseTarget}
+                  disabled={shouldLockActivePauseTarget}
                   value={activeTargetSecondsInput}
                   on:input={(event) => {
                     activeTargetSecondsInput = event.currentTarget.value;
