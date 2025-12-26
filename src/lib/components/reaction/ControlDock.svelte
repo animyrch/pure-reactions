@@ -22,10 +22,10 @@
 </script>
 
 <div
-  class={`controls-dock group pointer-events-none ${isFullscreen ? "fixed inset-x-0 bottom-12 z-50 flex justify-center px-6" : "sticky top-6 z-30 mt-10 flex justify-center w-full px-4"}`}
+  class={`controls-dock group pointer-events-none ${isFullscreen ? "fixed inset-x-0 bottom-12 z-50 flex w-full px-6" : "sticky top-6 z-30 mt-10 flex w-full px-4 sm:px-6 lg:px-10"}`}
 >
   <div
-    class={`controls-surface pointer-events-auto rounded-full bg-overlay px-4 py-xs shadow-elevated transition duration-slow ease-cinematic ${stickyControlsClass} w-full max-w-5xl`}
+    class={`controls-surface pointer-events-auto w-full rounded-full bg-overlay px-4 py-xs shadow-elevated transition duration-slow ease-cinematic ${stickyControlsClass}`}
   >
     <VideoControl
       {bothVideosStarted}
