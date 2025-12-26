@@ -243,9 +243,45 @@
     }
 
     function handleKeydown(event) {
+        if (event.altKey || event.ctrlKey || event.metaKey) return;
+
+        const target = event.target;
+        if (
+            target instanceof HTMLElement &&
+            (target.isContentEditable ||
+                target.closest('input, textarea, [contenteditable="true"]'))
+        ) {
+            return;
+        }
+
+        // Don't hijack ArrowLeft/Right when the related-reactions carousel has focus.
+        if (
+            (event.key === 'ArrowRight' || event.key === 'ArrowLeft') &&
+            target instanceof HTMLElement &&
+            target.closest('.carousel, [data-carousel-item]')
+        ) {
+            return;
+        }
+
         if (event.key === " ") {
             event.preventDefault();
             togglePlayState();
+            return;
+        }
+
+        if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+            if (!bothVideosStarted) return;
+            if (safeSeekMax <= safeSeekMin) return;
+
+            event.preventDefault();
+            const delta = event.key === 'ArrowRight' ? 5 : -5;
+            const baseTime = Number.isFinite(currentTime) ? currentTime : localTime;
+            const nextTime = clampNumber(baseTime + delta, safeSeekMin, safeSeekMax);
+
+            localTime = nextTime;
+            armPendingSeek(nextTime);
+            queueSeekDispatch(nextTime);
+            scheduleHide();
         }
     }
 
