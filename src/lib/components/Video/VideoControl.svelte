@@ -155,6 +155,22 @@
             ? safeSeekMaxCandidate
             : safeSeekMin;
 
+    $: hasExplicitSegmentBounds =
+        Boolean(isPlaylist) &&
+        Number.isFinite(seekMin) &&
+        seekMin >= 0 &&
+        Number.isFinite(seekMax) &&
+        seekMax > 0 &&
+        seekMax >= seekMin;
+
+    $: displaySeekMin = hasExplicitSegmentBounds ? 0 : safeSeekMin;
+    $: displaySeekMax = hasExplicitSegmentBounds
+        ? Math.max(0, safeSeekMax - safeSeekMin)
+        : safeSeekMax;
+    $: displayTime = hasExplicitSegmentBounds
+        ? Math.max(0, localTime - safeSeekMin)
+        : localTime;
+
     $: if (safeSeekMax > safeSeekMin) {
         const clamped = clampNumber(localTime, safeSeekMin, safeSeekMax);
         if (localTime !== clamped) {
@@ -166,11 +182,10 @@
 
     function handleSeekInput(event) {
         isDragging = true;
-        const time = clampNumber(
-            parseFloat(event.currentTarget.value),
-            safeSeekMin,
-            safeSeekMax
-        );
+        const rawValue = parseFloat(event.currentTarget.value);
+        const time = hasExplicitSegmentBounds
+            ? clampNumber(safeSeekMin + rawValue, safeSeekMin, safeSeekMax)
+            : clampNumber(rawValue, safeSeekMin, safeSeekMax);
 
         localTime = time;
 
@@ -182,11 +197,10 @@
     }
 
     function handleSeekChange(event) {
-        const time = clampNumber(
-            parseFloat(event.currentTarget.value),
-            safeSeekMin,
-            safeSeekMax
-        );
+        const rawValue = parseFloat(event.currentTarget.value);
+        const time = hasExplicitSegmentBounds
+            ? clampNumber(safeSeekMin + rawValue, safeSeekMin, safeSeekMax)
+            : clampNumber(rawValue, safeSeekMin, safeSeekMax);
 
         localTime = time;
         isDragging = false;
@@ -305,14 +319,14 @@
             <div class="flex flex-1 items-center px-3 gap-3">
                 <span
                     class="text-xs tabular-nums text-text-muted font-medium min-w-[32px] text-right hidden sm:block"
-                    >{formatTime(localTime)}</span
+                    >{formatTime(displayTime)}</span
                 >
                 <input
                     type="range"
-                    min={safeSeekMin}
-                    max={safeSeekMax}
+                    min={displaySeekMin}
+                    max={displaySeekMax}
                     step="0.1"
-                    value={localTime}
+                    value={displayTime}
                     class="scrubber-range w-full cursor-pointer"
                     on:input={handleSeekInput}
                     on:change={handleSeekChange}
@@ -321,7 +335,7 @@
                 />
                 <span
                     class="text-xs tabular-nums text-text-muted font-medium min-w-[32px] hidden sm:block"
-                    >{formatTime(safeSeekMax)}</span
+                    >{formatTime(displaySeekMax)}</span
                 >
             </div>
 
@@ -441,7 +455,7 @@
         -webkit-appearance: none;
         appearance: none;
         background: transparent;
-        height: 28px;
+        height: 36px;
         cursor: pointer;
         touch-action: manipulation;
     }
@@ -451,30 +465,30 @@
     }
 
     .scrubber-range::-webkit-slider-runnable-track {
-        height: 8px;
+        height: 10px;
         border-radius: 999px;
         @apply bg-border-subtle/60;
     }
 
     .scrubber-range::-moz-range-track {
-        height: 8px;
+        height: 10px;
         border-radius: 999px;
         @apply bg-border-subtle/60;
     }
 
     .scrubber-range::-webkit-slider-thumb {
         -webkit-appearance: none;
-        height: 20px;
-        width: 20px;
+        height: 24px;
+        width: 24px;
         border-radius: 999px;
-        margin-top: -6px; /* centers thumb on 8px track */
+        margin-top: -7px; /* centers thumb on 10px track */
         @apply bg-text-primary border border-border-strong/60;
         transition: transform 0.1s ease;
     }
 
     .scrubber-range::-moz-range-thumb {
-        height: 20px;
-        width: 20px;
+        height: 24px;
+        width: 24px;
         border-radius: 999px;
         @apply bg-text-primary border border-border-strong/60;
         cursor: pointer;
@@ -482,7 +496,7 @@
     }
 
     .scrubber-range::-moz-range-progress {
-        height: 8px;
+        height: 10px;
         border-radius: 999px;
         @apply bg-border-strong/70;
     }
