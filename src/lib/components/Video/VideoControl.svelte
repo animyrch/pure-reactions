@@ -23,6 +23,7 @@
     let isInteracting = false;
     let isKeyboardFocus = false;
     let isDragging = false;
+    let isHoveringControls = false;
     let localTime = 0;
     let hideTimeout;
     let containerRef;
@@ -75,11 +76,11 @@
 
     const scheduleHide = () => {
         clearHideTimeout();
-        // If dragging, don't hide
-        if (isDragging) return;
+        // If dragging or hovering controls, don't hide
+        if (isDragging || isHoveringControls) return;
 
         hideTimeout = setTimeout(() => {
-            if (!isKeyboardFocus && !isDragging) {
+            if (!isKeyboardFocus && !isDragging && !isHoveringControls) {
                 isInteracting = false;
             }
         }, 2200);
@@ -114,6 +115,18 @@
                 }
             }
         });
+    }
+
+    function handleControlsMouseEnter() {
+        if (!bothVideosStarted) return;
+        isHoveringControls = true;
+        revealControls();
+    }
+
+    function handleControlsMouseLeave() {
+        if (!bothVideosStarted) return;
+        isHoveringControls = false;
+        scheduleHide();
     }
 
     $: if (!isDragging && pendingSeekTime == null) {
@@ -223,7 +236,11 @@
     }
 
     $: isVisible =
-        !bothVideosStarted || isInteracting || isKeyboardFocus || isDragging;
+        !bothVideosStarted ||
+        isInteracting ||
+        isKeyboardFocus ||
+        isDragging ||
+        isHoveringControls;
     $: glassClasses = `${glassBase} ${isVisible ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`;
 </script>
 
@@ -253,6 +270,9 @@
             class={glassClasses}
             role="toolbar"
             aria-label="Reaction playback controls"
+            tabindex="0"
+            on:mouseenter={handleControlsMouseEnter}
+            on:mouseleave={handleControlsMouseLeave}
         >
             <!-- Play/Pause -->
             <div class="group relative shrink-0">
