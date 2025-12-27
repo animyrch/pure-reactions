@@ -95,6 +95,8 @@ type TwinPlayersState = {
   isReactionAutoMuted: boolean;
   pageSlug: string;
   isOutOfSync: boolean;
+  seekMin: number;
+  seekMax: number;
 };
 
 type UseTwinPlayersOptions = {
@@ -292,7 +294,9 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     isReactionMuteModeEnabled: false,
     isReactionAutoMuted: false,
     pageSlug: slug,
-    isOutOfSync: false
+    isOutOfSync: false,
+    seekMin: 0,
+    seekMax: 100000
   });
 
   let overlayElement: HTMLDivElement | undefined;
@@ -501,16 +505,8 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     }
 
     const snapshot = get(state);
-    const rawMin = Number(snapshot.offsetStartTime);
-    const seekMin = Number.isFinite(rawMin) && rawMin >= 0 ? rawMin : 0;
+    const { seekMin, seekMax } = snapshot;
 
-    const rawDuration = Number(snapshot.reactionDuration);
-    const durationCap = Number.isFinite(rawDuration) && rawDuration > 0 ? rawDuration : Number.POSITIVE_INFINITY;
-
-    const rawFinish = Number(snapshot.reactionFinishTime);
-    const finishCap = Number.isFinite(rawFinish) && rawFinish > 0 ? rawFinish : Number.POSITIVE_INFINITY;
-
-    const seekMax = Math.max(seekMin, Math.min(durationCap, finishCap));
     const clamped = seekMax === Number.POSITIVE_INFINITY
       ? Math.max(normalized, seekMin)
       : Math.min(Math.max(normalized, seekMin), seekMax);
@@ -572,6 +568,14 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       snapshot.timeOffset
     );
 
+    // Ignore events outside valid bounds (unless we are muting which is a safety feature)
+    const timeInReaction = reactionCurrentTime;
+    if (timeInReaction < snapshot.seekMin || (Number.isFinite(snapshot.seekMax) && timeInReaction > snapshot.seekMax)) {
+      // However, we might want to respect mute logic anyway?
+      // For now, let's strictly ignore config application
+      return;
+    }
+
     if (!changingReactionVolume && snapshot.currentVolumeReactionVideo !== newVolume) {
       changingReactionVolume = true;
       setVolumeForReactionVideo(newVolume);
@@ -587,6 +591,10 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       window.playbackRateConfigs,
       snapshot.timeOffset
     );
+    const timeInReaction = reactionCurrentTime;
+    if (timeInReaction < snapshot.seekMin || (Number.isFinite(snapshot.seekMax) && timeInReaction > snapshot.seekMax)) {
+      return;
+    }
     if (!changingSpeed && Math.abs(desiredPlaybackRate - snapshot.currentPlaybackRate) > 0.001) {
       changingSpeed = true;
       setPlaybackRateForOriginalVideo(desiredPlaybackRate);
@@ -704,9 +712,18 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
         }
       }
 
-      if (workingState !== effectiveConfigState || targetMismatch) {
-        handleStateChangeInOriginalVideo(workingState, effectiveConfigState, computedTargetTime);
-        workingState = effectiveConfigState;
+
+      // Effective playback clamping:
+      // If the resolved config's time (closestSmallerTimeCode) is BEFORE seekMin, we treat it as nonexistent.
+      // This means we should NOT apply it, unless there is a cue strictly inside [seekMin, seekMax].
+
+      const configIsInRange = config.closestSmallerTimeCode >= snapshot.seekMin && (!Number.isFinite(snapshot.seekMax) || config.closestSmallerTimeCode <= snapshot.seekMax);
+
+      if (configIsInRange && (workingState !== effectiveConfigState || targetMismatch)) {
+        if (reactionCurrentTime >= snapshot.seekMin && (!Number.isFinite(snapshot.seekMax) || reactionCurrentTime <= snapshot.seekMax)) {
+          handleStateChangeInOriginalVideo(workingState, effectiveConfigState, computedTargetTime);
+          workingState = effectiveConfigState;
+        }
       }
 
       if (workingState !== snapshot.currentStateOriginalVideo) {
@@ -751,7 +768,15 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
       console.log('Polling reaction time:', reactionCurrentTime, 'of', rawDuration);
       const reactionDuration = Number.isFinite(rawDuration) ? rawDuration : snapshot.reactionDuration;
       if (reactionCurrentTime !== snapshot.reactionCurrentTime || Math.abs(reactionDuration - snapshot.reactionDuration) > 0.1) {
-        updateState({ reactionCurrentTime, reactionDuration });
+        // Re-calculate seekMin/seekMax whenever duration/time updates significantly
+        const rawMin = Number(snapshot.offsetStartTime);
+        const seekMin = Number.isFinite(rawMin) && rawMin >= 0 ? rawMin : 0;
+        const rawDuration = Number.isFinite(reactionDuration) && reactionDuration > 0 ? reactionDuration : Number.POSITIVE_INFINITY;
+        const rawFinish = Number(snapshot.reactionFinishTime);
+        const finishCap = Number.isFinite(rawFinish) && rawFinish > 0 ? rawFinish : Number.POSITIVE_INFINITY;
+        const seekMax = Math.max(seekMin, Math.min(rawDuration, finishCap));
+
+        updateState({ reactionCurrentTime, reactionDuration, seekMin, seekMax });
       }
       if (reactionCurrentTime > reactionFinishTime) {
         pauseOriginalVideo();

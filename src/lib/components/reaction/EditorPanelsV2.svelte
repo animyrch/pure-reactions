@@ -1,16 +1,16 @@
 <script>
-  import AccessibleInput from '$lib/components/design-system/AccessibleInput.svelte';
-  import CinematicButton from '$lib/components/design-system/CinematicButton.svelte';
-  import ConfigEditorV2 from '$lib/components/Video/ConfigEditorV2.svelte';
-  import { showToast } from '$lib/stores/toast';
-  import { TOASTS } from '$lib/constants/toasts';
+  import AccessibleInput from "$lib/components/design-system/AccessibleInput.svelte";
+  import CinematicButton from "$lib/components/design-system/CinematicButton.svelte";
+  import ConfigEditorV2 from "$lib/components/Video/ConfigEditorV2.svelte";
+  import { showToast } from "$lib/stores/toast";
+  import { TOASTS } from "$lib/constants/toasts";
 
   export let isReactionMissing = false;
   export let isEditModeOn = false;
   export let isFineTuneModeOn = false;
   export let isPlaylist = false;
-  export let reactionVideoId = '';
-  export let reactionVideoIdError = '';
+  export let reactionVideoId = "";
+  export let reactionVideoIdError = "";
   export let isSettingReactionVideoId = false;
   export let offsetStartTime = 0;
   export let introBufferTime = 0;
@@ -53,12 +53,12 @@
   const SOUND_LEVEL_MAX = 200;
   const SOUND_LEVEL_STEP = 1;
 
-  let reactionVideoIdValue = reactionVideoId ?? '';
-  let offsetStartMinutesValue = '0';
-  let offsetStartSecondsValue = '0';
-  let reactionFinishMinutesValue = '0';
-  let reactionFinishSecondsValue = '0';
-  let introBufferTimeValue = introBufferTime?.toString?.() ?? '';
+  let reactionVideoIdValue = reactionVideoId ?? "";
+  let offsetStartMinutesValue = "0";
+  let offsetStartSecondsValue = "0";
+  let reactionFinishMinutesValue = "0";
+  let reactionFinishSecondsValue = "0";
+  let introBufferTimeValue = introBufferTime?.toString?.() ?? "";
   let soundLevelValue = Number.isFinite(soundLevel) ? soundLevel : 100;
 
   let lastReactionVideoIdProp = reactionVideoId;
@@ -69,7 +69,7 @@
 
   $: if (reactionVideoId !== lastReactionVideoIdProp) {
     lastReactionVideoIdProp = reactionVideoId;
-    reactionVideoIdValue = reactionVideoId ?? '';
+    reactionVideoIdValue = reactionVideoId ?? "";
   }
 
   const syncOffsetStartInputs = (value) => {
@@ -78,7 +78,9 @@
     const secondsPartRaw = totalSeconds - minutesPart * 60;
     const secondsPart = Math.round(secondsPartRaw * 10) / 10; // 1 decimal
     offsetStartMinutesValue = String(minutesPart);
-    offsetStartSecondsValue = Number.isInteger(secondsPart) ? String(secondsPart) : secondsPart.toFixed(1);
+    offsetStartSecondsValue = Number.isInteger(secondsPart)
+      ? String(secondsPart)
+      : secondsPart.toFixed(1);
   };
 
   syncOffsetStartInputs(offsetStartTime);
@@ -89,7 +91,9 @@
     const secondsPartRaw = totalSeconds - minutesPart * 60;
     const secondsPart = Math.round(secondsPartRaw * 10) / 10; // 1 decimal
     reactionFinishMinutesValue = String(minutesPart);
-    reactionFinishSecondsValue = Number.isInteger(secondsPart) ? String(secondsPart) : secondsPart.toFixed(1);
+    reactionFinishSecondsValue = Number.isInteger(secondsPart)
+      ? String(secondsPart)
+      : secondsPart.toFixed(1);
   };
 
   syncReactionFinishInputs(reactionFinishTime);
@@ -101,7 +105,7 @@
 
   $: if (introBufferTime !== lastIntroBufferTimeProp) {
     lastIntroBufferTimeProp = introBufferTime;
-    introBufferTimeValue = introBufferTime?.toString?.() ?? '';
+    introBufferTimeValue = introBufferTime?.toString?.() ?? "";
   }
 
   $: if (reactionFinishTime !== lastReactionFinishTimeProp) {
@@ -114,13 +118,16 @@
     soundLevelValue = Number.isFinite(soundLevel) ? soundLevel : 100;
   }
 
-  $: trimmedReactionVideoIdValue = (reactionVideoIdValue ?? '').trim();
-  $: currentReactionVideoId = (reactionVideoId ?? '').trim();
-  $: isReactionVideoIdDirty = trimmedReactionVideoIdValue.length > 0 && trimmedReactionVideoIdValue !== currentReactionVideoId;
+  $: trimmedReactionVideoIdValue = (reactionVideoIdValue ?? "").trim();
+  $: currentReactionVideoId = (reactionVideoId ?? "").trim();
+  $: isReactionVideoIdDirty =
+    trimmedReactionVideoIdValue.length > 0 &&
+    trimmedReactionVideoIdValue !== currentReactionVideoId;
 
   $: parsedIntroBufferTimeValue = Number.parseFloat(introBufferTimeValue);
   $: isIntroBufferTimeValid = !Number.isNaN(parsedIntroBufferTimeValue);
-  $: isIntroBufferTimeDirty = isIntroBufferTimeValid && parsedIntroBufferTimeValue !== introBufferTime;
+  $: isIntroBufferTimeDirty =
+    isIntroBufferTimeValid && parsedIntroBufferTimeValue !== introBufferTime;
 
   $: parsedOffsetStartMinutes = Number.parseInt(offsetStartMinutesValue, 10);
   $: parsedOffsetStartSeconds = Number.parseFloat(offsetStartSecondsValue);
@@ -130,13 +137,21 @@
     Number.isFinite(parsedOffsetStartSeconds) &&
     parsedOffsetStartSeconds >= 0 &&
     parsedOffsetStartSeconds < 60;
-  $: nextOffsetStartTimeSeconds = isOffsetStartValid ? (parsedOffsetStartMinutes * 60 + parsedOffsetStartSeconds) : 0;
+  $: nextOffsetStartTimeSeconds = isOffsetStartValid
+    ? parsedOffsetStartMinutes * 60 + parsedOffsetStartSeconds
+    : 0;
   $: isOffsetStartDirty =
     isOffsetStartValid &&
-    Math.abs(nextOffsetStartTimeSeconds - Number(offsetStartTime || 0)) > 0.0001;
+    Math.abs(nextOffsetStartTimeSeconds - Number(offsetStartTime || 0)) >
+      0.0001;
 
-  $: parsedReactionFinishMinutes = Number.parseInt(reactionFinishMinutesValue, 10);
-  $: parsedReactionFinishSeconds = Number.parseFloat(reactionFinishSecondsValue);
+  $: parsedReactionFinishMinutes = Number.parseInt(
+    reactionFinishMinutesValue,
+    10,
+  );
+  $: parsedReactionFinishSeconds = Number.parseFloat(
+    reactionFinishSecondsValue,
+  );
   $: isReactionFinishTimeValid =
     Number.isFinite(parsedReactionFinishMinutes) &&
     parsedReactionFinishMinutes >= 0 &&
@@ -144,13 +159,15 @@
     parsedReactionFinishSeconds >= 0 &&
     parsedReactionFinishSeconds < 60;
   $: nextReactionFinishTimeSeconds = isReactionFinishTimeValid
-    ? (parsedReactionFinishMinutes * 60 + parsedReactionFinishSeconds)
+    ? parsedReactionFinishMinutes * 60 + parsedReactionFinishSeconds
     : 0;
   $: isReactionFinishTimeDirty =
     isReactionFinishTimeValid &&
-    Math.abs(nextReactionFinishTimeSeconds - Number(reactionFinishTime || 0)) > 0.0001;
+    Math.abs(nextReactionFinishTimeSeconds - Number(reactionFinishTime || 0)) >
+      0.0001;
 
-  $: isSoundLevelDirty = Number.isFinite(soundLevelValue) && soundLevelValue !== soundLevel;
+  $: isSoundLevelDirty =
+    Number.isFinite(soundLevelValue) && soundLevelValue !== soundLevel;
 
   const handleReactionVideoSubmit = () => {
     if (!trimmedReactionVideoIdValue) return;
@@ -164,7 +181,7 @@
 
   const handleOffsetStartSubmit = () => {
     if (!isOffsetStartValid) {
-      showToast('Enter a valid start time (mm:ss).', TOASTS.WARNING);
+      showToast("Enter a valid start time (mm:ss).", TOASTS.WARNING);
       return;
     }
     onSetOffsetStartTime(nextOffsetStartTimeSeconds);
@@ -172,7 +189,7 @@
 
   const handleReactionFinishTimeSubmit = () => {
     if (!isReactionFinishTimeValid) {
-      showToast('Enter a valid finish time (mm:ss).', TOASTS.WARNING);
+      showToast("Enter a valid finish time (mm:ss).", TOASTS.WARNING);
       return;
     }
     onSetReactionFinishTime(nextReactionFinishTimeSeconds);
@@ -201,10 +218,10 @@
     if (!detail) return;
     try {
       await onCreatePlayerConfig(detail);
-      showToast('Playback cue added.', TOASTS.SUCCESS);
+      showToast("Playback cue added.", TOASTS.SUCCESS);
     } catch (error) {
-      console.error('Failed to add playback config', error);
-      showToast('Unable to add that cue. Try again.', TOASTS.WARNING);
+      console.error("Failed to add playback config", error);
+      showToast("Unable to add that cue. Try again.", TOASTS.WARNING);
     }
   };
 
@@ -213,10 +230,10 @@
     if (!detail) return;
     try {
       await onCreateVolumeConfig(detail);
-      showToast('Volume cue added.', TOASTS.SUCCESS);
+      showToast("Volume cue added.", TOASTS.SUCCESS);
     } catch (error) {
-      console.error('Failed to add volume config', error);
-      showToast('Unable to add that volume cue. Try again.', TOASTS.WARNING);
+      console.error("Failed to add volume config", error);
+      showToast("Unable to add that volume cue. Try again.", TOASTS.WARNING);
     }
   };
 
@@ -225,10 +242,13 @@
     if (!detail) return;
     try {
       await onCreateReactionVolumeConfig(detail);
-      showToast('Reaction volume cue added.', TOASTS.SUCCESS);
+      showToast("Reaction volume cue added.", TOASTS.SUCCESS);
     } catch (error) {
-      console.error('Failed to add reaction volume config', error);
-      showToast('Unable to add that reaction volume cue. Try again.', TOASTS.WARNING);
+      console.error("Failed to add reaction volume config", error);
+      showToast(
+        "Unable to add that reaction volume cue. Try again.",
+        TOASTS.WARNING,
+      );
     }
   };
 
@@ -237,10 +257,10 @@
     if (!detail) return;
     try {
       await onCreatePlaybackRateConfig(detail);
-      showToast('Playback speed cue added.', TOASTS.SUCCESS);
+      showToast("Playback speed cue added.", TOASTS.SUCCESS);
     } catch (error) {
-      console.error('Failed to add playback rate config', error);
-      showToast('Unable to add that speed cue. Try again.', TOASTS.WARNING);
+      console.error("Failed to add playback rate config", error);
+      showToast("Unable to add that speed cue. Try again.", TOASTS.WARNING);
     }
   };
 
@@ -249,10 +269,10 @@
     if (!detail) return;
     try {
       await onUpdatePlayerConfig(detail);
-      showToast('Playback cue updated.', TOASTS.SUCCESS);
+      showToast("Playback cue updated.", TOASTS.SUCCESS);
     } catch (error) {
-      console.error('Failed to update playback config', error);
-      showToast('Unable to update that cue. Try again.', TOASTS.WARNING);
+      console.error("Failed to update playback config", error);
+      showToast("Unable to update that cue. Try again.", TOASTS.WARNING);
     }
   };
 
@@ -261,10 +281,10 @@
     if (!detail) return;
     try {
       await onDeletePlayerConfig(detail);
-      showToast('Playback cue removed.', TOASTS.SUCCESS);
+      showToast("Playback cue removed.", TOASTS.SUCCESS);
     } catch (error) {
-      console.error('Failed to delete playback config', error);
-      showToast('Unable to remove that cue. Try again.', TOASTS.WARNING);
+      console.error("Failed to delete playback config", error);
+      showToast("Unable to remove that cue. Try again.", TOASTS.WARNING);
     }
   };
 
@@ -273,10 +293,10 @@
     if (!detail) return;
     try {
       await onUpdateVolumeConfig(detail);
-      showToast('Volume cue updated.', TOASTS.SUCCESS);
+      showToast("Volume cue updated.", TOASTS.SUCCESS);
     } catch (error) {
-      console.error('Failed to update volume config', error);
-      showToast('Unable to update that volume cue. Try again.', TOASTS.WARNING);
+      console.error("Failed to update volume config", error);
+      showToast("Unable to update that volume cue. Try again.", TOASTS.WARNING);
     }
   };
 
@@ -285,10 +305,13 @@
     if (!detail) return;
     try {
       await onUpdateReactionVolumeConfig(detail);
-      showToast('Reaction volume cue updated.', TOASTS.SUCCESS);
+      showToast("Reaction volume cue updated.", TOASTS.SUCCESS);
     } catch (error) {
-      console.error('Failed to update reaction volume config', error);
-      showToast('Unable to update that reaction volume cue. Try again.', TOASTS.WARNING);
+      console.error("Failed to update reaction volume config", error);
+      showToast(
+        "Unable to update that reaction volume cue. Try again.",
+        TOASTS.WARNING,
+      );
     }
   };
 
@@ -297,10 +320,10 @@
     if (!detail) return;
     try {
       await onDeleteVolumeConfig(detail);
-      showToast('Volume cue removed.', TOASTS.SUCCESS);
+      showToast("Volume cue removed.", TOASTS.SUCCESS);
     } catch (error) {
-      console.error('Failed to delete volume config', error);
-      showToast('Unable to remove that volume cue. Try again.', TOASTS.WARNING);
+      console.error("Failed to delete volume config", error);
+      showToast("Unable to remove that volume cue. Try again.", TOASTS.WARNING);
     }
   };
 
@@ -309,10 +332,13 @@
     if (!detail) return;
     try {
       await onDeleteReactionVolumeConfig(detail);
-      showToast('Reaction volume cue removed.', TOASTS.SUCCESS);
+      showToast("Reaction volume cue removed.", TOASTS.SUCCESS);
     } catch (error) {
-      console.error('Failed to delete reaction volume config', error);
-      showToast('Unable to remove that reaction volume cue. Try again.', TOASTS.WARNING);
+      console.error("Failed to delete reaction volume config", error);
+      showToast(
+        "Unable to remove that reaction volume cue. Try again.",
+        TOASTS.WARNING,
+      );
     }
   };
 
@@ -321,10 +347,10 @@
     if (!detail) return;
     try {
       await onUpdatePlaybackRateConfig(detail);
-      showToast('Playback speed cue updated.', TOASTS.SUCCESS);
+      showToast("Playback speed cue updated.", TOASTS.SUCCESS);
     } catch (error) {
-      console.error('Failed to update playback rate config', error);
-      showToast('Unable to update that speed cue. Try again.', TOASTS.WARNING);
+      console.error("Failed to update playback rate config", error);
+      showToast("Unable to update that speed cue. Try again.", TOASTS.WARNING);
     }
   };
 
@@ -333,25 +359,37 @@
     if (!detail) return;
     try {
       await onDeletePlaybackRateConfig(detail);
-      showToast('Playback speed cue removed.', TOASTS.SUCCESS);
+      showToast("Playback speed cue removed.", TOASTS.SUCCESS);
     } catch (error) {
-      console.error('Failed to delete playback rate config', error);
-      showToast('Unable to remove that speed cue. Try again.', TOASTS.WARNING);
+      console.error("Failed to delete playback rate config", error);
+      showToast("Unable to remove that speed cue. Try again.", TOASTS.WARNING);
     }
   };
 </script>
 
 <div class="flex flex-col gap-8">
   {#if (isReactionMissing || isEditModeOn) && !isFineTuneModeOn}
-    <section class="rounded-3xl border border-border-subtle bg-surface/80 px-6 py-6 shadow-elevated">
-      <header class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+    <section
+      class="rounded-3xl border border-border-subtle bg-surface/80 px-6 py-6 shadow-elevated"
+    >
+      <header
+        class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+      >
         <div>
-          <h2 class="text-lg font-semibold text-text-primary">Reaction video source</h2>
-          <p class="text-sm text-text-muted">Link the YouTube video you reacted to so we can load it in the editor.</p>
+          <h2 class="text-lg font-semibold text-text-primary">
+            Reaction video source
+          </h2>
+          <p class="text-sm text-text-muted">
+            Link the YouTube video you reacted to so we can load it in the
+            editor.
+          </p>
         </div>
       </header>
 
-      <form class="mt-6 flex flex-col gap-4 md:flex-row md:items-center" on:submit|preventDefault={handleReactionVideoSubmit}>
+      <form
+        class="mt-6 flex flex-col gap-4 md:flex-row md:items-center"
+        on:submit|preventDefault={handleReactionVideoSubmit}
+      >
         <div class="flex-1">
           <AccessibleInput
             id="reaction-video-id"
@@ -380,20 +418,37 @@
   {/if}
 
   {#if isEditModeOn && !isFineTuneModeOn}
-    <section class="rounded-3xl border border-border-subtle bg-surface/80 px-6 py-6 shadow-elevated">
-      <header class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+    <section
+      class="rounded-3xl border border-border-subtle bg-surface/80 px-6 py-6 shadow-elevated"
+    >
+      <header
+        class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+      >
         <div>
-          <h2 class="text-lg font-semibold text-text-primary">Playback tuning</h2>
-          <p class="text-sm text-text-muted">Dial in intro buffer and original audio balance for smoother reactions.</p>
+          <h2 class="text-lg font-semibold text-text-primary">
+            Playback tuning
+          </h2>
+          <p class="text-sm text-text-muted">
+            Dial in intro buffer and original audio balance for smoother
+            reactions.
+          </p>
         </div>
       </header>
 
       <div class="mt-6 flex flex-col gap-6">
         <div class="grid gap-6 lg:grid-cols-2">
-          <form class="flex flex-col gap-4" on:submit|preventDefault={handleOffsetStartSubmit}>
+          <form
+            class="flex flex-col gap-4"
+            on:submit|preventDefault={handleOffsetStartSubmit}
+          >
             <div>
-              <h3 class="text-sm font-medium text-text-secondary">Reaction start time</h3>
-              <p class="mt-1 text-sm text-text-muted">When you start playback, the reaction video will begin from this timestamp.</p>
+              <h3 class="text-sm font-medium text-text-secondary">
+                Reaction start time
+              </h3>
+              <p class="mt-1 text-sm text-text-muted">
+                When you start playback, the reaction video will begin from this
+                timestamp.
+              </p>
             </div>
 
             <div class="grid gap-4 sm:grid-cols-2">
@@ -419,17 +474,30 @@
             </div>
 
             <div class="flex justify-end">
-              <CinematicButton type="submit" size="sm" variant="secondary" disabled={!isOffsetStartDirty}>
+              <CinematicButton
+                type="submit"
+                size="sm"
+                variant="secondary"
+                disabled={!isOffsetStartDirty}
+              >
                 <span>Save start time</span>
               </CinematicButton>
             </div>
           </form>
 
           {#if isPlaylist}
-            <form class="flex flex-col gap-4" on:submit|preventDefault={handleReactionFinishTimeSubmit}>
+            <form
+              class="flex flex-col gap-4"
+              on:submit|preventDefault={handleReactionFinishTimeSubmit}
+            >
               <div>
-                <h3 class="text-sm font-medium text-text-secondary">Reaction finish time</h3>
-                <p class="mt-1 text-sm text-text-muted">Stop the reaction video once it reaches this timestamp (playlist reactions only).</p>
+                <h3 class="text-sm font-medium text-text-secondary">
+                  Reaction finish time
+                </h3>
+                <p class="mt-1 text-sm text-text-muted">
+                  Stop the reaction video once it reaches this timestamp
+                  (playlist reactions only).
+                </p>
               </div>
 
               <div class="grid gap-4 sm:grid-cols-2">
@@ -455,7 +523,12 @@
               </div>
 
               <div class="flex justify-end">
-                <CinematicButton type="submit" size="sm" variant="secondary" disabled={!isReactionFinishTimeDirty}>
+                <CinematicButton
+                  type="submit"
+                  size="sm"
+                  variant="secondary"
+                  disabled={!isReactionFinishTimeDirty}
+                >
                   <span>Save finish time</span>
                 </CinematicButton>
               </div>
@@ -463,7 +536,10 @@
           {/if}
         </div>
 
-        <form class="flex flex-col gap-4 md:flex-row md:items-center" on:submit|preventDefault={handleIntroBufferSubmit}>
+        <form
+          class="flex flex-col gap-4 md:flex-row md:items-center"
+          on:submit|preventDefault={handleIntroBufferSubmit}
+        >
           <div class="flex-1">
             <AccessibleInput
               id="intro-buffer-time"
@@ -477,15 +553,26 @@
             />
           </div>
           <div class="flex-none">
-            <CinematicButton type="submit" size="sm" variant="secondary" disabled={!isIntroBufferTimeDirty}>
+            <CinematicButton
+              type="submit"
+              size="sm"
+              variant="secondary"
+              disabled={!isIntroBufferTimeDirty}
+            >
               <span>Save intro buffer</span>
             </CinematicButton>
           </div>
         </form>
-        <form class="flex flex-col gap-4" on:submit|preventDefault={handleSoundLevelSubmit}>
+        <form
+          class="flex flex-col gap-4"
+          on:submit|preventDefault={handleSoundLevelSubmit}
+        >
           <div class="flex w-full flex-col gap-2">
             <div class="flex items-center justify-between">
-              <label class="text-sm font-medium text-text-secondary" for="original-sound-level">Original audio level</label>
+              <label
+                class="text-sm font-medium text-text-secondary"
+                for="original-sound-level">Original audio level</label
+              >
               <span class="text-sm text-text-muted">{soundLevelValue}%</span>
             </div>
             <input
@@ -500,29 +587,44 @@
             />
           </div>
           <div class="flex justify-end">
-            <CinematicButton type="submit" size="sm" variant="secondary" disabled={!isSoundLevelDirty}>
+            <CinematicButton
+              type="submit"
+              size="sm"
+              variant="secondary"
+              disabled={!isSoundLevelDirty}
+            >
               <span>Apply sound level</span>
             </CinematicButton>
           </div>
         </form>
 
-        <div class="flex flex-col gap-3 rounded-2xl border border-border-subtle bg-background/60 p-4">
+        <div
+          class="flex flex-col gap-3 rounded-2xl border border-border-subtle bg-background/60 p-4"
+        >
           <div>
-            <h3 class="text-base font-semibold text-text-primary">Reaction mute mode</h3>
-            <p class="text-sm text-text-muted">Mute your reaction audio whenever the original video plays.</p>
+            <h3 class="text-base font-semibold text-text-primary">
+              Reaction mute mode
+            </h3>
+            <p class="text-sm text-text-muted">
+              Mute your reaction audio whenever the original video plays.
+            </p>
           </div>
           <div class="flex items-center justify-between gap-4">
-            <span class="text-sm text-text-secondary">{isReactionMuteModeEnabled ? 'Enabled' : 'Disabled'}</span>
+            <span class="text-sm text-text-secondary"
+              >{isReactionMuteModeEnabled ? "Enabled" : "Disabled"}</span
+            >
             <button
               type="button"
-              class={`relative inline-flex h-7 w-12 items-center rounded-full border border-border-subtle transition duration-subtle ease-cinematic focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background ${isReactionMuteModeEnabled ? 'bg-accent-primary/80 border-accent-primary' : 'bg-surface/60 border-border-subtle'}`}
+              class={`relative inline-flex h-7 w-12 items-center rounded-full border border-border-subtle transition duration-subtle ease-cinematic focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background ${isReactionMuteModeEnabled ? "bg-accent-primary/80 border-accent-primary" : "bg-surface/60 border-border-subtle"}`}
               role="switch"
               aria-checked={isReactionMuteModeEnabled}
-              aria-label={isReactionMuteModeEnabled ? 'Disable reaction mute mode' : 'Enable reaction mute mode'}
+              aria-label={isReactionMuteModeEnabled
+                ? "Disable reaction mute mode"
+                : "Enable reaction mute mode"}
               on:click={handleToggleReactionMuteMode}
             >
               <span
-                class={`inline-block h-6 w-6 transform rounded-full bg-surface shadow-surface transition duration-subtle ease-cinematic ${isReactionMuteModeEnabled ? 'translate-x-5' : 'translate-x-1'}`}
+                class={`inline-block h-6 w-6 transform rounded-full bg-surface shadow-surface transition duration-subtle ease-cinematic ${isReactionMuteModeEnabled ? "translate-x-5" : "translate-x-1"}`}
               ></span>
             </button>
           </div>
@@ -532,20 +634,40 @@
   {/if}
 
   {#if isEditModeOn}
-    <section class="rounded-3xl border border-border-subtle bg-surface/80 px-6 py-6 shadow-elevated">
-      <header class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+    <section
+      class="rounded-3xl border border-border-subtle bg-surface/80 px-6 py-6 shadow-elevated"
+    >
+      <header
+        class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+      >
         <div>
-          <h2 class="text-lg font-semibold text-text-primary">Fine-tune mode</h2>
-          <p class="text-sm text-text-muted">Adjust precise playback, volume, and state timelines when you need full control.</p>
+          <h2 class="text-lg font-semibold text-text-primary">
+            Fine-tune mode
+          </h2>
+          <p class="text-sm text-text-muted">
+            Adjust precise playback, volume, and state timelines when you need
+            full control.
+          </p>
         </div>
-        <CinematicButton type="button" size="sm" variant={isFineTuneModeOn ? 'muted' : 'secondary'} on:click={handleToggleFineTuneMode}>
-          <span>{isFineTuneModeOn ? 'Disable fine-tune mode' : 'Enable fine-tune mode'}</span>
+        <CinematicButton
+          type="button"
+          size="sm"
+          variant={isFineTuneModeOn ? "muted" : "secondary"}
+          on:click={handleToggleFineTuneMode}
+        >
+          <span
+            >{isFineTuneModeOn
+              ? "Disable fine-tune mode"
+              : "Enable fine-tune mode"}</span
+          >
         </CinematicButton>
       </header>
 
       {#if isFineTuneModeOn}
         <div class="mt-6 flex flex-col gap-6">
-          <div class="rounded-2xl border border-border-subtle bg-background/60 p-4 shadow-surface">
+          <div
+            class="rounded-2xl border border-border-subtle bg-background/60 p-4 shadow-surface"
+          >
             <ConfigEditorV2
               {playerConfigs}
               {volumeConfigs}
@@ -555,9 +677,13 @@
               {reactionVolumeTimeline}
               {playbackRateConfigs}
               {playbackRateTimeline}
-              reactionCurrentTime={reactionCurrentTime}
-              reactionDuration={reactionDuration}
-              playerEventTimeline={playerEventTimeline}
+              {reactionCurrentTime}
+              {reactionDuration}
+              seekMin={offsetStartTime}
+              seekMax={reactionFinishTime > 0
+                ? reactionFinishTime
+                : Number.POSITIVE_INFINITY}
+              {playerEventTimeline}
               on:createPlayerConfig={handleCreatePlayerConfig}
               on:createVolumeConfig={handleCreateVolumeConfig}
               on:createReactionVolumeConfig={handleCreateReactionVolumeConfig}
