@@ -12,6 +12,7 @@
     export let bothVideosStarted;
     export let isPlaylist;
     export let isPlaylistAutoPlay;
+    export let showAutoPlayButton = true;
     export let showCinematicBars = false;
     export let isFullscreen = false;
     export let currentTime = 0;
@@ -394,7 +395,7 @@
                     </span>
                 </div>
 
-                {#if isPlaylist}
+                {#if isPlaylist && showAutoPlayButton}
                     <div class="group relative">
                         <button
                             type="button"

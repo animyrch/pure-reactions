@@ -6,6 +6,7 @@
   export let bothVideosStarted = false;
   export let isPlaylist = false;
   export let isPlaylistAutoPlay = false;
+  export let showAutoPlayButton = true;
   export let showCinematicBars = false;
 
   export let onPlayStateChanged = () => {};
@@ -31,6 +32,7 @@
       {bothVideosStarted}
       {isPlaylist}
       {isPlaylistAutoPlay}
+      {showAutoPlayButton}
       {showCinematicBars}
       {isFullscreen}
       {currentTime}

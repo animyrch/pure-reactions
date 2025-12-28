@@ -104,6 +104,7 @@ type UseTwinPlayersOptions = {
     slug: string;
     userId?: string | null;
   };
+  enableAutoPlay?: boolean;
 };
 
 type LoadReactionInPlaceOptions = {
@@ -234,7 +235,7 @@ const buildPlayerEventTimeline = (timeline: any[] = []) =>
       ) => a.timeInReaction - b.timeInReaction
     );
 
-export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
+export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOptions) {
   const { slug, userId } = data;
   const initialUrlState = getInitialUrlState();
   // console.log('Initial URL State:', initialUrlState);
@@ -2502,7 +2503,7 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
   };
 
   onMount(() => {
-    const isAutoPlay = readAutoPlayCookie();
+    const isAutoPlay = enableAutoPlay ? readAutoPlayCookie() : false;
     updateState({ isPlaylistAutoPlay: isAutoPlay });
 
     escListener = (event: KeyboardEvent) => {

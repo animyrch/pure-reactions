@@ -17,7 +17,7 @@
   import { TOASTS } from '$lib/constants/toasts';
 
   export let data;
-  const { state, actions } = useTwinPlayers({ data });
+  const { state, actions } = useTwinPlayers({ data, enableAutoPlay: false });
 
   let overlayRef;
 
@@ -267,6 +267,7 @@
         bothVideosStarted={$state.bothVideosStarted}
         isPlaylist={Boolean($state.playlistDocumentId)}
         isPlaylistAutoPlay={$state.isPlaylistAutoPlay}
+        showAutoPlayButton={false}
         showCinematicBars={$state.showCinematicBars}
         onPlayStateChanged={handlePlayStateChanged}
         onSyncVideos={actions.syncVideos}
