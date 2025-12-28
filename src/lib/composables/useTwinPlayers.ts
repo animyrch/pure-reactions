@@ -108,6 +108,7 @@ type UseTwinPlayersOptions = {
 
 type LoadReactionInPlaceOptions = {
   preserveReactionTime?: boolean;
+  autoPlay?: boolean;
 };
 
 type CreatePlayerConfigParams = {
@@ -1254,8 +1255,8 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     const previousReactionVideoId = snapshotBefore.reactionVideoId;
 
     if (!preserveReactionTime) {
-      originalVideoClicked = false;
-      reactionVideoClicked = false;
+      originalVideoClicked = Boolean(options.autoPlay);
+      reactionVideoClicked = Boolean(options.autoPlay);
     }
 
     if (!snapshotBefore.playerOriginal || !document.getElementById('player-original')) {
@@ -1438,7 +1439,7 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
     const isPlaylistPage = typeof window !== 'undefined' && window.location?.pathname?.startsWith('/playlist/');
     if (isPlaylistPage) {
       const nextOriginalVideoId = playlistDocument.originalVideoIds?.[nextIndex];
-      loadReactionInPlace(nextReactionDocumentId, { preserveReactionTime: false }).then(() => {
+      loadReactionInPlace(nextReactionDocumentId, { preserveReactionTime: false, autoPlay: true }).then(() => {
         const updatedIndex = nextIndex;
         const hasNext = updatedIndex < playlistItems.length - 1;
         updateState({
@@ -1452,8 +1453,6 @@ export function useTwinPlayers({ data }: UseTwinPlayersOptions) {
           window.history.pushState(window.history.state, '', url.toString());
         }
 
-        originalVideoClicked = false;
-        reactionVideoClicked = false;
       });
       return;
     }
