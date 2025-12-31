@@ -1778,6 +1778,20 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   const roundVolume = (value: number) => Math.round(Math.min(Math.max(value, 0), 100));
   const roundPlaybackRate = (value: number) => Math.round(value * 100) / 100;
 
+
+
+  const performPostSaveRewind = (referenceTime: number) => {
+    const snapshot = get(state);
+    if (!snapshot.isFineTuneModeOn) {
+      return;
+    }
+    if (!Number.isFinite(referenceTime)) {
+      return;
+    }
+    const targetTime = referenceTime - 5;
+    goToSecondsInReactionVideo(targetTime);
+  };
+
   const timelineArrayToMap = (timeline: any[] = []) => {
     const map = new Map<string, { t: number; state: number; targetTime: number }>();
     for (const entry of timeline) {
@@ -1800,7 +1814,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   };
 
   const persistPlayerTimelineMap = async (
-    map: Map<string, { t: number; state: number; targetTime: number }>
+    map: Map<string, { t: number; state: number; targetTime: number }>,
+    referenceTime: number
   ) => {
     const normalizedTimeline = Array.from(map.values()).sort((a, b) => a.t - b.t);
     const nextPlayerConfigs = Object.fromEntries(
@@ -1831,6 +1846,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       playerConfigs: nextPlayerConfigs,
       playerEventTimeline: buildPlayerEventTimeline(normalizedTimeline)
     });
+
+    performPostSaveRewind(referenceTime);
   };
 
   const volumeTimelineArrayToMap = (timeline: any[] = []) => {
@@ -1850,7 +1867,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     return map;
   };
 
-  const persistVolumeTimelineMap = async (map: Map<string, { t: number; volume: number }>) => {
+  const persistVolumeTimelineMap = async (map: Map<string, { t: number; volume: number }>, referenceTime: number) => {
     const normalizedTimeline = Array.from(map.values()).sort((a, b) => a.t - b.t);
     const nextVolumeConfigs = Object.fromEntries(
       normalizedTimeline.map((entry) => [
@@ -1877,9 +1894,11 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       volumeTimeline: normalizedTimeline,
       volumeConfigs: nextVolumeConfigs
     });
+
+    performPostSaveRewind(referenceTime);
   };
 
-  const persistReactionVolumeTimelineMap = async (map: Map<string, { t: number; volume: number }>) => {
+  const persistReactionVolumeTimelineMap = async (map: Map<string, { t: number; volume: number }>, referenceTime: number) => {
     const normalizedTimeline = Array.from(map.values()).sort((a, b) => a.t - b.t);
     const nextVolumeConfigs = Object.fromEntries(
       normalizedTimeline.map((entry) => [
@@ -1906,6 +1925,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       reactionVolumeTimeline: normalizedTimeline,
       reactionVolumeConfigs: nextVolumeConfigs
     });
+
+    performPostSaveRewind(referenceTime);
   };
 
   const playbackTimelineArrayToMap = (timeline: any[] = []) => {
@@ -1926,7 +1947,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     return map;
   };
 
-  const persistPlaybackTimelineMap = async (map: Map<string, { t: number; rate: number }>) => {
+  const persistPlaybackTimelineMap = async (map: Map<string, { t: number; rate: number }>, referenceTime: number) => {
     const normalizedTimeline = Array.from(map.values()).sort((a, b) => a.t - b.t);
     const nextPlaybackRateConfigs = Object.fromEntries(
       normalizedTimeline.map((entry) => [
@@ -1953,6 +1974,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       playbackRateTimeline: normalizedTimeline,
       playbackRateConfigs: nextPlaybackRateConfigs
     });
+
+    performPostSaveRewind(referenceTime);
   };
 
   const createPlayerConfig = async ({ timeInReaction, targetTime, state: rawState }: CreatePlayerConfigParams) => {
@@ -1973,7 +1996,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     });
 
     try {
-      await persistPlayerTimelineMap(timelineMap);
+      await persistPlayerTimelineMap(timelineMap, roundedReactionTime);
     } catch (error) {
       console.error('Failed to create player config', error);
       throw error;
@@ -1994,7 +2017,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     });
 
     try {
-      await persistVolumeTimelineMap(timelineMap);
+      await persistVolumeTimelineMap(timelineMap, roundedReactionTime);
     } catch (error) {
       console.error('Failed to create volume config', error);
       throw error;
@@ -2015,7 +2038,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     });
 
     try {
-      await persistReactionVolumeTimelineMap(timelineMap);
+      await persistReactionVolumeTimelineMap(timelineMap, roundedReactionTime);
     } catch (error) {
       console.error('Failed to create reaction volume config', error);
       throw error;
@@ -2037,7 +2060,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     });
 
     try {
-      await persistPlaybackTimelineMap(timelineMap);
+      await persistPlaybackTimelineMap(timelineMap, roundedReactionTime);
     } catch (error) {
       console.error('Failed to create playback rate config', error);
       throw error;
@@ -2090,7 +2113,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     });
 
     try {
-      await persistPlayerTimelineMap(timelineMap);
+      await persistPlayerTimelineMap(timelineMap, roundedReactionTime);
     } catch (error) {
       console.error('Failed to update player config', error);
       throw error;
@@ -2112,7 +2135,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     timelineMap.delete(key);
 
     try {
-      await persistPlayerTimelineMap(timelineMap);
+      await persistPlayerTimelineMap(timelineMap, sanitizedReactionTime);
     } catch (error) {
       console.error('Failed to delete player config', error);
       throw error;
@@ -2155,7 +2178,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     });
 
     try {
-      await persistVolumeTimelineMap(timelineMap);
+      await persistVolumeTimelineMap(timelineMap, roundedReactionTime);
     } catch (error) {
       console.error('Failed to update volume config', error);
       throw error;
@@ -2202,7 +2225,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     });
 
     try {
-      await persistReactionVolumeTimelineMap(timelineMap);
+      await persistReactionVolumeTimelineMap(timelineMap, roundedReactionTime);
     } catch (error) {
       console.error('Failed to update reaction volume config', error);
       throw error;
@@ -2224,7 +2247,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     timelineMap.delete(key);
 
     try {
-      await persistVolumeTimelineMap(timelineMap);
+      await persistVolumeTimelineMap(timelineMap, sanitizedReactionTime);
     } catch (error) {
       console.error('Failed to delete volume config', error);
       throw error;
@@ -2246,7 +2269,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     timelineMap.delete(key);
 
     try {
-      await persistReactionVolumeTimelineMap(timelineMap);
+      await persistReactionVolumeTimelineMap(timelineMap, sanitizedReactionTime);
     } catch (error) {
       console.error('Failed to delete reaction volume config', error);
       throw error;
@@ -2293,7 +2316,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     });
 
     try {
-      await persistPlaybackTimelineMap(timelineMap);
+      await persistPlaybackTimelineMap(timelineMap, roundedReactionTime);
     } catch (error) {
       console.error('Failed to update playback rate config', error);
       throw error;
@@ -2315,7 +2338,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     timelineMap.delete(key);
 
     try {
-      await persistPlaybackTimelineMap(timelineMap);
+      await persistPlaybackTimelineMap(timelineMap, sanitizedReactionTime);
     } catch (error) {
       console.error('Failed to delete playback rate config', error);
       throw error;
