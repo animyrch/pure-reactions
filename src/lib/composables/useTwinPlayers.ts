@@ -1755,8 +1755,14 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     if (!snapshot.youtubePlaylistId) {
       return;
     }
-    await updateFirebaseDocument({ reactionFinishTime: parsed });
-    updateState({ reactionFinishTime: parsed });
+
+    let finalValue = parsed;
+    if (Number.isFinite(snapshot.reactionDuration) && snapshot.reactionDuration > 0) {
+      finalValue = Math.min(finalValue, snapshot.reactionDuration);
+    }
+
+    await updateFirebaseDocument({ reactionFinishTime: finalValue });
+    updateState({ reactionFinishTime: finalValue });
   };
 
   const setSoundLevel = async (value: number) => {
