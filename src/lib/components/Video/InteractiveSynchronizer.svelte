@@ -207,11 +207,7 @@
     safeViewportEnd = Math.max(minEnd, Math.min(endCandidate, durationCeiling));
     viewportSpan = Math.max(0.001, safeViewportEnd - safeViewportStart);
   }
-  $: isZoomed =
-    viewportInitialized &&
-    safeDuration > 0 &&
-    (safeViewportStart > 0.0005 ||
-      Math.abs(safeViewportEnd - safeDuration) > 0.0005);
+  $: isZoomed = hasManualZoom;
   $: displayProgress = clamp01(
     viewportSpan <= 0
       ? 0
