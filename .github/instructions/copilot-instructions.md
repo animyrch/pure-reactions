@@ -111,3 +111,9 @@ The agent should behave like a calm, experienced art director who also understan
 - Serverless playlist fetcher at `routes/api/youtube/playlist/[id]/+server.js` proxies playlist items; respect quota limits and bubble HTTP failures to the UI.
 - Algolia search is client-only; ensure new components supply `indices` map shaped like `{ [indexName]: HitComponent }`.
 - Netlify deploy picks up `build/` output; keep adapter-specific assumptions (no Node APIs at runtime) when adding backend logic.
+
+## 12 — Logic placement & small-file strategy
+1. **Composables orchestrate** — keep `use*` composables responsible for lifecycle hooks, store wiring, Firebase calls, YT players, and UI helpers. They should stay stateful and thin.
+2. **Helpers stay stateless** — deterministic logic (rounding, map/array conversions, timeline derivations) belongs under `src/lib/helpers/`. Prefer descriptive names (e.g., `twinPlayersTimeline.ts`) so other modules can reuse them without bringing in composable state.
+3. **Split when needed** — if a file grows past ~300 lines or mixes side effects + pure logic, consider extracting the pure parts into a helper. Document the split briefly so future contributors understand where each responsibility lives.
+4. **Name for intent** — favor folder names that imply behavior (`helpers` vs `composables`). When adding new helpers, update `README.md` or documentation comments with the reasoning so the team remembers the standard.

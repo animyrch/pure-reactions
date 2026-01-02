@@ -23,6 +23,16 @@ import {
   toggleFullscreenBodyClass,
   writeAutoPlayCookie
 } from '$lib/helpers/reactionPlayer';
+import {
+  buildPlayerEventTimeline,
+  playbackTimelineArrayToMap,
+  roundPlaybackRate,
+  roundReactionTime,
+  roundTargetTime,
+  roundVolume,
+  timelineArrayToMap,
+  volumeTimelineArrayToMap
+} from '$lib/helpers/twinPlayersTimeline';
 
 declare const YT: any;
 
@@ -218,22 +228,6 @@ const iframeOptionDefault = {
   width: '100%',
   height: '100%'
 };
-
-const buildPlayerEventTimeline = (timeline: any[] = []) =>
-  timeline
-    .map((event: any, index: number) => ({
-      id: `player-array-${index}-${Number(event?.t ?? index)}`,
-      type: 'player',
-      timeInReaction: Number(event?.t) || 0,
-      state: Number(event?.state) || 0,
-      targetTime: Number(event?.targetTime ?? 0)
-    }))
-    .sort(
-      (
-        a: { timeInReaction: number },
-        b: { timeInReaction: number }
-      ) => a.timeInReaction - b.timeInReaction
-    );
 
 export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOptions) {
   const { slug, userId } = data;
@@ -767,7 +761,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       const previousReactionTime = snapshot.reactionCurrentTime;
       const reactionCurrentTime = parseFloat(playerReaction.getCurrentTime().toFixed(1));
       const rawDuration = typeof playerReaction.getDuration === 'function' ? Number(playerReaction.getDuration()) : Number.NaN;
-      console.log('Polling reaction time:', reactionCurrentTime, 'of', rawDuration);
+      // console.log('Polling reaction time:', reactionCurrentTime, 'of', rawDuration);
       const reactionDuration = Number.isFinite(rawDuration) ? rawDuration : snapshot.reactionDuration;
       if (reactionCurrentTime !== snapshot.reactionCurrentTime || Math.abs(reactionDuration - snapshot.reactionDuration) > 0.1) {
         // Re-calculate seekMin/seekMax whenever duration/time updates significantly
@@ -851,7 +845,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
   const onPlayerReady = (event: any) => {
     markPlayerReady();
-    console.log('Player ready event for', event?.target);
+    // console.log('Player ready event for', event?.target);
     const snapshot = get(state);
     if (event?.target === snapshot.playerOriginal) {
       setPlaybackRateForOriginalVideo(snapshot.currentPlaybackRate);
@@ -871,6 +865,12 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
   const startVideos = () => {
     const snapshot = get(state);
+    console.debug('[TwinPlayers] startVideos invoked', {
+      bothVideosStarted: snapshot.bothVideosStarted,
+      originalVideoClicked,
+      reactionVideoClicked,
+      reactionVideoId: snapshot.reactionVideoId
+    });
     if (!snapshot.playerReaction) {
       return;
     }
@@ -885,6 +885,12 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     enforceReactionMuteMode(typeof event?.data === 'number' ? event.data : undefined);
     if (event.data === YT.PlayerState.PLAYING) {
       console.log('Original video started playing');
+      const snapshotForDebug = get(state);
+      console.debug('[TwinPlayers] original PLAYING event', {
+        bothVideosStarted: snapshotForDebug.bothVideosStarted,
+        originalVideoClicked,
+        reactionVideoClicked
+      });
       if (!originalVideoClicked) {
         // Pause the actual player instance that emitted the event.
         // On fast client-side navigations, state.playerOriginal may not yet be updated
@@ -897,6 +903,10 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         if (originalVideoClicked && reactionVideoClicked) {
           startVideos();
         }
+        console.debug('[TwinPlayers] original gate blocking sync until both clicks', {
+          originalVideoClicked,
+          reactionVideoClicked
+        });
         // Do not allow syncing/polling before the gate is satisfied.
         return;
       }
@@ -919,10 +929,19 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         reactionVideoClicked = true;
       }
       const snapshot = get(state);
+      console.debug('[TwinPlayers] reaction PLAYING event', {
+        bothVideosStarted: snapshot.bothVideosStarted,
+        originalVideoClicked,
+        reactionVideoClicked
+      });
       if (!snapshot.bothVideosStarted) {
         if (originalVideoClicked && reactionVideoClicked) {
           startVideos();
         }
+        console.debug('[TwinPlayers] reaction gate blocking polling until both clicks', {
+          originalVideoClicked,
+          reactionVideoClicked
+        });
         // Do not start polling until both videos are explicitly started.
         return;
       }
@@ -1778,14 +1797,6 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     enforceReactionMuteMode();
   };
 
-  const roundReactionTime = (value: number) => Math.round(value * 10) / 10;
-  const roundTargetTime = (value: number) => Math.round(value * 100) / 100;
-
-  const roundVolume = (value: number) => Math.round(Math.min(Math.max(value, 0), 100));
-  const roundPlaybackRate = (value: number) => Math.round(value * 100) / 100;
-
-
-
   const performPostSaveRewind = (referenceTime: number) => {
     const snapshot = get(state);
     if (!snapshot.isFineTuneModeOn) {
@@ -1796,27 +1807,6 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     }
     const targetTime = referenceTime - 5;
     goToSecondsInReactionVideo(targetTime);
-  };
-
-  const timelineArrayToMap = (timeline: any[] = []) => {
-    const map = new Map<string, { t: number; state: number; targetTime: number }>();
-    for (const entry of timeline) {
-      if (!entry) continue;
-      const rawReactionTime = Number(entry?.t);
-      if (!Number.isFinite(rawReactionTime)) continue;
-      const roundedReactionTime = roundReactionTime(Math.max(0, rawReactionTime));
-      const rawStateValue = Number(entry?.state);
-      const sanitizedState = Number.isFinite(rawStateValue) ? rawStateValue : 2;
-      const rawTarget = Number(entry?.targetTime ?? entry?.time);
-      const sanitizedTarget = Number.isFinite(rawTarget) ? Math.max(0, rawTarget) : 0;
-      const roundedTarget = roundTargetTime(sanitizedTarget);
-      map.set(roundedReactionTime.toFixed(3), {
-        t: roundedReactionTime,
-        state: sanitizedState,
-        targetTime: roundedTarget
-      });
-    }
-    return map;
   };
 
   const persistPlayerTimelineMap = async (
@@ -1854,23 +1844,6 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     });
 
     performPostSaveRewind(referenceTime);
-  };
-
-  const volumeTimelineArrayToMap = (timeline: any[] = []) => {
-    const map = new Map<string, { t: number; volume: number }>();
-    for (const entry of timeline) {
-      if (!entry) continue;
-      const rawReactionTime = Number(entry?.t);
-      if (!Number.isFinite(rawReactionTime)) continue;
-      const roundedReactionTime = roundReactionTime(Math.max(0, rawReactionTime));
-      const rawVolumeValue = Number(entry?.volume ?? entry?.value);
-      const sanitizedVolume = Number.isFinite(rawVolumeValue) ? roundVolume(rawVolumeValue) : 100;
-      map.set(roundedReactionTime.toFixed(3), {
-        t: roundedReactionTime,
-        volume: sanitizedVolume
-      });
-    }
-    return map;
   };
 
   const persistVolumeTimelineMap = async (map: Map<string, { t: number; volume: number }>, referenceTime: number) => {
@@ -1933,24 +1906,6 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     });
 
     performPostSaveRewind(referenceTime);
-  };
-
-  const playbackTimelineArrayToMap = (timeline: any[] = []) => {
-    const map = new Map<string, { t: number; rate: number }>();
-    for (const entry of timeline) {
-      if (!entry) continue;
-      const rawReactionTime = Number(entry?.t);
-      if (!Number.isFinite(rawReactionTime)) continue;
-      const roundedReactionTime = roundReactionTime(Math.max(0, rawReactionTime));
-      const rawRateValue = Number(entry?.rate ?? entry?.value);
-      const sanitizedRate =
-        Number.isFinite(rawRateValue) && rawRateValue > 0 ? roundPlaybackRate(rawRateValue) : 1;
-      map.set(roundedReactionTime.toFixed(3), {
-        t: roundedReactionTime,
-        rate: sanitizedRate
-      });
-    }
-    return map;
   };
 
   const persistPlaybackTimelineMap = async (map: Map<string, { t: number; rate: number }>, referenceTime: number) => {
