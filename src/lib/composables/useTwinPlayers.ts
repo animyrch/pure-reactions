@@ -216,6 +216,13 @@ type VerifyAndSyncMetadataParams = {
 
 export const CONTROLS_FADE_CLASS = 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100';
 
+// Debug toggles
+const ENABLE_GATE_DEBUG = false;
+const ENABLE_WATCHDOG = false;
+
+// Global tracker for the currently active instance. Only the active instance should handle events.
+let globalActiveInstanceId: string | null = null;
+
 const playerOptions = {
   autoplay: 0,
   controls: 1,
@@ -311,6 +318,77 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
   let originalVideoClicked = false;
   let reactionVideoClicked = false;
+  let clickGateSessionId = 0;
+  let clickGateEventSeq = 0;
+  const instanceId = (() => {
+    if (typeof window === 'undefined') {
+      return 'ssr';
+    }
+    const key = '__twinPlayersInstanceCounter';
+    const w = window as any;
+    w[key] = (Number(w[key]) || 0) + 1;
+    return String(w[key]);
+  })();
+
+  // Claim this instance as the active one. Previous instances will be superseded.
+  globalActiveInstanceId = instanceId;
+
+  let gateWatchdogInterval: ReturnType<typeof setInterval> | undefined;
+  let lastGateWatchdogLogAt = 0;
+
+  let buildInterfaceSeq = 0;
+  let initSeq = 0;
+
+  let isDestroyed = false;
+
+  const getPlayerDebugInfo = (target: any) => {
+    let iframeId: string | undefined;
+    let videoId: string | undefined;
+    try {
+      const iframe = target?.getIframe?.();
+      if (iframe && typeof iframe.id === 'string') {
+        iframeId = iframe.id;
+      }
+    } catch {
+      // ignore
+    }
+
+    try {
+      const data = target?.getVideoData?.();
+      if (data && typeof data.video_id === 'string') {
+        videoId = data.video_id;
+      }
+    } catch {
+      // ignore
+    }
+
+    return { iframeId, videoId };
+  };
+
+  const debugClickGate = (label: string, details: Record<string, any> = {}, includeStack = false) => {
+    if (!ENABLE_GATE_DEBUG || typeof console === 'undefined') {
+      return;
+    }
+    const snapshot = get(state);
+    const base = {
+      ts: Date.now(),
+      seq: ++clickGateEventSeq,
+      session: clickGateSessionId,
+      instanceId,
+      slug: snapshot.pageSlug,
+      bothVideosStarted: snapshot.bothVideosStarted,
+      originalVideoClicked,
+      reactionVideoClicked,
+      ...details
+    };
+
+    if (includeStack) {
+      console.debug(label, { ...base, stack: new Error().stack });
+      return;
+    }
+
+    console.debug(label, base);
+  };
   let playlistFetchPromise: Promise<void> | undefined;
   let changingVolume = false;
   let changingReactionVolume = false;
@@ -323,10 +401,27 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   const updateState = (partial: Partial<TwinPlayersState> | ((value: TwinPlayersState) => Partial<TwinPlayersState>)) => {
     state.update((value) => {
       const patch = typeof partial === 'function' ? partial(value) : partial;
-      return {
+      const nextValue = {
         ...value,
         ...patch
       };
+
+      if (ENABLE_GATE_DEBUG && value.bothVideosStarted !== nextValue.bothVideosStarted) {
+        console.debug('[TwinPlayers] bothVideosStarted changed', {
+          ts: Date.now(),
+          seq: ++clickGateEventSeq,
+          session: clickGateSessionId,
+          instanceId,
+          slug: nextValue.pageSlug,
+          from: value.bothVideosStarted,
+          to: nextValue.bothVideosStarted,
+          originalVideoClicked,
+          reactionVideoClicked,
+          stack: new Error().stack
+        });
+      }
+
+      return nextValue;
     });
   };
 
@@ -369,23 +464,142 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
   const startReactionVideo = () => {
     const { playerReaction } = get(state);
-    playerReaction?.playVideo();
+    playWithTrace('reaction', playerReaction, 'startReactionVideo');
   };
 
   const startOriginalVideo = () => {
     const snapshot = get(state);
     if (snapshot.playerOriginal) {
       snapshot.playerOriginal.setPlaybackRate(snapshot.currentPlaybackRate);
-      snapshot.playerOriginal.playVideo();
+      playWithTrace('original', snapshot.playerOriginal, 'startOriginalVideo');
     }
   };
 
   const pauseOriginalVideo = () => {
-    get(state).playerOriginal?.pauseVideo();
+    pausePlayerWithTrace('original', get(state).playerOriginal, 'pauseOriginalVideo');
   };
 
   const pauseReactionVideo = () => {
-    get(state).playerReaction?.pauseVideo();
+    pausePlayerWithTrace('reaction', get(state).playerReaction, 'pauseReactionVideo');
+  };
+
+  const stateName = (value: number | undefined) => {
+    switch (value) {
+      case YT?.PlayerState?.UNSTARTED:
+        return 'UNSTARTED';
+      case YT?.PlayerState?.ENDED:
+        return 'ENDED';
+      case YT?.PlayerState?.PLAYING:
+        return 'PLAYING';
+      case YT?.PlayerState?.PAUSED:
+        return 'PAUSED';
+      case YT?.PlayerState?.BUFFERING:
+        return 'BUFFERING';
+      case YT?.PlayerState?.CUED:
+        return 'CUED';
+      default:
+        return typeof value === 'number' ? `UNKNOWN(${value})` : 'UNKNOWN';
+    }
+  };
+
+  const getPlayerStateSafely = (player: any) => {
+    if (!player || typeof player.getPlayerState !== 'function') {
+      return undefined;
+    }
+    try {
+      return Number(player.getPlayerState());
+    } catch {
+      return undefined;
+    }
+  };
+
+  const verifyStateSoon = (label: string, target: any) => {
+    if (!ENABLE_GATE_DEBUG || typeof window === 'undefined') {
+      return;
+    }
+    window.setTimeout(() => {
+      const snapshot = get(state);
+      debugClickGate(`[TwinPlayers] ${label} VERIFY`, {
+        ...getPlayerDebugInfo(target),
+        playerState: stateName(getPlayerStateSafely(target)),
+        currentTime: typeof target?.getCurrentTime === 'function' ? target.getCurrentTime() : undefined,
+        gateSatisfied: originalVideoClicked && reactionVideoClicked,
+        bothVideosStarted: snapshot.bothVideosStarted
+      });
+    }, 120);
+  };
+
+  const pausePlayerWithTrace = (which: 'original' | 'reaction', target: any, reason: string, retryCount = 0) => {
+    if (!ENABLE_GATE_DEBUG) {
+      try {
+        target?.pauseVideo?.();
+      } catch {
+        // ignore
+      }
+      return;
+    }
+    const playerInfo = getPlayerDebugInfo(target);
+    debugClickGate(`[TwinPlayers] ${which} pauseVideo()`, {
+      reason,
+      retryCount,
+      ...playerInfo,
+      playerState: stateName(getPlayerStateSafely(target))
+    }, true);
+    try {
+      target?.pauseVideo?.();
+    } catch (error) {
+      debugClickGate(`[TwinPlayers] ${which} pauseVideo() threw`, {
+        reason,
+        error: String(error),
+        ...playerInfo
+      }, true);
+    }
+
+    if (typeof window !== 'undefined' && retryCount < 3) {
+      window.setTimeout(() => {
+        const currentState = getPlayerStateSafely(target);
+        if (currentState === YT.PlayerState.PLAYING || currentState === YT.PlayerState.BUFFERING) {
+          debugClickGate(`[TwinPlayers] ${which} pauseVideo() failed, retrying`, {
+            reason,
+            retryCount,
+            currentState: stateName(currentState),
+            ...playerInfo
+          }, true);
+          pausePlayerWithTrace(which, target, reason, retryCount + 1);
+        } else {
+          verifyStateSoon(`${which} pause`, target);
+        }
+      }, 150);
+    } else {
+      verifyStateSoon(`${which} pause`, target);
+    }
+  };
+
+  const playWithTrace = (which: 'original' | 'reaction', target: any, reason: string) => {
+    if (!ENABLE_GATE_DEBUG) {
+      try {
+        target?.playVideo?.();
+      } catch {
+        // ignore
+      }
+      return;
+    }
+    const playerInfo = getPlayerDebugInfo(target);
+    debugClickGate(`[TwinPlayers] ${which} playVideo()`, {
+      reason,
+      ...playerInfo,
+      playerState: stateName(getPlayerStateSafely(target))
+    }, true);
+    try {
+      target?.playVideo?.();
+    } catch (error) {
+      debugClickGate(`[TwinPlayers] ${which} playVideo() threw`, {
+        reason,
+        error: String(error),
+        ...playerInfo
+      }, true);
+    }
+    verifyStateSoon(`${which} play`, target);
   };
 
   const muteReactionAudio = (player?: any) => {
@@ -844,13 +1058,27 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   };
 
   const onPlayerReady = (event: any) => {
+    if (isDestroyed || globalActiveInstanceId !== instanceId) {
+      debugClickGate('[TwinPlayers] onPlayerReady IGNORED (instance superseded)', {
+        isDestroyed,
+        globalActiveInstanceId
+      });
+      return;
+    }
     markPlayerReady();
     // console.log('Player ready event for', event?.target);
     const snapshot = get(state);
+    const playerInfo = getPlayerDebugInfo(event?.target);
     if (event?.target === snapshot.playerOriginal) {
+      debugClickGate('[TwinPlayers] original player READY', {
+        ...playerInfo
+      });
       setPlaybackRateForOriginalVideo(snapshot.currentPlaybackRate);
     }
     if (event?.target === snapshot.playerReaction) {
+      debugClickGate('[TwinPlayers] reaction player READY', {
+        ...playerInfo
+      });
       if (typeof event?.target?.setPlaybackRate === 'function') {
         event.target.setPlaybackRate(1);
       }
@@ -865,55 +1093,109 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
   const startVideos = () => {
     const snapshot = get(state);
-    console.debug('[TwinPlayers] startVideos invoked', {
-      bothVideosStarted: snapshot.bothVideosStarted,
-      originalVideoClicked,
-      reactionVideoClicked,
-      reactionVideoId: snapshot.reactionVideoId
-    });
+    debugClickGate('[TwinPlayers] startVideos invoked', { reactionVideoId: snapshot.reactionVideoId }, true);
     if (!snapshot.playerReaction) {
+      debugClickGate('[TwinPlayers] startVideos aborted (missing reaction player)', {
+        reactionVideoId: snapshot.reactionVideoId
+      });
       return;
     }
+
+    // Set the gate flag BEFORE triggering playVideo().
+    // Otherwise, YT can emit PLAYING synchronously, and the stateChange handler may re-pause.
+    updateState({ bothVideosStarted: true });
+    debugClickGate('[TwinPlayers] bothVideosStarted set true via startVideos gate release', {
+      offsetStartTime: snapshot.offsetStartTime,
+      playbackRate: snapshot.currentPlaybackRate
+    });
+
     goToSecondsInReactionVideo(snapshot.offsetStartTime || 0);
     setPlaybackRateForOriginalVideo(snapshot.currentPlaybackRate);
     startReactionVideo();
     pollVideoCurrentTime();
-    updateState({ bothVideosStarted: true });
   };
 
   const onStateChangeOriginal = (event: any) => {
-    enforceReactionMuteMode(typeof event?.data === 'number' ? event.data : undefined);
-    if (event.data === YT.PlayerState.PLAYING) {
-      console.log('Original video started playing');
-      const snapshotForDebug = get(state);
-      console.debug('[TwinPlayers] original PLAYING event', {
-        bothVideosStarted: snapshotForDebug.bothVideosStarted,
-        originalVideoClicked,
-        reactionVideoClicked
+    if (isDestroyed || globalActiveInstanceId !== instanceId) {
+      debugClickGate('[TwinPlayers] original stateChange IGNORED (instance superseded)', {
+        state: event?.data,
+        stateName: stateName(event?.data),
+        isDestroyed,
+        globalActiveInstanceId
       });
-      if (!originalVideoClicked) {
-        // Pause the actual player instance that emitted the event.
-        // On fast client-side navigations, state.playerOriginal may not yet be updated
-        // when the first PLAYING event fires, which can bypass the "click both players" gate.
+      // Force pause the player since this instance is no longer active
+      try {
         event?.target?.pauseVideo?.();
+      } catch {
+        // ignore
+      }
+      return;
+    }
+    enforceReactionMuteMode(typeof event?.data === 'number' ? event.data : undefined);
+    debugClickGate('[TwinPlayers] original stateChange', {
+      state: event?.data,
+      stateName: stateName(event?.data),
+      ...getPlayerDebugInfo(event?.target)
+    }, true);
+    if (event.data === YT.PlayerState.PLAYING) {
+      const snapshot = get(state);
+      const playerInfo = getPlayerDebugInfo(event?.target);
+      const wasClicked = originalVideoClicked;
+      if (!originalVideoClicked) {
         originalVideoClicked = true;
       }
-      const snapshot = get(state);
+
+      debugClickGate('[TwinPlayers] original PLAYING event', {
+        state: event.data,
+        stateName: stateName(event.data),
+        clickedFlagChanged: !wasClicked,
+        targetIsStatePlayer: event?.target === snapshot.playerOriginal,
+        ...playerInfo
+      }, true);
+
       if (!snapshot.bothVideosStarted) {
-        if (originalVideoClicked && reactionVideoClicked) {
-          startVideos();
+        const gateSatisfied = originalVideoClicked && reactionVideoClicked;
+
+        if (!gateSatisfied) {
+          pausePlayerWithTrace('original', event?.target ?? snapshot.playerOriginal, 'click-gate (bothVideosStarted=false)');
+          debugClickGate('[TwinPlayers] original paused for click gate', {
+            gateSatisfied,
+            ...playerInfo,
+            playerState: stateName(getPlayerStateSafely(event?.target ?? snapshot.playerOriginal))
+          });
+          return;
         }
-        console.debug('[TwinPlayers] original gate blocking sync until both clicks', {
-          originalVideoClicked,
-          reactionVideoClicked
+
+        debugClickGate('[TwinPlayers] original triggers startVideos (gate satisfied)', {
+          ...playerInfo
         });
-        // Do not allow syncing/polling before the gate is satisfied.
+        startVideos();
         return;
       }
     }
   };
 
   const onStateChangeReaction = async (event: any) => {
+    if (isDestroyed || globalActiveInstanceId !== instanceId) {
+      debugClickGate('[TwinPlayers] reaction stateChange IGNORED (instance superseded)', {
+        state: event?.data,
+        stateName: stateName(event?.data),
+        isDestroyed,
+        globalActiveInstanceId
+      });
+      // Force pause the player since this instance is no longer active
+      try {
+        event?.target?.pauseVideo?.();
+      } catch {
+        // ignore
+      }
+      return;
+    }
+    debugClickGate('[TwinPlayers] reaction stateChange', {
+      state: event?.data,
+      stateName: stateName(event?.data),
+      ...getPlayerDebugInfo(event?.target)
+    }, true);
     if (event.data === YT.PlayerState.ENDED && get(state).isPlaylistAutoPlay) {
       if (get(state).hasNextIndexInPlaylist) {
         loadNextReactionInPlaylist();
@@ -923,26 +1205,37 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       loadNextReactionInQueue();
     }
     if (event.data === YT.PlayerState.PLAYING) {
+      const snapshot = get(state);
+      const playerInfo = getPlayerDebugInfo(event?.target);
+      const wasClicked = reactionVideoClicked;
       if (!reactionVideoClicked) {
-        // Same reasoning as original player: pause the emitting instance.
-        event?.target?.pauseVideo?.();
         reactionVideoClicked = true;
       }
-      const snapshot = get(state);
-      console.debug('[TwinPlayers] reaction PLAYING event', {
-        bothVideosStarted: snapshot.bothVideosStarted,
-        originalVideoClicked,
-        reactionVideoClicked
-      });
+
+      debugClickGate('[TwinPlayers] reaction PLAYING event', {
+        state: event.data,
+        stateName: stateName(event.data),
+        clickedFlagChanged: !wasClicked,
+        targetIsStatePlayer: event?.target === snapshot.playerReaction,
+        ...playerInfo
+      }, true);
+
       if (!snapshot.bothVideosStarted) {
-        if (originalVideoClicked && reactionVideoClicked) {
-          startVideos();
+        const gateSatisfied = originalVideoClicked && reactionVideoClicked;
+        if (!gateSatisfied) {
+          pausePlayerWithTrace('reaction', event?.target ?? snapshot.playerReaction, 'click-gate (bothVideosStarted=false)');
+          debugClickGate('[TwinPlayers] reaction paused for click gate', {
+            gateSatisfied,
+            ...playerInfo,
+            playerState: stateName(getPlayerStateSafely(event?.target ?? snapshot.playerReaction))
+          });
+          return;
         }
-        console.debug('[TwinPlayers] reaction gate blocking polling until both clicks', {
-          originalVideoClicked,
-          reactionVideoClicked
+
+        debugClickGate('[TwinPlayers] reaction triggers startVideos (gate satisfied)', {
+          ...playerInfo
         });
-        // Do not start polling until both videos are explicitly started.
+        startVideos();
         return;
       }
 
@@ -1072,6 +1365,15 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   };
 
   const setUpVideos = async (reactionData: Record<string, any>) => {
+    // CRITICAL: Abort if this instance has been superseded
+    if (globalActiveInstanceId !== instanceId) {
+      debugClickGate('[TwinPlayers] setUpVideos aborted (instance superseded)', {
+        globalActiveInstanceId,
+        reactionVideoId: reactionData?.reactionVideoId
+      });
+      return;
+    }
+
     if (!reactionData) {
       setExpectedPlayerReadyCount(0);
       resetReactionDurationProbe();
@@ -1147,9 +1449,26 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     // Reset the click-to-start gate whenever we recreate players.
     originalVideoClicked = false;
     reactionVideoClicked = false;
+    clickGateSessionId += 1;
+    debugClickGate('[TwinPlayers] click gate reset', {
+      source: 'setUpVideos',
+      reactionVideoId,
+      originalVideoId
+    }, true);
 
     resetReactionDurationProbe();
     resetOriginalStateTracking();
+
+    // Final guard before creating players - abort if superseded
+    if (globalActiveInstanceId !== instanceId) {
+      debugClickGate('[TwinPlayers] setUpVideos aborted before player creation (instance superseded)', {
+        globalActiveInstanceId,
+        reactionVideoId,
+        originalVideoId
+      });
+      setExpectedPlayerReadyCount(0);
+      return;
+    }
 
     const expectedPlayers = 1 + (reactionVideoId ? 1 : 0);
     setExpectedPlayerReadyCount(expectedPlayers);
@@ -1182,6 +1501,23 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     } catch (error) {
       console.error('Failed to initialise YouTube players', error);
       finalizeLoadingState();
+      return;
+    }
+
+    // Post-creation check - if superseded during player creation, destroy what we just made
+    if (globalActiveInstanceId !== instanceId) {
+      debugClickGate('[TwinPlayers] setUpVideos aborting after player creation (instance superseded)', {
+        globalActiveInstanceId,
+        reactionVideoId,
+        originalVideoId
+      });
+      try {
+        newPlayerOriginal?.destroy?.();
+        newPlayerReaction?.destroy?.();
+      } catch {
+        // ignore
+      }
+      setExpectedPlayerReadyCount(0);
       return;
     }
 
@@ -1224,6 +1560,11 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       reactionCurrentTime: offsetStartTime || 0,
       reactionDuration: typeof newPlayerReaction?.getDuration === 'function' ? Number(newPlayerReaction.getDuration()) || 0 : 0
     });
+    console.debug('[TwinPlayers] state reset after setUpVideos', {
+      bothVideosStarted: false,
+      reactionVideoId,
+      originalVideoId
+    });
 
     enforceReactionMuteMode();
 
@@ -1241,6 +1582,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   };
 
   const buildInterface = async (slugValue: string, { isUpdate = false }: { isUpdate?: boolean } = {}) => {
+    const seq = (buildInterfaceSeq += 1);
+    debugClickGate('[TwinPlayers] buildInterface start', { seq, slugValue, isUpdate }, true);
     if (isUpdate) {
       (window as any).currentReactionDocumentId = slugValue;
       const reaction = await getReaction(slugValue);
@@ -1251,6 +1594,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       const reaction = await getReaction(slugValue);
       await setUpVideos(reaction);
     }
+
+    debugClickGate('[TwinPlayers] buildInterface done', { seq, slugValue, isUpdate });
   };
 
   const loadReactionInPlace = async (nextReactionDocumentId: string, options: LoadReactionInPlaceOptions = {}) => {
@@ -1277,6 +1622,10 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     if (!preserveReactionTime) {
       originalVideoClicked = Boolean(options.autoPlay);
       reactionVideoClicked = Boolean(options.autoPlay);
+      clickGateSessionId += 1;
+      debugClickGate('[TwinPlayers] click gate state from loadReactionInPlace autoPlay', {
+        autoPlay: Boolean(options.autoPlay)
+      }, true);
     }
 
     if (!snapshotBefore.playerOriginal || !document.getElementById('player-original')) {
@@ -1491,6 +1840,10 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       }
       originalVideoClicked = false;
       reactionVideoClicked = false;
+      clickGateSessionId += 1;
+      debugClickGate('[TwinPlayers] click gate reset when loading next playlist reaction', {
+        nextReactionDocumentId
+      }, true);
       updateState({
         bothVideosStarted: false,
         currentStateOriginalVideo: -1,
@@ -1583,6 +1936,10 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
           }
           originalVideoClicked = false;
           reactionVideoClicked = false;
+          clickGateSessionId += 1;
+          debugClickGate('[TwinPlayers] click gate reset when loading next queue reaction', {
+            nextReactionDocumentId
+          }, true);
           updateState({
             bothVideosStarted: false,
             currentStateOriginalVideo: -1,
@@ -2339,12 +2696,22 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   };
 
   const handlePlayStateChange = (isPlaying: boolean) => {
+    debugClickGate('[TwinPlayers] handlePlayStateChange called', { isPlaying }, true);
     if (isPlaying) {
       const snapshot = get(state);
       if (!snapshot.bothVideosStarted) {
+        debugClickGate('[TwinPlayers] handlePlayStateChange releasing gate', {
+          gateSatisfied: originalVideoClicked && reactionVideoClicked,
+          offsetStartTime: snapshot.offsetStartTime,
+          playbackRate: snapshot.currentPlaybackRate
+        }, true);
         goToSecondsInReactionVideo(snapshot.offsetStartTime || 0);
         setPlaybackRateForOriginalVideo(snapshot.currentPlaybackRate);
         updateState({ bothVideosStarted: true });
+        debugClickGate('[TwinPlayers] bothVideosStarted set true via handlePlayStateChange gate release', {
+          offsetStartTime: snapshot.offsetStartTime,
+          playbackRate: snapshot.currentPlaybackRate
+        });
       }
       startReactionVideo();
       handleStateChangeInReactionVideo(YT.PlayerState.PAUSED, YT.PlayerState.PLAYING);
@@ -2356,11 +2723,21 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   };
 
   const syncVideos = () => {
+    debugClickGate('[TwinPlayers] syncVideos called', {}, true);
     const snapshot = get(state);
     if (!snapshot.bothVideosStarted) {
+      debugClickGate('[TwinPlayers] syncVideos releasing gate', {
+        gateSatisfied: originalVideoClicked && reactionVideoClicked,
+        offsetStartTime: snapshot.offsetStartTime,
+        playbackRate: snapshot.currentPlaybackRate
+      }, true);
       goToSecondsInReactionVideo(snapshot.offsetStartTime || 0);
       setPlaybackRateForOriginalVideo(snapshot.currentPlaybackRate);
       updateState({ bothVideosStarted: true });
+      debugClickGate('[TwinPlayers] bothVideosStarted set true via syncVideos gate release', {
+        offsetStartTime: snapshot.offsetStartTime,
+        playbackRate: snapshot.currentPlaybackRate
+      });
     }
     pauseOriginalVideo();
     pauseReactionVideo();
@@ -2487,6 +2864,56 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   };
 
   onMount(() => {
+    debugClickGate('[TwinPlayers] instance mounted', { enableAutoPlay }, true);
+
+    if (ENABLE_WATCHDOG) {
+      // Watchdog: if something starts playback while gate is closed, pause it and log.
+      // This catches missed onStateChange events and stale player instances that can "auto-play".
+      gateWatchdogInterval = setInterval(() => {
+        const snapshot = get(state);
+        if (snapshot.bothVideosStarted) {
+          return;
+        }
+
+        const now = Date.now();
+
+        const maybePauseIfPlaying = (target: any, which: 'reaction' | 'original') => {
+          if (!target || typeof target.getPlayerState !== 'function') {
+            return;
+          }
+          let playerState: number | undefined;
+          try {
+            playerState = Number(target.getPlayerState());
+          } catch {
+            playerState = undefined;
+          }
+          if (playerState !== YT.PlayerState.PLAYING) {
+            return;
+          }
+
+          try {
+            target.pauseVideo?.();
+          } catch {
+            // ignore
+          }
+
+          // Rate-limit watchdog logs to avoid console spam.
+          if (now - lastGateWatchdogLogAt > 500) {
+            lastGateWatchdogLogAt = now;
+            debugClickGate('[TwinPlayers] WATCHDOG paused player while gated', {
+              which,
+              state: playerState,
+              gateSatisfied: originalVideoClicked && reactionVideoClicked,
+              ...getPlayerDebugInfo(target)
+            }, true);
+          }
+        };
+
+        maybePauseIfPlaying(snapshot.playerReaction, 'reaction');
+        maybePauseIfPlaying(snapshot.playerOriginal, 'original');
+      }, 150);
+    }
+
     const isAutoPlay = enableAutoPlay ? readAutoPlayCookie() : false;
     updateState({ isPlaylistAutoPlay: isAutoPlay });
 
@@ -2508,22 +2935,67 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     }
 
     const init = async () => {
+      const seq = (initSeq += 1);
+      debugClickGate('[TwinPlayers] init start', { seq }, true);
       try {
+        // Check if we're still the active instance before doing expensive work
+        if (globalActiveInstanceId !== instanceId) {
+          debugClickGate('[TwinPlayers] init aborted (instance superseded before start)', {
+            seq,
+            globalActiveInstanceId
+          });
+          return;
+        }
+
         await tick();
+
+        // Re-check after await - another instance may have claimed active
+        if (globalActiveInstanceId !== instanceId) {
+          debugClickGate('[TwinPlayers] init aborted (instance superseded after tick)', {
+            seq,
+            globalActiveInstanceId
+          });
+          return;
+        }
+
         injectYoutubeIframeApiScript();
         await waitForYoutubeIframeApiReady();
+
+        // Re-check after API ready
+        if (globalActiveInstanceId !== instanceId) {
+          debugClickGate('[TwinPlayers] init aborted (instance superseded after YT API ready)', {
+            seq,
+            globalActiveInstanceId
+          });
+          return;
+        }
+
         if (!document.getElementById('player-original')) {
           console.warn('Player element not found, skipping initialization');
+          debugClickGate('[TwinPlayers] init aborted (missing player-original element)', { seq });
           return;
         }
         const initialSlug = get(state).pageSlug;
         if (!initialSlug) {
           finalizeLoadingState();
+          debugClickGate('[TwinPlayers] init aborted (missing slug)', { seq });
           return;
         }
+
+        // Final check before building interface
+        if (globalActiveInstanceId !== instanceId) {
+          debugClickGate('[TwinPlayers] init aborted (instance superseded before buildInterface)', {
+            seq,
+            globalActiveInstanceId
+          });
+          return;
+        }
+
         await buildInterface(initialSlug);
       } catch (error) {
         console.error('Failed to initialize reaction player:', error);
+      } finally {
+        debugClickGate('[TwinPlayers] init done', { seq });
       }
     };
 
@@ -2531,11 +3003,25 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   });
 
   onDestroy(() => {
+    isDestroyed = true;
+    debugClickGate('[TwinPlayers] instance destroyed', {}, true);
     // Ensure embedded YouTube players are torn down when leaving the route.
     // Without this, client-side navigation from edit -> reaction can leave behind
     // active player instances and cause inconsistent start/sync behavior.
     try {
       const snapshot = get(state);
+      // CRITICAL: Pause players BEFORE destroying to prevent autoplay continuation
+      try {
+        snapshot.playerOriginal?.pauseVideo?.();
+      } catch {
+        // ignore
+      }
+      try {
+        snapshot.playerReaction?.pauseVideo?.();
+      } catch {
+        // ignore
+      }
+      // Small delay to ensure pause takes effect before destroy
       snapshot.playerOriginal?.destroy?.();
       snapshot.playerReaction?.destroy?.();
     } catch (error) {
@@ -2556,6 +3042,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     clearTimeout(exitButtonCollapseTimeout);
     clearTimeout(playerReadyTimeout);
     clearInterval(pollInterval);
+    clearInterval(gateWatchdogInterval);
+    gateWatchdogInterval = undefined;
     resetReactionDurationProbe();
     resetOriginalStateTracking();
     if (overlayElement) {
