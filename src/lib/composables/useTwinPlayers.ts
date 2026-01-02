@@ -853,9 +853,6 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     markPlayerReady();
     console.log('Player ready event for', event?.target);
     const snapshot = get(state);
-    if (event?.target !== snapshot.playerOriginal && event?.target !== snapshot.playerReaction) {
-      return;
-    }
     if (event?.target === snapshot.playerOriginal) {
       setPlaybackRateForOriginalVideo(snapshot.currentPlaybackRate);
     }
@@ -885,9 +882,6 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   };
 
   const onStateChangeOriginal = (event: any) => {
-    if (get(state).playerOriginal !== event.target) {
-      return;
-    }
     enforceReactionMuteMode(typeof event?.data === 'number' ? event.data : undefined);
     if (event.data === YT.PlayerState.PLAYING) {
       console.log('Original video started playing');
@@ -910,9 +904,6 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   };
 
   const onStateChangeReaction = async (event: any) => {
-    if (get(state).playerReaction !== event.target) {
-      return;
-    }
     if (event.data === YT.PlayerState.ENDED && get(state).isPlaylistAutoPlay) {
       if (get(state).hasNextIndexInPlaylist) {
         loadNextReactionInPlaylist();
@@ -1131,10 +1122,6 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
     const playerOriginal = get(state).playerOriginal;
     const playerReaction = get(state).playerReaction;
-
-    // Unlink players from state immediately so late events from them are ignored.
-    updateState({ playerOriginal: null, playerReaction: null });
-
     playerOriginal?.destroy?.();
     playerReaction?.destroy?.();
 
