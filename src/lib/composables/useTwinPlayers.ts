@@ -847,6 +847,20 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     changingState = true;
     try {
       const snapshot = get(state);
+
+      // If the original video has legitimately ended, don't apply sync logic.
+      // This prevents the video from looping back to the start when it finishes before the reaction.
+      const actualOriginalPlayerState = typeof snapshot.playerOriginal?.getPlayerState === 'function'
+        ? snapshot.playerOriginal.getPlayerState()
+        : undefined;
+      if (actualOriginalPlayerState === YT?.PlayerState?.ENDED) {
+        // Keep the state updated to reflect it ended, but don't seek/resync
+        if (snapshot.currentStateOriginalVideo !== YT.PlayerState.ENDED) {
+          updateState({ currentStateOriginalVideo: YT.PlayerState.ENDED });
+        }
+        return;
+      }
+
       const reactionPlayerState = typeof snapshot.playerReaction?.getPlayerState === 'function'
         ? snapshot.playerReaction.getPlayerState()
         : undefined;
