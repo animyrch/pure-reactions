@@ -252,6 +252,10 @@
   $: if (showDebugConfigs && showIgnoredConfigs) {
     showIgnoredConfigs = false;
   }
+
+  $: if (!showDebugConfigs && showIgnoredConfigs && !ignoredTimelineEntries.length) {
+    showIgnoredConfigs = false;
+  }
 </script>
 
 <div class="flex flex-col gap-6">
@@ -290,7 +294,7 @@
       on:deletePlaybackRateConfig={(event) =>
         dispatch("deletePlaybackRateConfig", event.detail)}
     />
-  {:else if showIgnoredConfigs}
+  {:else if showIgnoredConfigs && ignoredTimelineEntries.length}
     <DebugConfigs
       summary={ignoredSummary}
       timelineEntries={ignoredTimelineEntries}
