@@ -1832,7 +1832,15 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       bothVideosStarted: preserveReactionTime ? snapshotBefore.bothVideosStarted : false,
       reactionCurrentTime: typeof previousReactionTime === 'number' ? previousReactionTime : offsetStartTime || 0,
       reactionDuration:
-        typeof nextPlayerReaction?.getDuration === 'function' ? Number(nextPlayerReaction.getDuration()) || 0 : snapshotBefore.reactionDuration
+        typeof nextPlayerReaction?.getDuration === 'function' ? Number(nextPlayerReaction.getDuration()) || 0 : snapshotBefore.reactionDuration,
+      seekMin: offsetStartTime || 0,
+      seekMax: Math.max(
+        offsetStartTime || 0,
+        Math.min(
+          typeof nextPlayerReaction?.getDuration === 'function' ? Number(nextPlayerReaction.getDuration()) || 0 : snapshotBefore.reactionDuration || Number.POSITIVE_INFINITY,
+          reactionFinishTime
+        )
+      )
     });
 
     enforceReactionMuteMode();
