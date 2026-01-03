@@ -21,6 +21,12 @@
 
   let overlayRef;
 
+  const handlePlaylistQueueSelect = async ({ targetReactionDocumentId }) => {
+    if (!targetReactionDocumentId) return;
+    await goto(`/edit-reaction/${targetReactionDocumentId}${$page.url.search}${$page.url.hash}`);
+    location.reload();
+  };
+
   $: stickyControlsClass = $state.isFullscreen ? CONTROLS_FADE_CLASS : 'opacity-100';
   $: overlayRef && actions.registerOverlayRef(overlayRef);
   $: actions.handleSlugChange($page.params.slug);
@@ -306,6 +312,7 @@
             playlistId={$state.youtubePlaylistId}
             playlistDocumentId={$state.playlistDocumentId}
             isCreation={false}
+            onSelect={handlePlaylistQueueSelect}
           />
         </div>
       {/if}

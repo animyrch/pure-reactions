@@ -17,9 +17,14 @@
     const isQueue = itemType === "queue";
     const isPlaylist = itemType === "playlist";
 
+    const playlistQuery = originalVideoId
+        ? `?${new URLSearchParams({ item: originalVideoId }).toString()}`
+        : "";
     const reactionRedirectionPath = isQueue
         ? `/queue/${queueSlug || reactionPageId}`
-        : `/reaction/${reactionPageId}${playlistId ? `?playlistId=${playlistId}` : ""}`;
+        : isPlaylist && playlistId
+          ? `/playlist/${playlistId}${playlistQuery}`
+          : `/reaction/${reactionPageId}${playlistId ? `?playlistId=${playlistId}` : ""}`;
     const originalAlt = originalVideoTitle
         ? `Original: ${originalVideoTitle}`
         : "Original video thumbnail";
