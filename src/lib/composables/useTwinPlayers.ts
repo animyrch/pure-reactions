@@ -848,19 +848,6 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     try {
       const snapshot = get(state);
 
-      // If the original video has legitimately ended, don't apply sync logic.
-      // This prevents the video from looping back to the start when it finishes before the reaction.
-      const actualOriginalPlayerState = typeof snapshot.playerOriginal?.getPlayerState === 'function'
-        ? snapshot.playerOriginal.getPlayerState()
-        : undefined;
-      if (actualOriginalPlayerState === YT?.PlayerState?.ENDED) {
-        // Keep the state updated to reflect it ended, but don't seek/resync
-        if (snapshot.currentStateOriginalVideo !== YT.PlayerState.ENDED) {
-          updateState({ currentStateOriginalVideo: YT.PlayerState.ENDED });
-        }
-        return;
-      }
-
       const reactionPlayerState = typeof snapshot.playerReaction?.getPlayerState === 'function'
         ? snapshot.playerReaction.getPlayerState()
         : undefined;
@@ -943,10 +930,31 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
       const configIsInRange = config.closestSmallerTimeCode >= snapshot.seekMin && (!Number.isFinite(snapshot.seekMax) || config.closestSmallerTimeCode <= snapshot.seekMax);
 
-      if (configIsInRange && (workingState !== effectiveConfigState || targetMismatch)) {
+      // Check if the original video has legitimately ended.
+      // If it has ended AND the config doesn't want it to play, skip the sync to prevent loop-back.
+      // Seeking an ENDED YouTube video can cause it to restart, so we only sync if explicitly needed.
+      const actualOriginalPlayerState = typeof snapshot.playerOriginal?.getPlayerState === 'function'
+        ? snapshot.playerOriginal.getPlayerState()
+        : undefined;
+      const originalHasEnded = actualOriginalPlayerState === YT?.PlayerState?.ENDED;
+      const configWantsToPlay = effectiveConfigState === YT.PlayerState.PLAYING;
+
+      // Only apply sync if:
+      // 1. The original hasn't ended, OR
+      // 2. The config explicitly wants it to play (restart)
+      const shouldApplySync = !originalHasEnded || configWantsToPlay;
+
+      if (shouldApplySync && configIsInRange && (workingState !== effectiveConfigState || targetMismatch)) {
         if (reactionCurrentTime >= snapshot.seekMin && (!Number.isFinite(snapshot.seekMax) || reactionCurrentTime <= snapshot.seekMax)) {
           handleStateChangeInOriginalVideo(workingState, effectiveConfigState, computedTargetTime);
           workingState = effectiveConfigState;
+        }
+      }
+
+      // If video has ended and should stay ended, update state tracker
+      if (originalHasEnded && !configWantsToPlay) {
+        if (snapshot.currentStateOriginalVideo !== YT.PlayerState.ENDED) {
+          workingState = YT.PlayerState.ENDED;
         }
       }
 
