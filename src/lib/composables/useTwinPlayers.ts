@@ -1109,7 +1109,35 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       playbackRate: snapshot.currentPlaybackRate
     });
 
-    goToSecondsInReactionVideo(snapshot.offsetStartTime || 0);
+    // Initialize the original video to the correct state and position
+    // based on the timeline config at offsetStartTime
+    const startTime = snapshot.offsetStartTime || 0;
+    const initialConfig = getCurrentStateFromStateConfigs(
+      startTime,
+      window.playerConfigs,
+      snapshot.timeOffset
+    );
+
+    const rawInitialState = Number(initialConfig.state);
+    const initialState = Number.isFinite(rawInitialState) ? rawInitialState : -1;
+    const initialTargetTime = Number(initialConfig.time ?? 0);
+
+    // Set the original video to the correct starting position and state
+    if (Number.isFinite(initialTargetTime)) {
+      goToSecondsInOriginalVideo(initialTargetTime);
+    }
+
+    // Initialize state tracking
+    updateState({ currentStateOriginalVideo: initialState });
+
+    // Set the original video to play or pause based on the config
+    if (initialState === YT.PlayerState.PLAYING) {
+      startOriginalVideo();
+    } else {
+      pauseOriginalVideo();
+    }
+
+    goToSecondsInReactionVideo(startTime);
     setPlaybackRateForOriginalVideo(snapshot.currentPlaybackRate);
     startReactionVideo();
     pollVideoCurrentTime();
