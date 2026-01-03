@@ -223,13 +223,77 @@
 
   let showDebugConfigs = false;
   $: showDebugConfigs = $page.url.searchParams.get("debug") === "true";
+
+  let showIgnoredConfigs = false;
+
+  $: isEntryIgnored = (entry) => {
+    const t = entry?.timeInReaction;
+    if (!Number.isFinite(t)) return false;
+    if (t < seekMin) return true;
+    if (Number.isFinite(seekMax) && t > seekMax) return true;
+    return false;
+  };
+
+  $: ignoredTimelineEntries = timelineEntries.filter(isEntryIgnored);
+  $: ignoredSummary = {
+    total: ignoredTimelineEntries.length,
+    volume: ignoredTimelineEntries.filter((entry) => entry?.type === "volume")
+      .length,
+    player: ignoredTimelineEntries.filter((entry) => entry?.type === "player")
+      .length,
+    speed: ignoredTimelineEntries.filter((entry) => entry?.type === "speed")
+      .length,
+    spanStart: ignoredTimelineEntries[0]?.timeInReaction ?? null,
+    spanEnd:
+      ignoredTimelineEntries[ignoredTimelineEntries.length - 1]?.timeInReaction ??
+        null,
+  };
+
+  $: if (showDebugConfigs && showIgnoredConfigs) {
+    showIgnoredConfigs = false;
+  }
 </script>
 
 <div class="flex flex-col gap-6">
+  {#if !showDebugConfigs && ignoredTimelineEntries.length}
+    <button
+      type="button"
+      class="inline-flex items-center justify-center self-start rounded-md px-3 py-2 text-xs font-medium text-text-muted transition hover:bg-surface/70 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
+      aria-expanded={showIgnoredConfigs}
+      on:click={() => {
+        showIgnoredConfigs = !showIgnoredConfigs;
+      }}
+    >
+      {showIgnoredConfigs
+        ? "Close ignored configs"
+        : "Show ignored configuration entries"}
+    </button>
+  {/if}
+
   {#if showDebugConfigs}
     <DebugConfigs
       {summary}
       {timelineEntries}
+      typeMeta={TYPE_META}
+      {formatSeconds}
+      {resolveStateLabel}
+      {formatPercent}
+      {formatRate}
+      {seekMin}
+      {seekMax}
+      on:deletePlayerConfig={(event) =>
+        dispatch("deletePlayerConfig", event.detail)}
+      on:deleteVolumeConfig={(event) =>
+        dispatch("deleteVolumeConfig", event.detail)}
+      on:deleteReactionVolumeConfig={(event) =>
+        dispatch("deleteReactionVolumeConfig", event.detail)}
+      on:deletePlaybackRateConfig={(event) =>
+        dispatch("deletePlaybackRateConfig", event.detail)}
+    />
+  {:else if showIgnoredConfigs}
+    <DebugConfigs
+      summary={ignoredSummary}
+      timelineEntries={ignoredTimelineEntries}
       typeMeta={TYPE_META}
       {formatSeconds}
       {resolveStateLabel}
