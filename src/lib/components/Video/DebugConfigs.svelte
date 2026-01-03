@@ -1,4 +1,8 @@
 <script>
+  import { createEventDispatcher } from "svelte";
+
+  const dispatch = createEventDispatcher();
+
   export let summary = {
     total: 0,
     volume: 0,
@@ -15,6 +19,28 @@
   export let formatRate = (value) => value;
   export let seekMin = 0;
   export let seekMax = Number.POSITIVE_INFINITY;
+
+  const handleDeleteEntry = (entry) => {
+    const timeInReaction = entry?.timeInReaction;
+    if (!Number.isFinite(timeInReaction)) return;
+
+    if (entry?.trackId === "reactionVolume") {
+      dispatch("deleteReactionVolumeConfig", { timeInReaction });
+      return;
+    }
+
+    if (entry?.type === "volume") {
+      dispatch("deleteVolumeConfig", { timeInReaction });
+      return;
+    }
+
+    if (entry?.type === "speed") {
+      dispatch("deletePlaybackRateConfig", { timeInReaction });
+      return;
+    }
+
+    dispatch("deletePlayerConfig", { timeInReaction });
+  };
 
   $: isEntryActive = (entry) => {
     const t = entry?.timeInReaction;
@@ -82,10 +108,10 @@
       <ul class="divide-y divide-border-subtle/60">
         {#each timelineEntries as entry}
           <li
-            class={`flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 ${!isEntryActive(entry) ? "opacity-40 grayscale" : ""}`}
+            class="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
           >
             <div
-              class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4"
+              class={`flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4 ${!isEntryActive(entry) ? "opacity-40 grayscale" : ""}`}
             >
               <span
                 class={`inline-flex items-center justify-center rounded-full px-3 py-1 text-xs font-medium ${typeMeta[entry.type]?.badgeClass ?? "border border-border-subtle text-text-secondary"}`}
@@ -99,7 +125,9 @@
                 </p>
                 <p class="text-xs text-text-muted">
                   {#if entry.type === "volume"}
-                    Sets original audio to {formatPercent(entry.volume)}.
+                    Sets {entry.trackId === "reactionVolume" ? "reaction" : "original"} audio to {formatPercent(
+                      entry.volume,
+                    )}.
                   {:else if entry.type === "player"}
                     Switches to {resolveStateLabel(
                       entry.state,
@@ -114,6 +142,15 @@
                 </p>
               </div>
             </div>
+
+            <button
+              type="button"
+              class="inline-flex items-center justify-center self-start rounded-md px-2 py-1 text-xs font-medium text-text-muted transition hover:bg-surface/70 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 sm:self-auto"
+              aria-label={`Delete event at ${formatSeconds(entry.timeInReaction)}`}
+              on:click={() => handleDeleteEntry(entry)}
+            >
+              Delete
+            </button>
           </li>
         {/each}
       </ul>

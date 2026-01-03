@@ -73,7 +73,7 @@
     return YOUTUBE_STATE_LABELS[state] ?? `State ${state}`;
   };
 
-  const normalizeVolumeEvents = (timeline, configs) => {
+  const normalizeVolumeEvents = (timeline, configs, trackId = "volume") => {
     if (Array.isArray(timeline) && timeline.length) {
       return timeline
         .map((event, index) => {
@@ -82,8 +82,9 @@
           if (!Number.isFinite(timeInReaction) || Number.isNaN(volume))
             return null;
           return {
-            id: `volume-array-${index}-${timeInReaction}`,
+            id: `volume-array-${trackId}-${index}-${timeInReaction}`,
             type: "volume",
+            trackId,
             timeInReaction,
             volume,
           };
@@ -98,8 +99,9 @@
         if (!Number.isFinite(timeInReaction) || Number.isNaN(volume))
           return null;
         return {
-          id: `volume-map-${index}-${timeInReaction}`,
+          id: `volume-map-${trackId}-${index}-${timeInReaction}`,
           type: "volume",
+          trackId,
           timeInReaction,
           volume,
         };
@@ -119,6 +121,7 @@
           return {
             id: `player-array-${index}-${timeInReaction}`,
             type: "player",
+            trackId: "player",
             timeInReaction,
             state,
             targetTime,
@@ -137,6 +140,7 @@
         return {
           id: `player-map-${index}-${timeInReaction}`,
           type: "player",
+          trackId: "player",
           timeInReaction,
           state,
           targetTime,
@@ -156,6 +160,7 @@
           return {
             id: `speed-array-${index}-${timeInReaction}`,
             type: "speed",
+            trackId: "speed",
             timeInReaction,
             rate,
           };
@@ -171,6 +176,7 @@
         return {
           id: `speed-map-${index}-${timeInReaction}`,
           type: "speed",
+          trackId: "speed",
           timeInReaction,
           rate,
         };
@@ -178,10 +184,11 @@
       .filter(Boolean);
   };
 
-  $: volumeEvents = normalizeVolumeEvents(volumeTimeline, volumeConfigs);
+  $: volumeEvents = normalizeVolumeEvents(volumeTimeline, volumeConfigs, "volume");
   $: reactionVolumeEvents = normalizeVolumeEvents(
     reactionVolumeTimeline,
     reactionVolumeConfigs,
+    "reactionVolume",
   );
   $: normalizedPlayerEvents = normalizePlayerEvents(
     stateTimeline,
@@ -230,6 +237,14 @@
       {formatRate}
       {seekMin}
       {seekMax}
+      on:deletePlayerConfig={(event) =>
+        dispatch("deletePlayerConfig", event.detail)}
+      on:deleteVolumeConfig={(event) =>
+        dispatch("deleteVolumeConfig", event.detail)}
+      on:deleteReactionVolumeConfig={(event) =>
+        dispatch("deleteReactionVolumeConfig", event.detail)}
+      on:deletePlaybackRateConfig={(event) =>
+        dispatch("deletePlaybackRateConfig", event.detail)}
     />
   {/if}
 
