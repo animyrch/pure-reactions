@@ -901,6 +901,12 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       const actualOriginalTime = typeof snapshot.playerOriginal?.getCurrentTime === 'function'
         ? Number(snapshot.playerOriginal.getCurrentTime())
         : Number.NaN;
+      const rawOriginalDuration = typeof snapshot.playerOriginal?.getDuration === 'function'
+        ? Number(snapshot.playerOriginal.getDuration())
+        : Number.NaN;
+      const originalDuration = Number.isFinite(rawOriginalDuration) && rawOriginalDuration > 0
+        ? rawOriginalDuration
+        : Number.NaN;
       let computedTargetTime = Number.isFinite(baseTargetTime) ? baseTargetTime : Number.NaN;
 
       if (Number.isFinite(computedTargetTime) && Number.isFinite(anchorTime)) {
@@ -908,6 +914,28 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         if (effectiveConfigState === YT.PlayerState.PLAYING && Number.isFinite(deltaSinceAnchor)) {
           computedTargetTime += Math.max(deltaSinceAnchor, 0);
         }
+      }
+
+      // Edge case: reaction continues after the original's natural duration.
+      // If we keep trying to sync/seeking beyond the duration, YouTube may loop back near 0.
+      // We keep sync active (so seeking back earlier re-enables original playback) but we
+      // stop applying time/state changes while the mapped target time is past the end.
+      const ORIGINAL_END_EPSILON = 0.25;
+      const targetPastOriginalEnd = Number.isFinite(originalDuration)
+        && Number.isFinite(computedTargetTime)
+        && computedTargetTime >= Math.max(originalDuration - ORIGINAL_END_EPSILON, 0);
+
+      if (targetPastOriginalEnd) {
+        pauseOriginalVideo();
+        workingState = YT.PlayerState.ENDED;
+        if (workingState !== snapshot.currentStateOriginalVideo) {
+          updateState({ currentStateOriginalVideo: workingState });
+        }
+        enforceReactionMuteMode(workingState);
+        if (Number.isFinite(actualOriginalTime)) {
+          lastOriginalTargetTime = actualOriginalTime;
+        }
+        return;
       }
 
       const tolerance = effectiveConfigState === YT.PlayerState.PLAYING ? 0.35 : 0.01;
