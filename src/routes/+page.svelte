@@ -7,7 +7,7 @@
 	import { page } from "$app/stores";
 	import { SORTINGS } from "$lib/constants/sortings";
 	import { userExtraDataStore } from "$lib/stores/userExtraData";
-	import { onMount, onDestroy } from "svelte";
+	import { onMount, onDestroy, tick } from "svelte";
 	import { handlePrivateRoute } from "$lib/helpers/routing";
 	import { isLoggedIn } from "$lib/stores/user";
 
@@ -22,62 +22,93 @@
 	let isLoading = false;
 	let lastReactionDoc = null;
 	let lastQueueDoc = null;
-	let initialLoad = true;
+	let hasMoreReactions = true;
+	let hasMoreQueues = true;
+	let sentinel;
 	const pageSize = 9;
 	const queuePageSize = 3; // Include fewer queues to maintain balance
 
+	const ensureFillViewport = async () => {
+		await tick();
+		if (isLoading || !sentinel) return;
+		if (!hasMoreReactions && !hasMoreQueues) return;
+		const rect = sentinel.getBoundingClientRect();
+		if (rect.top <= window.innerHeight) {
+			loadReactions();
+		}
+	};
+
 	const loadReactions = async () => {
+		if (isLoading) return;
+		if (!hasMoreReactions && !hasMoreQueues) return;
+		isLoading = true;
 		const sortBy = $page.url.searchParams.get("sortBy") || SORTINGS.NEW;
 		const follows = $userExtraDataStore.userExtraData?.follows;
 
-		// Fetch reactions and queues in parallel
-		const [reactionsResponse, queuesResponse] = await Promise.all([
-			getReactionsByPage(lastReactionDoc, pageSize, sortBy, follows),
-			getQueuesByPage(lastQueueDoc, queuePageSize),
-		]);
+		try {
+			const reactionsPromise = hasMoreReactions
+				? getReactionsByPage(lastReactionDoc, pageSize, sortBy, follows)
+				: Promise.resolve({ reactions: [], lastVisible: null });
+			const queuesPromise = hasMoreQueues
+				? getQueuesByPage(lastQueueDoc, queuePageSize)
+				: Promise.resolve({ queues: [], lastVisible: null });
 
-		lastReactionDoc = reactionsResponse.lastVisible;
-		lastQueueDoc = queuesResponse.lastVisible;
+			// Fetch reactions and queues in parallel
+			const [reactionsResponse, queuesResponse] = await Promise.all([
+				reactionsPromise,
+				queuesPromise,
+			]);
 
-		// For queues, we'll use a generic placeholder - the actual thumbnails will be
-		// fetched when rendering if needed, or we can show a queue-specific placeholder
-		const hydratedQueues = queuesResponse.queues;
+			if (hasMoreReactions) {
+				lastReactionDoc = reactionsResponse.lastVisible || null;
+				hasMoreReactions =
+					reactionsResponse.reactions?.length === pageSize &&
+					!!reactionsResponse.lastVisible;
+			}
+			if (hasMoreQueues) {
+				lastQueueDoc = queuesResponse.lastVisible || null;
+				hasMoreQueues =
+					queuesResponse.queues?.length === queuePageSize &&
+					!!queuesResponse.lastVisible;
+			}
 
-		// Merge and sort by creation date
-		const newItems = [
-			...reactionsResponse.reactions,
-			...hydratedQueues,
-		].sort((a, b) => {
-			const aTime = a.data?.createdAt?.toMillis?.() || 0;
-			const bTime = b.data?.createdAt?.toMillis?.() || 0;
-			return bTime - aTime;
-		});
+			const hydratedQueues = queuesResponse.queues || [];
 
-		reactions = [...reactions, ...newItems];
+			// Merge and sort by creation date
+			const newItems = [
+				...(reactionsResponse.reactions || []),
+				...hydratedQueues,
+			].sort((a, b) => {
+				const aTime = a.data?.createdAt?.toMillis?.() || 0;
+				const bTime = b.data?.createdAt?.toMillis?.() || 0;
+				return bTime - aTime;
+			});
+
+			reactions = [...reactions, ...newItems];
+		} finally {
+			isLoading = false;
+			ensureFillViewport();
+		}
 	};
-	loadReactions();
 	// Create an intersection observer to load more reactions when the user scrolls to the bottom of the list
 	let observer;
 	onMount(() => {
 		const options = {
 			root: null,
-			rootMargin: "0px",
-			threshold: 1.0,
+			rootMargin: "400px 0px",
+			threshold: 0,
 		};
 		observer = new IntersectionObserver(loadMore, options);
-		observer.observe(document.querySelector(".load-more"));
+		if (sentinel) observer.observe(sentinel);
+		loadReactions();
 	});
 	onDestroy(() => {
 		if (observer) observer.disconnect();
 	});
 
 	function loadMore(entries, _observer) {
-		if (entries[0].isIntersecting) {
-			if (!initialLoad) {
-				loadReactions();
-			} else {
-				initialLoad = false;
-			}
+		if (entries[0]?.isIntersecting) {
+			loadReactions();
 		}
 	}
 </script>
@@ -86,10 +117,10 @@
 	{#if $page.route.id === "/"}
 		<ReactionsSorting />
 	{/if}
-	{#if isLoading}
+	{#if isLoading && reactions.length === 0}
 		<div>Loading...</div>
 	{:else}
 		<ReactionsList {reactions} />
 	{/if}
-	<div class="load-more"></div>
+	<div class="load-more" bind:this={sentinel} aria-hidden="true"></div>
 </div>
