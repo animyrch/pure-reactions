@@ -2267,8 +2267,56 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     const clamped = Math.max(0, parsed);
     const rounded = Math.round(clamped * 10) / 10;
 
+    const snapshot = get(state);
+    const oldStart = snapshot.offsetStartTime;
+
     await updateFirebaseDocument({ offsetStartTime: rounded });
     updateState({ offsetStartTime: rounded, reactionCurrentTime: rounded });
+
+    if (rounded > oldStart) {
+      const oldKey = roundReactionTime(oldStart).toFixed(3);
+      const newKey = roundReactionTime(rounded).toFixed(3);
+
+      // 1. Player State Timeline
+      const playerMap = timelineArrayToMap(snapshot.stateTimeline);
+      if (playerMap.has(oldKey) && !playerMap.has(newKey)) {
+        const entry = playerMap.get(oldKey)!;
+        entry.t = rounded;
+        playerMap.set(newKey, entry);
+        playerMap.delete(oldKey);
+        await persistPlayerTimelineMap(playerMap, rounded);
+      }
+
+      // 2. Volume Timeline
+      const volumeMap = volumeTimelineArrayToMap(snapshot.volumeTimeline);
+      if (volumeMap.has(oldKey) && !volumeMap.has(newKey)) {
+        const entry = volumeMap.get(oldKey)!;
+        entry.t = rounded;
+        volumeMap.set(newKey, entry);
+        volumeMap.delete(oldKey);
+        await persistVolumeTimelineMap(volumeMap, rounded);
+      }
+
+      // 3. Reaction Volume Timeline
+      const reactionVolumeMap = volumeTimelineArrayToMap(snapshot.reactionVolumeTimeline);
+      if (reactionVolumeMap.has(oldKey) && !reactionVolumeMap.has(newKey)) {
+        const entry = reactionVolumeMap.get(oldKey)!;
+        entry.t = rounded;
+        reactionVolumeMap.set(newKey, entry);
+        reactionVolumeMap.delete(oldKey);
+        await persistReactionVolumeTimelineMap(reactionVolumeMap, rounded);
+      }
+
+      // 4. Playback Rate Timeline
+      const playbackMap = playbackTimelineArrayToMap(snapshot.playbackRateTimeline);
+      if (playbackMap.has(oldKey) && !playbackMap.has(newKey)) {
+        const entry = playbackMap.get(oldKey)!;
+        entry.t = rounded;
+        playbackMap.set(newKey, entry);
+        playbackMap.delete(oldKey);
+        await persistPlaybackTimelineMap(playbackMap, rounded);
+      }
+    }
   };
 
   const setIntroBufferTime = async (value: number) => {
