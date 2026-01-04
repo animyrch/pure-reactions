@@ -340,6 +340,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   let initSeq = 0;
 
   let isDestroyed = false;
+  let isSwitchingReactionInPlace = false;
 
   const getPlayerDebugInfo = (target: any) => {
     let iframeId: string | undefined;
@@ -1006,6 +1007,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     let reactionPlayerState = YT?.PlayerState?.UNSTARTED ?? -1;
     pollInterval = setInterval(() => {
       const snapshot = get(state);
+      if (isSwitchingReactionInPlace) {
+        return;
+      }
       const {
         playerReaction,
         playerOriginal,
@@ -1269,6 +1273,26 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       }
       return;
     }
+    const snapshot = get(state);
+    const isCurrentReactionPlayer = event?.target === snapshot.playerReaction;
+    if (!isCurrentReactionPlayer) {
+      debugClickGate('[TwinPlayers] reaction stateChange IGNORED (stale player)', {
+        state: event?.data,
+        stateName: stateName(event?.data),
+        ...getPlayerDebugInfo(event?.target)
+      }, true);
+      return;
+    }
+
+    if (isSwitchingReactionInPlace) {
+      debugClickGate('[TwinPlayers] reaction stateChange IGNORED (switching)', {
+        state: event?.data,
+        stateName: stateName(event?.data),
+        ...getPlayerDebugInfo(event?.target)
+      }, true);
+      return;
+    }
+
     debugClickGate('[TwinPlayers] reaction stateChange', {
       state: event?.data,
       stateName: stateName(event?.data),
@@ -1685,6 +1709,12 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       return;
     }
 
+    isSwitchingReactionInPlace = true;
+    clearInterval(pollInterval);
+    pollInterval = undefined;
+
+    try {
+
     await tick();
     injectYoutubeIframeApiScript();
     await waitForYoutubeIframeApiReady();
@@ -1879,6 +1909,27 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       currentOriginalAuthor: reactionData?.originalVideoAuthor,
       currentReactionTitle: reactionData?.reactionVideoTitle,
       currentReactionAuthor: reactionData?.reactionVideoAuthor
+    });
+    } finally {
+      isSwitchingReactionInPlace = false;
+    }
+  };
+
+  const setPlaylistSelectionIndex = (index: number) => {
+    const snapshot = get(state);
+    const totalFromDoc = Array.isArray(snapshot.playlistDocument?.reactionBinomeIds)
+      ? snapshot.playlistDocument.reactionBinomeIds.length
+      : 0;
+    const totalFromItems = Array.isArray(snapshot.playlistItems) ? snapshot.playlistItems.length : 0;
+    const total = Math.max(totalFromDoc, totalFromItems);
+    if (!total) {
+      updateState({ currentIndexInPlaylist: 0, hasNextIndexInPlaylist: false });
+      return;
+    }
+    const clamped = Math.max(0, Math.min(total - 1, Math.trunc(Number(index) || 0)));
+    updateState({
+      currentIndexInPlaylist: clamped,
+      hasNextIndexInPlaylist: clamped < total - 1
     });
   };
 
@@ -3147,6 +3198,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       hasNextInQueue,
       navigateToNextReactionInQueue,
       toggleAutoPlaylist,
+      setPlaylistSelectionIndex,
       toggleCinematicBars,
       handlePlayStateChange,
       syncVideos,

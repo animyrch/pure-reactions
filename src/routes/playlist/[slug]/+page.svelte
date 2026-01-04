@@ -1,7 +1,6 @@
 <script>
   import { page } from "$app/stores";
   import { browser } from "$app/environment";
-  import { goto } from "$app/navigation";
   import { onDestroy, onMount } from "svelte";
   import CreatorDetails from "$lib/components/Video/CreatorDetails.svelte";
   import PlaylistQueue from "$lib/components/Video/PlaylistQueue.svelte";
@@ -108,7 +107,8 @@
     if (!reactionDocumentId) return;
 
     setUrlSelectedItem(originalVideoId);
-    await actions.loadReactionInPlace(reactionDocumentId, { preserveReactionTime: true });
+    actions.setPlaylistSelectionIndex(index);
+    await actions.loadReactionInPlace(reactionDocumentId, { preserveReactionTime: false, autoPlay: true });
   };
 
   onMount(async () => {
