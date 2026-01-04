@@ -3,7 +3,8 @@ const getClosestSmallerKey = (timedConfigs, searchKey) => {
         return -Infinity;
     }
     const keys = Object.keys(timedConfigs).map(Number);
-    const smallerKeys = keys.filter(currentKey => currentKey < searchKey);
+    // Include exact matches so configs at t=0.0 apply immediately on refresh.
+    const smallerKeys = keys.filter(currentKey => currentKey <= searchKey);
     return smallerKeys.reduce((prev, curr) => (curr > prev ? curr : prev), -Infinity);
 };
 

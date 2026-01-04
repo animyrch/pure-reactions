@@ -1172,6 +1172,23 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       snapshot.timeOffset
     );
 
+    // Apply initial volume BEFORE any playVideo() to prevent an audible blip on refresh.
+    // (Polling applies volume every 500ms, which is too late for t=0 configs.)
+    const initialOriginalVolume = getCurrentVolumeFromVolumeConfigs(
+      startTime,
+      window.volumeConfigs,
+      snapshot.globalGain,
+      snapshot.timeOffset
+    );
+    if (snapshot.playerOriginal && typeof initialOriginalVolume === 'number' && Number.isFinite(initialOriginalVolume)) {
+      if (!changingVolume && snapshot.currentVolumeOriginalVideo !== initialOriginalVolume) {
+        changingVolume = true;
+        setVolumeForOriginalVideo(initialOriginalVolume);
+        updateState({ currentVolumeOriginalVideo: initialOriginalVolume });
+        changingVolume = false;
+      }
+    }
+
     const rawInitialState = Number(initialConfig.state);
     const initialState = Number.isFinite(rawInitialState) ? rawInitialState : -1;
     const initialTargetTime = Number(initialConfig.time ?? 0);
