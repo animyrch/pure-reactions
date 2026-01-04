@@ -24,6 +24,28 @@ export function writeAutoPlayCookie(value: boolean, playlistId?: string | null):
   document.cookie = `autoPlay=${value}; expires=${expiry.toUTCString()}; path=/`;
 }
 
+export function readCinematicBarsCookie(): boolean {
+  if (typeof document === 'undefined') {
+    return true;
+  }
+  const match = document.cookie
+    .split('; ')
+    .find((row) => row.startsWith('cinematicBars='))
+    ?.split('=')[1];
+  
+  if (match === undefined) return true;
+  return match === 'true';
+}
+
+export function writeCinematicBarsCookie(value: boolean): void {
+  if (typeof document === 'undefined') {
+    return;
+  }
+  const expiry = new Date();
+  expiry.setTime(expiry.getTime() + 365 * 24 * 60 * 60 * 1000);
+  document.cookie = `cinematicBars=${value}; expires=${expiry.toUTCString()}; path=/`;
+}
+
 export function toggleFullscreenBodyClass(isFullscreen: boolean, className = FULLSCREEN_BODY_CLASS): void {
   if (typeof document === 'undefined') {
     return;

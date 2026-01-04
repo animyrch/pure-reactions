@@ -108,6 +108,11 @@
 
     setUrlSelectedItem(originalVideoId);
     actions.setPlaylistSelectionIndex(index);
+
+    if (browser) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
     await actions.loadReactionInPlace(reactionDocumentId, { preserveReactionTime: false, autoPlay: true });
   };
 

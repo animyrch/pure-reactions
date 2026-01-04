@@ -20,8 +20,10 @@ import {
 import {
   deriveTimelines,
   readAutoPlayCookie,
+  readCinematicBarsCookie,
   toggleFullscreenBodyClass,
-  writeAutoPlayCookie
+  writeAutoPlayCookie,
+  writeCinematicBarsCookie
 } from '$lib/helpers/reactionPlayer';
 import {
   buildPlayerEventTimeline,
@@ -266,7 +268,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     queueSlug: initialUrlState.queueSlug,
     queueIndex: Number.isFinite(initialUrlState.queueIndex as number) ? (initialUrlState.queueIndex as number) : 0,
     isQueueAutoPlay: Boolean(initialUrlState.queueAutoPlay),
-    showCinematicBars: true,
+    showCinematicBars: readCinematicBarsCookie(),
     isFullscreen: initialUrlState.isFullscreen,
     isControlSurfaceVisible: false,
     isExitButtonExpanded: false,
@@ -2898,7 +2900,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
   const toggleCinematicBars = () => {
     const snapshot = get(state);
-    updateState({ showCinematicBars: !snapshot.showCinematicBars });
+    const nextValue = !snapshot.showCinematicBars;
+    updateState({ showCinematicBars: nextValue });
+    writeCinematicBarsCookie(nextValue);
   };
 
   const handlePlayStateChange = (isPlaying: boolean) => {
