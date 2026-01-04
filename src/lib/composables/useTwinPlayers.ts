@@ -1891,6 +1891,10 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     const nextIndex = currentIndexInPlaylist + 1;
     const nextReactionDocumentId = playlistDocument.reactionBinomeIds[nextIndex];
 
+    if (nextReactionDocumentId === snapshot.pageSlug || (typeof window !== 'undefined' && (window as any).currentReactionDocumentId === nextReactionDocumentId)) {
+      return;
+    }
+
     const isPlaylistPage = typeof window !== 'undefined' && window.location?.pathname?.startsWith('/playlist/');
     if (isPlaylistPage) {
       const nextOriginalVideoId = playlistDocument.originalVideoIds?.[nextIndex];
