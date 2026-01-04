@@ -1829,7 +1829,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       currentStateOriginalVideo: -1,
       currentVolumeOriginalVideo: 100,
       currentVolumeReactionVideo: 100,
-      bothVideosStarted: preserveReactionTime ? snapshotBefore.bothVideosStarted : false,
+      bothVideosStarted: preserveReactionTime ? snapshotBefore.bothVideosStarted : Boolean(options.autoPlay),
       reactionCurrentTime: typeof previousReactionTime === 'number' ? previousReactionTime : offsetStartTime || 0,
       reactionDuration:
         typeof nextPlayerReaction?.getDuration === 'function' ? Number(nextPlayerReaction.getDuration()) || 0 : snapshotBefore.reactionDuration,
