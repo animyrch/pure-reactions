@@ -1900,7 +1900,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
     if (!preserveReactionTime && canReuseReactionPlayer && typeof nextPlayerReaction?.seekTo === 'function') {
       try {
-        // nextPlayerReaction.seekTo(Number(offsetStartTime) || 0, true);
+        nextPlayerReaction.seekTo(Number(offsetStartTime) || 0, true);
       } catch {
         // ignore
       }
@@ -1971,7 +1971,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     const isPlaylistPage = typeof window !== 'undefined' && window.location?.pathname?.startsWith('/playlist/');
     if (isPlaylistPage) {
       const nextOriginalVideoId = playlistDocument.originalVideoIds?.[nextIndex];
-      loadReactionInPlace(nextReactionDocumentId, { preserveReactionTime: false, autoPlay: true }).then(() => {
+      loadReactionInPlace(nextReactionDocumentId, { preserveReactionTime: true, autoPlay: true }).then(() => {
         const updatedIndex = nextIndex;
         const hasNext = updatedIndex < playlistItems.length - 1;
         updateState({
