@@ -1900,7 +1900,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
     if (!preserveReactionTime && canReuseReactionPlayer && typeof nextPlayerReaction?.seekTo === 'function') {
       try {
-        nextPlayerReaction.seekTo(Number(offsetStartTime) || 0, true);
+        // nextPlayerReaction.seekTo(Number(offsetStartTime) || 0, true);
       } catch {
         // ignore
       }
