@@ -720,6 +720,18 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     const snapshot = get(state);
     const { seekMin, seekMax } = snapshot;
 
+    // DEBUG: Trace who is calling seek
+    if (ENABLE_GATE_DEBUG || true) {
+      console.debug('[TwinPlayers] goToSecondsInReactionVideo called', {
+        target: normalized,
+        current: snapshot.playerReaction?.getCurrentTime?.(),
+        seekMin,
+        seekMax,
+        bothVideosStarted: snapshot.bothVideosStarted
+      });
+      // console.trace();
+    }
+
     const clamped = seekMax === Number.POSITIVE_INFINITY
       ? Math.max(normalized, seekMin)
       : Math.min(Math.max(normalized, seekMin), seekMax);
