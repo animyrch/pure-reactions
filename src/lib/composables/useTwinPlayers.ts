@@ -1046,7 +1046,10 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       }
       if (reactionCurrentTime > reactionFinishTime) {
         pauseOriginalVideo();
-        pauseReactionVideo();
+
+        if (!isPlaylistAutoPlay) {
+          pauseReactionVideo();
+        }
         clearInterval(pollInterval);
         if (isPlaylistAutoPlay && hasNextIndexInPlaylist) {
           loadNextReactionInPlaylist();
