@@ -1919,12 +1919,15 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
       if (!preserveReactionTime && canReuseReactionPlayer && typeof nextPlayerReaction?.seekTo === 'function') {
         // SMART SEEK:
-        // If the target `offsetStartTime` is very close to `previousReactionTime` (continuation),
-        // OR if we are just starting from 0 and the video is already running near 0,
+        // If the target `offsetStartTime` is very close to current player time (continuation),
         // we can SKIP the seek to prevent a stutter.
         const startTime = Number(offsetStartTime) || 0;
-        const prevTime = Number(previousReactionTime) || 0;
-        const diff = Math.abs(startTime - prevTime);
+
+        const currentPlayerTime = typeof nextPlayerReaction?.getCurrentTime === 'function'
+          ? Number(nextPlayerReaction.getCurrentTime())
+          : 0;
+
+        const diff = Math.abs(startTime - currentPlayerTime);
 
         // Threshold: if we are within 2 seconds, assume it's a smooth continuation.
         // Also, if the video is already playing and we are targeting 0, maybe just let it play?
@@ -2998,6 +3001,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     // pauseReactionVideo(); // Removed to allow smoother transitions
     startReactionVideo();
     handleStateChangeInReactionVideo(YT.PlayerState.PAUSED, YT.PlayerState.PLAYING);
+    // Ensure poller is running since we might have suppressed the PLAYING event
+    pollVideoCurrentTime();
   };
 
   const showControls = () => {
