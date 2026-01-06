@@ -6,12 +6,15 @@ type ReactionDocument = Record<string, unknown>;
 
 export function readAutoPlayCookie(): boolean {
   if (typeof document === 'undefined') {
-    return false;
+    return true;
   }
   const match = document.cookie
     .split('; ')
     .find((row) => row.startsWith('autoPlay='))
     ?.split('=')[1];
+  if (match === undefined) {
+    return true;
+  }
   return match === 'true';
 }
 
