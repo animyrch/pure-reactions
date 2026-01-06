@@ -23,7 +23,16 @@ export const downloadBasicVideoDetails = async (videoId) => {
 };
 
 export const getAuthorFromAuthorUrl = (authorUrl) => {
-  return authorUrl && authorUrl.replace(YOUTUBE_URL, '');
+  if (!authorUrl) return authorUrl;
+
+  // oEmbed returns percent-encoded handles for non-ASCII names (e.g. Japanese);
+  // decode them so we store the readable channel handle instead of raw escapes.
+  try {
+    return decodeURIComponent(authorUrl).replace(YOUTUBE_URL, '');
+  } catch (error) {
+    console.error('Failed to decode author URL', error);
+    return authorUrl.replace(YOUTUBE_URL, '');
+  }
 };
 
 /**
