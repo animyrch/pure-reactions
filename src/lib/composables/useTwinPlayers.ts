@@ -1916,7 +1916,15 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
     try {
       await tick();
-      syncVideos();
+      if (preserveReactionTime && get(state).bothVideosStarted) {
+        handleStateChangeInReactionVideo(YT.PlayerState.BUFFERING, YT.PlayerState.PLAYING);
+        pollVideoCurrentTime();
+      } else {
+        syncVideos();
+        if (get(state).bothVideosStarted) {
+          pollVideoCurrentTime();
+        }
+      }
     } catch {
       // ignore
     }
