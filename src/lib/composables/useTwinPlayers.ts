@@ -797,6 +797,57 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     }
   };
 
+  const handleMobileVolumeArbitration = (reactionCurrentTime: number) => {
+    const snapshot = get(state);
+
+    // Calculate intended volumes for both
+    const intendedOriginalVolume = getCurrentVolumeFromVolumeConfigs(
+      reactionCurrentTime,
+      window.volumeConfigs,
+      snapshot.globalGain,
+      snapshot.timeOffset
+    );
+
+    const intendedReactionVolume = getCurrentVolumeFromVolumeConfigs(
+      reactionCurrentTime,
+      (window as any).reactionVolumeConfigs,
+      1.0,
+      snapshot.timeOffset
+    );
+
+    // Decision Logic: Whichever is higher wins.
+    // Start with a small threshold to avoid flickering if they are equal (favor Original if equal or very close?)
+    // Let's strictly follow: "whichever video has a higher volume config"
+
+    const originalWins = intendedOriginalVolume >= intendedReactionVolume;
+
+    // Apply Mutex (Mutually Exclusive) Audio
+    if (originalWins) {
+      // Unmute/Set Original
+      if (snapshot.playerOriginal?.isMuted?.() || snapshot.currentVolumeOriginalVideo !== intendedOriginalVolume) {
+        setVolumeForOriginalVideo(intendedOriginalVolume);
+        snapshot.playerOriginal?.unMute?.();
+        updateState({ currentVolumeOriginalVideo: intendedOriginalVolume });
+      }
+      // Mute Reaction
+      // We only mute if it's not already muted to avoid spamming calls
+      if (!snapshot.playerReaction?.isMuted?.()) {
+        muteReactionAudio(snapshot.playerReaction);
+      }
+    } else {
+      // Unmute/Set Reaction
+      if (snapshot.playerReaction?.isMuted?.() || snapshot.currentVolumeReactionVideo !== intendedReactionVolume) {
+        setVolumeForReactionVideo(intendedReactionVolume);
+        snapshot.playerReaction?.unMute?.();
+        updateState({ currentVolumeReactionVideo: intendedReactionVolume });
+      }
+      // Mute Original
+      if (!snapshot.playerOriginal?.isMuted?.()) {
+        snapshot.playerOriginal?.mute?.();
+      }
+    }
+  };
+
   const handleOriginalVideoSpeed = (reactionCurrentTime: number) => {
     const snapshot = get(state);
     const desiredPlaybackRate = getCurrentPlaybackRateFromConfigs(
@@ -1059,8 +1110,12 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         }
         return;
       }
-      handleOriginalVideoVolume(reactionCurrentTime);
-      handleReactionVideoVolume(reactionCurrentTime);
+      if (typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        handleMobileVolumeArbitration(reactionCurrentTime);
+      } else {
+        handleOriginalVideoVolume(reactionCurrentTime);
+        handleReactionVideoVolume(reactionCurrentTime);
+      }
       handleOriginalVideoSpeed(reactionCurrentTime);
       handleOriginalVideoState(reactionCurrentTime, previousReactionTime);
     }, interval);
@@ -1737,209 +1792,209 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
     try {
 
-    await tick();
-    injectYoutubeIframeApiScript();
-    await waitForYoutubeIframeApiReady();
-
-    const snapshotBefore = get(state);
-    const preserveReactionTime = Boolean(options.preserveReactionTime);
-    const previousReactionTime =
-      preserveReactionTime && typeof snapshotBefore.playerReaction?.getCurrentTime === 'function'
-        ? Number(snapshotBefore.playerReaction.getCurrentTime()) || 0
-        : undefined;
-    const previousReactionVideoId = snapshotBefore.reactionVideoId;
-
-    if (!preserveReactionTime) {
-      originalVideoClicked = Boolean(options.autoPlay);
-      reactionVideoClicked = Boolean(options.autoPlay);
-      clickGateSessionId += 1;
-      debugClickGate('[TwinPlayers] click gate state from loadReactionInPlace autoPlay', {
-        autoPlay: Boolean(options.autoPlay)
-      }, true);
-    }
-
-    if (!snapshotBefore.playerOriginal || !document.getElementById('player-original')) {
-      await buildInterface(nextReactionDocumentId, { isUpdate: true });
-      updateUIElements(nextReactionDocumentId);
-      return;
-    }
-
-    (window as any).currentReactionDocumentId = nextReactionDocumentId;
-    const reactionData = await getReaction(nextReactionDocumentId);
-    if (!reactionData) {
-      await setUpVideos(reactionData);
-      updateUIElements(nextReactionDocumentId);
-      return;
-    }
-
-    const {
-      playerConfigs,
-      volumeConfigs,
-      reactionVolumeConfigs,
-      playbackRateConfigs,
-      stateTimeline,
-      volumeTimeline,
-      reactionVolumeTimeline,
-      playbackRateTimeline
-    } = deriveTimelines(reactionData);
-
-    window.playerConfigs = reactionData['stateTimeline'] || reactionData['reactionConfigs'];
-    window.volumeConfigs = reactionData['volumeTimeline'] || reactionData['volumeConfigs'];
-    (window as any).reactionVolumeConfigs = reactionData['reactionVolumeTimeline'] || reactionData['reactionVolumeConfigs'];
-    window.playbackRateConfigs = reactionData['playbackTimeline'] || reactionData['playbackRateConfigs'];
-
-    const normalizedPlayerEvents = buildPlayerEventTimeline(stateTimeline);
-
-    const reactionVideoId = reactionData['reactionVideoId'] ?? '';
-    const originalVideoId = reactionData['originalVideoId'];
-    const youtubePlaylistId = reactionData['youtubePlaylistId'];
-
-    const rawOffsetStartTime = Number(reactionData['offsetStartTime'] ?? 0);
-    const offsetStartTime = Number.isFinite(rawOffsetStartTime) && rawOffsetStartTime >= 0
-      ? Math.round(rawOffsetStartTime * 10) / 10
-      : 0;
-    const reactionFinishTime = parseFloat(reactionData['reactionFinishTime']) || 100000;
-    const timeOffset = reactionData['timeOffset'] || 0;
-    const globalGainValue = reactionData['globalGain'];
-    const globalGain = typeof globalGainValue === 'number' && !Number.isNaN(globalGainValue) ? globalGainValue : 1.0;
-    const soundLevel = Math.max(0, Math.min(200, Math.round(globalGain * 100)));
-    const currentPlaybackRate = getCurrentPlaybackRateFromConfigs(offsetStartTime || 0, window.playbackRateConfigs, timeOffset);
-
-    const canReuseReactionPlayer =
-      Boolean(snapshotBefore.playerReaction) &&
-      Boolean(reactionVideoId) &&
-      reactionVideoId === previousReactionVideoId &&
-      Boolean(document.getElementById('player-reaction'));
-
-    if (!canReuseReactionPlayer && snapshotBefore.playerReaction?.destroy) {
-      snapshotBefore.playerReaction.destroy();
-    }
-
-    const shouldCreateReactionPlayer = Boolean(reactionVideoId) && !canReuseReactionPlayer;
-    setExpectedPlayerReadyCount(shouldCreateReactionPlayer ? 1 : 0);
-
-    let nextPlayerReaction: any = snapshotBefore.playerReaction;
-    if (shouldCreateReactionPlayer) {
-      try {
-        nextPlayerReaction = new YT.Player('player-reaction', {
-          videoId: reactionVideoId,
-          playerVars: playerOptions,
-          ...iframeOptionDefault,
-          events: {
-            onReady: onPlayerReady,
-            onStateChange: onStateChangeReaction
-          }
-        });
-      } catch (error) {
-        console.error('Failed to initialise reaction YouTube player', error);
-        nextPlayerReaction = null;
-        setExpectedPlayerReadyCount(0);
-      }
-    }
-
-    if (originalVideoId && typeof snapshotBefore.playerOriginal?.loadVideoById === 'function') {
-      try {
-        snapshotBefore.playerOriginal.loadVideoById(originalVideoId);
-      } catch (error) {
-        console.error('Failed to load original video by id', error);
-      }
-    }
-
-    updateState({
-      isPublished: reactionData.isPublished,
-      isReactionMissing: !reactionVideoId,
-      reactorId: reactionData['reactorId'],
-      isUsersOwnVideo: reactionData['reactorId'] === userId,
-      canShowEditModeButton: reactionData['reactorId'] === userId,
-      playerConfigs,
-      volumeConfigs,
-      reactionVolumeConfigs,
-      playbackRateConfigs,
-      stateTimeline,
-      volumeTimeline,
-      reactionVolumeTimeline,
-      playbackRateTimeline,
-      playerEventTimeline: normalizedPlayerEvents,
-      reactionVideoId,
-      originalVideoId,
-      reactionVideoAuthor: reactionData?.reactionVideoAuthor,
-      reactionVideoTitle: reactionData?.reactionVideoTitle,
-      originalVideoAuthor: reactionData?.originalVideoAuthor,
-      originalVideoTitle: reactionData?.originalVideoTitle,
-      youtubePlaylistId,
-      offsetStartTime,
-      reactionFinishTime,
-      timeOffset,
-      globalGain,
-      introBufferTime: timeOffset,
-      soundLevel,
-      isReactionMuteModeEnabled: Boolean(reactionData?.muteReactionWhileOriginalPlays),
-      isReactionAutoMuted: false,
-      currentPlaybackRate,
-      playerOriginal: snapshotBefore.playerOriginal,
-      playerReaction: nextPlayerReaction,
-      currentStateOriginalVideo: -1,
-      currentVolumeOriginalVideo: 100,
-      currentVolumeReactionVideo: 100,
-      bothVideosStarted: preserveReactionTime ? snapshotBefore.bothVideosStarted : Boolean(options.autoPlay),
-      reactionCurrentTime: typeof previousReactionTime === 'number' ? previousReactionTime : offsetStartTime || 0,
-      reactionDuration:
-        typeof nextPlayerReaction?.getDuration === 'function' ? Number(nextPlayerReaction.getDuration()) || 0 : snapshotBefore.reactionDuration,
-      seekMin: offsetStartTime || 0,
-      seekMax: Math.max(
-        offsetStartTime || 0,
-        Math.min(
-          typeof nextPlayerReaction?.getDuration === 'function' ? Number(nextPlayerReaction.getDuration()) || 0 : snapshotBefore.reactionDuration || Number.POSITIVE_INFINITY,
-          reactionFinishTime
-        )
-      )
-    });
-
-    enforceReactionMuteMode();
-    await setPlaylistData(get(state).playlistDocumentId, youtubePlaylistId);
-
-    if (!preserveReactionTime && canReuseReactionPlayer && typeof nextPlayerReaction?.seekTo === 'function') {
-      try {
-        nextPlayerReaction.seekTo(Number(offsetStartTime) || 0, true);
-      } catch {
-        // ignore
-      }
-    }
-
-    if (typeof previousReactionTime === 'number' && typeof nextPlayerReaction?.seekTo === 'function' && !canReuseReactionPlayer) {
-      try {
-        nextPlayerReaction.seekTo(previousReactionTime, true);
-      } catch {
-        // ignore
-      }
-    }
-
-    try {
       await tick();
-      if (preserveReactionTime && get(state).bothVideosStarted) {
-        handleStateChangeInReactionVideo(YT.PlayerState.BUFFERING, YT.PlayerState.PLAYING);
-        pollVideoCurrentTime();
-      } else {
-        syncVideos();
-        if (get(state).bothVideosStarted) {
-          pollVideoCurrentTime();
+      injectYoutubeIframeApiScript();
+      await waitForYoutubeIframeApiReady();
+
+      const snapshotBefore = get(state);
+      const preserveReactionTime = Boolean(options.preserveReactionTime);
+      const previousReactionTime =
+        preserveReactionTime && typeof snapshotBefore.playerReaction?.getCurrentTime === 'function'
+          ? Number(snapshotBefore.playerReaction.getCurrentTime()) || 0
+          : undefined;
+      const previousReactionVideoId = snapshotBefore.reactionVideoId;
+
+      if (!preserveReactionTime) {
+        originalVideoClicked = Boolean(options.autoPlay);
+        reactionVideoClicked = Boolean(options.autoPlay);
+        clickGateSessionId += 1;
+        debugClickGate('[TwinPlayers] click gate state from loadReactionInPlace autoPlay', {
+          autoPlay: Boolean(options.autoPlay)
+        }, true);
+      }
+
+      if (!snapshotBefore.playerOriginal || !document.getElementById('player-original')) {
+        await buildInterface(nextReactionDocumentId, { isUpdate: true });
+        updateUIElements(nextReactionDocumentId);
+        return;
+      }
+
+      (window as any).currentReactionDocumentId = nextReactionDocumentId;
+      const reactionData = await getReaction(nextReactionDocumentId);
+      if (!reactionData) {
+        await setUpVideos(reactionData);
+        updateUIElements(nextReactionDocumentId);
+        return;
+      }
+
+      const {
+        playerConfigs,
+        volumeConfigs,
+        reactionVolumeConfigs,
+        playbackRateConfigs,
+        stateTimeline,
+        volumeTimeline,
+        reactionVolumeTimeline,
+        playbackRateTimeline
+      } = deriveTimelines(reactionData);
+
+      window.playerConfigs = reactionData['stateTimeline'] || reactionData['reactionConfigs'];
+      window.volumeConfigs = reactionData['volumeTimeline'] || reactionData['volumeConfigs'];
+      (window as any).reactionVolumeConfigs = reactionData['reactionVolumeTimeline'] || reactionData['reactionVolumeConfigs'];
+      window.playbackRateConfigs = reactionData['playbackTimeline'] || reactionData['playbackRateConfigs'];
+
+      const normalizedPlayerEvents = buildPlayerEventTimeline(stateTimeline);
+
+      const reactionVideoId = reactionData['reactionVideoId'] ?? '';
+      const originalVideoId = reactionData['originalVideoId'];
+      const youtubePlaylistId = reactionData['youtubePlaylistId'];
+
+      const rawOffsetStartTime = Number(reactionData['offsetStartTime'] ?? 0);
+      const offsetStartTime = Number.isFinite(rawOffsetStartTime) && rawOffsetStartTime >= 0
+        ? Math.round(rawOffsetStartTime * 10) / 10
+        : 0;
+      const reactionFinishTime = parseFloat(reactionData['reactionFinishTime']) || 100000;
+      const timeOffset = reactionData['timeOffset'] || 0;
+      const globalGainValue = reactionData['globalGain'];
+      const globalGain = typeof globalGainValue === 'number' && !Number.isNaN(globalGainValue) ? globalGainValue : 1.0;
+      const soundLevel = Math.max(0, Math.min(200, Math.round(globalGain * 100)));
+      const currentPlaybackRate = getCurrentPlaybackRateFromConfigs(offsetStartTime || 0, window.playbackRateConfigs, timeOffset);
+
+      const canReuseReactionPlayer =
+        Boolean(snapshotBefore.playerReaction) &&
+        Boolean(reactionVideoId) &&
+        reactionVideoId === previousReactionVideoId &&
+        Boolean(document.getElementById('player-reaction'));
+
+      if (!canReuseReactionPlayer && snapshotBefore.playerReaction?.destroy) {
+        snapshotBefore.playerReaction.destroy();
+      }
+
+      const shouldCreateReactionPlayer = Boolean(reactionVideoId) && !canReuseReactionPlayer;
+      setExpectedPlayerReadyCount(shouldCreateReactionPlayer ? 1 : 0);
+
+      let nextPlayerReaction: any = snapshotBefore.playerReaction;
+      if (shouldCreateReactionPlayer) {
+        try {
+          nextPlayerReaction = new YT.Player('player-reaction', {
+            videoId: reactionVideoId,
+            playerVars: playerOptions,
+            ...iframeOptionDefault,
+            events: {
+              onReady: onPlayerReady,
+              onStateChange: onStateChangeReaction
+            }
+          });
+        } catch (error) {
+          console.error('Failed to initialise reaction YouTube player', error);
+          nextPlayerReaction = null;
+          setExpectedPlayerReadyCount(0);
         }
       }
-    } catch {
-      // ignore
-    }
 
-    updateUIElements(nextReactionDocumentId);
+      if (originalVideoId && typeof snapshotBefore.playerOriginal?.loadVideoById === 'function') {
+        try {
+          snapshotBefore.playerOriginal.loadVideoById(originalVideoId);
+        } catch (error) {
+          console.error('Failed to load original video by id', error);
+        }
+      }
 
-    await verifyAndSyncMetadata({
-      documentId: typeof reactionData?.id === 'string' ? reactionData.id : undefined,
-      originalVideoId,
-      reactionVideoId,
-      currentOriginalTitle: reactionData?.originalVideoTitle,
-      currentOriginalAuthor: reactionData?.originalVideoAuthor,
-      currentReactionTitle: reactionData?.reactionVideoTitle,
-      currentReactionAuthor: reactionData?.reactionVideoAuthor
-    });
+      updateState({
+        isPublished: reactionData.isPublished,
+        isReactionMissing: !reactionVideoId,
+        reactorId: reactionData['reactorId'],
+        isUsersOwnVideo: reactionData['reactorId'] === userId,
+        canShowEditModeButton: reactionData['reactorId'] === userId,
+        playerConfigs,
+        volumeConfigs,
+        reactionVolumeConfigs,
+        playbackRateConfigs,
+        stateTimeline,
+        volumeTimeline,
+        reactionVolumeTimeline,
+        playbackRateTimeline,
+        playerEventTimeline: normalizedPlayerEvents,
+        reactionVideoId,
+        originalVideoId,
+        reactionVideoAuthor: reactionData?.reactionVideoAuthor,
+        reactionVideoTitle: reactionData?.reactionVideoTitle,
+        originalVideoAuthor: reactionData?.originalVideoAuthor,
+        originalVideoTitle: reactionData?.originalVideoTitle,
+        youtubePlaylistId,
+        offsetStartTime,
+        reactionFinishTime,
+        timeOffset,
+        globalGain,
+        introBufferTime: timeOffset,
+        soundLevel,
+        isReactionMuteModeEnabled: Boolean(reactionData?.muteReactionWhileOriginalPlays),
+        isReactionAutoMuted: false,
+        currentPlaybackRate,
+        playerOriginal: snapshotBefore.playerOriginal,
+        playerReaction: nextPlayerReaction,
+        currentStateOriginalVideo: -1,
+        currentVolumeOriginalVideo: 100,
+        currentVolumeReactionVideo: 100,
+        bothVideosStarted: preserveReactionTime ? snapshotBefore.bothVideosStarted : Boolean(options.autoPlay),
+        reactionCurrentTime: typeof previousReactionTime === 'number' ? previousReactionTime : offsetStartTime || 0,
+        reactionDuration:
+          typeof nextPlayerReaction?.getDuration === 'function' ? Number(nextPlayerReaction.getDuration()) || 0 : snapshotBefore.reactionDuration,
+        seekMin: offsetStartTime || 0,
+        seekMax: Math.max(
+          offsetStartTime || 0,
+          Math.min(
+            typeof nextPlayerReaction?.getDuration === 'function' ? Number(nextPlayerReaction.getDuration()) || 0 : snapshotBefore.reactionDuration || Number.POSITIVE_INFINITY,
+            reactionFinishTime
+          )
+        )
+      });
+
+      enforceReactionMuteMode();
+      await setPlaylistData(get(state).playlistDocumentId, youtubePlaylistId);
+
+      if (!preserveReactionTime && canReuseReactionPlayer && typeof nextPlayerReaction?.seekTo === 'function') {
+        try {
+          nextPlayerReaction.seekTo(Number(offsetStartTime) || 0, true);
+        } catch {
+          // ignore
+        }
+      }
+
+      if (typeof previousReactionTime === 'number' && typeof nextPlayerReaction?.seekTo === 'function' && !canReuseReactionPlayer) {
+        try {
+          nextPlayerReaction.seekTo(previousReactionTime, true);
+        } catch {
+          // ignore
+        }
+      }
+
+      try {
+        await tick();
+        if (preserveReactionTime && get(state).bothVideosStarted) {
+          handleStateChangeInReactionVideo(YT.PlayerState.BUFFERING, YT.PlayerState.PLAYING);
+          pollVideoCurrentTime();
+        } else {
+          syncVideos();
+          if (get(state).bothVideosStarted) {
+            pollVideoCurrentTime();
+          }
+        }
+      } catch {
+        // ignore
+      }
+
+      updateUIElements(nextReactionDocumentId);
+
+      await verifyAndSyncMetadata({
+        documentId: typeof reactionData?.id === 'string' ? reactionData.id : undefined,
+        originalVideoId,
+        reactionVideoId,
+        currentOriginalTitle: reactionData?.originalVideoTitle,
+        currentOriginalAuthor: reactionData?.originalVideoAuthor,
+        currentReactionTitle: reactionData?.reactionVideoTitle,
+        currentReactionAuthor: reactionData?.reactionVideoAuthor
+      });
     } finally {
       isSwitchingReactionInPlace = false;
     }
