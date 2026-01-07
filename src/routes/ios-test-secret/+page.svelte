@@ -88,27 +88,77 @@
         statusMessage = "Players ready. Both start muted — press play on both.";
     }
 
+    let firstVideoPaused = false;
+    let successfulDualStart = false;
+
     function onPlayerStateChange(event) {
-        checkStartCondition();
+        checkStartCondition(event.target);
     }
 
-    function checkStartCondition() {
-        if (bothPlaying) return;
+    function checkStartCondition(triggeringPlayer) {
+        if (successfulDualStart) return;
 
         const p1State = playerOriginal?.getPlayerState();
         const p2State = playerReaction?.getPlayerState();
 
-        // YT.PlayerState.PLAYING is 1
-        if (p1State === 1 && p2State === 1) {
+        const p1Playing = p1State === 1;
+        const p2Playing = p2State === 1;
+        const p1Paused = p1State === 2;
+        const p2Paused = p2State === 2;
+
+        console.log(`State Check: P1=${p1State} P2=${p2State}`);
+
+        // Success condition: Both are playing
+        if (p1Playing && p2Playing) {
+            console.log("SUCCESS detected.");
+            successfulDualStart = true;
             bothPlaying = true;
-            // Ensure iOS starts from a muted state for both.
-            playerOriginal?.mute?.();
-            playerReaction?.mute?.();
             statusMessage =
-                "Both players started! Starting alternating sequence...";
+                "SUCCESS! Both players running. The pause did NOT break it.";
+
+            // Unmute purely to prove audio works, but let logic decide phase
+            playerOriginal.unMute();
+            playerReaction.mute();
+
             startAlternatingSequence();
+            return;
+        }
+
+        // STEP 1: Pause the first one that plays (Hypothesis Test)
+        // Only do this if we haven't paused one yet.
+        if (!firstVideoPaused) {
+            if (p1Playing) {
+                console.log("Hypothesis Test: Pausing Original...");
+                playerOriginal.pauseVideo();
+                firstVideoPaused = true;
+                statusMessage = "Original PAUSED. Now click Reaction.";
+                return;
+            } else if (p2Playing) {
+                console.log("Hypothesis Test: Pausing Reaction...");
+                playerReaction.pauseVideo();
+                firstVideoPaused = true;
+                statusMessage = "Reaction PAUSED. Now click Original.";
+                return;
+            }
+        }
+
+        // STEP 2: Attempt to resume if we are in the "One Playing, One Paused" state
+        if (firstVideoPaused) {
+            if (p1Playing && p2Paused) {
+                // Reaction was paused, Original is now playing. Resume Reaction.
+                console.log("Attempting to resume Reaction...");
+                statusMessage = "Original playing. Resuming Reaction...";
+                playerReaction.playVideo();
+            } else if (p2Playing && p1Paused) {
+                // Original was paused, Reaction is now playing. Resume Original.
+                console.log("Attempting to resume Original...");
+                statusMessage = "Reaction playing. Resuming Original...";
+                playerOriginal.playVideo();
+            } else {
+                statusMessage = `Waiting... P1:${stateToString(p1State)} P2:${stateToString(p2State)}`;
+            }
         } else {
-            statusMessage = `Processing... Original: ${stateToString(p1State)}, Reaction: ${stateToString(p2State)}`;
+            statusMessage = "Waiting for user to click a video...";
         }
     }
 
@@ -120,7 +170,6 @@
         if (state === 5) return "CUED";
         return "UNKNOWN (" + state + ")";
     }
-
     function startAlternatingSequence() {
         // Start switching only once both are confirmed playing.
         setPhase("original_muted");
@@ -180,7 +229,8 @@
             <div
                 class="indicator"
                 class:active={currentPhase === "reaction_muted"}
-                class:muted={currentPhase === "original_muted" || currentPhase === "both_muted"}
+                class:muted={currentPhase === "original_muted" ||
+                    currentPhase === "both_muted"}
             >
                 {currentPhase === "reaction_muted" ? "AUDIO ACTIVE" : "MUTED"}
             </div>
@@ -192,7 +242,8 @@
             <div
                 class="indicator"
                 class:active={currentPhase === "original_muted"}
-                class:muted={currentPhase === "reaction_muted" || currentPhase === "both_muted"}
+                class:muted={currentPhase === "reaction_muted" ||
+                    currentPhase === "both_muted"}
             >
                 {currentPhase === "original_muted" ? "AUDIO ACTIVE" : "MUTED"}
             </div>
