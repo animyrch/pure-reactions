@@ -257,9 +257,9 @@
 
         // Don't hijack ArrowLeft/Right when the related-reactions carousel has focus.
         if (
-            (event.key === 'ArrowRight' || event.key === 'ArrowLeft') &&
+            (event.key === "ArrowRight" || event.key === "ArrowLeft") &&
             target instanceof HTMLElement &&
-            target.closest('.carousel, [data-carousel-item]')
+            target.closest(".carousel, [data-carousel-item]")
         ) {
             return;
         }
@@ -270,14 +270,20 @@
             return;
         }
 
-        if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+        if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
             if (!bothVideosStarted) return;
             if (safeSeekMax <= safeSeekMin) return;
 
             event.preventDefault();
-            const delta = event.key === 'ArrowRight' ? 5 : -5;
-            const baseTime = Number.isFinite(currentTime) ? currentTime : localTime;
-            const nextTime = clampNumber(baseTime + delta, safeSeekMin, safeSeekMax);
+            const delta = event.key === "ArrowRight" ? 5 : -5;
+            const baseTime = Number.isFinite(currentTime)
+                ? currentTime
+                : localTime;
+            const nextTime = clampNumber(
+                baseTime + delta,
+                safeSeekMin,
+                safeSeekMax,
+            );
 
             localTime = nextTime;
             armPendingSeek(nextTime);
@@ -440,7 +446,7 @@
                 </div>
 
                 {#if !isFullscreen}
-                    <div class="group relative">
+                    <div class="group relative hidden md:block">
                         <button
                             type="button"
                             class={`${buttonBase} bg-surface/80 shadow-surface`}

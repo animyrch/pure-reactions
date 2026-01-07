@@ -114,12 +114,12 @@
   const getEditReactionHref = () => {
     const query = new URLSearchParams();
     if ($state.playlistDocumentId) {
-      query.set('playlistId', $state.playlistDocumentId);
+      query.set("playlistId", $state.playlistDocumentId);
       if ($state.originalVideoId) {
-        query.set('item', $state.originalVideoId);
+        query.set("item", $state.originalVideoId);
       }
     }
-    const suffix = query.toString() ? `?${query.toString()}` : '';
+    const suffix = query.toString() ? `?${query.toString()}` : "";
     return `/edit-reaction/${$state.pageSlug}${suffix}`;
   };
 
@@ -175,8 +175,7 @@
     <p class="mb-4 rounded-md bg-warning/10 px-4 py-3 text-sm text-warning">
       Warning: The reaction video id is missing. This reaction page will stay
       hidden until a video id is added in the
-      <a class="underline" href={getEditReactionHref()}
-        data-sveltekit-reload
+      <a class="underline" href={getEditReactionHref()} data-sveltekit-reload
         >edit view</a
       >
       and published again.
@@ -186,7 +185,7 @@
     class={`theater-wrapper ${
       $state.isFullscreen
         ? "fixed inset-0 z-50 m-0 h-screen w-screen overflow-hidden rounded-none bg-black px-0 py-0 text-text-primary shadow-none"
-        : "relative mx-auto my-10 w-full max-w-none rounded-2xl bg-surface/80 px-4 py-8 text-text-primary shadow-elevated backdrop-blur sm:px-6 lg:px-10 xl:rounded-3xl"
+        : "relative w-full max-w-none bg-black text-text-primary shadow-none md:shadow-elevated md:mx-auto md:my-10 md:rounded-2xl md:bg-surface/80 md:px-4 md:py-8 md:backdrop-blur sm:px-6 lg:px-10 xl:rounded-3xl"
     }`}
   >
     {#if $state.isFullscreen}
@@ -204,11 +203,13 @@
         onPointerLeave={actions.scheduleHideControls}
       />
     {:else}
-      <div class="grid gap-6 md:grid-cols-2 xl:gap-8">
+      <div class="flex flex-col gap-0 md:grid md:gap-6 md:grid-cols-2 xl:gap-8">
         <div
-          class="relative overflow-hidden rounded-xl bg-black shadow-elevated"
+          class="relative overflow-hidden bg-black shadow-elevated rounded-none md:rounded-xl landscape:fixed landscape:inset-0 landscape:z-40 landscape:h-full landscape:w-full landscape:rounded-none md:landscape:static md:landscape:w-auto md:landscape:h-auto md:landscape:rounded-xl"
         >
-          <div class="relative aspect-[16/9] sm:aspect-[3/2]">
+          <div
+            class="relative aspect-[16/9] landscape:aspect-auto landscape:h-full landscape:w-full md:landscape:aspect-[3/2] sm:aspect-[3/2]"
+          >
             <div
               id="player-original"
               class="absolute inset-0 h-full w-full"
@@ -227,9 +228,11 @@
         </div>
         {#if !$state.isReactionMissing}
           <div
-            class="relative overflow-hidden rounded-xl bg-black/80 shadow-surface"
+            class="relative overflow-hidden bg-black/80 shadow-surface w-[80vw] mx-auto mt-4 aspect-[16/9] rounded-lg md:w-auto md:mt-0 md:mx-0 md:rounded-xl md:aspect-auto landscape:fixed landscape:top-4 landscape:right-4 landscape:z-50 landscape:w-[30vw] landscape:mt-0 landscape:rounded-lg landscape:shadow-elevated md:landscape:static md:landscape:w-auto md:landscape:rounded-xl"
           >
-            <div class="relative aspect-[16/9] sm:aspect-[3/2]">
+            <div
+              class="relative aspect-[16/9] md:landscape:aspect-[3/2] sm:aspect-[3/2] landscape:aspect-auto landscape:h-full landscape:w-full"
+            >
               <div
                 id="player-reaction"
                 class="absolute inset-0 h-full w-full"
@@ -272,7 +275,10 @@
         currentTime={$state.reactionCurrentTime}
         duration={$state.reactionDuration}
         seekMin={$state.offsetStartTime || 0}
-        seekMax={Math.min($state.reactionFinishTime || 0, $state.reactionDuration || 0)}
+        seekMax={Math.min(
+          $state.reactionFinishTime || 0,
+          $state.reactionDuration || 0,
+        )}
         onSeek={actions.seekTo}
       />
     {/if}
