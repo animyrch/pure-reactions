@@ -816,10 +816,10 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     );
 
     // Decision Logic: Whichever is higher wins.
-    // Start with a small threshold to avoid flickering if they are equal (favor Original if equal or very close?)
-    // Let's strictly follow: "whichever video has a higher volume config"
+    // We use strict inequality (>). If they are equal (e.g. both default 100), Reaction wins.
+    // This satisfies the requirement: "if no previous audio config, assume original is muted and reaction is not muted"
 
-    const originalWins = intendedOriginalVolume >= intendedReactionVolume;
+    const originalWins = intendedOriginalVolume > intendedReactionVolume;
 
     // Apply Mutex (Mutually Exclusive) Audio
     if (originalWins) {
