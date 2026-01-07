@@ -8,6 +8,7 @@ const createInitialState = () => ({
   isPublished: false,
   isReactionMissing: false,
   isFullscreen: false,
+  canShowEditPlaylistButton: false,
   handlers: {
     enterEditMode: null,
     closeEditMode: null,

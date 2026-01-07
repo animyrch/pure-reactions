@@ -111,6 +111,7 @@
       canShowCloseEditModeButton,
       isPublished,
       isReactionMissing,
+      canShowEditPlaylistButton,
       handlers,
     } = state;
 
@@ -155,7 +156,7 @@
       });
     }
 
-    if (handlers.editPlaylist) {
+    if (canShowEditPlaylistButton && handlers.editPlaylist) {
       itemList.push({
         name: "Edit Playlist",
         icon: ListMusicSolid,

@@ -131,6 +131,7 @@
       isPublished: $state.isPublished,
       isReactionMissing: $state.isReactionMissing,
       isFullscreen: $state.isFullscreen,
+      canShowEditPlaylistButton: false,
       handlers: {
         enterEditMode: null,
         closeEditMode: handleExitEditor,

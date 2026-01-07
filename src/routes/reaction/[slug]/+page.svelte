@@ -25,6 +25,11 @@
 
   let overlayRef;
 
+  let isCurrentReactionCreator = false;
+  $: isCurrentReactionCreator = Boolean(
+    data?.userId && $state.reactorId && data.userId === $state.reactorId,
+  );
+
   $: stickyControlsClass = $state.isFullscreen
     ? CONTROLS_FADE_CLASS
     : "opacity-100";
@@ -127,6 +132,8 @@
       isPublished: $state.isPublished,
       isReactionMissing: $state.isReactionMissing,
       isFullscreen: $state.isFullscreen,
+      canShowEditPlaylistButton:
+        Boolean($state.playlistDocumentId) && isCurrentReactionCreator,
       handlers: {
         enterEditMode: () => {
           if (!browser) return;

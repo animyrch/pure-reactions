@@ -24,6 +24,11 @@
   $: stickyControlsClass = $state.isFullscreen ? CONTROLS_FADE_CLASS : "opacity-100";
   $: overlayRef && actions.registerOverlayRef(overlayRef);
 
+  let isCurrentReactionCreator = false;
+  $: isCurrentReactionCreator = Boolean(
+    data?.userId && $state.reactorId && data.userId === $state.reactorId,
+  );
+
   let playlistSlug = "";
   let playlistDocumentLocal = null;
   let playlistInitError = "";
@@ -132,6 +137,9 @@
       isPublished: $state.isPublished,
       isReactionMissing: $state.isReactionMissing,
       isFullscreen: $state.isFullscreen,
+      canShowEditPlaylistButton: Boolean(
+        playlistSlug && isCurrentReactionCreator,
+      ),
       handlers: {
         enterEditMode: isPlaylistOwner
           ? () => {
