@@ -25,7 +25,7 @@
 	let hasMoreReactions = true;
 	let hasMoreQueues = true;
 	let sentinel;
-	const pageSize = 9;
+	const pageSize = 15;
 	const queuePageSize = 3; // Include fewer queues to maintain balance
 
 	const ensureFillViewport = async () => {
