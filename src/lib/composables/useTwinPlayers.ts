@@ -859,6 +859,19 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   const handleMobileVolumeArbitration = (reactionCurrentTime: number) => {
     const snapshot = get(state);
 
+    const hasAnyVolumeConfig = (configs: any) => {
+      if (!configs) {
+        return false;
+      }
+      if (Array.isArray(configs)) {
+        return configs.length > 0;
+      }
+      if (typeof configs === 'object') {
+        return Object.keys(configs).length > 0;
+      }
+      return false;
+    };
+
     // Calculate intended volumes for both
     const intendedOriginalVolume = getCurrentVolumeFromVolumeConfigs(
       reactionCurrentTime,
@@ -874,9 +887,46 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       snapshot.timeOffset
     );
 
-    // Decision Logic: Whichever is higher wins.
-    // We use strict inequality (>). If they are equal (e.g. both default 100), Reaction wins.
-    // This satisfies the requirement: "if no previous audio config, assume original is muted and reaction is not muted"
+    const hasOriginalVolumeConfigs = hasAnyVolumeConfig(window.volumeConfigs);
+    const hasReactionVolumeConfigs = hasAnyVolumeConfig((window as any).reactionVolumeConfigs);
+
+    // Special-case: If there are no volume configs at all, pick the audible player by original play state.
+    // - Original PLAYING  -> original audible
+    // - Otherwise         -> reaction audible
+    // This keeps mobile mutually-exclusive audio while matching desktop behavior (both audible) outside mobile.
+    if (!hasOriginalVolumeConfigs && !hasReactionVolumeConfigs) {
+      const playingState = typeof YT !== 'undefined' && typeof YT?.PlayerState?.PLAYING === 'number'
+        ? YT.PlayerState.PLAYING
+        : 1;
+
+      const originalWins = snapshot.currentStateOriginalVideo === playingState;
+      mobileAudioWinner = originalWins ? 'original' : 'reaction';
+
+      if (originalWins) {
+        if (snapshot.playerOriginal?.isMuted?.() || snapshot.currentVolumeOriginalVideo !== intendedOriginalVolume) {
+          setVolumeForOriginalVideo(intendedOriginalVolume);
+          snapshot.playerOriginal?.unMute?.();
+          updateState({ currentVolumeOriginalVideo: intendedOriginalVolume });
+        }
+        if (!snapshot.playerReaction?.isMuted?.()) {
+          muteReactionAudio(snapshot.playerReaction);
+        }
+      } else {
+        if (snapshot.playerReaction?.isMuted?.() || snapshot.currentVolumeReactionVideo !== intendedReactionVolume) {
+          setVolumeForReactionVideo(intendedReactionVolume);
+          snapshot.playerReaction?.unMute?.();
+          updateState({ currentVolumeReactionVideo: intendedReactionVolume });
+        }
+        if (!snapshot.playerOriginal?.isMuted?.()) {
+          snapshot.playerOriginal?.mute?.();
+        }
+      }
+
+      return;
+    }
+
+    // Decision Logic (configs present): Whichever intended volume is higher wins.
+    // We use strict inequality (>). If they are equal, Reaction wins.
 
     const delta = intendedOriginalVolume - intendedReactionVolume;
     const HYSTERESIS = 3;
