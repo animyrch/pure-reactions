@@ -43,7 +43,7 @@
     const handleToggleAutoPlaylist = () => dispatch("toggleAutoPlaylist");
     const handleToggleCinematicBars = () => dispatch("toggleCinematicBars");
     const handleEnterFullscreen = () => dispatch("enterFullscreen");
-    const handleSeek = (e) => dispatch("seek", e.detail);
+    const handleSeek = (time) => dispatch("seek", time);
 
     // We are not passing actions directly to avoid tight coupling to the composable,
     // instead re-dispatching events.
@@ -158,7 +158,7 @@
             duration={reactionDuration}
             seekMin={offsetStartTime || 0}
             seekMax={Math.min(reactionFinishTime || 0, reactionDuration || 0)}
-            onSeek={(e) => handleSeek(e)}
+            onSeek={handleSeek}
         />
     {/if}
 </section>

@@ -758,11 +758,30 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     }
 
     const snapshot = get(state);
-    const { seekMin, seekMax } = snapshot;
 
-    const clamped = seekMax === Number.POSITIVE_INFINITY
+    // Defensive bounds handling:
+    // During early player lifecycle (or some in-place loads), seekMax can temporarily equal seekMin
+    // (e.g., when duration is still 0). If we clamp against that, every seek snaps back to start.
+    const seekMin = Number.isFinite(snapshot.seekMin) && snapshot.seekMin >= 0 ? snapshot.seekMin : 0;
+    const rawFinish = Number(snapshot.reactionFinishTime);
+    const finishCap = Number.isFinite(rawFinish) && rawFinish > 0 ? rawFinish : Number.POSITIVE_INFINITY;
+
+    let effectiveSeekMax = Number(snapshot.seekMax);
+    if (!Number.isFinite(effectiveSeekMax) || effectiveSeekMax <= seekMin) {
+      const durationFromPlayer =
+        typeof snapshot.playerReaction?.getDuration === 'function' ? Number(snapshot.playerReaction.getDuration()) : Number.NaN;
+      const durationFallback = Number(snapshot.reactionDuration);
+      const durationCap = Number.isFinite(durationFromPlayer) && durationFromPlayer > 0
+        ? durationFromPlayer
+        : (Number.isFinite(durationFallback) && durationFallback > 0 ? durationFallback : Number.POSITIVE_INFINITY);
+      effectiveSeekMax = durationCap;
+    }
+
+    effectiveSeekMax = Math.max(seekMin, Math.min(effectiveSeekMax, finishCap));
+
+    const clamped = effectiveSeekMax === Number.POSITIVE_INFINITY
       ? Math.max(normalized, seekMin)
-      : Math.min(Math.max(normalized, seekMin), seekMax);
+      : Math.min(Math.max(normalized, seekMin), effectiveSeekMax);
 
     snapshot.playerReaction?.seekTo?.(clamped, true);
   };
@@ -2045,13 +2064,16 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         reactionDuration:
           typeof nextPlayerReaction?.getDuration === 'function' ? Number(nextPlayerReaction.getDuration()) || 0 : snapshotBefore.reactionDuration,
         seekMin: offsetStartTime || 0,
-        seekMax: Math.max(
-          offsetStartTime || 0,
-          Math.min(
-            typeof nextPlayerReaction?.getDuration === 'function' ? Number(nextPlayerReaction.getDuration()) || 0 : snapshotBefore.reactionDuration || Number.POSITIVE_INFINITY,
-            reactionFinishTime
-          )
-        )
+        seekMax: (() => {
+          const seekMin = offsetStartTime || 0;
+          const rawDuration = typeof nextPlayerReaction?.getDuration === 'function'
+            ? Number(nextPlayerReaction.getDuration())
+            : Number(snapshotBefore.reactionDuration);
+          const durationCap = Number.isFinite(rawDuration) && rawDuration > 0 ? rawDuration : Number.POSITIVE_INFINITY;
+          const rawFinish = Number(reactionFinishTime);
+          const finishCap = Number.isFinite(rawFinish) && rawFinish > 0 ? rawFinish : Number.POSITIVE_INFINITY;
+          return Math.max(seekMin, Math.min(durationCap, finishCap));
+        })()
       });
 
       enforceReactionMuteMode();
