@@ -402,6 +402,19 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   let lastOriginalSeekTarget: number | undefined;
   let mobileAudioWinner: 'original' | 'reaction' | null = null;
 
+  const isMobileAudioEnvironment = () => {
+    if (typeof navigator === 'undefined') {
+      return false;
+    }
+    const ua = String(navigator.userAgent || '');
+    if (/iPhone|iPad|iPod|Android/i.test(ua)) {
+      return true;
+    }
+    // iPadOS can masquerade as macOS (Safari reports Macintosh) but still behaves like mobile for autoplay/audio.
+    const isIpadOs = /Macintosh/i.test(ua) && Number(navigator.maxTouchPoints || 0) > 1;
+    return isIpadOs;
+  };
+
   toggleFullscreenBodyClass(initialUrlState.isFullscreen);
 
   const updateState = (partial: Partial<TwinPlayersState> | ((value: TwinPlayersState) => Partial<TwinPlayersState>)) => {
@@ -1177,7 +1190,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         }
         return;
       }
-      if (typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+      if (isMobileAudioEnvironment()) {
         handleMobileVolumeArbitration(reactionCurrentTime);
       } else {
         handleOriginalVideoVolume(reactionCurrentTime);
@@ -1301,18 +1314,42 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
     // Apply initial volume BEFORE any playVideo() to prevent an audible blip on refresh.
     // (Polling applies volume every 500ms, which is too late for t=0 configs.)
+    mobileAudioWinner = null;
+    const isMobile = isMobileAudioEnvironment();
+
     const initialOriginalVolume = getCurrentVolumeFromVolumeConfigs(
       startTime,
       window.volumeConfigs,
       snapshot.globalGain,
       snapshot.timeOffset
     );
-    if (snapshot.playerOriginal && typeof initialOriginalVolume === 'number' && Number.isFinite(initialOriginalVolume)) {
-      if (!changingVolume && snapshot.currentVolumeOriginalVideo !== initialOriginalVolume) {
-        changingVolume = true;
-        setVolumeForOriginalVideo(initialOriginalVolume);
-        updateState({ currentVolumeOriginalVideo: initialOriginalVolume });
-        changingVolume = false;
+
+    const initialReactionVolume = getCurrentVolumeFromVolumeConfigs(
+      startTime,
+      (window as any).reactionVolumeConfigs,
+      1.0,
+      snapshot.timeOffset
+    );
+
+    if (isMobile) {
+      // On mobile, only one player reliably has audio. Apply the mutex immediately at t=0.
+      handleMobileVolumeArbitration(startTime);
+    } else {
+      if (snapshot.playerOriginal && typeof initialOriginalVolume === 'number' && Number.isFinite(initialOriginalVolume)) {
+        if (!changingVolume && snapshot.currentVolumeOriginalVideo !== initialOriginalVolume) {
+          changingVolume = true;
+          setVolumeForOriginalVideo(initialOriginalVolume);
+          updateState({ currentVolumeOriginalVideo: initialOriginalVolume });
+          changingVolume = false;
+        }
+      }
+      if (snapshot.playerReaction && typeof initialReactionVolume === 'number' && Number.isFinite(initialReactionVolume)) {
+        if (!changingReactionVolume && snapshot.currentVolumeReactionVideo !== initialReactionVolume) {
+          changingReactionVolume = true;
+          setVolumeForReactionVideo(initialReactionVolume);
+          updateState({ currentVolumeReactionVideo: initialReactionVolume });
+          changingReactionVolume = false;
+        }
       }
     }
 
