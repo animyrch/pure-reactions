@@ -332,7 +332,7 @@
             on:mouseleave={handleControlsMouseLeave}
         >
             <!-- Play/Pause -->
-            <div class="group relative shrink-0">
+            <div class="group relative shrink-0 order-2 sm:order-none">
                 <button
                     type="button"
                     class={`${buttonBase} ${isPlaying ? "bg-accent-primary text-background shadow-elevated" : "bg-surface/80 shadow-surface"}`}
@@ -359,7 +359,7 @@
             </div>
 
             <!-- Scrubber -->
-            <div class="flex flex-1 items-center px-3 gap-3">
+            <div class="flex w-full items-center px-0 sm:flex-1 sm:px-3 gap-3 order-1 sm:order-none">
                 <span
                     class="text-xs tabular-nums text-text-muted font-medium min-w-[32px] text-right hidden sm:block"
                     >{formatTime(displayTime)}</span
@@ -383,7 +383,7 @@
             </div>
 
             <!-- Other Buttons -->
-            <div class="flex items-center gap-2 shrink-0">
+            <div class="flex items-center gap-2 shrink-0 order-3 sm:order-none">
                 <div class="group relative">
                     <button
                         type="button"
@@ -483,8 +483,10 @@
     .controls-glass {
         display: flex;
         flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: space-between;
         align-items: center;
-        gap: 1.5rem;
+        gap: 0.75rem;
         padding: 1rem 1.5rem;
         border-radius: 999px;
         background: rgba(20, 24, 32, 0.9);
@@ -492,6 +494,14 @@
         backdrop-filter: blur(20px);
         border: 1px solid rgba(255, 255, 255, 0.08);
         width: 100%;
+    }
+
+    @media (min-width: 640px) {
+        .controls-glass {
+            flex-wrap: nowrap;
+            justify-content: flex-start;
+            gap: 1.5rem;
+        }
     }
 
     .scrubber-range {

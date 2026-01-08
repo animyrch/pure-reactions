@@ -23,7 +23,7 @@
 </script>
 
 <div
-  class={`controls-dock group pointer-events-none ${isFullscreen ? "fixed inset-x-0 bottom-12 z-50 flex w-full px-6" : "fixed bottom-4 left-0 right-0 z-50 w-full px-4 md:sticky md:top-6 md:mt-10 md:bottom-auto md:px-4 sm:px-6 lg:px-10"}`}
+  class={`controls-dock group pointer-events-none ${isFullscreen ? "fixed inset-x-0 bottom-12 z-50 flex w-full px-6" : "relative z-10 w-full px-4 mt-4 md:sticky md:top-6 md:mt-10 md:px-4 sm:px-6 lg:px-10"}`}
 >
   <div
     class={`controls-surface pointer-events-auto w-full rounded-full bg-overlay px-4 py-xs shadow-elevated transition duration-slow ease-cinematic ${stickyControlsClass}`}
