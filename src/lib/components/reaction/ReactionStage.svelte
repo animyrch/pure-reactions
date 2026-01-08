@@ -184,7 +184,7 @@
             z-index: 50;
             display: flex;
             flex-direction: row;
-            align-items: flex-start;
+            align-items: center;
             gap: 0;
             padding: 0;
             padding-bottom: var(--control-dock-space);
