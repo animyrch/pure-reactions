@@ -398,6 +398,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   let changingState = false;
   let changingSpeed = false;
   let lastOriginalTargetTime: number | undefined;
+  let lastOriginalSeekAt = 0;
+  let lastOriginalSeekTarget: number | undefined;
+  let mobileAudioWinner: 'original' | 'reaction' | null = null;
 
   toggleFullscreenBodyClass(initialUrlState.isFullscreen);
 
@@ -697,18 +700,42 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
   const resetOriginalStateTracking = () => {
     lastOriginalTargetTime = undefined;
+    lastOriginalSeekTarget = undefined;
+    lastOriginalSeekAt = 0;
   };
 
-  const goToSecondsInOriginalVideo = (seconds: number) => {
+  const goToSecondsInOriginalVideo = (
+    seconds: number,
+    options: { allowSeekAhead?: boolean; throttleMs?: number; force?: boolean } = {}
+  ) => {
     const normalized = Number(seconds);
     if (!Number.isFinite(normalized)) {
-      return;
+      return false;
     }
     const { playerOriginal } = get(state);
     if (playerOriginal && typeof playerOriginal.seekTo === 'function') {
-      playerOriginal.seekTo(normalized, true);
+      const now = Date.now();
+      const throttleMs = Number(options.throttleMs ?? 0);
+      if (!options.force && throttleMs > 0 && now - lastOriginalSeekAt < throttleMs) {
+        return false;
+      }
+      if (
+        !options.force
+        && typeof lastOriginalSeekTarget === 'number'
+        && Math.abs(lastOriginalSeekTarget - normalized) < 0.25
+        && now - lastOriginalSeekAt < Math.max(throttleMs, 1200)
+      ) {
+        return false;
+      }
+
+      const allowSeekAhead = options.allowSeekAhead !== false;
+      playerOriginal.seekTo(normalized, allowSeekAhead);
       lastOriginalTargetTime = normalized;
+      lastOriginalSeekTarget = normalized;
+      lastOriginalSeekAt = now;
+      return true;
     }
+    return false;
   };
 
   const goToSecondsInReactionVideo = (seconds: number) => {
@@ -819,7 +846,19 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     // We use strict inequality (>). If they are equal (e.g. both default 100), Reaction wins.
     // This satisfies the requirement: "if no previous audio config, assume original is muted and reaction is not muted"
 
-    const originalWins = intendedOriginalVolume > intendedReactionVolume;
+    const delta = intendedOriginalVolume - intendedReactionVolume;
+    const HYSTERESIS = 3;
+    let originalWins = intendedOriginalVolume > intendedReactionVolume;
+    if (mobileAudioWinner) {
+      if (Math.abs(delta) <= HYSTERESIS) {
+        originalWins = mobileAudioWinner === 'original';
+      }
+    } else if (intendedOriginalVolume === intendedReactionVolume) {
+      originalWins = false;
+    }
+
+    const nextWinner: 'original' | 'reaction' = originalWins ? 'original' : 'reaction';
+    mobileAudioWinner = nextWinner;
 
     // Apply Mutex (Mutually Exclusive) Audio
     if (originalWins) {
@@ -867,14 +906,23 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     }
   };
 
-  const handleStateChangeInOriginalVideo = (previousState: number, nextState: number, targetTime: number) => {
+  const handleStateChangeInOriginalVideo = (
+    previousState: number,
+    nextState: number,
+    targetTime: number,
+    options: { allowSeekAhead?: boolean; throttleMs?: number; forceSeek?: boolean } = {}
+  ) => {
     const resolvedState = typeof nextState === 'number' ? nextState : -1;
     const normalizedTarget = Number(targetTime);
     const targetChanged = Number.isFinite(normalizedTarget)
       && (typeof lastOriginalTargetTime !== 'number' || Math.abs(lastOriginalTargetTime - normalizedTarget) > 0.01);
 
     if (targetChanged) {
-      goToSecondsInOriginalVideo(normalizedTarget);
+      goToSecondsInOriginalVideo(normalizedTarget, {
+        allowSeekAhead: options.allowSeekAhead,
+        throttleMs: options.throttleMs,
+        force: options.forceSeek
+      });
     }
 
     if (resolvedState === YT.PlayerState.PLAYING) {
@@ -888,9 +936,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       pauseOriginalVideo();
     }
 
-    if (Number.isFinite(normalizedTarget)) {
-      lastOriginalTargetTime = normalizedTarget;
-    }
+    // Do not update lastOriginalTargetTime here unless a seek was actually applied.
+    // lastOriginalTargetTime is updated in goToSecondsInOriginalVideo() and via actual player time sampling.
   };
 
   const handleOriginalVideoState = (reactionCurrentTime: number, previousReactionTime: number) => {
@@ -992,14 +1039,25 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         return;
       }
 
-      const tolerance = effectiveConfigState === YT.PlayerState.PLAYING ? 0.35 : 0.01;
+      const isMobilePlaybackDevice = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      const tolerance = effectiveConfigState === YT.PlayerState.PLAYING
+        ? (isMobilePlaybackDevice ? 0.9 : 0.35)
+        : (isMobilePlaybackDevice ? 0.05 : 0.01);
 
       let targetMismatch = false;
+      let driftAbs = Number.NaN;
       if (Number.isFinite(computedTargetTime)) {
         if (Number.isFinite(actualOriginalTime)) {
-          targetMismatch = Math.abs(actualOriginalTime - computedTargetTime) > tolerance;
+          driftAbs = Math.abs(actualOriginalTime - computedTargetTime);
+          if (isMobilePlaybackDevice && effectiveConfigState === YT.PlayerState.PLAYING) {
+            const quantize = (value: number, step: number) => Math.round(value / step) * step;
+            targetMismatch = Math.abs(quantize(actualOriginalTime, 0.5) - quantize(computedTargetTime, 0.5)) > tolerance;
+          } else {
+            targetMismatch = driftAbs > tolerance;
+          }
         } else if (typeof lastOriginalTargetTime === 'number') {
-          targetMismatch = Math.abs(lastOriginalTargetTime - computedTargetTime) > tolerance;
+          driftAbs = Math.abs(lastOriginalTargetTime - computedTargetTime);
+          targetMismatch = driftAbs > tolerance;
         } else {
           targetMismatch = true;
         }
@@ -1026,9 +1084,18 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       // 2. The config explicitly wants it to play (restart)
       const shouldApplySync = !originalHasEnded || configWantsToPlay;
 
-      if (shouldApplySync && configIsInRange && (workingState !== effectiveConfigState || targetMismatch)) {
+      const now = Date.now();
+      const shouldApplyState = workingState !== effectiveConfigState;
+      const shouldApplySeek = targetMismatch
+        && (!isMobilePlaybackDevice || (Number.isFinite(driftAbs) && (driftAbs > 1.75 || now - lastOriginalSeekAt > 2500)));
+
+      if (shouldApplySync && configIsInRange && (shouldApplyState || shouldApplySeek)) {
         if (reactionCurrentTime >= snapshot.seekMin && (!Number.isFinite(snapshot.seekMax) || reactionCurrentTime <= snapshot.seekMax)) {
-          handleStateChangeInOriginalVideo(workingState, effectiveConfigState, computedTargetTime);
+          handleStateChangeInOriginalVideo(workingState, effectiveConfigState, computedTargetTime, {
+            throttleMs: isMobilePlaybackDevice ? 2500 : 0,
+            allowSeekAhead: !(Number.isFinite(driftAbs) && driftAbs < 1.25),
+            forceSeek: shouldApplyState
+          });
           workingState = effectiveConfigState;
         }
       }
