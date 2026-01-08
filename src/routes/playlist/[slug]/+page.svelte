@@ -6,10 +6,11 @@
   import PlaylistQueue from "$lib/components/Video/PlaylistQueue.svelte";
   import OtherReactions from "$lib/components/Video/OtherReactions.svelte";
   import SubtleLoader from "$lib/components/design-system/SubtleLoader.svelte";
-  import FullscreenChrome from "$lib/components/reaction/FullscreenChrome.svelte";
-  import ControlDock from "$lib/components/reaction/ControlDock.svelte";
-  import MissingReactionPlaceholder from "$lib/components/reaction/MissingReactionPlaceholder.svelte";
-  import { useTwinPlayers, CONTROLS_FADE_CLASS } from "$lib/composables/useTwinPlayers";
+  import ReactionStage from "$lib/components/reaction/ReactionStage.svelte";
+  import {
+    useTwinPlayers,
+    CONTROLS_FADE_CLASS,
+  } from "$lib/composables/useTwinPlayers";
   import { reactionDial } from "$lib/stores/reactionDial";
   import { showToast } from "$lib/stores/toast";
   import { TOASTS } from "$lib/constants/toasts";
@@ -18,10 +19,14 @@
   export let data;
 
   // We start with an empty reaction slug and load the selected one client-side.
-  const { state, actions } = useTwinPlayers({ data: { slug: "", userId: data?.userId } });
+  const { state, actions } = useTwinPlayers({
+    data: { slug: "", userId: data?.userId },
+  });
 
   let overlayRef;
-  $: stickyControlsClass = $state.isFullscreen ? CONTROLS_FADE_CLASS : "opacity-100";
+  $: stickyControlsClass = $state.isFullscreen
+    ? CONTROLS_FADE_CLASS
+    : "opacity-100";
   $: overlayRef && actions.registerOverlayRef(overlayRef);
 
   let isCurrentReactionCreator = false;
@@ -33,8 +38,11 @@
   let playlistDocumentLocal = null;
   let playlistInitError = "";
 
-  $: playlistOwnerId = ($state.playlistDocument ?? playlistDocumentLocal)?.reactorId;
-  $: isPlaylistOwner = Boolean(data?.userId && playlistOwnerId && playlistOwnerId === data.userId);
+  $: playlistOwnerId = ($state.playlistDocument ?? playlistDocumentLocal)
+    ?.reactorId;
+  $: isPlaylistOwner = Boolean(
+    data?.userId && playlistOwnerId && playlistOwnerId === data.userId,
+  );
 
   const normalizeSelectedOriginalId = (playlistDoc, selectedOriginalId) => {
     const originals = Array.isArray(playlistDoc?.originalVideoIds)
@@ -64,7 +72,9 @@
     }
   };
 
-  const loadSelectedReaction = async ({ preserveReactionTime = false } = {}) => {
+  const loadSelectedReaction = async ({
+    preserveReactionTime = false,
+  } = {}) => {
     if (!browser) return;
     playlistInitError = "";
 
@@ -91,7 +101,9 @@
 
       await actions.setPlaylistDocumentId(playlistSlug);
       setUrlSelectedItem(originalVideoId, { replace: true });
-      await actions.loadReactionInPlace(reactionDocumentId, { preserveReactionTime });
+      await actions.loadReactionInPlace(reactionDocumentId, {
+        preserveReactionTime,
+      });
     } catch (error) {
       console.error("Failed to load playlist", error);
       playlistInitError = "Unable to load playlist.";
@@ -118,7 +130,10 @@
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
-    await actions.loadReactionInPlace(reactionDocumentId, { preserveReactionTime: false, autoPlay: true });
+    await actions.loadReactionInPlace(reactionDocumentId, {
+      preserveReactionTime: false,
+      autoPlay: true,
+    });
   };
 
   onMount(async () => {
@@ -145,13 +160,16 @@
           ? () => {
               if (!browser) return;
               const playlistId = playlistSlug;
-              const item = $state.originalVideoId || $page.url.searchParams.get('item');
+              const item =
+                $state.originalVideoId || $page.url.searchParams.get("item");
               const query = new URLSearchParams();
-              if (playlistId) query.set('playlistId', playlistId);
-              if (item) query.set('item', item);
-              const suffix = query.toString() ? `?${query.toString()}` : '';
+              if (playlistId) query.set("playlistId", playlistId);
+              if (item) query.set("item", item);
+              const suffix = query.toString() ? `?${query.toString()}` : "";
               // Hard navigate so editor always starts from a clean player state.
-              window.location.assign(`/edit-reaction/${$state.pageSlug}${suffix}`);
+              window.location.assign(
+                `/edit-reaction/${$state.pageSlug}${suffix}`,
+              );
             }
           : null,
         editPlaylist: playlistSlug
@@ -190,99 +208,50 @@
   </div>
 </div>
 
-<div class={`website-inner-container bg-background text-text-primary ${$state.isLoading ? "hidden" : ""}`}>
+<div
+  class={`website-inner-container bg-background text-text-primary ${$state.isLoading ? "hidden" : ""}`}
+>
   {#if playlistInitError}
     <p class="mb-4 rounded-md bg-warning/10 px-4 py-3 text-sm text-warning">
       {playlistInitError}
     </p>
   {/if}
 
-  <section
-    class={`theater-wrapper ${
-      $state.isFullscreen
-        ? "fixed inset-0 z-50 m-0 h-screen w-screen overflow-hidden rounded-none bg-black px-0 py-0 text-text-primary shadow-none"
-        : "relative mx-auto my-10 w-full max-w-none rounded-2xl bg-surface/80 px-4 py-8 text-text-primary shadow-elevated backdrop-blur sm:px-6 lg:px-10 xl:rounded-3xl"
-    }`}
-  >
-    {#if $state.isFullscreen}
-      <FullscreenChrome
-        isControlSurfaceVisible={$state.isControlSurfaceVisible}
-        isExitButtonExpanded={$state.isExitButtonExpanded}
-        showCinematicBars={$state.showCinematicBars}
-        isReactionMissing={$state.isReactionMissing}
-        bind:overlayRef
-        onExitClick={actions.handleExitFullscreenClick}
-        onExitEnter={actions.handleExitButtonEnter}
-        onExitLeave={actions.handleExitButtonLeave}
-        onPointerMove={actions.handleFullscreenPointerMove}
-        onPointerDown={actions.handleFullscreenPointerDown}
-        onPointerLeave={actions.scheduleHideControls}
-      />
-    {:else}
-      <div class="grid gap-6 md:grid-cols-2 xl:gap-8">
-        <div class="relative overflow-hidden rounded-xl bg-black shadow-elevated">
-          <div class="relative aspect-[16/9] sm:aspect-[3/2]">
-            <div id="player-original" class="absolute inset-0 h-full w-full"></div>
-          </div>
-          {#if $state.showCinematicBars}
-            <div
-              class="pointer-events-none absolute inset-x-0 top-0 h-[12%] bg-gradient-to-b from-black via-black/80 to-transparent"
-              aria-hidden="true"
-            ></div>
-            <div
-              class="pointer-events-none absolute inset-x-0 bottom-0 h-[12%] bg-gradient-to-t from-black via-black/80 to-transparent"
-              aria-hidden="true"
-            ></div>
-          {/if}
-        </div>
-
-        {#if !$state.isReactionMissing}
-          <div class="relative overflow-hidden rounded-xl bg-black/80 shadow-surface">
-            <div class="relative aspect-[16/9] sm:aspect-[3/2]">
-              <div id="player-reaction" class="absolute inset-0 h-full w-full"></div>
-            </div>
-            {#if $state.showCinematicBars}
-              <div
-                class="pointer-events-none absolute inset-x-0 top-0 h-[12%] bg-gradient-to-b from-black via-black/80 to-transparent"
-                aria-hidden="true"
-              ></div>
-              <div
-                class="pointer-events-none absolute inset-x-0 bottom-0 h-[12%] bg-gradient-to-t from-black via-black/80 to-transparent"
-                aria-hidden="true"
-              ></div>
-            {/if}
-          </div>
-        {:else}
-          <MissingReactionPlaceholder
-            loading={false}
-            error={""}
-            on:submit={handleMissingReactionSubmit}
-          />
-        {/if}
-      </div>
-    {/if}
-
-    {#if $state.playerOriginal && ($state.playerReaction || $state.isReactionMissing)}
-      <ControlDock
-        isFullscreen={$state.isFullscreen}
-        stickyControlsClass={stickyControlsClass}
-        bothVideosStarted={$state.bothVideosStarted}
-        isPlaylist={true}
-        isPlaylistAutoPlay={$state.isPlaylistAutoPlay}
-        showCinematicBars={$state.showCinematicBars}
-        onPlayStateChanged={handlePlayStateChanged}
-        onSyncVideos={actions.syncVideos}
-        onToggleAutoPlaylist={actions.toggleAutoPlaylist}
-        onToggleBars={actions.toggleCinematicBars}
-        onEnterFullscreen={actions.openWithFullscreen}
-        currentTime={$state.reactionCurrentTime}
-        duration={$state.reactionDuration}
-        seekMin={$state.offsetStartTime || 0}
-        seekMax={Math.min($state.reactionFinishTime || 0, $state.reactionDuration || 0)}
-        onSeek={actions.seekTo}
-      />
-    {/if}
-  </section>
+  <ReactionStage
+    isFullscreen={$state.isFullscreen}
+    isControlSurfaceVisible={$state.isControlSurfaceVisible}
+    isExitButtonExpanded={$state.isExitButtonExpanded}
+    showCinematicBars={$state.showCinematicBars}
+    isReactionMissing={$state.isReactionMissing}
+    isUsersOwnVideo={isPlaylistOwner}
+    playerOriginal={$state.playerOriginal}
+    playerReaction={$state.playerReaction}
+    {stickyControlsClass}
+    bothVideosStarted={$state.bothVideosStarted}
+    isPlaylist={true}
+    isPlaylistAutoPlay={$state.isPlaylistAutoPlay}
+    reactionCurrentTime={$state.reactionCurrentTime}
+    reactionDuration={$state.reactionDuration}
+    offsetStartTime={$state.offsetStartTime}
+    reactionFinishTime={$state.reactionFinishTime}
+    missingReactionLoading={false}
+    missingReactionError=""
+    alwaysShowMissingPlaceholder={true}
+    bind:overlayRef
+    on:exitClick={actions.handleExitFullscreenClick}
+    on:exitEnter={actions.handleExitButtonEnter}
+    on:exitLeave={actions.handleExitButtonLeave}
+    on:pointerMove={actions.handleFullscreenPointerMove}
+    on:pointerDown={actions.handleFullscreenPointerDown}
+    on:pointerLeave={actions.scheduleHideControls}
+    on:missingReactionSubmit={handleMissingReactionSubmit}
+    on:playStateChanged={handlePlayStateChanged}
+    on:syncVideos={actions.syncVideos}
+    on:toggleAutoPlaylist={actions.toggleAutoPlaylist}
+    on:toggleCinematicBars={actions.toggleCinematicBars}
+    on:enterFullscreen={actions.openWithFullscreen}
+    on:seek={(e) => actions.seekTo(e.detail)}
+  />
 
   {#if !$state.isFullscreen}
     <div class="mx-auto w-full px-4 pt-6 sm:px-6 lg:px-10">

@@ -48,3 +48,19 @@
     />
   </div>
 </div>
+
+<style>
+  @media (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-width: 1023px) {
+    .controls-dock {
+      position: fixed;
+      left: 0;
+      right: 0;
+      top: auto;
+      bottom: 0;
+      margin-top: 0;
+      padding-left: 0;
+      padding-right: 0;
+      z-index: 60;
+    }
+  }
+</style>

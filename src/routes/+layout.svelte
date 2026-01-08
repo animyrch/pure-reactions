@@ -15,9 +15,13 @@
   $: currentToasts = $toasts; // Access the store value
 
   let reduceMotion = false;
+  let isMobileLandscapeTheater = false;
 
   $: isReactionRoute = $page.url.pathname?.startsWith("/reaction/");
-  $: hideSpeedDial = isReactionRoute && $reactionDial.isFullscreen;
+  $: isPlaylistRoute = $page.url.pathname?.startsWith("/playlist/");
+  $: isPlaybackRoute = isReactionRoute || isPlaylistRoute;
+  $: hideSpeedDial =
+    isPlaybackRoute && ($reactionDial.isFullscreen || isMobileLandscapeTheater);
 
   onMount(() => {
     const unsubscribe = prefersReducedMotion.subscribe((value) => {
@@ -25,8 +29,30 @@
       document.documentElement.classList.toggle("motion-reduce", value);
     });
 
+    const mediaQuery =
+      "(hover: none) and (pointer: coarse) and (orientation: landscape) and (max-width: 1023px)";
+    const media = window.matchMedia(mediaQuery);
+
+    const updateMobileLandscapeTheater = () => {
+      isMobileLandscapeTheater = Boolean(media?.matches);
+    };
+
+    updateMobileLandscapeTheater();
+
+    if (typeof media?.addEventListener === "function") {
+      media.addEventListener("change", updateMobileLandscapeTheater);
+    } else if (typeof media?.addListener === "function") {
+      media.addListener(updateMobileLandscapeTheater);
+    }
+
     return () => {
       unsubscribe?.();
+
+      if (typeof media?.removeEventListener === "function") {
+        media.removeEventListener("change", updateMobileLandscapeTheater);
+      } else if (typeof media?.removeListener === "function") {
+        media.removeListener(updateMobileLandscapeTheater);
+      }
     };
   });
 
