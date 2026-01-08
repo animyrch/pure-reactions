@@ -1173,12 +1173,12 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       const now = Date.now();
       const shouldApplyState = workingState !== effectiveConfigState;
       const shouldApplySeek = targetMismatch
-        && (!isMobilePlaybackDevice || (Number.isFinite(driftAbs) && (driftAbs > 1.75 || now - lastOriginalSeekAt > 2500)));
+        && (!isMobilePlaybackDevice || (Number.isFinite(driftAbs) && (driftAbs > 2.5 || now - lastOriginalSeekAt > 3500)));
 
       if (shouldApplySync && configIsInRange && (shouldApplyState || shouldApplySeek)) {
         if (reactionCurrentTime >= snapshot.seekMin && (!Number.isFinite(snapshot.seekMax) || reactionCurrentTime <= snapshot.seekMax)) {
           handleStateChangeInOriginalVideo(workingState, effectiveConfigState, computedTargetTime, {
-            throttleMs: isMobilePlaybackDevice ? 2500 : 0,
+            throttleMs: isMobilePlaybackDevice ? 3500 : 0,
             allowSeekAhead: !(Number.isFinite(driftAbs) && driftAbs < 1.25),
             forceSeek: shouldApplyState
           });
