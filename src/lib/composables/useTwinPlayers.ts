@@ -658,6 +658,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   };
 
   const enforceReactionMuteMode = (overrideOriginalState?: number) => {
+    return;
     const snapshot = get(state);
     const reactionPlayer = snapshot.playerReaction;
     if (!reactionPlayer) {
