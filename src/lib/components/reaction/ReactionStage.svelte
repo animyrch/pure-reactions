@@ -55,7 +55,7 @@
             ? "fixed inset-0 z-50 m-0 h-screen w-screen overflow-hidden rounded-none bg-black px-0 py-0 text-text-primary shadow-none"
             : "relative w-full max-w-none bg-black text-text-primary shadow-none md:shadow-elevated md:mx-auto md:my-10 md:rounded-2xl md:bg-surface/80 md:px-4 md:py-8 md:backdrop-blur sm:px-6 lg:px-10 xl:rounded-3xl"
     }`}
-    style="--control-dock-space: 96px;"
+    style="--control-dock-space: 80px;"
 >
     {#if isFullscreen}
         <FullscreenChrome

@@ -23,10 +23,10 @@
 </script>
 
 <div
-  class={`controls-dock group pointer-events-none ${isFullscreen ? "fixed inset-x-0 bottom-12 z-50 flex w-full px-6" : "relative z-10 w-full px-4 mt-4 md:sticky md:top-6 md:mt-10 md:px-4 sm:px-6 lg:px-10"}`}
+  class={`controls-dock group pointer-events-none ${isFullscreen ? "controls-dock--fullscreen fixed inset-x-0 z-50 flex w-full px-3 sm:px-6" : "relative z-10 mt-4 w-full px-4 md:mt-8 md:px-4 sm:px-6 lg:px-10"}`}
 >
   <div
-    class={`controls-surface pointer-events-auto w-full rounded-full bg-overlay px-4 py-xs shadow-elevated transition duration-slow ease-cinematic ${stickyControlsClass}`}
+    class={`controls-surface pointer-events-auto mx-auto w-full max-w-[920px] transition-opacity duration-slow ease-cinematic ${stickyControlsClass} ${isFullscreen ? "max-w-[720px]" : ""}`}
   >
     <VideoControl
       {bothVideosStarted}
@@ -50,6 +50,10 @@
 </div>
 
 <style>
+  .controls-dock--fullscreen {
+    bottom: max(12px, env(safe-area-inset-bottom));
+  }
+
   @media (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-width: 1023px) {
     .controls-dock {
       position: fixed;
@@ -58,9 +62,10 @@
       top: auto;
       bottom: 0;
       margin-top: 0;
-      padding-left: 0;
-      padding-right: 0;
+      padding-left: 12px;
+      padding-right: 12px;
       z-index: 60;
     }
+
   }
 </style>

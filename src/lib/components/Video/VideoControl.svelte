@@ -37,13 +37,10 @@
 
     const dispatch = createEventDispatcher();
 
-    // Re-add these (they were present before; glassBase is required by glassClasses)
-    const buttonBase =
-        "inline-flex h-16 w-16 items-center justify-center rounded-full text-text-primary transition duration-subtle ease-cinematic hover:bg-elevated/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.97]";
-    const tooltipBase =
-        "pointer-events-none absolute -bottom-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-sm bg-overlay px-xs py-[2px] text-[0.65rem] uppercase tracking-wide text-text-primary opacity-0 transition duration-subtle ease-cinematic";
-    const glassBase =
-        "controls-glass transition-opacity duration-500 ease-cinematic";
+    const primaryButtonBase =
+        "inline-flex h-11 w-11 items-center justify-center rounded-full transition duration-subtle ease-cinematic focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] sm:h-12 sm:w-12";
+    const iconButtonBase =
+        "inline-flex h-9 w-9 items-center justify-center rounded-full text-text-primary/90 transition duration-subtle ease-cinematic hover:bg-elevated/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98]";
 
     const clearPendingSeek = () => {
         pendingSeekTime = null;
@@ -84,7 +81,7 @@
             if (!isKeyboardFocus && !isDragging && !isHoveringControls) {
                 isInteracting = false;
             }
-        }, 2200);
+        }, 1800);
     };
 
     const revealControls = () => {
@@ -298,7 +295,7 @@
         isKeyboardFocus ||
         isDragging ||
         isHoveringControls;
-    $: glassClasses = `${glassBase} ${isVisible ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`;
+    $: controlsClasses = `${isVisible ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`;
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
@@ -324,7 +321,7 @@
         </p>
     {:else}
         <div
-            class={glassClasses}
+            class={`controls-surface flex w-full items-center justify-between gap-3 rounded-full border border-border-subtle/70 bg-surface/70 px-3 py-2 backdrop-blur-sm transition-opacity duration-subtle ease-cinematic sm:px-4 ${controlsClasses}`}
             role="toolbar"
             aria-label="Reaction playback controls"
             tabindex="0"
@@ -335,7 +332,7 @@
             <div class="group relative shrink-0 order-2 sm:order-none">
                 <button
                     type="button"
-                    class={`${buttonBase} ${isPlaying ? "bg-accent-primary text-background shadow-elevated" : "bg-surface/80 shadow-surface"}`}
+                    class={`${primaryButtonBase} ${isPlaying ? "bg-accent-primary/90 text-background" : "bg-elevated/70 text-text-primary"}`}
                     on:click={togglePlayState}
                     aria-label={isPlaying
                         ? "Pause both videos"
@@ -351,15 +348,10 @@
                         >{isPlaying ? "Pause videos" : "Resume videos"}</span
                     >
                 </button>
-                <span
-                    class={`${tooltipBase} group-hover:opacity-100 group-focus-within:opacity-100`}
-                >
-                    {isPlaying ? "Pause" : "Play"}
-                </span>
             </div>
 
             <!-- Scrubber -->
-            <div class="flex w-full items-center px-0 sm:flex-1 sm:px-3 gap-3 order-1 sm:order-none">
+            <div class="scrubber-wrap flex w-full items-center gap-3 px-0 sm:flex-1 sm:px-2 order-1 sm:order-none">
                 <span
                     class="text-xs tabular-nums text-text-muted font-medium min-w-[32px] text-right hidden sm:block"
                     >{formatTime(displayTime)}</span
@@ -387,80 +379,60 @@
                 <div class="group relative">
                     <button
                         type="button"
-                        class={`${buttonBase} bg-surface/80 shadow-surface`}
+                        class={iconButtonBase}
                         on:click={syncVideos}
                         aria-label="Re-sync playback"
                     >
-                        <ClockOutline class="h-5 w-5" />
+                        <ClockOutline class="h-4 w-4" />
                         <span class="sr-only">Sync videos</span>
                     </button>
-                    <span
-                        class={`${tooltipBase} group-hover:opacity-100 group-focus-within:opacity-100`}
-                    >
-                        Sync
-                    </span>
                 </div>
 
                 {#if isPlaylist && showAutoPlayButton}
                     <div class="group relative">
                         <button
                             type="button"
-                            class={`${buttonBase} ${isPlaylistAutoPlay ? "bg-success text-background shadow-elevated" : "bg-surface/80 shadow-surface"}`}
+                            class={`${iconButtonBase} ${isPlaylistAutoPlay ? "bg-success/20 text-success" : ""}`}
                             on:click={toggleAutoPlaylist}
                             aria-label={`Toggle auto-playlist ${isPlaylistAutoPlay ? "off" : "on"}`}
                             aria-pressed={isPlaylistAutoPlay}
                         >
-                            <ArrowsRepeatOutline class="h-5 w-5" />
+                            <ArrowsRepeatOutline class="h-4 w-4" />
                             <span class="sr-only"
                                 >Toggle playlist auto-play</span
                             >
                         </button>
-                        <span
-                            class={`${tooltipBase} group-hover:opacity-100 group-focus-within:opacity-100`}
-                        >
-                            Auto {isPlaylistAutoPlay ? "On" : "Off"}
-                        </span>
                     </div>
                 {/if}
 
                 <div class="group relative">
                     <button
                         type="button"
-                        class={`${buttonBase} ${showCinematicBars ? "bg-border-strong/90 shadow-elevated" : "bg-surface/80 shadow-surface"}`}
+                        class={`${iconButtonBase} ${showCinematicBars ? "bg-elevated/60" : ""}`}
                         on:click={toggleBars}
                         aria-pressed={showCinematicBars}
                         aria-label={showCinematicBars
                             ? "Disable cinematic bars"
                             : "Enable cinematic bars"}
                     >
-                        <VideoSolid class="h-5 w-5" />
+                        <VideoSolid class="h-4 w-4" />
                         <span class="sr-only"
                             >Toggle cinematic letterboxing</span
                         >
                     </button>
-                    <span
-                        class={`${tooltipBase} group-hover:opacity-100 group-focus-within:opacity-100`}
-                    >
-                        Bars {showCinematicBars ? "On" : "Off"}
-                    </span>
                 </div>
 
                 {#if !isFullscreen}
                     <div class="group relative hidden md:block">
                         <button
                             type="button"
-                            class={`${buttonBase} bg-surface/80 shadow-surface`}
+                            class={iconButtonBase}
                             on:click={enterFullscreen}
                             aria-label="Enter fullscreen view"
                         >
-                            <ExpandSolid class="h-5 w-5" />
+                            <ExpandSolid class="h-4 w-4" />
                             <span class="sr-only">Enter fullscreen</span>
                         </button>
-                        <span
-                            class={`${tooltipBase} group-hover:opacity-100 group-focus-within:opacity-100`}
-                        >
-                            Fullscreen
-                        </span>
                     </div>
                 {/if}
             </div>
@@ -468,7 +440,7 @@
     {/if}
 </div>
 
-<style>
+<style lang="postcss">
     .sr-only {
         position: absolute;
         width: 1px;
@@ -480,35 +452,11 @@
         white-space: nowrap;
         border: 0;
     }
-    .controls-glass {
-        display: flex;
-        flex-direction: row;
-        flex-wrap: wrap;
-        justify-content: space-between;
-        align-items: center;
-        gap: 0.75rem;
-        padding: 1rem 1.5rem;
-        border-radius: 999px;
-        background: rgba(20, 24, 32, 0.9);
-        box-shadow: 0 12px 32px rgba(5, 8, 12, 0.55);
-        backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        width: 100%;
-    }
-
-    @media (min-width: 640px) {
-        .controls-glass {
-            flex-wrap: nowrap;
-            justify-content: flex-start;
-            gap: 1.5rem;
-        }
-    }
-
     .scrubber-range {
         -webkit-appearance: none;
         appearance: none;
         background: transparent;
-        height: 36px;
+        height: 28px;
         cursor: pointer;
         touch-action: manipulation;
     }
@@ -518,38 +466,38 @@
     }
 
     .scrubber-range::-webkit-slider-runnable-track {
-        height: 10px;
+        height: 4px;
         border-radius: 999px;
         @apply bg-border-subtle/60;
     }
 
     .scrubber-range::-moz-range-track {
-        height: 10px;
+        height: 4px;
         border-radius: 999px;
         @apply bg-border-subtle/60;
     }
 
     .scrubber-range::-webkit-slider-thumb {
         -webkit-appearance: none;
-        height: 24px;
-        width: 24px;
+        height: 12px;
+        width: 12px;
         border-radius: 999px;
-        margin-top: -7px; /* centers thumb on 10px track */
-        @apply bg-text-primary border border-border-strong/60;
+        margin-top: -4px; /* centers thumb on 4px track */
+        @apply bg-text-primary border border-border-strong/40;
         transition: transform 0.1s ease;
     }
 
     .scrubber-range::-moz-range-thumb {
-        height: 24px;
-        width: 24px;
+        height: 12px;
+        width: 12px;
         border-radius: 999px;
-        @apply bg-text-primary border border-border-strong/60;
+        @apply bg-text-primary border border-border-strong/40;
         cursor: pointer;
         transition: transform 0.1s ease;
     }
 
     .scrubber-range::-moz-range-progress {
-        height: 10px;
+        height: 4px;
         border-radius: 999px;
         @apply bg-border-strong/70;
     }
