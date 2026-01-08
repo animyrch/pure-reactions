@@ -1209,7 +1209,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
   const pollVideoCurrentTime = () => {
     clearInterval(pollInterval);
-    const interval = 500;
+    const interval = 300;
     let reactionPlayerState = YT?.PlayerState?.UNSTARTED ?? -1;
     pollInterval = setInterval(() => {
       const snapshot = get(state);
