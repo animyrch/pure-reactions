@@ -3,7 +3,6 @@
     import BookmarkManagement from '../BookmarkManagement.svelte';
     import FollowManagement from '$lib/components/FollowManagement.svelte';
     import RateVideo from '$lib/components/Video/RateVideo.svelte';
-    import { ArrowUpRightFromSquareOutline } from 'flowbite-svelte-icons';
 
     export let originalVideoTitle;
     export let originalVideoAuthor;
@@ -15,16 +14,11 @@
     export let reactionVideoId;
     export let originalVideoId;
 
-    const createAvatarPlaceholder = (name) => {
-        const initial = (name?.trim()?.charAt(0) || '?').toUpperCase();
-        const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'><defs><linearGradient id='grad' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' stop-color='#1f2a37'/><stop offset='100%' stop-color='#2f3a4b'/></linearGradient></defs><rect width='96' height='96' fill='url(#grad)' rx='48'/><text x='50%' y='55%' font-size='42' font-family='Manrope, Arial, sans-serif' font-weight='600' fill='#f5f7fa' text-anchor='middle'>${initial}</text></svg>`;
-        return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
-    };
+    const createAvatarPlaceholder = (_name) => '/by-icon.svg';
 
     $: originalAvatarSrc = createAvatarPlaceholder(originalVideoAuthor);
     $: reactionAvatarSrc = createAvatarPlaceholder(reactionVideoAuthor);
 
-    const youtubeWatchUrl = (videoId) => (videoId ? `https://www.youtube.com/watch?v=${videoId}` : undefined);
     const youtubeChannelUrl = (author) => (author ? `https://www.youtube.com/${author}` : undefined);
 
         let viewerData;
@@ -42,11 +36,6 @@
                     Original video
                 {/if}
             </h2>
-            <div class="header-actions">
-                {#if originalVideoId}
-                    <RateVideo videoId={originalVideoId} />
-                {/if}
-            </div>
         </header>
 
         <div class="identity">
@@ -73,6 +62,12 @@
                 {/if}
             </div>
         </div>
+
+        <div class="header-actions">
+            {#if originalVideoId}
+                <RateVideo videoId={originalVideoId} />
+            {/if}
+        </div>
     </article>
 
     <article class="column" aria-labelledby="reaction-heading">
@@ -84,21 +79,6 @@
                     Reaction video
                 {/if}
             </h2>
-            <div class="header-actions">
-                {#if reactionVideoId}
-                    <RateVideo videoId={reactionVideoId} />
-                {/if}
-                {#if canUseActions}
-                    <BookmarkManagement slug={pageSlug} />
-                {/if}
-                {#if canUseActions && reactionVideoAuthor}
-                    <FollowManagement
-                        reactionCreator={reactionVideoAuthor}
-                        {reactorId}
-                        follows={viewerData?.follows}
-                    />
-                {/if}
-            </div>
         </header>
 
         <div class="identity flex justify-center items-center gap-4">
@@ -125,6 +105,22 @@
                 {/if}
             </div>
         </div>
+
+        <div class="header-actions">
+            {#if reactionVideoId}
+                <RateVideo videoId={reactionVideoId} />
+            {/if}
+            {#if canUseActions}
+                <BookmarkManagement slug={pageSlug} />
+            {/if}
+            {#if canUseActions && reactionVideoAuthor}
+                <FollowManagement
+                    reactionCreator={reactionVideoAuthor}
+                    {reactorId}
+                    follows={viewerData?.follows}
+                />
+            {/if}
+        </div>
     </article>
 </section>
 
@@ -141,16 +137,23 @@
     }
 
     .column {
-        display: flex;
-        flex-direction: column;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        grid-template-areas:
+            'heading actions'
+            'identity identity';
         gap: 1.25rem;
     }
 
     .column-header {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 1rem;
+        grid-area: heading;
+        min-width: 0;
+    }
+
+    .header-actions {
+        grid-area: actions;
+        justify-self: end;
+        align-self: start;
     }
 
     .video-heading {
@@ -163,6 +166,7 @@
     }
 
     .identity {
+        grid-area: identity;
         display: flex;
         align-items: flex-start;
         gap: 1rem;
@@ -211,27 +215,6 @@
         flex-wrap: wrap;
     }
 
-    .link-out {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        font-size: 0.85rem;
-        font-weight: 500;
-        color: #5cb2ff;
-        text-decoration: none;
-        padding: 0.35rem 0.6rem;
-        border-radius: 999px;
-        background: rgba(92, 178, 255, 0.12);
-        transition: background-color 240ms ease, color 240ms ease;
-    }
-
-    .link-out:hover,
-    .link-out:focus-visible {
-        color: #f5f7fa;
-        background: rgba(92, 178, 255, 0.22);
-        outline: none;
-    }
-
             :global(.header-actions button) {
                 border: none;
         width: 2.2rem;
@@ -264,10 +247,16 @@
             gap: 1.25rem;
         }
 
-        .column-header {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 0.75rem;
+        .column {
+            grid-template-columns: 1fr;
+            grid-template-areas:
+                'heading'
+                'identity'
+                'actions';
+        }
+
+        .header-actions {
+            justify-self: start;
         }
 
         .header-actions {

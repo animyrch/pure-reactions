@@ -1,0 +1,25 @@
+<svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="by">
+  <text
+    x="48"
+    y="50"
+    font-family="Great Vibes, Brush Script MT, cursive"
+    font-size="58"
+    fill="#f5f7fa"
+    stroke="#f5f7fa"
+    stroke-width="1"
+    paint-order="stroke fill"
+    text-anchor="middle"
+    dominant-baseline="middle"
+    letter-spacing="-1"
+  >
+    by
+  </text>
+
+  <path
+    d="M 20 66 Q 34 74 48 72 Q 62 70 76 66"
+    stroke="#f5f7fa"
+    stroke-width="2"
+    fill="none"
+    stroke-linecap="round"
+  />
+</svg>
