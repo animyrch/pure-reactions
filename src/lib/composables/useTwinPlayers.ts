@@ -82,6 +82,7 @@ type TwinPlayersState = {
   playerOriginal: any;
   playerReaction: any;
   bothVideosStarted: boolean;
+  isUserPaused: boolean;
   playerConfigs: Record<string, any>;
   volumeConfigs: Record<string, any>;
   reactionVolumeConfigs: Record<string, any>;
@@ -275,6 +276,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     playerOriginal: null,
     playerReaction: null,
     bothVideosStarted: false,
+    isUserPaused: false,
     playerConfigs: {},
     volumeConfigs: {},
     reactionVolumeConfigs: {},
@@ -1172,13 +1174,22 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
       const now = Date.now();
       const shouldApplyState = workingState !== effectiveConfigState;
-      const shouldApplySeek = targetMismatch
-        && (!isMobilePlaybackDevice || (Number.isFinite(driftAbs) && (driftAbs > 2.5 || now - lastOriginalSeekAt > 3500)));
+      // Seeking while PLAYING can cause visible frame flashes if we do it repeatedly.
+      // On desktop, allow drift-correction seeks only when drift is meaningful and we haven't sought recently.
+      // On mobile, keep the more conservative behavior (seek rarely).
+      const DESKTOP_SEEK_COOLDOWN_MS = 4500;
+      const DESKTOP_MIN_DRIFT_TO_SEEK = 1.25;
+
+      const shouldApplySeek = targetMismatch && (
+        isMobilePlaybackDevice
+          ? (Number.isFinite(driftAbs) && (driftAbs > 2.5 || now - lastOriginalSeekAt > 3500))
+          : (configWantsToPlay && Number.isFinite(driftAbs) && driftAbs > DESKTOP_MIN_DRIFT_TO_SEEK && now - lastOriginalSeekAt > DESKTOP_SEEK_COOLDOWN_MS)
+      );
 
       if (shouldApplySync && configIsInRange && (shouldApplyState || shouldApplySeek)) {
         if (reactionCurrentTime >= snapshot.seekMin && (!Number.isFinite(snapshot.seekMax) || reactionCurrentTime <= snapshot.seekMax)) {
           handleStateChangeInOriginalVideo(workingState, effectiveConfigState, computedTargetTime, {
-            throttleMs: isMobilePlaybackDevice ? 3500 : 0,
+            throttleMs: isMobilePlaybackDevice ? 3500 : DESKTOP_SEEK_COOLDOWN_MS,
             allowSeekAhead: !(Number.isFinite(driftAbs) && driftAbs < 1.25),
             forceSeek: shouldApplyState
           });
@@ -1227,6 +1238,21 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       if (!playerReaction || !playerOriginal) {
         return;
       }
+
+      // User pause override: while paused, do NOT run sync/state logic.
+      // We still enforce pausing in case a player continues playing due to missed events.
+      if (snapshot.isUserPaused) {
+        const originalState = getPlayerStateSafely(playerOriginal);
+        if (originalState === YT.PlayerState.PLAYING || originalState === YT.PlayerState.BUFFERING) {
+          pausePlayerWithTrace('original', playerOriginal, 'userPaused override');
+        }
+        const reactionState = getPlayerStateSafely(playerReaction);
+        if (reactionState === YT.PlayerState.PLAYING || reactionState === YT.PlayerState.BUFFERING) {
+          pausePlayerWithTrace('reaction', playerReaction, 'userPaused override');
+        }
+        return;
+      }
+
       const newReactionState = playerReaction.getPlayerState();
       if (reactionPlayerState !== newReactionState) {
         handleStateChangeInReactionVideo(reactionPlayerState, newReactionState);
@@ -1467,6 +1493,13 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       }
       return;
     }
+
+    // If the user explicitly paused, ignore any attempt to (re)start playback.
+    if (get(state).isUserPaused && (event?.data === YT.PlayerState.PLAYING || event?.data === YT.PlayerState.BUFFERING)) {
+      pausePlayerWithTrace('original', event?.target ?? get(state).playerOriginal, 'userPaused override (stateChange)');
+      return;
+    }
+
     enforceReactionMuteMode(typeof event?.data === 'number' ? event.data : undefined);
     debugClickGate('[TwinPlayers] original stateChange', {
       state: event?.data,
@@ -1527,6 +1560,13 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       }
       return;
     }
+
+    // If the user explicitly paused, ignore any attempt to (re)start playback.
+    if (get(state).isUserPaused && (event?.data === YT.PlayerState.PLAYING || event?.data === YT.PlayerState.BUFFERING)) {
+      pausePlayerWithTrace('reaction', event?.target ?? get(state).playerReaction, 'userPaused override (stateChange)');
+      return;
+    }
+
     const snapshot = get(state);
     const isCurrentReactionPlayer = event?.target === snapshot.playerReaction;
     if (!isCurrentReactionPlayer) {
@@ -1913,6 +1953,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       currentStateOriginalVideo: -1,
       currentVolumeOriginalVideo: 100,
       bothVideosStarted: false,
+      isUserPaused: false,
       reactionCurrentTime: offsetStartTime || 0,
       reactionDuration: typeof newPlayerReaction?.getDuration === 'function' ? Number(newPlayerReaction.getDuration()) || 0 : 0
     });
@@ -2252,6 +2293,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       }, true);
       updateState({
         bothVideosStarted: false,
+        isUserPaused: false,
         currentStateOriginalVideo: -1,
         currentVolumeOriginalVideo: 100,
         reactionCurrentTime: 0,
@@ -2348,6 +2390,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
           }, true);
           updateState({
             bothVideosStarted: false,
+            isUserPaused: false,
             currentStateOriginalVideo: -1,
             currentVolumeOriginalVideo: 100,
             reactionCurrentTime: 0,
@@ -3154,6 +3197,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   const handlePlayStateChange = (isPlaying: boolean) => {
     debugClickGate('[TwinPlayers] handlePlayStateChange called', { isPlaying }, true);
     if (isPlaying) {
+      if (get(state).isUserPaused) {
+        updateState({ isUserPaused: false });
+      }
       const snapshot = get(state);
       if (!snapshot.bothVideosStarted) {
         debugClickGate('[TwinPlayers] handlePlayStateChange releasing gate', {
@@ -3174,12 +3220,16 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       return;
     }
 
+    updateState({ isUserPaused: true });
     pauseOriginalVideo();
     pauseReactionVideo();
   };
 
   const syncVideos = () => {
     debugClickGate('[TwinPlayers] syncVideos called', {}, true);
+    if (get(state).isUserPaused) {
+      updateState({ isUserPaused: false });
+    }
     const snapshot = get(state);
     if (!snapshot.bothVideosStarted) {
       debugClickGate('[TwinPlayers] syncVideos releasing gate', {
