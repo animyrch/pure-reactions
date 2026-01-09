@@ -1178,7 +1178,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       // On desktop, allow drift-correction seeks only when drift is meaningful and we haven't sought recently.
       // On mobile, keep the more conservative behavior (seek rarely).
       const DESKTOP_SEEK_COOLDOWN_MS = 4500;
-      const DESKTOP_MIN_DRIFT_TO_SEEK = 1.25;
+      const DESKTOP_MIN_DRIFT_TO_SEEK = 0.25;
 
       const shouldApplySeek = targetMismatch && (
         isMobilePlaybackDevice
