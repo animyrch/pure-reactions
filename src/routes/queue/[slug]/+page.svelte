@@ -13,6 +13,7 @@
     let isLoading = true;
     let statusMessage = '';
     let ownerId = '';
+    let ownerName = '';
     let isOwner = false;
 
     let queueEntries = [];
@@ -61,6 +62,7 @@
 
         ownerId = queueDefinition?.data?.ownerId || '';
         isOwner = Boolean(ownerId && ownerId === $page.data?.userId);
+        ownerName = (isOwner ? ($page.data?.displayName || '') : (queueDefinition?.data?.ownerName || '')).trim();
 
         const reactionIds = queueDefinition.data?.items
             ?.filter((item) => item?.type === 'reaction' && item?.id)
@@ -196,7 +198,7 @@
                             {#if isOwner}
                                 Your queue
                             {:else}
-                                Owner: {ownerId}
+                                Owner: {ownerName || 'Unknown user'}
                             {/if}
                         </span>
                     {/if}
@@ -358,6 +360,7 @@
 
     .queue {
         display: grid;
+        grid-template-columns: minmax(0, 1fr);
         gap: 0.85rem;
         padding: 0;
         margin: 0;
@@ -378,6 +381,7 @@
 
     .queue-item {
         display: block;
+        width: 100%;
         text-decoration: none;
         color: inherit;
         border-radius: 0.95rem;

@@ -34,6 +34,7 @@
 	$: buttonId = reactionPageId ? `offset-${reactionPageId}` : `offset-fallback-${fallbackSuffix}`;
 	$: inputId = `queue-new-${buttonId}`;
 	$: authedUserId = $page?.data?.userId || $currentUser?.uid;
+	$: authedUserName = ($page?.data?.displayName || $currentUser?.displayName || '').trim();
 	$: queuesWithReaction = userQueues.map((queue) => {
 		const items = Array.isArray(queue?.data?.items) ? queue.data.items : [];
 		const hasReaction = items.some((item) => item?.type === 'reaction' && item?.id === reactionPageId);
@@ -101,7 +102,8 @@
 			const result = await upsertReactionIntoQueue({
 				nameOrSlug: targetName,
 				reactionId: reactionPageId,
-				userId: uid
+				userId: uid,
+				ownerName: authedUserName
 			});
 
 			if (result?.created) {
@@ -138,7 +140,8 @@
 				await upsertReactionIntoQueue({
 					nameOrSlug: queueSlug,
 					reactionId: reactionPageId,
-					userId: uid
+					userId: uid,
+					ownerName: authedUserName
 				});
 				showToast('Reaction added to queue.', TOASTS.SUCCESS);
 			}
@@ -221,7 +224,6 @@
 			class="menu-panel"
 			role="menu"
 			aria-label="Thumbnail actions"
-			on:click|stopPropagation
 		>
 			{#if reactionVideoAuthor}
 				<li>

@@ -353,7 +353,7 @@ export const getUserQueues = async (userId) => {
     }
 };
 
-export const upsertReactionIntoQueue = async ({ nameOrSlug, reactionId, userId }) => {
+export const upsertReactionIntoQueue = async ({ nameOrSlug, reactionId, userId, ownerName = '' }) => {
     const slugFromName = slugifyQueueName(nameOrSlug);
     if (!reactionId) {
         throw new Error('Reaction id missing.');
@@ -389,6 +389,7 @@ export const upsertReactionIntoQueue = async ({ nameOrSlug, reactionId, userId }
             description: existingData?.description || '',
             items: nextItems,
             ownerId: userId,
+            ownerName: (ownerName || existingData?.ownerName || '').trim(),
             createdAt: snap.exists() ? existingData?.createdAt || serverTimestamp() : serverTimestamp(),
             updatedAt: serverTimestamp()
         };
