@@ -6,6 +6,7 @@
 
   $: safeIndex = Number.isFinite(index) && index >= 0 ? index : 0;
   $: safeTotal = typeof total === 'number' && Number.isFinite(total) && total > 0 ? total : null;
+  $: counter = safeTotal ? `${safeIndex + 1}/${safeTotal}` : `#${safeIndex + 1}`;
   $: label = safeTotal ? `${queueSlug} • ${safeIndex + 1}/${safeTotal}` : `${queueSlug} • #${safeIndex + 1}`;
   $: href = queueSlug ? `/queue/${queueSlug}` : null;
   $: titleText = queueTitle ? `${queueTitle} — ${label}` : label;
@@ -14,12 +15,14 @@
 {#if queueSlug}
   <a class="pill" href={href} aria-label={titleText} title={titleText}>
     <span class="dot" aria-hidden="true" />
-    <span class="text">{label}</span>
+    <span class="text text-slug">{queueSlug}</span>
+    <span class="text text-counter">• {counter}</span>
   </a>
 {:else}
   <div class="pill" aria-label={titleText} title={titleText}>
     <span class="dot" aria-hidden="true" />
-    <span class="text">{label}</span>
+    <span class="text text-slug">{queueSlug || ''}</span>
+    <span class="text text-counter">• {counter}</span>
   </div>
 {/if}
 
@@ -39,6 +42,7 @@
     letter-spacing: 0.08em;
     text-transform: uppercase;
     font-weight: 600;
+    max-width: 100%; /* Ensure it doesn't overflow parent */
   }
 
   a.pill {
@@ -62,9 +66,18 @@
     border-radius: 999px;
     background: linear-gradient(135deg, rgba(67, 217, 173, 0.95), rgba(88, 112, 193, 0.85));
     box-shadow: 0 0 0 3px rgba(67, 217, 173, 0.12);
+    flex-shrink: 0;
   }
 
-  .text {
+  .text-slug {
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+
+  .text-counter {
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 </style>

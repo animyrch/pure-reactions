@@ -217,15 +217,17 @@
   {#if !$state.isFullscreen}
     <div class="mx-auto w-full px-4 pt-6 sm:px-6 lg:px-10">
       {#if $state.queueSlug}
-        <div class="mb-4 flex items-center justify-between">
-          <QueueProgressPill
-            queueSlug={$state.queueSlug}
-            index={$state.queueIndex}
-          />
+        <div class="mb-4 flex items-center justify-between gap-3">
+          <div class="min-w-0 overflow-hidden">
+            <QueueProgressPill
+              queueSlug={$state.queueSlug}
+              index={$state.queueIndex}
+            />
+          </div>
           {#if queueHasNext}
             <button
               type="button"
-              class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-text-primary backdrop-blur transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 disabled:cursor-not-allowed disabled:opacity-50"
+              class="shrink-0 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-text-primary backdrop-blur transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 disabled:cursor-not-allowed disabled:opacity-50"
               on:click={handleGoToNextInQueue}
               disabled={queueHasNextLoading}
               aria-label="Go to next item in queue"
