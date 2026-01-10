@@ -2403,7 +2403,10 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   };
 
   const getNextReactionIdInQueue = async (queueSlug: string, nextIndex: number) => {
-    const queueDefinition = await getQueueBySlug(queueSlug);
+    if (!userId) {
+      return null;
+    }
+    const queueDefinition = await getQueueBySlug(queueSlug, userId);
     const items = Array.isArray(queueDefinition?.data?.items) ? queueDefinition.data.items : [];
     if (!items.length) {
       return null;

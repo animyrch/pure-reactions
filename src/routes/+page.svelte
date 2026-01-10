@@ -1,7 +1,7 @@
 <!-- src/App.svelte -->
 
 <script>
-	import { getReactionsByPage, getQueuesByPage } from "$lib/helpers/firebase";
+	import { getReactionsByPage } from "$lib/helpers/firebase";
 	import ReactionsList from "$lib/components/ReactionsList.svelte";
 	import ReactionsSorting from "$lib/components/Navigation/ReactionsSorting.svelte";
 	import { page } from "$app/stores";
@@ -21,17 +21,14 @@
 	let reactions = [];
 	let isLoading = false;
 	let lastReactionDoc = null;
-	let lastQueueDoc = null;
 	let hasMoreReactions = true;
-	let hasMoreQueues = true;
 	let sentinel;
 	const pageSize = 15;
-	const queuePageSize = 3; // Include fewer queues to maintain balance
 
 	const ensureFillViewport = async () => {
 		await tick();
 		if (isLoading || !sentinel) return;
-		if (!hasMoreReactions && !hasMoreQueues) return;
+		if (!hasMoreReactions) return;
 		const rect = sentinel.getBoundingClientRect();
 		if (rect.top <= window.innerHeight) {
 			loadReactions();
@@ -40,51 +37,23 @@
 
 	const loadReactions = async () => {
 		if (isLoading) return;
-		if (!hasMoreReactions && !hasMoreQueues) return;
+		if (!hasMoreReactions) return;
 		isLoading = true;
 		const sortBy = $page.url.searchParams.get("sortBy") || SORTINGS.NEW;
 		const follows = $userExtraDataStore.userExtraData?.follows;
 
 		try {
-			const reactionsPromise = hasMoreReactions
-				? getReactionsByPage(lastReactionDoc, pageSize, sortBy, follows)
-				: Promise.resolve({ reactions: [], lastVisible: null });
-			const queuesPromise = hasMoreQueues
-				? getQueuesByPage(lastQueueDoc, queuePageSize)
-				: Promise.resolve({ queues: [], lastVisible: null });
-
-			// Fetch reactions and queues in parallel
-			const [reactionsResponse, queuesResponse] = await Promise.all([
-				reactionsPromise,
-				queuesPromise,
-			]);
-
-			if (hasMoreReactions) {
-				lastReactionDoc = reactionsResponse.lastVisible || null;
-				hasMoreReactions =
-					reactionsResponse.reactions?.length === pageSize &&
-					!!reactionsResponse.lastVisible;
-			}
-			if (hasMoreQueues) {
-				lastQueueDoc = queuesResponse.lastVisible || null;
-				hasMoreQueues =
-					queuesResponse.queues?.length === queuePageSize &&
-					!!queuesResponse.lastVisible;
-			}
-
-			const hydratedQueues = queuesResponse.queues || [];
-
-			// Merge and sort by creation date
-			const newItems = [
-				...(reactionsResponse.reactions || []),
-				...hydratedQueues,
-			].sort((a, b) => {
-				const aTime = a.data?.createdAt?.toMillis?.() || 0;
-				const bTime = b.data?.createdAt?.toMillis?.() || 0;
-				return bTime - aTime;
-			});
-
-			reactions = [...reactions, ...newItems];
+			const reactionsResponse = await getReactionsByPage(
+				lastReactionDoc,
+				pageSize,
+				sortBy,
+				follows,
+			);
+			lastReactionDoc = reactionsResponse.lastVisible || null;
+			hasMoreReactions =
+				reactionsResponse.reactions?.length === pageSize &&
+				!!reactionsResponse.lastVisible;
+			reactions = [...reactions, ...(reactionsResponse.reactions || [])];
 		} finally {
 			isLoading = false;
 			ensureFillViewport();

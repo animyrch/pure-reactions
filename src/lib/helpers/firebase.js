@@ -241,12 +241,16 @@ export const getReactionsByPage = async (lastDoc, limitBy, sortBy, follows) => {
     };
 };
 
-export const getQueuesByPage = async (lastDoc, limitBy) => {
+export const getQueuesByPage = async (lastDoc, limitBy, userId) => {
     let queues = [];
     let lastVisible = null;
+    if (!userId) {
+        return { queues: [], lastVisible: null };
+    }
     try {
         const queuesCollection = createCollection(db, COLLECTION_QUEUES, 'getQueuesByPage');
         let baseQuery = query(queuesCollection,
+            where('ownerId', '==', userId),
             orderBy('createdAt', 'desc')
         );
         if (lastDoc) {
@@ -317,8 +321,8 @@ export const getPlaylist = async (playlistId) => {
     }
 };
 
-export const getQueueBySlug = async (slug) => {
-    if (!slug) {
+export const getQueueBySlug = async (slug, userId) => {
+    if (!slug || !userId) {
         return null;
     }
 
@@ -327,13 +331,19 @@ export const getQueueBySlug = async (slug) => {
         const queueRef = doc(queuesCollection, slug);
         const snapshot = await getDoc(queueRef);
 
-        if (snapshot.exists()) {
-            return {
-                id: snapshot.id,
-                data: snapshot.data()
-            };
+        if (!snapshot.exists()) {
+            return null;
         }
-        return null;
+
+        const data = snapshot.data();
+        if (data?.ownerId !== userId) {
+            return null;
+        }
+
+        return {
+            id: snapshot.id,
+            data
+        };
     } catch (error) {
         console.error('Error getting queue by slug: ', error);
         return null;
@@ -346,7 +356,7 @@ export const getUserQueues = async (userId) => {
         const queuesCollection = createCollection(db, COLLECTION_QUEUES, 'getUserQueues');
         const queryRef = query(queuesCollection, where('ownerId', '==', userId), orderBy('createdAt', 'desc'));
         const snapshot = await getDocs(queryRef);
-        return snapshot.docs.map((docSnapshot) => ({ id: docSnapshot.id, data: docSnapshot.data() }));
+        return snapshot.docs.map((docSnapshot) => ({ id: docSnapshot.id, data: docSnapshot.data(), type: 'queue' }));
     } catch (error) {
         console.error('Error fetching user queues: ', error);
         return [];
@@ -601,7 +611,6 @@ export const getReactionsByIds = async (reactionIds) => {
         console.error('Error getting documents filtered by reaction video ids: ', error);
         return [];
     }
-    return reactions;
 };
 
 export const createUserWithEmailAndPasswordWrapper = async (email, password) => {

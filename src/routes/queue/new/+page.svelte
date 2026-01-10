@@ -112,7 +112,7 @@
         <div class="mb-8 space-y-2">
             <p class="text-xs uppercase tracking-[0.35em] text-text-muted">Create queue</p>
             <h1 class="text-3xl font-semibold md:text-4xl">New queue</h1>
-            <p class="text-sm text-text-muted">Queues are user-owned collections of reaction binomes or playlists. Anyone can view them; only you can create or overwrite yours.</p>
+            <p class="text-sm text-text-muted">Queues are private, user-owned collections of reaction binomes or playlists. Only you can view and manage your queues — you’ll find them later in Bookmarks.</p>
         </div>
 
         <div class="space-y-8 rounded-2xl border border-white/10 bg-white/5 p-6 shadow-elevated">

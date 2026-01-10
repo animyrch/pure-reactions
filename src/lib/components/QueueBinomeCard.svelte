@@ -18,13 +18,6 @@
     $: playlistId = isPlaylist ? item?.playlist?.id : reactionData?.playlistId;
 
     $: hasData = Boolean(reactionPageId && reactionData);
-    $: binomeCount = item?.playlist?.data?.reactionBinomeIds?.length ?? 0;
-    $: subtitle = isPlaylist
-        ? `${binomeCount} binome${binomeCount === 1 ? '' : 's'} in playlist`
-        : reactionVideoAuthor
-            ? `by ${reactionVideoAuthor}`
-            : 'Reaction';
-    $: title = reactionVideoTitle || originalVideoTitle || cardLabel;
 </script>
 
 <div class="queue-card">
@@ -66,24 +59,4 @@
         transition: transform 200ms ease, box-shadow 200ms ease;
     }
 
-    .badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.25rem;
-        padding: 0.15rem 0.55rem;
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.06);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        color: #cdd3e0;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        font-weight: 600;
-    }
-
-    .fallback {
-        padding: 1rem;
-        border-radius: 0.75rem;
-        background: rgba(255, 255, 255, 0.02);
-        border: 1px dashed rgba(255, 255, 255, 0.08);
-    }
 </style>

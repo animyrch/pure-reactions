@@ -4,6 +4,7 @@
     import { goto } from '$app/navigation';
     import QueueBinomeCard from '$lib/components/QueueBinomeCard.svelte';
     import { getReactionsByIds, getPlaylist, getQueueBySlug } from '$lib/helpers/firebase';
+    import { handlePrivateRoute } from '$lib/helpers/routing';
 
     export let data;
 
@@ -52,16 +53,24 @@
     };
 
     const hydrateQueueItems = async () => {
-        queueDefinition = await getQueueBySlug(slug);
+        const authedUserId = $page?.data?.userId;
+        if (!authedUserId) {
+            handlePrivateRoute();
+            statusMessage = 'Sign in to access your queues.';
+            isLoading = false;
+            return;
+        }
+
+        queueDefinition = await getQueueBySlug(slug, authedUserId);
 
         if (!queueDefinition) {
-            statusMessage = 'Queue not found in Firebase. Create a document whose id equals the slug.';
+            statusMessage = 'Queue not found.';
             isLoading = false;
             return;
         }
 
         ownerId = queueDefinition?.data?.ownerId || '';
-        isOwner = Boolean(ownerId && ownerId === $page.data?.userId);
+        isOwner = Boolean(ownerId && ownerId === authedUserId);
         ownerName = (isOwner ? ($page.data?.displayName || '') : (queueDefinition?.data?.ownerName || '')).trim();
 
         const reactionIds = queueDefinition.data?.items
