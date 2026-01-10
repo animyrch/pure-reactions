@@ -59,6 +59,12 @@
   onNavigate((navigation) => {
     if (reduceMotion || !document.startViewTransition) return;
 
+    // Skip view transitions for reaction routes to prevent DOM instability during YouTube player initialization
+    const toPath = navigation.to?.url?.pathname ?? '';
+    if (toPath.startsWith('/reaction/')) {
+      return;
+    }
+
     return new Promise((resolve) => {
       document.startViewTransition(async () => {
         resolve();

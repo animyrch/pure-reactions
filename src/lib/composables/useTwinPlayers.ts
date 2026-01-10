@@ -316,6 +316,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   let escListener: ((event: KeyboardEvent) => void) | undefined;
   let pendingPlayerReadyCount = 0;
   let playerReadyTimeout: ReturnType<typeof setTimeout> | undefined;
+  let initRetryCount = 0;
+  const MAX_INIT_RETRIES = 3;
+  const INIT_RETRY_DELAY = 4000;
 
   const YOUTUBE_IFRAME_API_SRC = 'https://www.youtube.com/iframe_api';
   let youtubeApiReadyPromise: Promise<void> | null = null;
@@ -460,7 +463,21 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     }
     playerReadyTimeout = setTimeout(() => {
       finalizeLoadingState();
-    }, 8000);
+    }, INIT_RETRY_DELAY);
+  };
+
+  const waitForPlayerElements = async (maxAttempts = 10, delayMs = 100): Promise<boolean> => {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      if (document.getElementById('player-original') && document.getElementById('player-reaction')) {
+        return true;
+      }
+      // Only player-original is required (reaction video element might not exist for some edge cases)
+      if (document.getElementById('player-original')) {
+        return true;
+      }
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+    return document.getElementById('player-original') !== null;
   };
 
   const setExpectedPlayerReadyCount = (count: number) => {
@@ -3454,7 +3471,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
     const init = async () => {
       const seq = (initSeq += 1);
-      debugClickGate('[TwinPlayers] init start', { seq }, true);
+      debugClickGate('[TwinPlayers] init start', { seq, retryCount: initRetryCount }, true);
       try {
         // Check if we're still the active instance before doing expensive work
         if (globalActiveInstanceId !== instanceId) {
@@ -3488,11 +3505,28 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
           return;
         }
 
-        if (!document.getElementById('player-original')) {
-          console.warn('Player element not found, skipping initialization');
-          debugClickGate('[TwinPlayers] init aborted (missing player-original element)', { seq });
+        // Wait for DOM elements with retry mechanism
+        const elementsReady = await waitForPlayerElements(15, 100);
+        if (!elementsReady) {
+          console.warn('Player elements not found after waiting');
+          debugClickGate('[TwinPlayers] init: player elements not ready', { seq, retryCount: initRetryCount });
+          
+          // Auto-retry after INIT_RETRY_DELAY if we haven't exceeded max retries
+          if (initRetryCount < MAX_INIT_RETRIES && globalActiveInstanceId === instanceId) {
+            initRetryCount++;
+            console.log(`[TwinPlayers] Auto-retrying initialization (attempt ${initRetryCount}/${MAX_INIT_RETRIES})`);
+            setTimeout(() => {
+              if (globalActiveInstanceId === instanceId && !isDestroyed) {
+                init();
+              }
+            }, INIT_RETRY_DELAY);
+          } else {
+            console.error('[TwinPlayers] Max retries exceeded, giving up');
+            finalizeLoadingState();
+          }
           return;
         }
+
         const initialSlug = get(state).pageSlug;
         if (!initialSlug) {
           finalizeLoadingState();
@@ -3512,6 +3546,17 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         await buildInterface(initialSlug);
       } catch (error) {
         console.error('Failed to initialize reaction player:', error);
+        
+        // Auto-retry on error if we haven't exceeded max retries
+        if (initRetryCount < MAX_INIT_RETRIES && globalActiveInstanceId === instanceId && !isDestroyed) {
+          initRetryCount++;
+          console.log(`[TwinPlayers] Auto-retrying after error (attempt ${initRetryCount}/${MAX_INIT_RETRIES})`);
+          setTimeout(() => {
+            if (globalActiveInstanceId === instanceId && !isDestroyed) {
+              init();
+            }
+          }, INIT_RETRY_DELAY);
+        }
       } finally {
         debugClickGate('[TwinPlayers] init done', { seq });
       }
