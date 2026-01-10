@@ -3329,11 +3329,22 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     if (typeof window === 'undefined') {
       return;
     }
+    // Update state reactively instead of refreshing
+    updateState({ isFullscreen: value });
+
+    // Update URL for shareability/refresh persistence using History API
     const url = new URL(window.location.href);
     const params = new URLSearchParams(url.search);
     params.set('isFullscreen', String(value));
     url.search = params.toString();
-    window.location.href = url.toString();
+    window.history.replaceState(window.history.state, '', url.toString());
+
+    // Toggle body class for overflow control
+    if (value) {
+      document.body.classList.add('reaction-fullscreen');
+    } else {
+      document.body.classList.remove('reaction-fullscreen');
+    }
   };
 
   const openWithFullscreen = () => {

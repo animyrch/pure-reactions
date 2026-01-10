@@ -1,5 +1,4 @@
 <script>
-    import FullscreenChrome from "$lib/components/reaction/FullscreenChrome.svelte";
     import ControlDock from "$lib/components/reaction/ControlDock.svelte";
     import MissingReactionPlaceholder from "$lib/components/reaction/MissingReactionPlaceholder.svelte";
     import { createEventDispatcher } from "svelte";
@@ -44,83 +43,127 @@
     const handleToggleCinematicBars = () => dispatch("toggleCinematicBars");
     const handleEnterFullscreen = () => dispatch("enterFullscreen");
     const handleSeek = (time) => dispatch("seek", time);
-
-    // We are not passing actions directly to avoid tight coupling to the composable,
-    // instead re-dispatching events.
 </script>
 
 <section
     class={`theater-wrapper ${
         isFullscreen
-            ? "fixed inset-0 z-50 m-0 h-screen w-screen overflow-hidden rounded-none bg-black px-0 py-0 text-text-primary shadow-none"
+            ? "theater-wrapper--fullscreen fixed inset-0 z-50 m-0 h-screen w-screen overflow-hidden rounded-none bg-black px-0 py-0 text-text-primary shadow-none"
             : "relative w-full max-w-none bg-black text-text-primary shadow-none md:shadow-elevated md:mx-auto md:my-10 md:rounded-2xl md:bg-surface/80 md:px-4 md:py-8 md:backdrop-blur sm:px-6 lg:px-10 xl:rounded-3xl"
     }`}
     style="--control-dock-space: 80px;"
 >
+    <!-- Fullscreen overlay & exit button (only shown when fullscreen) -->
     {#if isFullscreen}
-        <FullscreenChrome
-            {isControlSurfaceVisible}
-            {isExitButtonExpanded}
-            {showCinematicBars}
-            {isReactionMissing}
-            bind:overlayRef
-            onExitClick={handleExitClick}
-            onExitEnter={handleExitEnter}
-            onExitLeave={handleExitLeave}
-            onPointerMove={(e) => handlePointerMove(e)}
-            onPointerDown={(e) => handlePointerDown(e)}
-            onPointerLeave={(e) => handlePointerLeave(e)}
-        />
-    {:else}
         <div
-            data-stage="container"
-            class="flex flex-col gap-0 md:grid md:gap-6 md:grid-cols-2 xl:gap-8"
+            class={`absolute left-6 top-6 z-50 transition-opacity duration-200 ease-cinematic ${isControlSurfaceVisible ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"}`}
+        >
+            <button
+                type="button"
+                class={`group flex items-center overflow-hidden rounded-full bg-surface/40 ${isExitButtonExpanded ? "pl-3 pr-4" : "px-3"} py-2 text-sm font-semibold text-text-primary shadow-elevated backdrop-blur transition-all duration-200 ease-cinematic hover:-translate-y-0.5 hover:bg-surface/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent`}
+                on:click={handleExitClick}
+                on:mouseenter={handleExitEnter}
+                on:mouseleave={handleExitLeave}
+                on:focus={handleExitEnter}
+                on:blur={handleExitLeave}
+                on:touchstart={handleExitEnter}
+                on:touchend={handleExitLeave}
+                aria-label="Exit fullscreen"
+                title="Exit fullscreen"
+            >
+                <span
+                    class={`flex items-center justify-center overflow-hidden transition-all duration-200 ease-cinematic ${isExitButtonExpanded ? "w-0 opacity-0" : "w-4 opacity-80"}`}
+                >
+                    <svg
+                        class="h-4 w-4 text-text-primary/80"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                        aria-hidden="true"
+                    >
+                        <path
+                            d="M5 9V5h4V3H3v6h2zm14-6h-6v2h4v4h2V3zm-6 18h6v-6h-2v4h-4v2zM5 15H3v6h6v-2H5v-4z"
+                        />
+                    </svg>
+                </span>
+                <span
+                    class={`inline-flex items-center whitespace-nowrap transition-all duration-200 ease-cinematic ${isExitButtonExpanded ? "ml-2 max-w-xs opacity-100" : "ml-0 max-w-0 opacity-0"}`}
+                >
+                    Exit fullscreen
+                </span>
+            </button>
+        </div>
+        <div
+            class="absolute inset-0 z-40 cursor-default bg-transparent"
+            bind:this={overlayRef}
+            on:pointermove={handlePointerMove}
+            on:pointerdown={handlePointerDown}
+            on:pointerleave={handlePointerLeave}
+        ></div>
+    {/if}
+
+    <!-- Main stage container: players always exist in DOM, layout changes via CSS -->
+    <div
+        data-stage="container"
+        class={isFullscreen
+            ? "relative h-full w-full"
+            : "flex flex-col gap-0 md:grid md:gap-6 md:grid-cols-2 xl:gap-8"}
+    >
+        <!-- Original video player container -->
+        <div
+            data-stage="original"
+            class={isFullscreen
+                ? "absolute inset-0"
+                : "relative overflow-hidden bg-black shadow-elevated rounded-none md:rounded-xl"}
         >
             <div
-                data-stage="original"
-                class="relative overflow-hidden bg-black shadow-elevated rounded-none md:rounded-xl"
+                data-stage="original-frame"
+                class={isFullscreen
+                    ? "h-full w-full"
+                    : "relative w-full h-[56.25vw] md:h-auto md:aspect-[16/9]"}
             >
                 <div
-                    data-stage="original-frame"
-                    class="relative w-full h-[56.25vw] md:h-auto md:aspect-[16/9]"
+                    data-stage="original-frame-inner"
+                    class="relative h-full w-full"
                 >
-                    <div
-                        data-stage="original-frame-inner"
-                        class="relative h-full w-full"
-                    >
                     <div
                         id="player-original"
                         class="absolute inset-0 h-full w-full"
                     ></div>
-                    </div>
                 </div>
-                {#if showCinematicBars}
-                    <div
-                        class="pointer-events-none absolute inset-x-0 top-0 h-[8%] bg-gradient-to-b from-black/80 to-transparent"
-                        aria-hidden="true"
-                    ></div>
-                    <div
-                        class="pointer-events-none absolute inset-x-0 bottom-0 h-[12%] bg-gradient-to-t from-black via-black/80 to-transparent"
-                        aria-hidden="true"
-                    ></div>
-                {/if}
             </div>
-            {#if !isReactionMissing}
+            {#if showCinematicBars}
                 <div
-                    data-stage="reaction"
-                    class="relative overflow-hidden bg-black/80 shadow-surface w-[80vw] h-[45vw] mx-auto mt-4 rounded-lg md:w-auto md:h-auto md:mt-0 md:mx-0 md:rounded-xl md:aspect-[16/9]"
+                    class={`pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-black via-black/80 to-transparent ${isFullscreen ? "h-[12%]" : "h-[8%] from-black/80"}`}
+                    aria-hidden="true"
+                ></div>
+                <div
+                    class="pointer-events-none absolute inset-x-0 bottom-0 h-[12%] bg-gradient-to-t from-black via-black/80 to-transparent"
+                    aria-hidden="true"
+                ></div>
+            {/if}
+        </div>
+
+        <!-- Reaction video player container -->
+        {#if !isReactionMissing}
+            <div
+                data-stage="reaction"
+                class={isFullscreen
+                    ? "pointer-events-auto absolute right-6 top-6 z-50 w-[min(28%,320px)]"
+                    : "relative overflow-hidden bg-black/80 shadow-surface w-[80vw] h-[45vw] mx-auto mt-4 rounded-lg md:w-auto md:h-auto md:mt-0 md:mx-0 md:rounded-xl md:aspect-[16/9]"}
+            >
+                <div
+                    class={isFullscreen
+                        ? "relative aspect-cinematic overflow-hidden rounded-lg bg-black/80 shadow-elevated"
+                        : "relative h-full w-full"}
                 >
                     <div
-                        class="relative h-full w-full"
-                    >
-                        <div
-                            id="player-reaction"
-                            class="absolute inset-0 h-full w-full"
-                        ></div>
-                    </div>
+                        id="player-reaction"
+                        class="absolute inset-0 h-full w-full"
+                    ></div>
                     {#if showCinematicBars}
                         <div
-                            class="pointer-events-none absolute inset-x-0 top-0 h-[8%] bg-gradient-to-b from-black/80 to-transparent"
+                            class="pointer-events-none absolute inset-x-0 top-0 h-[12%] bg-gradient-to-b from-black via-black/80 to-transparent"
                             aria-hidden="true"
                         ></div>
                         <div
@@ -129,17 +172,17 @@
                         ></div>
                     {/if}
                 </div>
-            {:else if isUsersOwnVideo || alwaysShowMissingPlaceholder}
-                <MissingReactionPlaceholder
-                    loading={missingReactionLoading}
-                    error={missingReactionError}
-                    on:submit={handleMissingReactionSubmit}
-                />
-            {:else if !isUsersOwnVideo}
-                <div class="hidden"></div>
-            {/if}
-        </div>
-    {/if}
+            </div>
+        {:else if isUsersOwnVideo || alwaysShowMissingPlaceholder}
+            <MissingReactionPlaceholder
+                loading={missingReactionLoading}
+                error={missingReactionError}
+                on:submit={handleMissingReactionSubmit}
+            />
+        {:else if !isUsersOwnVideo}
+            <div class="hidden"></div>
+        {/if}
+    </div>
 
     {#if playerOriginal && (playerReaction || isReactionMissing)}
         <ControlDock
