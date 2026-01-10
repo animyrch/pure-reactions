@@ -160,14 +160,17 @@
   });
 </script>
 
-<div class={$state.isLoading ? "" : "hidden"}>
-  <div class="flex justify-center py-24">
+<!-- Loading overlay - covers content while YouTube players initialize in the background -->
+{#if $state.isLoading}
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-background">
     <SubtleLoader label="Loading reaction experience" />
   </div>
-</div>
+{/if}
 
+<!-- Content container - always rendered so YouTube players can initialize properly (not display:none) -->
 <div
-  class={`website-inner-container bg-background text-text-primary ${$state.isLoading ? "hidden" : ""}`}
+  class="website-inner-container bg-background text-text-primary"
+  aria-hidden={$state.isLoading}
 >
   {#if $state.isReactionMissing && !$state.isUsersOwnVideo}
     <p class="mb-4 rounded-md bg-warning/10 px-4 py-3 text-sm text-warning">

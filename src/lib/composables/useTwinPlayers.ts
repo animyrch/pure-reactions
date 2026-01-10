@@ -456,13 +456,64 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     updateState({ isLoading: false });
   };
 
+  const arePlayersActuallyReady = (): boolean => {
+    const snapshot = get(state);
+    const { playerOriginal, playerReaction, isReactionMissing } = snapshot;
+    
+    // Check if original player is functional
+    if (!playerOriginal) return false;
+    try {
+      // Try to call a method - if it throws or returns undefined, player isn't ready
+      const originalState = playerOriginal.getPlayerState?.();
+      if (typeof originalState !== 'number') return false;
+    } catch {
+      return false;
+    }
+    
+    // If reaction is expected, check it too
+    if (!isReactionMissing && playerReaction) {
+      try {
+        const reactionState = playerReaction.getPlayerState?.();
+        if (typeof reactionState !== 'number') return false;
+      } catch {
+        return false;
+      }
+    }
+    
+    return true;
+  };
+
   const scheduleLoadingFallback = () => {
     clearTimeout(playerReadyTimeout);
     if (pendingPlayerReadyCount === 0) {
       return;
     }
     playerReadyTimeout = setTimeout(() => {
-      finalizeLoadingState();
+      // Check if players are actually functional
+      if (!arePlayersActuallyReady() && initRetryCount < MAX_INIT_RETRIES && globalActiveInstanceId === instanceId && !isDestroyed) {
+        console.warn(`[TwinPlayers] Players not ready after ${INIT_RETRY_DELAY}ms, retrying (attempt ${initRetryCount + 1}/${MAX_INIT_RETRIES})`);
+        initRetryCount++;
+        // Destroy current players and rebuild
+        const snapshot = get(state);
+        try {
+          snapshot.playerOriginal?.destroy?.();
+          snapshot.playerReaction?.destroy?.();
+        } catch {
+          // ignore
+        }
+        updateState({ playerOriginal: null, playerReaction: null });
+        // Rebuild after a short delay
+        setTimeout(async () => {
+          if (globalActiveInstanceId === instanceId && !isDestroyed) {
+            const slug = get(state).pageSlug;
+            if (slug) {
+              await buildInterface(slug, { isUpdate: true });
+            }
+          }
+        }, 500);
+      } else {
+        finalizeLoadingState();
+      }
     }, INIT_RETRY_DELAY);
   };
 
@@ -1857,8 +1908,39 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
     const playerOriginal = get(state).playerOriginal;
     const playerReaction = get(state).playerReaction;
+    
+    // Properly destroy existing players
+    try {
+      playerOriginal?.pauseVideo?.();
+    } catch {
+      // ignore
+    }
+    try {
+      playerReaction?.pauseVideo?.();
+    } catch {
+      // ignore
+    }
     playerOriginal?.destroy?.();
     playerReaction?.destroy?.();
+    
+    // Clean up any orphaned iframes that YouTube may have left behind
+    // This can happen during client-side navigation if the player wasn't properly destroyed
+    const cleanupOrphanedIframe = (containerId: string) => {
+      const container = document.getElementById(containerId);
+      if (container && container.tagName === 'IFRAME') {
+        // YouTube replaced the div with an iframe - we need to restore the div
+        const parent = container.parentElement;
+        if (parent) {
+          const newDiv = document.createElement('div');
+          newDiv.id = containerId;
+          newDiv.className = container.className;
+          parent.replaceChild(newDiv, container);
+        }
+      }
+    };
+    
+    cleanupOrphanedIframe('player-original');
+    cleanupOrphanedIframe('player-reaction');
 
     // Reset the click-to-start gate whenever we recreate players.
     originalVideoClicked = false;
