@@ -38,6 +38,7 @@
   let reactionVideoIdError = "";
   let queueHasNext = false;
   let queueHasNextLoading = false;
+  let queueHasNextCheckKey = "";
 
   const refreshQueueHasNext = async () => {
     if (!$state.queueSlug) {
@@ -122,7 +123,6 @@
   };
 
   $: if (browser && !$state.isLoading) {
-    refreshQueueHasNext();
     reactionDial.updateContext({
       isUsersOwnVideo: $state.isUsersOwnVideo,
       canShowEditModeButton: $state.canShowEditModeButton,
@@ -153,6 +153,14 @@
         openWithHalfscreen: actions.openWithHalfscreen,
       },
     });
+  }
+
+  $: if (browser && !$state.isLoading) {
+    const nextKey = `${$state.queueSlug ?? ""}:${$state.queueIndex ?? ""}`;
+    if (nextKey !== queueHasNextCheckKey) {
+      queueHasNextCheckKey = nextKey;
+      refreshQueueHasNext();
+    }
   }
 
   onDestroy(() => {
