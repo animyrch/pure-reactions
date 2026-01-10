@@ -3,6 +3,7 @@
 
     export let item;
     export let index = 0;
+    export let linkless = false;
 
     const isPlaylist = item?.type === 'playlist';
     const isReaction = item?.type === 'reaction';
@@ -35,6 +36,8 @@
             {originalVideoTitle}
             {reactionVideoAuthor}
             {playlistId}
+            linkless={linkless}
+            showContextMenu={!linkless}
             interactive
         />
     {/if}

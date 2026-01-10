@@ -290,6 +290,7 @@
                                         aria-label={`Watch ${entry.reaction?.data?.reactionVideoTitle || entry.reaction?.data?.originalVideoTitle || 'reaction'} (item ${entry.index + 1} of ${queueEntries.length})`}
                                     >
                                         <QueueBinomeCard
+                                            linkless
                                             item={{
                                                 type: 'reaction',
                                                 id: entry.reactionId,
