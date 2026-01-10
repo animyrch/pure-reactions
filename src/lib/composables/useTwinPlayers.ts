@@ -12,6 +12,7 @@ import {
   getPlaylist,
   getQueueBySlug
 } from '$lib/helpers/firebase';
+import { writeQueueProgress } from '$lib/helpers/queueProgress';
 import {
   downloadBasicVideoDetails,
   extractYouTubeVideoId,
@@ -2093,6 +2094,19 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     }
 
     debugClickGate('[TwinPlayers] buildInterface done', { seq, slugValue, isUpdate });
+
+    // Persist queue progress for the Resume button (client-only).
+    try {
+      const snapshot = get(state);
+      if (typeof window !== 'undefined' && userId && snapshot.queueSlug) {
+        writeQueueProgress(userId, snapshot.queueSlug, {
+          reactionId: slugValue,
+          index: Number(snapshot.queueIndex) || 0
+        });
+      }
+    } catch (error) {
+      console.warn('[TwinPlayers] failed to persist queue progress', error);
+    }
   };
 
   const loadReactionInPlace = async (nextReactionDocumentId: string, options: LoadReactionInPlaceOptions = {}) => {
@@ -2449,6 +2463,10 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       return { ok: false as const, reason: 'end-of-queue' as const };
     }
 
+    if (typeof window !== 'undefined' && userId) {
+      writeQueueProgress(userId, queueSlug, { reactionId: nextReactionDocumentId, index: nextIndex });
+    }
+
     const url = new URL(typeof window !== 'undefined' ? window.location.href : 'https://purereactions.com');
     url.pathname = `/reaction/${nextReactionDocumentId}`;
     url.searchParams.set('queueSlug', queueSlug);
@@ -2476,6 +2494,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
         buildInterface(nextReactionDocumentId, { isUpdate: true }).then(() => {
           updateState({ queueIndex: nextIndex });
+          if (typeof window !== 'undefined' && userId) {
+            writeQueueProgress(userId, queueSlug, { reactionId: nextReactionDocumentId, index: nextIndex });
+          }
           if (typeof window !== 'undefined') {
             const url = new URL(window.location.href);
             url.pathname = `/reaction/${nextReactionDocumentId}`;

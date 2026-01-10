@@ -5,6 +5,7 @@
     import QueueBinomeCard from '$lib/components/QueueBinomeCard.svelte';
     import { getReactionsByIds, getPlaylist, getQueueBySlug } from '$lib/helpers/firebase';
     import { handlePrivateRoute } from '$lib/helpers/routing';
+    import { readQueueProgress } from '$lib/helpers/queueProgress';
 
     export let data;
 
@@ -20,6 +21,10 @@
     let queueEntries = [];
     let queueIsLoading = false;
     let queueStatusMessage = '';
+
+    let canResume = false;
+    let resumeIndex = 0;
+    let resumeReactionId = '';
 
     $: queueTitle = queueDefinition?.data?.title || 'Untitled queue';
     $: totalBinomes = queueDefinition?.data?.items?.length ?? 0;
@@ -46,7 +51,10 @@
 
     const handleResume = async () => {
         if (!queueEntries?.length) return;
-        const idx = Math.min(Math.max(currentSetIndex, 0), queueEntries.length - 1);
+
+        const idx = canResume
+            ? resumeIndex
+            : Math.min(Math.max(currentSetIndex, 0), queueEntries.length - 1);
         const target = queueEntries[idx];
         if (!target?.reactionId) return;
         await goto(buildQueueWatchUrl(target.reactionId, idx, { autoplay: true, fullscreen: false }));
@@ -160,6 +168,37 @@
                 reaction: hydratedMap.get(entry.reactionId) || null
             }));
 
+            // Resolve Resume target from localStorage (prefer reactionId match; fallback to saved index).
+            try {
+                const saved = readQueueProgress(authedUserId, slug);
+                if (saved && queueEntries.length) {
+                    const matchIndex = queueEntries.findIndex((entry) => entry?.reactionId === saved.reactionId);
+                    const resolvedIndex = matchIndex >= 0
+                        ? matchIndex
+                        : Math.min(Math.max(Number(saved.index) || 0, 0), queueEntries.length - 1);
+
+                    const resolved = queueEntries[resolvedIndex];
+                    if (resolved?.reactionId) {
+                        canResume = true;
+                        resumeIndex = resolvedIndex;
+                        resumeReactionId = resolved.reactionId;
+                    } else {
+                        canResume = false;
+                        resumeIndex = 0;
+                        resumeReactionId = '';
+                    }
+                } else {
+                    canResume = false;
+                    resumeIndex = 0;
+                    resumeReactionId = '';
+                }
+            } catch (error) {
+                console.warn('Failed to read queue resume progress', error);
+                canResume = false;
+                resumeIndex = 0;
+                resumeReactionId = '';
+            }
+
             if (!queueEntries.length) {
                 queueStatusMessage = 'Nothing to play yet. Add at least one reaction or playlist item.';
             }
@@ -237,10 +276,12 @@
                             class="btn-secondary"
                             type="button"
                             on:click={handleResume}
-                            disabled={queueIsLoading || !queueEntries.length}
-                            aria-label="Resume this queue from the current position"
+                            disabled={queueIsLoading || !queueEntries.length || !canResume}
+                            aria-label={canResume
+                                ? `Resume this queue from item ${resumeIndex + 1}`
+                                : 'Resume is available after you start watching this queue'}
                         >
-                            Resume
+                            Resume{#if canResume} • #{resumeIndex + 1}{/if}
                         </button>
                     </div>
                 </div>
