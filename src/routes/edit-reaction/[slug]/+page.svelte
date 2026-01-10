@@ -1,20 +1,23 @@
 <script>
-  import { page } from '$app/stores';
-  import { goto } from '$app/navigation';
-  import { browser } from '$app/environment';
-  import { onDestroy } from 'svelte';
-  import CreatorDetails from '$lib/components/Video/CreatorDetails.svelte';
-  import PlaylistQueue from '$lib/components/Video/PlaylistQueue.svelte';
-  import SubtleLoader from '$lib/components/design-system/SubtleLoader.svelte';
-  import CinematicButton from '$lib/components/design-system/CinematicButton.svelte';
-  import FullscreenChrome from '$lib/components/reaction/FullscreenChrome.svelte';
-  import ControlDock from '$lib/components/reaction/ControlDock.svelte';
-  import EditorPanelsV2 from '$lib/components/reaction/EditorPanelsV2.svelte';
-  import MissingReactionPlaceholder from '$lib/components/reaction/MissingReactionPlaceholder.svelte';
-  import { useTwinPlayers, CONTROLS_FADE_CLASS } from '$lib/composables/useTwinPlayers';
-  import { reactionDial } from '$lib/stores/reactionDial';
-  import { showToast } from '$lib/stores/toast';
-  import { TOASTS } from '$lib/constants/toasts';
+  import { page } from "$app/stores";
+  import { goto } from "$app/navigation";
+  import { browser } from "$app/environment";
+  import { onDestroy } from "svelte";
+  import CreatorDetails from "$lib/components/Video/CreatorDetails.svelte";
+  import PlaylistQueue from "$lib/components/Video/PlaylistQueue.svelte";
+  import SubtleLoader from "$lib/components/design-system/SubtleLoader.svelte";
+  import CinematicButton from "$lib/components/design-system/CinematicButton.svelte";
+  import FullscreenChrome from "$lib/components/reaction/FullscreenChrome.svelte";
+  import ControlDock from "$lib/components/reaction/ControlDock.svelte";
+  import EditorPanelsV2 from "$lib/components/reaction/EditorPanelsV2.svelte";
+  import MissingReactionPlaceholder from "$lib/components/reaction/MissingReactionPlaceholder.svelte";
+  import {
+    useTwinPlayers,
+    CONTROLS_FADE_CLASS,
+  } from "$lib/composables/useTwinPlayers";
+  import { reactionDial } from "$lib/stores/reactionDial";
+  import { showToast } from "$lib/stores/toast";
+  import { TOASTS } from "$lib/constants/toasts";
 
   export let data;
   const { state, actions } = useTwinPlayers({ data, enableAutoPlay: false });
@@ -23,11 +26,15 @@
 
   const handlePlaylistQueueSelect = async ({ targetReactionDocumentId }) => {
     if (!targetReactionDocumentId) return;
-    await goto(`/edit-reaction/${targetReactionDocumentId}${$page.url.search}${$page.url.hash}`);
+    await goto(
+      `/edit-reaction/${targetReactionDocumentId}${$page.url.search}${$page.url.hash}`,
+    );
     location.reload();
   };
 
-  $: stickyControlsClass = $state.isFullscreen ? CONTROLS_FADE_CLASS : 'opacity-100';
+  $: stickyControlsClass = $state.isFullscreen
+    ? CONTROLS_FADE_CLASS
+    : "opacity-100";
   $: overlayRef && actions.registerOverlayRef(overlayRef);
   $: actions.handleSlugChange($page.params.slug);
 
@@ -36,23 +43,29 @@
   };
 
   let isSettingReactionVideoId = false;
-  let reactionVideoIdError = '';
+  let reactionVideoIdError = "";
 
   const handleSetReactionVideoId = async (value) => {
-    const trimmed = value?.trim?.() ?? '';
+    const trimmed = value?.trim?.() ?? "";
     if (!trimmed) {
-      reactionVideoIdError = 'Enter a YouTube URL or ID before continuing.';
+      reactionVideoIdError = "Enter a YouTube URL or ID before continuing.";
       return;
     }
-    reactionVideoIdError = '';
+    reactionVideoIdError = "";
     isSettingReactionVideoId = true;
     try {
-      await actions.editActionEntryPoint(() => actions.setReactionVideoId(trimmed));
+      await actions.editActionEntryPoint(() =>
+        actions.setReactionVideoId(trimmed),
+      );
     } catch (error) {
-      console.error('Failed to set reaction video ID', error);
-      reactionVideoIdError = 'We couldn\'t load that video. Double-check the link or ID and try again.';
+      console.error("Failed to set reaction video ID", error);
+      reactionVideoIdError =
+        "We couldn't load that video. Double-check the link or ID and try again.";
       if (browser) {
-        showToast('Unable to load that reaction video. Check the ID and try again.', TOASTS.WARNING);
+        showToast(
+          "Unable to load that reaction video. Check the ID and try again.",
+          TOASTS.WARNING,
+        );
       }
     } finally {
       isSettingReactionVideoId = false;
@@ -72,7 +85,9 @@
   };
 
   const handleSetReactionFinishTime = async (value) => {
-    await actions.editActionEntryPoint(() => actions.setReactionFinishTime(value));
+    await actions.editActionEntryPoint(() =>
+      actions.setReactionFinishTime(value),
+    );
   };
 
   const handleSetSoundLevel = async (value) => {
@@ -80,7 +95,9 @@
   };
 
   const handleSetReactionMuteMode = async (value) => {
-    await actions.editActionEntryPoint(() => actions.setReactionMuteMode(value));
+    await actions.editActionEntryPoint(() =>
+      actions.setReactionMuteMode(value),
+    );
   };
 
   const handleExitEditor = () => {
@@ -89,13 +106,15 @@
     }
     if (!browser) return;
 
-    const playlistSlugFromUrl = $page.url.searchParams.get('playlistId');
-    const itemFromUrl = $page.url.searchParams.get('item');
+    const playlistSlugFromUrl = $page.url.searchParams.get("playlistId");
+    const itemFromUrl = $page.url.searchParams.get("item");
     const playlistSlug = $state.playlistDocumentId ?? playlistSlugFromUrl;
 
     if (playlistSlug) {
       const originalVideoId = $state.originalVideoId ?? itemFromUrl;
-      const itemQuery = originalVideoId ? `?item=${encodeURIComponent(originalVideoId)}` : '';
+      const itemQuery = originalVideoId
+        ? `?item=${encodeURIComponent(originalVideoId)}`
+        : "";
       // Hard navigate to ensure a fresh player state.
       window.location.assign(`/playlist/${playlistSlug}${itemQuery}`);
       return;
@@ -116,10 +135,15 @@
   }
 
   $: if (!$state.isReactionMissing && reactionVideoIdError) {
-    reactionVideoIdError = '';
+    reactionVideoIdError = "";
   }
 
-  $: if (browser && !$state.isLoading && $state.isUsersOwnVideo && !$state.isEditModeOn) {
+  $: if (
+    browser &&
+    !$state.isLoading &&
+    $state.isUsersOwnVideo &&
+    !$state.isEditModeOn
+  ) {
     actions.enterEditMode();
   }
 
@@ -138,8 +162,8 @@
         setIsPublished: actions.setIsPublished,
         setIsUnpublished: actions.setIsUnpublished,
         openWithFullscreen: actions.openWithFullscreen,
-        openWithHalfscreen: actions.openWithHalfscreen
-      }
+        openWithHalfscreen: actions.openWithHalfscreen,
+      },
     });
   }
 
@@ -148,15 +172,19 @@
   });
 </script>
 
-<div class={$state.isLoading ? '' : 'hidden'}>
+<div class={$state.isLoading ? "" : "hidden"}>
   <div class="flex justify-center py-24">
     <SubtleLoader label="Loading editor" />
   </div>
 </div>
 
-<div class={`website-inner-container bg-background text-text-primary ${$state.isLoading ? 'hidden' : ''}`}>
+<div
+  class={`website-inner-container bg-background text-text-primary ${$state.isLoading ? "hidden" : ""}`}
+>
   {#if !$state.isFullscreen}
-    <div class="mx-auto flex w-full flex-wrap items-center justify-between gap-3 px-4 pt-6 sm:px-6 lg:px-10">
+    <div
+      class="mx-auto flex w-full flex-wrap items-center justify-between gap-3 px-4 pt-6 sm:px-6 lg:px-10"
+    >
       <h1 class="text-xl font-semibold text-text-primary">Edit Reaction</h1>
       <div class="flex items-center gap-2">
         <CinematicButton
@@ -178,8 +206,8 @@
           isFineTuneModeOn={$state.isFineTuneModeOn}
           isPlaylist={Boolean($state.youtubePlaylistId)}
           reactionVideoId={$state.reactionVideoId}
-          reactionVideoIdError={reactionVideoIdError}
-          isSettingReactionVideoId={isSettingReactionVideoId}
+          {reactionVideoIdError}
+          {isSettingReactionVideoId}
           offsetStartTime={$state.offsetStartTime}
           introBufferTime={$state.introBufferTime}
           reactionFinishTime={$state.reactionFinishTime}
@@ -215,15 +243,17 @@
           onSetSoundLevel={handleSetSoundLevel}
           onSetReactionMuteMode={handleSetReactionMuteMode}
           onToggleFineTuneMode={actions.toggleFineTuneMode}
+          onSeek={actions.seekTo}
         />
       </div>
     </div>
   {/if}
 
   <section
-    class={`theater-wrapper ${$state.isFullscreen
-      ? 'fixed inset-0 z-50 m-0 h-screen w-screen overflow-hidden rounded-none bg-black px-0 py-0 text-text-primary shadow-none'
-      : 'relative mx-auto my-6 w-full max-w-none rounded-2xl bg-surface/80 px-4 py-8 text-text-primary shadow-elevated backdrop-blur sm:px-6 lg:px-10 xl:rounded-3xl'
+    class={`theater-wrapper ${
+      $state.isFullscreen
+        ? "fixed inset-0 z-50 m-0 h-screen w-screen overflow-hidden rounded-none bg-black px-0 py-0 text-text-primary shadow-none"
+        : "relative mx-auto my-6 w-full max-w-none rounded-2xl bg-surface/80 px-4 py-8 text-text-primary shadow-elevated backdrop-blur sm:px-6 lg:px-10 xl:rounded-3xl"
     }`}
   >
     {#if $state.isFullscreen}
@@ -232,7 +262,7 @@
         isExitButtonExpanded={$state.isExitButtonExpanded}
         showCinematicBars={$state.showCinematicBars}
         isReactionMissing={$state.isReactionMissing}
-        bind:overlayRef={overlayRef}
+        bind:overlayRef
         onExitClick={actions.handleExitFullscreenClick}
         onExitEnter={actions.handleExitButtonEnter}
         onExitLeave={actions.handleExitButtonLeave}
@@ -242,19 +272,35 @@
       />
     {:else}
       <div class="grid gap-6 md:grid-cols-2 xl:gap-8">
-        <div class="relative overflow-hidden rounded-xl bg-black shadow-elevated">
+        <div
+          class="relative overflow-hidden rounded-xl bg-black shadow-elevated"
+        >
           <div class="relative aspect-[16/9] sm:aspect-[3/2]">
-            <div id="player-original" class="absolute inset-0 h-full w-full"></div>
+            <div
+              id="player-original"
+              class="absolute inset-0 h-full w-full"
+            ></div>
           </div>
           {#if $state.showCinematicBars}
-            <div class="pointer-events-none absolute inset-x-0 top-0 h-[12%] bg-gradient-to-b from-black via-black/80 to-transparent" aria-hidden="true"></div>
-            <div class="pointer-events-none absolute inset-x-0 bottom-0 h-[12%] bg-gradient-to-t from-black via-black/80 to-transparent" aria-hidden="true"></div>
+            <div
+              class="pointer-events-none absolute inset-x-0 top-0 h-[12%] bg-gradient-to-b from-black via-black/80 to-transparent"
+              aria-hidden="true"
+            ></div>
+            <div
+              class="pointer-events-none absolute inset-x-0 bottom-0 h-[12%] bg-gradient-to-t from-black via-black/80 to-transparent"
+              aria-hidden="true"
+            ></div>
           {/if}
         </div>
         {#if !$state.isReactionMissing}
-          <div class="relative overflow-hidden rounded-xl bg-black/80 shadow-surface">
+          <div
+            class="relative overflow-hidden rounded-xl bg-black/80 shadow-surface"
+          >
             <div class="relative aspect-[16/9] sm:aspect-[3/2]">
-              <div id="player-reaction" class="absolute inset-0 h-full w-full"></div>
+              <div
+                id="player-reaction"
+                class="absolute inset-0 h-full w-full"
+              ></div>
             </div>
           </div>
         {:else}
@@ -270,7 +316,7 @@
     {#if $state.playerOriginal && $state.playerReaction}
       <ControlDock
         isFullscreen={$state.isFullscreen}
-        stickyControlsClass={stickyControlsClass}
+        {stickyControlsClass}
         bothVideosStarted={$state.bothVideosStarted}
         isPlaylist={Boolean($state.playlistDocumentId)}
         isPlaylistAutoPlay={$state.isPlaylistAutoPlay}
@@ -284,7 +330,10 @@
         currentTime={$state.reactionCurrentTime}
         duration={$state.reactionDuration}
         seekMin={$state.offsetStartTime || 0}
-        seekMax={Math.min($state.reactionFinishTime || 0, $state.reactionDuration || 0)}
+        seekMax={Math.min(
+          $state.reactionFinishTime || 0,
+          $state.reactionDuration || 0,
+        )}
         onSeek={actions.seekTo}
       />
     {/if}
@@ -331,4 +380,3 @@
     overflow: hidden;
   }
 </style>
-

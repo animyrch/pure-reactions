@@ -790,6 +790,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       : Math.min(Math.max(normalized, seekMin), effectiveSeekMax);
 
     snapshot.playerReaction?.seekTo?.(clamped, true);
+    updateState({ reactionCurrentTime: clamped });
   };
 
   const setVolumeForOriginalVideo = (volume: number) => {

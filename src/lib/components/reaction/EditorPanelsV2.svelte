@@ -48,6 +48,7 @@
   export let onSetSoundLevel = () => {};
   export let onSetReactionMuteMode = () => {};
   export let onToggleFineTuneMode = () => {};
+  export let onSeek = (_time) => {};
 
   const SOUND_LEVEL_MIN = 0;
   const SOUND_LEVEL_MAX = 200;
@@ -363,6 +364,13 @@
     } catch (error) {
       console.error("Failed to delete playback rate config", error);
       showToast("Unable to remove that speed cue. Try again.", TOASTS.WARNING);
+    }
+  };
+
+  const handleSeek = (event) => {
+    const time = event?.detail?.time;
+    if (Number.isFinite(time)) {
+      onSeek(time);
     }
   };
 </script>
@@ -696,6 +704,7 @@
               on:deleteReactionVolumeConfig={handleDeleteReactionVolumeConfig}
               on:updatePlaybackRateConfig={handleUpdatePlaybackRateConfig}
               on:deletePlaybackRateConfig={handleDeletePlaybackRateConfig}
+              on:seek={handleSeek}
             />
           </div>
         </div>

@@ -124,6 +124,11 @@
   let hasManualZoom = false;
   let timelineContainer = null;
 
+  // Playhead drag state
+  let isDraggingPlayhead = false;
+  let playheadDragRect = null;
+  let playheadContainerEl = null;
+
   const PLAYBACK_RATE_OPTIONS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 
   let pendingVolumeInput = "100";
@@ -1306,7 +1311,50 @@
     Math.abs(marker.timeInReaction - activeMarker.initialTimeInReaction) <
       0.001;
 
+  // Playhead drag handlers
+  const updatePlayheadDrag = (event) => {
+    if (!isDraggingPlayhead || !playheadDragRect) return;
+    const clientX = event.clientX ?? event.touches?.[0]?.clientX ?? 0;
+    const offsetX = clientX - playheadDragRect.left;
+    const ratio = Math.max(0, Math.min(1, offsetX / playheadDragRect.width));
+    const targetTime = safeViewportStart + ratio * viewportSpan;
+    dispatch("seek", { time: targetTime });
+  };
+
+  const endPlayheadDrag = () => {
+    isDraggingPlayhead = false;
+    playheadDragRect = null;
+    window.removeEventListener("mousemove", updatePlayheadDrag);
+    window.removeEventListener("mouseup", endPlayheadDrag);
+    window.removeEventListener("touchmove", updatePlayheadDrag);
+    window.removeEventListener("touchend", endPlayheadDrag);
+  };
+
+  const startPlayheadDrag = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!playheadContainerEl) return;
+    playheadDragRect = playheadContainerEl.getBoundingClientRect();
+    isDraggingPlayhead = true;
+    window.addEventListener("mousemove", updatePlayheadDrag);
+    window.addEventListener("mouseup", endPlayheadDrag);
+    window.addEventListener("touchmove", updatePlayheadDrag, {
+      passive: false,
+    });
+    window.addEventListener("touchend", endPlayheadDrag);
+    // Immediately seek to clicked position
+    updatePlayheadDrag(event);
+  };
+
+  const cleanupPlayheadListeners = () => {
+    window.removeEventListener("mousemove", updatePlayheadDrag);
+    window.removeEventListener("mouseup", endPlayheadDrag);
+    window.removeEventListener("touchmove", updatePlayheadDrag);
+    window.removeEventListener("touchend", endPlayheadDrag);
+  };
+
   onDestroy(cleanupZoomListeners);
+  onDestroy(cleanupPlayheadListeners);
 </script>
 
 <svelte:window on:keydown={handleWindowKeydown} />
@@ -1347,17 +1395,36 @@
     <div class="relative flex flex-col gap-4 pt-6">
       <!-- Global current-time indicator (aligned to the region column: w-28 + gap-3) -->
       <div
-        class="pointer-events-none absolute left-[calc(7rem+0.75rem)] right-0 top-0 h-6"
-        aria-hidden="true"
+        class="pointer-events-auto absolute left-[calc(7rem+0.75rem)] right-0 top-0 h-6 cursor-ew-resize"
+        aria-label="Playhead scrubber"
+        role="slider"
+        aria-valuenow={safeCurrentTime}
+        aria-valuemin={safeViewportStart}
+        aria-valuemax={safeViewportEnd}
+        tabindex="0"
+        bind:this={playheadContainerEl}
+        on:mousedown={startPlayheadDrag}
+        on:touchstart={startPlayheadDrag}
       >
-        <div
-          class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2"
+        <button
+          type="button"
+          class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 cursor-ew-resize focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/60"
           style={`left: ${indicatorPosition}`}
+          aria-label="Drag to scrub playback"
+          tabindex="-1"
         >
-          <div
-            class="h-3 w-3 rounded-full border border-white/30 bg-accent-primary shadow"
-          ></div>
-        </div>
+          <!-- Playhead icon: upward triangle (pointing down at timeline) -->
+          <svg
+            class="h-5 w-5 text-accent-primary drop-shadow rotate-180"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              d="M10 3a1 1 0 0 1 .894.553l5 10A1 1 0 0 1 15 15H5a1 1 0 0 1-.894-1.447l5-10A1 1 0 0 1 10 3z"
+            />
+          </svg>
+        </button>
       </div>
 
       {#each visibleTracks as track (track.id)}

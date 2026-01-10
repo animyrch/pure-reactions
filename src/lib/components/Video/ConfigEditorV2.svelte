@@ -184,7 +184,11 @@
       .filter(Boolean);
   };
 
-  $: volumeEvents = normalizeVolumeEvents(volumeTimeline, volumeConfigs, "volume");
+  $: volumeEvents = normalizeVolumeEvents(
+    volumeTimeline,
+    volumeConfigs,
+    "volume",
+  );
   $: reactionVolumeEvents = normalizeVolumeEvents(
     reactionVolumeTimeline,
     reactionVolumeConfigs,
@@ -245,15 +249,19 @@
       .length,
     spanStart: ignoredTimelineEntries[0]?.timeInReaction ?? null,
     spanEnd:
-      ignoredTimelineEntries[ignoredTimelineEntries.length - 1]?.timeInReaction ??
-        null,
+      ignoredTimelineEntries[ignoredTimelineEntries.length - 1]
+        ?.timeInReaction ?? null,
   };
 
   $: if (showDebugConfigs && showIgnoredConfigs) {
     showIgnoredConfigs = false;
   }
 
-  $: if (!showDebugConfigs && showIgnoredConfigs && !ignoredTimelineEntries.length) {
+  $: if (
+    !showDebugConfigs &&
+    showIgnoredConfigs &&
+    !ignoredTimelineEntries.length
+  ) {
     showIgnoredConfigs = false;
   }
 </script>
@@ -358,6 +366,7 @@
         dispatch("updatePlaybackRateConfig", event.detail)}
       on:deletePlaybackRateConfig={(event) =>
         dispatch("deletePlaybackRateConfig", event.detail)}
+      on:seek={(event) => dispatch("seek", event.detail)}
     />
   </div>
 </div>
