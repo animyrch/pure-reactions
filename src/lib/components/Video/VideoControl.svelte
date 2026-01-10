@@ -408,7 +408,7 @@
                 <div class="group relative">
                     <button
                         type="button"
-                        class={`${iconButtonBase} ${showCinematicBars ? "bg-elevated/60" : ""}`}
+                        class={`${iconButtonBase} ${showCinematicBars ? "bg-accent-primary/20 text-accent-primary" : ""}`}
                         on:click={toggleBars}
                         aria-pressed={showCinematicBars}
                         aria-label={showCinematicBars

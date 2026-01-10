@@ -96,7 +96,7 @@
                 </div>
                 {#if showCinematicBars}
                     <div
-                        class="pointer-events-none absolute inset-x-0 top-0 h-[12%] bg-gradient-to-b from-black via-black/80 to-transparent"
+                        class="pointer-events-none absolute inset-x-0 top-0 h-[8%] bg-gradient-to-b from-black/80 to-transparent"
                         aria-hidden="true"
                     ></div>
                     <div
@@ -120,7 +120,7 @@
                     </div>
                     {#if showCinematicBars}
                         <div
-                            class="pointer-events-none absolute inset-x-0 top-0 h-[12%] bg-gradient-to-b from-black via-black/80 to-transparent"
+                            class="pointer-events-none absolute inset-x-0 top-0 h-[8%] bg-gradient-to-b from-black/80 to-transparent"
                             aria-hidden="true"
                         ></div>
                         <div
