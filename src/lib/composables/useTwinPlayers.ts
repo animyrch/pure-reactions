@@ -45,6 +45,7 @@ declare global {
     volumeConfigs: Record<string, any> | any[];
     reactionVolumeConfigs: Record<string, any> | any[];
     playbackRateConfigs: Record<string, any> | any[];
+    __players: { original: any; reaction: any };
   }
 }
 
@@ -446,6 +447,13 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         });
       }
 
+      if (typeof window !== 'undefined') {
+        window.__players = {
+          original: nextValue.playerOriginal,
+          reaction: nextValue.playerReaction
+        };
+      }
+
       return nextValue;
     });
   };
@@ -460,7 +468,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   const arePlayersActuallyReady = (): boolean => {
     const snapshot = get(state);
     const { playerOriginal, playerReaction, isReactionMissing } = snapshot;
-    
+
     // Check if original player is functional
     if (!playerOriginal) return false;
     try {
@@ -470,7 +478,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     } catch {
       return false;
     }
-    
+
     // If reaction is expected, check it too
     if (!isReactionMissing && playerReaction) {
       try {
@@ -480,7 +488,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         return false;
       }
     }
-    
+
     return true;
   };
 
@@ -1909,7 +1917,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
     const playerOriginal = get(state).playerOriginal;
     const playerReaction = get(state).playerReaction;
-    
+
     // Properly destroy existing players
     try {
       playerOriginal?.pauseVideo?.();
@@ -1923,7 +1931,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     }
     playerOriginal?.destroy?.();
     playerReaction?.destroy?.();
-    
+
     // Clean up any orphaned iframes that YouTube may have left behind
     // This can happen during client-side navigation if the player wasn't properly destroyed
     const cleanupOrphanedIframe = (containerId: string) => {
@@ -1939,7 +1947,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         }
       }
     };
-    
+
     cleanupOrphanedIframe('player-original');
     cleanupOrphanedIframe('player-reaction');
 
@@ -3616,7 +3624,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         if (!elementsReady) {
           console.warn('Player elements not found after waiting');
           debugClickGate('[TwinPlayers] init: player elements not ready', { seq, retryCount: initRetryCount });
-          
+
           // Auto-retry after INIT_RETRY_DELAY if we haven't exceeded max retries
           if (initRetryCount < MAX_INIT_RETRIES && globalActiveInstanceId === instanceId) {
             initRetryCount++;
@@ -3652,7 +3660,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         await buildInterface(initialSlug);
       } catch (error) {
         console.error('Failed to initialize reaction player:', error);
-        
+
         // Auto-retry on error if we haven't exceeded max retries
         if (initRetryCount < MAX_INIT_RETRIES && globalActiveInstanceId === instanceId && !isDestroyed) {
           initRetryCount++;

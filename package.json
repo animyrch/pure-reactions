@@ -6,9 +6,11 @@
     "dev": "vite dev",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint . --ext .js,.svelte"
+    "lint": "eslint . --ext .js,.svelte",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
     "@sveltejs/adapter-auto": "^2.0.0",
     "@sveltejs/adapter-netlify": "^1.0.0-next.88",
     "@sveltejs/enhanced-img": "^0.1.7",
