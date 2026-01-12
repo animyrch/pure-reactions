@@ -255,6 +255,7 @@ const iframeOptionDefault = {
 export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOptions) {
   const { slug, userId } = data;
   const initialUrlState = getInitialUrlState();
+  const lazySyncRequested = Boolean(initialUrlState.mobileLazySync);
   // console.log('Initial URL State:', initialUrlState);
   const state = writable<TwinPlayersState>({
     isLoading: true,
@@ -937,12 +938,22 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     const targetChanged = Number.isFinite(normalizedTarget)
       && (typeof syncTracking.lastOriginalTargetTime !== 'number' || Math.abs(syncTracking.lastOriginalTargetTime - normalizedTarget) > 0.01);
 
+    const ua = typeof navigator !== 'undefined' ? String(navigator.userAgent || '') : '';
+    const isMobilePlaybackDevice = /iPhone|iPad|iPod|Android/i.test(ua);
+    const isMobileLazySyncEnabled = lazySyncRequested && isMobilePlaybackDevice;
+    const originalStateNow = getPlayerStateSafely(get(state).playerOriginal);
+    const shouldSuppressSeek =
+      isMobileLazySyncEnabled
+      && originalStateNow === YT?.PlayerState?.BUFFERING;
+
     if (targetChanged) {
-      goToSecondsInOriginalVideo(normalizedTarget, {
-        allowSeekAhead: options.allowSeekAhead,
-        throttleMs: options.throttleMs,
-        force: options.forceSeek
-      });
+      if (!shouldSuppressSeek) {
+        goToSecondsInOriginalVideo(normalizedTarget, {
+          allowSeekAhead: options.allowSeekAhead,
+          throttleMs: options.throttleMs,
+          force: options.forceSeek
+        });
+      }
     }
 
     if (resolvedState === YT.PlayerState.PLAYING) {
@@ -1054,6 +1065,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       const isMobileAudio = isMobileAudioEnvironment();
       const ua = typeof navigator !== 'undefined' ? String(navigator.userAgent || '') : '';
       const isMobilePlaybackDevice = /iPhone|iPad|iPod|Android/i.test(ua);
+      const isMobileLazySyncEnabled = lazySyncRequested && isMobilePlaybackDevice;
 
       const originalIsMuted = typeof playerOriginal?.isMuted === 'function' ? Boolean(playerOriginal.isMuted()) : undefined;
       const reactionIsMuted = typeof playerReaction?.isMuted === 'function' ? Boolean(playerReaction.isMuted()) : undefined;
@@ -1079,6 +1091,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
           isReactionAutoMuted: snapshot.isReactionAutoMuted,
           isMobileAudioEnvironment: isMobileAudio,
           isMobilePlaybackDevice,
+          isMobileLazySyncEnabled,
           playerConfigs: snapshot.playerConfigs,
           volumeConfigs: snapshot.volumeConfigs,
           reactionVolumeConfigs: snapshot.reactionVolumeConfigs,
@@ -1359,6 +1372,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     const isMobileAudio = isMobileAudioEnvironment();
     const ua = typeof navigator !== 'undefined' ? String(navigator.userAgent || '') : '';
     const isMobilePlaybackDevice = /iPhone|iPad|iPod|Android/i.test(ua);
+    const isMobileLazySyncEnabled = lazySyncRequested && isMobilePlaybackDevice;
 
     const originalIsMuted = typeof snapshot.playerOriginal?.isMuted === 'function'
       ? Boolean(snapshot.playerOriginal.isMuted())
@@ -1384,6 +1398,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         isReactionAutoMuted: snapshot.isReactionAutoMuted,
         isMobileAudioEnvironment: isMobileAudio,
         isMobilePlaybackDevice,
+        isMobileLazySyncEnabled,
         playerConfigs: snapshot.playerConfigs,
         volumeConfigs: snapshot.volumeConfigs,
         reactionVolumeConfigs: snapshot.reactionVolumeConfigs,
@@ -3729,7 +3744,8 @@ function getInitialUrlState() {
       playlistId: null as string | null,
       queueSlug: null as string | null,
       queueIndex: null as number | null,
-      queueAutoPlay: false
+      queueAutoPlay: false,
+      mobileLazySync: false
     };
   }
   const url = new URL(window.location.href);
@@ -3737,11 +3753,14 @@ function getInitialUrlState() {
   const queueSlug = params.get('queueSlug');
   const queueIndexRaw = params.get('queueIndex');
   const queueAutoPlayRaw = params.get('queueAutoPlay');
+  const mobileLazySyncRaw = params.get('mobileLazySync') ?? params.get('lazySync');
+  const mobileLazySync = mobileLazySyncRaw === 'true' || mobileLazySyncRaw === '1' || params.has('mobileLazySync') || params.has('lazySync');
   return {
     isFullscreen: params.get('isFullscreen') === 'true',
     playlistId: params.get('playlistId'),
     queueSlug,
     queueIndex: queueIndexRaw ? Number(queueIndexRaw) : null,
-    queueAutoPlay: queueAutoPlayRaw === 'true'
+    queueAutoPlay: queueAutoPlayRaw === 'true',
+    mobileLazySync
   };
 }

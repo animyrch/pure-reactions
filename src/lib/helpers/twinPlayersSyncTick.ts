@@ -42,6 +42,7 @@ export type TwinPlayersSyncTickInput = {
 
   isMobileAudioEnvironment: boolean;
   isMobilePlaybackDevice: boolean;
+  isMobileLazySyncEnabled?: boolean;
 
   playerConfigs: any;
   volumeConfigs: any;
@@ -387,9 +388,13 @@ export function computeTwinPlayersSyncTick(
     };
   }
 
-  const tolerance = effectiveConfigState === yt.PLAYING
-    ? (input.isMobilePlaybackDevice ? 0.9 : 0.15)
-    : (input.isMobilePlaybackDevice ? 0.05 : 0.01);
+  const isMobileLazySyncEnabled = Boolean(input.isMobileLazySyncEnabled);
+
+  const tolerance = isMobileLazySyncEnabled
+    ? 2.0
+    : (effectiveConfigState === yt.PLAYING
+        ? (input.isMobilePlaybackDevice ? 0.9 : 0.15)
+        : (input.isMobilePlaybackDevice ? 0.05 : 0.01));
 
   let targetMismatch = false;
   let driftAbs = Number.NaN;
@@ -429,7 +434,13 @@ export function computeTwinPlayersSyncTick(
 
   const shouldApplySeek = targetMismatch && (
     input.isMobilePlaybackDevice
-      ? (Number.isFinite(driftAbs) && (driftAbs > 2.5 || now - nextTracking.lastOriginalSeekAt > 3500))
+      ? (
+          isMobileLazySyncEnabled
+            ? (Number.isFinite(driftAbs)
+                && driftAbs > 2.0
+                && now - nextTracking.lastOriginalSeekAt > 3500)
+            : (Number.isFinite(driftAbs) && (driftAbs > 2.5 || now - nextTracking.lastOriginalSeekAt > 3500))
+        )
       : (configWantsToPlay
           && Number.isFinite(driftAbs)
           && driftAbs > DESKTOP_MIN_DRIFT_TO_SEEK
