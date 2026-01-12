@@ -43,6 +43,108 @@ test.describe('Twin Video Sync & Stability', () => {
         }, { timeout: 45000 }).toBeLessThanOrEqual(0.15);
     });
 
+    test('Play Trigger: should start both videos within 250ms', async ({ page }) => {
+        await page.goto(REACTION_PAGE_URL);
+
+        // 1. Wait for readiness
+        await waitForPlayersReady(page);
+
+        // 2. Satisfy the click-gate once so the app control surface is enabled.
+        await startPlaybackInteraction(page);
+        await page.getByRole('button', { name: 'Pause both videos' }).waitFor({ timeout: 45000 });
+
+        // 3. Pause via app control
+        await page.getByRole('button', { name: 'Pause both videos' }).click({ force: true });
+        await page.getByRole('button', { name: 'Resume both videos' }).waitFor({ timeout: 20000 });
+
+        await expect.poll(async () => {
+            const s = await readTwinPlayersSnapshot(page);
+            if (!s) return false;
+            const isActive = (state) => state === YT_PLAYER_STATE.PLAYING || state === YT_PLAYER_STATE.BUFFERING;
+            return !isActive(s.originalPlayerState) && !isActive(s.reactionPlayerState);
+        }, { timeout: 20000 }).toBe(true);
+
+        // 4. Arm timers for first confirmed playback start (PLAYING + currentTime advancing)
+        await page.evaluate(() => {
+            const players = window.__players;
+            if (!players?.original || !players?.reaction) return;
+
+            window.__twinPlayStartTimes = {
+                armedAt: performance.now(),
+                original: null,
+                reaction: null,
+            };
+
+            const getState = (p) => {
+                if (typeof p?.getPlayerState === 'function') return p.getPlayerState();
+                if (typeof p?.paused === 'boolean') return p.paused ? 2 : 1;
+                return null;
+            };
+
+            const getTime = (p) => {
+                if (typeof p?.getCurrentTime === 'function') return p.getCurrentTime();
+                if (typeof p?.currentTime === 'number') return p.currentTime;
+                return 0;
+            };
+
+            const initial = {
+                original: getTime(players.original),
+                reaction: getTime(players.reaction),
+            };
+
+            const markIfUnset = (key) => {
+                const t = window.__twinPlayStartTimes;
+                if (!t || t[key] != null) return;
+                t[key] = performance.now();
+            };
+
+            const tick = () => {
+                const t = window.__twinPlayStartTimes;
+                if (!t) return;
+
+                try {
+                    if (t.original == null) {
+                        const state = getState(players.original);
+                        const time = getTime(players.original);
+                        if (state === 1 && time > initial.original + 0.02) markIfUnset('original');
+                    }
+                } catch {
+                    // No-op
+                }
+
+                try {
+                    if (t.reaction == null) {
+                        const state = getState(players.reaction);
+                        const time = getTime(players.reaction);
+                        if (state === 1 && time > initial.reaction + 0.02) markIfUnset('reaction');
+                    }
+                } catch {
+                    // No-op
+                }
+
+                if (t.original == null || t.reaction == null) {
+                    requestAnimationFrame(tick);
+                }
+            };
+
+            requestAnimationFrame(tick);
+        });
+
+        // 5. Resume via app control
+        await page.getByRole('button', { name: 'Resume both videos' }).click({ force: true });
+
+        // 6. Wait until both have recorded a start time
+        await expect.poll(async () => {
+            const t = await page.evaluate(() => window.__twinPlayStartTimes);
+            return Boolean(t && t.original != null && t.reaction != null);
+        }, { timeout: 45000 }).toBe(true);
+
+        // 7. Assert both transitions happened within 250ms
+        const times = await page.evaluate(() => window.__twinPlayStartTimes);
+        expect(times, 'Expected play start times').toBeTruthy();
+        expect(Math.abs(times.original - times.reaction), 'Start time delta (ms)').toBeLessThanOrEqual(250);
+    });
+
     test('Volume Stability: should preserve sync when volume changes automatically', async ({ page }, testInfo) => {
         await page.goto(REACTION_PAGE_URL);
 

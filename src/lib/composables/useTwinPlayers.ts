@@ -36,11 +36,18 @@ import {
   timelineArrayToMap,
   volumeTimelineArrayToMap
 } from '$lib/helpers/twinPlayersTimeline';
+import {
+  computeTwinPlayersSyncTick,
+  type TwinPlayersPlayerState,
+  type TwinPlayersSyncTracking
+} from '$lib/helpers/twinPlayersSyncTick';
+import { applyTwinPlayersSyncActions } from '$lib/helpers/twinPlayersSyncApply';
 
 declare const YT: any;
 
 declare global {
   interface Window {
+    YT?: any;
     playerConfigs: Record<string, any> | any[];
     volumeConfigs: Record<string, any> | any[];
     reactionVolumeConfigs: Record<string, any> | any[];
@@ -350,6 +357,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
   let isDestroyed = false;
   let isSwitchingReactionInPlace = false;
+  let lastUserResumeAt = 0;
 
   const getPlayerDebugInfo = (target: any) => {
     let iframeId: string | undefined;
@@ -402,12 +410,13 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   let playlistFetchPromise: Promise<void> | undefined;
   let changingVolume = false;
   let changingReactionVolume = false;
-  let changingState = false;
   let changingSpeed = false;
-  let lastOriginalTargetTime: number | undefined;
-  let lastOriginalSeekAt = 0;
-  let lastOriginalSeekTarget: number | undefined;
-  let mobileAudioWinner: 'original' | 'reaction' | null = null;
+  const syncTracking: TwinPlayersSyncTracking = {
+    lastOriginalTargetTime: undefined,
+    lastOriginalSeekAt: 0,
+    lastOriginalSeekTarget: undefined,
+    mobileAudioWinner: null
+  };
 
   const isMobileAudioEnvironment = () => {
     if (typeof navigator === 'undefined') {
@@ -788,16 +797,33 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         updateState({ isReactionAutoMuted: false });
         const reactionCurrentTime = Number(snapshot.playerReaction?.getCurrentTime?.().toFixed?.(1));
         if (Number.isFinite(reactionCurrentTime)) {
-          handleReactionVideoVolume(reactionCurrentTime);
+          const timeInReaction = reactionCurrentTime;
+          if (
+            timeInReaction >= snapshot.seekMin
+            && (!Number.isFinite(snapshot.seekMax) || timeInReaction <= snapshot.seekMax)
+          ) {
+            const newVolume = getCurrentVolumeFromVolumeConfigs(
+              reactionCurrentTime,
+              snapshot.reactionVolumeConfigs,
+              1.0,
+              snapshot.timeOffset
+            );
+            if (!changingReactionVolume && snapshot.currentVolumeReactionVideo !== newVolume) {
+              changingReactionVolume = true;
+              setVolumeForReactionVideo(newVolume);
+              updateState({ currentVolumeReactionVideo: newVolume });
+              changingReactionVolume = false;
+            }
+          }
         }
       }
     }
   };
 
   const resetOriginalStateTracking = () => {
-    lastOriginalTargetTime = undefined;
-    lastOriginalSeekTarget = undefined;
-    lastOriginalSeekAt = 0;
+    syncTracking.lastOriginalTargetTime = undefined;
+    syncTracking.lastOriginalSeekTarget = undefined;
+    syncTracking.lastOriginalSeekAt = 0;
   };
 
   const goToSecondsInOriginalVideo = (
@@ -812,23 +838,23 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     if (playerOriginal && typeof playerOriginal.seekTo === 'function') {
       const now = Date.now();
       const throttleMs = Number(options.throttleMs ?? 0);
-      if (!options.force && throttleMs > 0 && now - lastOriginalSeekAt < throttleMs) {
+      if (!options.force && throttleMs > 0 && now - syncTracking.lastOriginalSeekAt < throttleMs) {
         return false;
       }
       if (
         !options.force
-        && typeof lastOriginalSeekTarget === 'number'
-        && Math.abs(lastOriginalSeekTarget - normalized) < 0.25
-        && now - lastOriginalSeekAt < Math.max(throttleMs, 1200)
+        && typeof syncTracking.lastOriginalSeekTarget === 'number'
+        && Math.abs(syncTracking.lastOriginalSeekTarget - normalized) < 0.25
+        && now - syncTracking.lastOriginalSeekAt < Math.max(throttleMs, 1200)
       ) {
         return false;
       }
 
       const allowSeekAhead = options.allowSeekAhead !== false;
       playerOriginal.seekTo(normalized, allowSeekAhead);
-      lastOriginalTargetTime = normalized;
-      lastOriginalSeekTarget = normalized;
-      lastOriginalSeekAt = now;
+      syncTracking.lastOriginalTargetTime = normalized;
+      syncTracking.lastOriginalSeekTarget = normalized;
+      syncTracking.lastOriginalSeekAt = now;
       return true;
     }
     return false;
@@ -885,193 +911,6 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     }
   };
 
-  const handleOriginalVideoVolume = (reactionCurrentTime: number) => {
-    const snapshot = get(state);
-    const newVolume = getCurrentVolumeFromVolumeConfigs(
-      reactionCurrentTime,
-      window.volumeConfigs,
-      snapshot.globalGain,
-      snapshot.timeOffset
-    );
-    if (!changingVolume && snapshot.currentVolumeOriginalVideo !== newVolume) {
-      changingVolume = true;
-      setVolumeForOriginalVideo(newVolume);
-      updateState({ currentVolumeOriginalVideo: newVolume });
-      changingVolume = false;
-    }
-  };
-
-  const handleReactionVideoVolume = (reactionCurrentTime: number) => {
-    const snapshot = get(state);
-    const reactionPlayer = snapshot.playerReaction;
-    if (!reactionPlayer) {
-      return;
-    }
-
-    const playingState = typeof YT !== 'undefined' && typeof YT?.PlayerState?.PLAYING === 'number'
-      ? YT.PlayerState.PLAYING
-      : 1;
-
-    const shouldMute = snapshot.isReactionMuteModeEnabled && snapshot.currentStateOriginalVideo === playingState;
-    if (shouldMute || snapshot.isReactionAutoMuted) {
-      return;
-    }
-
-    const newVolume = getCurrentVolumeFromVolumeConfigs(
-      reactionCurrentTime,
-      (window as any).reactionVolumeConfigs,
-      1.0,
-      snapshot.timeOffset
-    );
-
-    // Ignore events outside valid bounds (unless we are muting which is a safety feature)
-    const timeInReaction = reactionCurrentTime;
-    if (timeInReaction < snapshot.seekMin || (Number.isFinite(snapshot.seekMax) && timeInReaction > snapshot.seekMax)) {
-      // However, we might want to respect mute logic anyway?
-      // For now, let's strictly ignore config application
-      return;
-    }
-
-    if (!changingReactionVolume && snapshot.currentVolumeReactionVideo !== newVolume) {
-      changingReactionVolume = true;
-      setVolumeForReactionVideo(newVolume);
-      updateState({ currentVolumeReactionVideo: newVolume });
-      changingReactionVolume = false;
-    }
-  };
-
-  const handleMobileVolumeArbitration = (reactionCurrentTime: number) => {
-    const snapshot = get(state);
-
-    const hasAnyVolumeConfig = (configs: any) => {
-      if (!configs) {
-        return false;
-      }
-      if (Array.isArray(configs)) {
-        return configs.length > 0;
-      }
-      if (typeof configs === 'object') {
-        return Object.keys(configs).length > 0;
-      }
-      return false;
-    };
-
-    // Calculate intended volumes for both
-    const intendedOriginalVolume = getCurrentVolumeFromVolumeConfigs(
-      reactionCurrentTime,
-      window.volumeConfigs,
-      snapshot.globalGain,
-      snapshot.timeOffset
-    );
-
-    const intendedReactionVolume = getCurrentVolumeFromVolumeConfigs(
-      reactionCurrentTime,
-      (window as any).reactionVolumeConfigs,
-      1.0,
-      snapshot.timeOffset
-    );
-
-    const hasOriginalVolumeConfigs = hasAnyVolumeConfig(window.volumeConfigs);
-    const hasReactionVolumeConfigs = hasAnyVolumeConfig((window as any).reactionVolumeConfigs);
-
-    // Special-case: If there are no volume configs at all, pick the audible player by original play state.
-    // - Original PLAYING  -> original audible
-    // - Otherwise         -> reaction audible
-    // This keeps mobile mutually-exclusive audio while matching desktop behavior (both audible) outside mobile.
-    if (!hasOriginalVolumeConfigs && !hasReactionVolumeConfigs) {
-      const playingState = typeof YT !== 'undefined' && typeof YT?.PlayerState?.PLAYING === 'number'
-        ? YT.PlayerState.PLAYING
-        : 1;
-
-      const originalWins = snapshot.currentStateOriginalVideo === playingState;
-      mobileAudioWinner = originalWins ? 'original' : 'reaction';
-
-      if (originalWins) {
-        if (snapshot.playerOriginal?.isMuted?.() || snapshot.currentVolumeOriginalVideo !== intendedOriginalVolume) {
-          setVolumeForOriginalVideo(intendedOriginalVolume);
-          snapshot.playerOriginal?.unMute?.();
-          updateState({ currentVolumeOriginalVideo: intendedOriginalVolume });
-        }
-        if (!snapshot.playerReaction?.isMuted?.()) {
-          muteReactionAudio(snapshot.playerReaction);
-        }
-      } else {
-        if (snapshot.playerReaction?.isMuted?.() || snapshot.currentVolumeReactionVideo !== intendedReactionVolume) {
-          setVolumeForReactionVideo(intendedReactionVolume);
-          snapshot.playerReaction?.unMute?.();
-          updateState({ currentVolumeReactionVideo: intendedReactionVolume });
-        }
-        if (!snapshot.playerOriginal?.isMuted?.()) {
-          snapshot.playerOriginal?.mute?.();
-        }
-      }
-
-      return;
-    }
-
-    // Decision Logic (configs present): Whichever intended volume is higher wins.
-    // We use strict inequality (>). If they are equal, Reaction wins.
-
-    const delta = intendedOriginalVolume - intendedReactionVolume;
-    const HYSTERESIS = 3;
-    let originalWins = intendedOriginalVolume > intendedReactionVolume;
-    if (mobileAudioWinner) {
-      if (Math.abs(delta) <= HYSTERESIS) {
-        originalWins = mobileAudioWinner === 'original';
-      }
-    } else if (intendedOriginalVolume === intendedReactionVolume) {
-      originalWins = false;
-    }
-
-    const nextWinner: 'original' | 'reaction' = originalWins ? 'original' : 'reaction';
-    mobileAudioWinner = nextWinner;
-
-    // Apply Mutex (Mutually Exclusive) Audio
-    if (originalWins) {
-      // Unmute/Set Original
-      if (snapshot.playerOriginal?.isMuted?.() || snapshot.currentVolumeOriginalVideo !== intendedOriginalVolume) {
-        setVolumeForOriginalVideo(intendedOriginalVolume);
-        snapshot.playerOriginal?.unMute?.();
-        updateState({ currentVolumeOriginalVideo: intendedOriginalVolume });
-      }
-      // Mute Reaction
-      // We only mute if it's not already muted to avoid spamming calls
-      if (!snapshot.playerReaction?.isMuted?.()) {
-        muteReactionAudio(snapshot.playerReaction);
-      }
-    } else {
-      // Unmute/Set Reaction
-      if (snapshot.playerReaction?.isMuted?.() || snapshot.currentVolumeReactionVideo !== intendedReactionVolume) {
-        setVolumeForReactionVideo(intendedReactionVolume);
-        snapshot.playerReaction?.unMute?.();
-        updateState({ currentVolumeReactionVideo: intendedReactionVolume });
-      }
-      // Mute Original
-      if (!snapshot.playerOriginal?.isMuted?.()) {
-        snapshot.playerOriginal?.mute?.();
-      }
-    }
-  };
-
-  const handleOriginalVideoSpeed = (reactionCurrentTime: number) => {
-    const snapshot = get(state);
-    const desiredPlaybackRate = getCurrentPlaybackRateFromConfigs(
-      reactionCurrentTime,
-      window.playbackRateConfigs,
-      snapshot.timeOffset
-    );
-    const timeInReaction = reactionCurrentTime;
-    if (timeInReaction < snapshot.seekMin || (Number.isFinite(snapshot.seekMax) && timeInReaction > snapshot.seekMax)) {
-      return;
-    }
-    if (!changingSpeed && Math.abs(desiredPlaybackRate - snapshot.currentPlaybackRate) > 0.001) {
-      changingSpeed = true;
-      setPlaybackRateForOriginalVideo(desiredPlaybackRate);
-      updateState({ currentPlaybackRate: desiredPlaybackRate });
-      changingSpeed = false;
-    }
-  };
-
   const handleStateChangeInOriginalVideo = (
     previousState: number,
     nextState: number,
@@ -1081,7 +920,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     const resolvedState = typeof nextState === 'number' ? nextState : -1;
     const normalizedTarget = Number(targetTime);
     const targetChanged = Number.isFinite(normalizedTarget)
-      && (typeof lastOriginalTargetTime !== 'number' || Math.abs(lastOriginalTargetTime - normalizedTarget) > 0.01);
+      && (typeof syncTracking.lastOriginalTargetTime !== 'number' || Math.abs(syncTracking.lastOriginalTargetTime - normalizedTarget) > 0.01);
 
     if (targetChanged) {
       goToSecondsInOriginalVideo(normalizedTarget, {
@@ -1104,196 +943,6 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
     // Do not update lastOriginalTargetTime here unless a seek was actually applied.
     // lastOriginalTargetTime is updated in goToSecondsInOriginalVideo() and via actual player time sampling.
-  };
-
-  const handleOriginalVideoState = (reactionCurrentTime: number, previousReactionTime: number) => {
-    if (changingState) {
-      return;
-    }
-
-    changingState = true;
-    try {
-      const snapshot = get(state);
-
-      const reactionPlayerState = typeof snapshot.playerReaction?.getPlayerState === 'function'
-        ? snapshot.playerReaction.getPlayerState()
-        : undefined;
-      const isReactionPlaying = reactionPlayerState === YT?.PlayerState?.PLAYING;
-      const shouldHoldOriginalWhilePaused = snapshot.isFineTuneModeOn && !isReactionPlaying;
-      const timeline = Array.isArray(snapshot.stateTimeline) ? snapshot.stateTimeline : [];
-      const timeOffset = Number(snapshot.timeOffset || 0);
-      const previousEffective = Number.isFinite(previousReactionTime)
-        ? Number(previousReactionTime) - timeOffset
-        : Number(reactionCurrentTime) - timeOffset;
-      const currentEffective = Number(reactionCurrentTime) - timeOffset;
-      const movingForward = currentEffective >= previousEffective - 0.0001;
-
-      let workingState = snapshot.currentStateOriginalVideo;
-
-      if (movingForward && timeline.length) {
-        // Process every state event that fired between the previous and current samples.
-        const eventsInRange = timeline.filter((entry) => {
-          const eventTime = Number(entry?.t);
-          if (!Number.isFinite(eventTime)) {
-            return false;
-          }
-          return eventTime > previousEffective && eventTime <= currentEffective;
-        });
-
-        for (const entry of eventsInRange) {
-          const rawState = Number(entry?.state);
-          let desiredState = Number.isFinite(rawState) ? rawState : -1;
-          if (shouldHoldOriginalWhilePaused && desiredState === YT.PlayerState.PLAYING) {
-            desiredState = YT.PlayerState.PAUSED;
-          }
-          const desiredTarget = Number(entry?.targetTime ?? entry?.time ?? 0);
-          handleStateChangeInOriginalVideo(workingState, desiredState, desiredTarget);
-          workingState = desiredState;
-        }
-      }
-
-      const config = getCurrentStateFromStateConfigs(
-        reactionCurrentTime,
-        window.playerConfigs,
-        snapshot.timeOffset
-      );
-      const rawConfigState = Number(config.state);
-      const configState = Number.isFinite(rawConfigState) ? rawConfigState : -1;
-      const effectiveConfigState =
-        shouldHoldOriginalWhilePaused && configState === YT.PlayerState.PLAYING
-          ? YT.PlayerState.PAUSED
-          : configState;
-      const baseTargetTime = Number(config.time ?? 0);
-      const anchorTime = Number(config.closestSmallerTimeCode ?? currentEffective);
-      const actualOriginalTime = typeof snapshot.playerOriginal?.getCurrentTime === 'function'
-        ? Number(snapshot.playerOriginal.getCurrentTime())
-        : Number.NaN;
-      const rawOriginalDuration = typeof snapshot.playerOriginal?.getDuration === 'function'
-        ? Number(snapshot.playerOriginal.getDuration())
-        : Number.NaN;
-      const originalDuration = Number.isFinite(rawOriginalDuration) && rawOriginalDuration > 0
-        ? rawOriginalDuration
-        : Number.NaN;
-      let computedTargetTime = Number.isFinite(baseTargetTime) ? baseTargetTime : Number.NaN;
-
-      if (Number.isFinite(computedTargetTime) && Number.isFinite(anchorTime)) {
-        const deltaSinceAnchor = currentEffective - anchorTime;
-        if (effectiveConfigState === YT.PlayerState.PLAYING && Number.isFinite(deltaSinceAnchor)) {
-          computedTargetTime += Math.max(deltaSinceAnchor, 0);
-        }
-      }
-
-      // Edge case: reaction continues after the original's natural duration.
-      // If we keep trying to sync/seeking beyond the duration, YouTube may loop back near 0.
-      // We keep sync active (so seeking back earlier re-enables original playback) but we
-      // stop applying time/state changes while the mapped target time is past the end.
-      const ORIGINAL_END_EPSILON = 0.25;
-      const targetPastOriginalEnd = Number.isFinite(originalDuration)
-        && Number.isFinite(computedTargetTime)
-        && computedTargetTime >= Math.max(originalDuration - ORIGINAL_END_EPSILON, 0);
-
-      if (targetPastOriginalEnd) {
-        pauseOriginalVideo();
-        workingState = YT.PlayerState.ENDED;
-        if (workingState !== snapshot.currentStateOriginalVideo) {
-          updateState({ currentStateOriginalVideo: workingState });
-        }
-        enforceReactionMuteMode(workingState);
-        if (Number.isFinite(actualOriginalTime)) {
-          lastOriginalTargetTime = actualOriginalTime;
-        }
-        return;
-      }
-
-      const isMobilePlaybackDevice = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      const tolerance = effectiveConfigState === YT.PlayerState.PLAYING
-        ? (isMobilePlaybackDevice ? 0.9 : 0.35)
-        : (isMobilePlaybackDevice ? 0.05 : 0.01);
-
-      let targetMismatch = false;
-      let driftAbs = Number.NaN;
-      if (Number.isFinite(computedTargetTime)) {
-        if (Number.isFinite(actualOriginalTime)) {
-          driftAbs = Math.abs(actualOriginalTime - computedTargetTime);
-          if (isMobilePlaybackDevice && effectiveConfigState === YT.PlayerState.PLAYING) {
-            const quantize = (value: number, step: number) => Math.round(value / step) * step;
-            targetMismatch = Math.abs(quantize(actualOriginalTime, 0.5) - quantize(computedTargetTime, 0.5)) > tolerance;
-          } else {
-            targetMismatch = driftAbs > tolerance;
-          }
-        } else if (typeof lastOriginalTargetTime === 'number') {
-          driftAbs = Math.abs(lastOriginalTargetTime - computedTargetTime);
-          targetMismatch = driftAbs > tolerance;
-        } else {
-          targetMismatch = true;
-        }
-      }
-
-
-      // Effective playback clamping:
-      // If the resolved config's time (closestSmallerTimeCode) is BEFORE seekMin, we treat it as nonexistent.
-      // This means we should NOT apply it, unless there is a cue strictly inside [seekMin, seekMax].
-
-      const configIsInRange = config.closestSmallerTimeCode >= snapshot.seekMin && (!Number.isFinite(snapshot.seekMax) || config.closestSmallerTimeCode <= snapshot.seekMax);
-
-      // Check if the original video has legitimately ended.
-      // If it has ended AND the config doesn't want it to play, skip the sync to prevent loop-back.
-      // Seeking an ENDED YouTube video can cause it to restart, so we only sync if explicitly needed.
-      const actualOriginalPlayerState = typeof snapshot.playerOriginal?.getPlayerState === 'function'
-        ? snapshot.playerOriginal.getPlayerState()
-        : undefined;
-      const originalHasEnded = actualOriginalPlayerState === YT?.PlayerState?.ENDED;
-      const configWantsToPlay = effectiveConfigState === YT.PlayerState.PLAYING;
-
-      // Only apply sync if:
-      // 1. The original hasn't ended, OR
-      // 2. The config explicitly wants it to play (restart)
-      const shouldApplySync = !originalHasEnded || configWantsToPlay;
-
-      const now = Date.now();
-      const shouldApplyState = workingState !== effectiveConfigState;
-      // Seeking while PLAYING can cause visible frame flashes if we do it repeatedly.
-      // On desktop, allow drift-correction seeks only when drift is meaningful and we haven't sought recently.
-      // On mobile, keep the more conservative behavior (seek rarely).
-      const DESKTOP_SEEK_COOLDOWN_MS = 4500;
-      const DESKTOP_MIN_DRIFT_TO_SEEK = 0.25;
-
-      const shouldApplySeek = targetMismatch && (
-        isMobilePlaybackDevice
-          ? (Number.isFinite(driftAbs) && (driftAbs > 2.5 || now - lastOriginalSeekAt > 3500))
-          : (configWantsToPlay && Number.isFinite(driftAbs) && driftAbs > DESKTOP_MIN_DRIFT_TO_SEEK && now - lastOriginalSeekAt > DESKTOP_SEEK_COOLDOWN_MS)
-      );
-
-      if (shouldApplySync && configIsInRange && (shouldApplyState || shouldApplySeek)) {
-        if (reactionCurrentTime >= snapshot.seekMin && (!Number.isFinite(snapshot.seekMax) || reactionCurrentTime <= snapshot.seekMax)) {
-          handleStateChangeInOriginalVideo(workingState, effectiveConfigState, computedTargetTime, {
-            throttleMs: isMobilePlaybackDevice ? 3500 : DESKTOP_SEEK_COOLDOWN_MS,
-            allowSeekAhead: !(Number.isFinite(driftAbs) && driftAbs < 1.25),
-            forceSeek: shouldApplyState
-          });
-          workingState = effectiveConfigState;
-        }
-      }
-
-      // If video has ended and should stay ended, update state tracker
-      if (originalHasEnded && !configWantsToPlay) {
-        if (snapshot.currentStateOriginalVideo !== YT.PlayerState.ENDED) {
-          workingState = YT.PlayerState.ENDED;
-        }
-      }
-
-      if (workingState !== snapshot.currentStateOriginalVideo) {
-        updateState({ currentStateOriginalVideo: workingState });
-      }
-
-      enforceReactionMuteMode(workingState);
-
-      if (Number.isFinite(actualOriginalTime)) {
-        lastOriginalTargetTime = actualOriginalTime;
-      }
-    } finally {
-      changingState = false;
-    }
   };
 
   const pollVideoCurrentTime = () => {
@@ -1327,6 +976,12 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         const reactionState = getPlayerStateSafely(playerReaction);
         if (reactionState === YT.PlayerState.PLAYING || reactionState === YT.PlayerState.BUFFERING) {
           pausePlayerWithTrace('reaction', playerReaction, 'userPaused override');
+        }
+
+        // Keep the local state tracker aligned while paused so we don't interpret
+        // a stale PLAYING -> PAUSED transition on resume and unnecessarily re-pause.
+        if (typeof reactionState === 'number') {
+          reactionPlayerState = reactionState;
         }
         return;
       }
@@ -1367,14 +1022,98 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         }
         return;
       }
-      if (isMobileAudioEnvironment()) {
-        handleMobileVolumeArbitration(reactionCurrentTime);
-      } else {
-        handleOriginalVideoVolume(reactionCurrentTime);
-        handleReactionVideoVolume(reactionCurrentTime);
+
+      const ytStates: TwinPlayersPlayerState = {
+        PLAYING: typeof YT?.PlayerState?.PLAYING === 'number' ? YT.PlayerState.PLAYING : 1,
+        PAUSED: typeof YT?.PlayerState?.PAUSED === 'number' ? YT.PlayerState.PAUSED : 2,
+        BUFFERING: typeof YT?.PlayerState?.BUFFERING === 'number' ? YT.PlayerState.BUFFERING : 3,
+        CUED: typeof YT?.PlayerState?.CUED === 'number' ? YT.PlayerState.CUED : 5,
+        ENDED: typeof YT?.PlayerState?.ENDED === 'number' ? YT.PlayerState.ENDED : 0
+      };
+
+      const isMobileAudio = isMobileAudioEnvironment();
+      const ua = typeof navigator !== 'undefined' ? String(navigator.userAgent || '') : '';
+      const isMobilePlaybackDevice = /iPhone|iPad|iPod|Android/i.test(ua);
+
+      const originalIsMuted = typeof playerOriginal?.isMuted === 'function' ? Boolean(playerOriginal.isMuted()) : undefined;
+      const reactionIsMuted = typeof playerReaction?.isMuted === 'function' ? Boolean(playerReaction.isMuted()) : undefined;
+
+      const originalCurrentTime = typeof playerOriginal?.getCurrentTime === 'function' ? Number(playerOriginal.getCurrentTime()) : undefined;
+      const originalDuration = typeof playerOriginal?.getDuration === 'function' ? Number(playerOriginal.getDuration()) : undefined;
+      const originalPlayerState = typeof playerOriginal?.getPlayerState === 'function' ? Number(playerOriginal.getPlayerState()) : undefined;
+
+      const result = computeTwinPlayersSyncTick(
+        {
+          reactionCurrentTime,
+          previousReactionTime,
+          seekMin: snapshot.seekMin,
+          seekMax: snapshot.seekMax,
+          timeOffset: snapshot.timeOffset,
+          globalGain: snapshot.globalGain,
+          isFineTuneModeOn: snapshot.isFineTuneModeOn,
+          currentStateOriginalVideo: snapshot.currentStateOriginalVideo,
+          currentPlaybackRate: snapshot.currentPlaybackRate,
+          currentVolumeOriginalVideo: snapshot.currentVolumeOriginalVideo,
+          currentVolumeReactionVideo: snapshot.currentVolumeReactionVideo,
+          isReactionMuteModeEnabled: snapshot.isReactionMuteModeEnabled,
+          isReactionAutoMuted: snapshot.isReactionAutoMuted,
+          isMobileAudioEnvironment: isMobileAudio,
+          isMobilePlaybackDevice,
+          playerConfigs: snapshot.playerConfigs,
+          volumeConfigs: snapshot.volumeConfigs,
+          reactionVolumeConfigs: snapshot.reactionVolumeConfigs,
+          playbackRateConfigs: snapshot.playbackRateConfigs,
+          stateTimeline: snapshot.stateTimeline,
+          reactionPlayerState,
+          originalPlayerState,
+          originalCurrentTime,
+          originalDuration,
+          originalIsMuted,
+          reactionIsMuted,
+          now: Date.now(),
+          yt: ytStates
+        },
+        syncTracking
+      );
+
+      Object.assign(syncTracking, result.nextTracking);
+
+      const { nextGuards, nextWorkingState } = applyTwinPlayersSyncActions(result.actions, {
+        snapshot,
+        guards: {
+          changingVolume,
+          changingReactionVolume,
+          changingSpeed
+        },
+        workingState: snapshot.currentStateOriginalVideo,
+        ytEndedState: ytStates.ENDED,
+        deps: {
+          setVolumeForOriginalVideo,
+          setVolumeForReactionVideo,
+          setPlaybackRateForOriginalVideo,
+          pauseOriginalVideo,
+          handleStateChangeInOriginalVideo,
+          muteReactionAudio,
+          unmuteReactionAudio,
+          updateState
+        }
+      });
+
+      changingVolume = nextGuards.changingVolume;
+      changingReactionVolume = nextGuards.changingReactionVolume;
+      changingSpeed = nextGuards.changingSpeed;
+
+      if (typeof result.stateUpdates.currentStateOriginalVideo === 'number') {
+        if (snapshot.currentStateOriginalVideo !== result.stateUpdates.currentStateOriginalVideo) {
+          updateState({ currentStateOriginalVideo: result.stateUpdates.currentStateOriginalVideo });
+        }
+      } else if (nextWorkingState !== snapshot.currentStateOriginalVideo) {
+        updateState({ currentStateOriginalVideo: nextWorkingState });
       }
-      handleOriginalVideoSpeed(reactionCurrentTime);
-      handleOriginalVideoState(reactionCurrentTime, previousReactionTime);
+
+      if (!isMobileAudio && typeof result.enforceMuteModeWithOriginalState === 'number') {
+        enforceReactionMuteMode(result.enforceMuteModeWithOriginalState);
+      }
     }, interval);
   };
 
@@ -1408,12 +1147,38 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     ) {
       pauseOriginalVideo();
     }
-    if (previousState === YT.PlayerState.BUFFERING && nextState === YT.PlayerState.PLAYING) {
+
+    // When reaction playback begins (including resume), bring the original into the
+    // desired state/position. Previously we only handled BUFFERING -> PLAYING which can miss
+    // PAUSED/CUED -> PLAYING transitions and lead to multi-second desync.
+    if (nextState === YT.PlayerState.PLAYING && previousState !== YT.PlayerState.PLAYING) {
       const snapshot = get(state);
+
+      // Fast-resume path: seeking the original immediately on resume can trigger buffering that
+      // makes it start noticeably later than the reaction. Start it ASAP, then let the polling
+      // sync loop correct drift on subsequent ticks.
+      if (Date.now() - lastUserResumeAt < 1200) {
+        try {
+          const currentOriginalTime = typeof snapshot.playerOriginal?.getCurrentTime === 'function'
+            ? Number(snapshot.playerOriginal.getCurrentTime())
+            : 0;
+          if (Number.isFinite(currentOriginalTime)) {
+            syncTracking.lastOriginalTargetTime = currentOriginalTime;
+            syncTracking.lastOriginalSeekTarget = currentOriginalTime;
+            syncTracking.lastOriginalSeekAt = Date.now();
+          }
+        } catch {
+          // ignore
+        }
+
+        startOriginalVideo();
+        return;
+      }
+
       const reactionCurrentTime = Number(snapshot.playerReaction?.getCurrentTime().toFixed(1));
       const closestConfig = getCurrentStateFromStateConfigs(
         reactionCurrentTime,
-        window.playerConfigs,
+        snapshot.playerConfigs,
         snapshot.timeOffset
       );
       const rawDesiredState = Number(closestConfig.state);
@@ -1485,54 +1250,109 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     const startTime = snapshot.offsetStartTime || 0;
     const initialConfig = getCurrentStateFromStateConfigs(
       startTime,
-      window.playerConfigs,
+      snapshot.playerConfigs,
       snapshot.timeOffset
     );
-
-    // Apply initial volume BEFORE any playVideo() to prevent an audible blip on refresh.
-    // (Polling applies volume every 500ms, which is too late for t=0 configs.)
-    mobileAudioWinner = null;
-    const isMobile = isMobileAudioEnvironment();
-
-    const initialOriginalVolume = getCurrentVolumeFromVolumeConfigs(
-      startTime,
-      window.volumeConfigs,
-      snapshot.globalGain,
-      snapshot.timeOffset
-    );
-
-    const initialReactionVolume = getCurrentVolumeFromVolumeConfigs(
-      startTime,
-      (window as any).reactionVolumeConfigs,
-      1.0,
-      snapshot.timeOffset
-    );
-
-    if (isMobile) {
-      // On mobile, only one player reliably has audio. Apply the mutex immediately at t=0.
-      handleMobileVolumeArbitration(startTime);
-    } else {
-      if (snapshot.playerOriginal && typeof initialOriginalVolume === 'number' && Number.isFinite(initialOriginalVolume)) {
-        if (!changingVolume && snapshot.currentVolumeOriginalVideo !== initialOriginalVolume) {
-          changingVolume = true;
-          setVolumeForOriginalVideo(initialOriginalVolume);
-          updateState({ currentVolumeOriginalVideo: initialOriginalVolume });
-          changingVolume = false;
-        }
-      }
-      if (snapshot.playerReaction && typeof initialReactionVolume === 'number' && Number.isFinite(initialReactionVolume)) {
-        if (!changingReactionVolume && snapshot.currentVolumeReactionVideo !== initialReactionVolume) {
-          changingReactionVolume = true;
-          setVolumeForReactionVideo(initialReactionVolume);
-          updateState({ currentVolumeReactionVideo: initialReactionVolume });
-          changingReactionVolume = false;
-        }
-      }
-    }
 
     const rawInitialState = Number(initialConfig.state);
     const initialState = Number.isFinite(rawInitialState) ? rawInitialState : -1;
     const initialTargetTime = Number(initialConfig.time ?? 0);
+
+    // Apply initial volume/mute BEFORE any playVideo() to prevent an audible blip.
+    // This is also where mobile audio arbitration is decided.
+    syncTracking.mobileAudioWinner = null;
+
+    const ytStates: TwinPlayersPlayerState = {
+      PLAYING: typeof YT?.PlayerState?.PLAYING === 'number' ? YT.PlayerState.PLAYING : 1,
+      PAUSED: typeof YT?.PlayerState?.PAUSED === 'number' ? YT.PlayerState.PAUSED : 2,
+      BUFFERING: typeof YT?.PlayerState?.BUFFERING === 'number' ? YT.PlayerState.BUFFERING : 3,
+      CUED: typeof YT?.PlayerState?.CUED === 'number' ? YT.PlayerState.CUED : 5,
+      ENDED: typeof YT?.PlayerState?.ENDED === 'number' ? YT.PlayerState.ENDED : 0
+    };
+
+    const isMobileAudio = isMobileAudioEnvironment();
+    const ua = typeof navigator !== 'undefined' ? String(navigator.userAgent || '') : '';
+    const isMobilePlaybackDevice = /iPhone|iPad|iPod|Android/i.test(ua);
+
+    const originalIsMuted = typeof snapshot.playerOriginal?.isMuted === 'function'
+      ? Boolean(snapshot.playerOriginal.isMuted())
+      : undefined;
+    const reactionIsMuted = typeof snapshot.playerReaction?.isMuted === 'function'
+      ? Boolean(snapshot.playerReaction.isMuted())
+      : undefined;
+
+    const initialTick = computeTwinPlayersSyncTick(
+      {
+        reactionCurrentTime: startTime,
+        previousReactionTime: startTime,
+        seekMin: snapshot.seekMin,
+        seekMax: snapshot.seekMax,
+        timeOffset: snapshot.timeOffset,
+        globalGain: snapshot.globalGain,
+        isFineTuneModeOn: snapshot.isFineTuneModeOn,
+        currentStateOriginalVideo: initialState,
+        currentPlaybackRate: snapshot.currentPlaybackRate,
+        currentVolumeOriginalVideo: snapshot.currentVolumeOriginalVideo,
+        currentVolumeReactionVideo: snapshot.currentVolumeReactionVideo,
+        isReactionMuteModeEnabled: snapshot.isReactionMuteModeEnabled,
+        isReactionAutoMuted: snapshot.isReactionAutoMuted,
+        isMobileAudioEnvironment: isMobileAudio,
+        isMobilePlaybackDevice,
+        playerConfigs: snapshot.playerConfigs,
+        volumeConfigs: snapshot.volumeConfigs,
+        reactionVolumeConfigs: snapshot.reactionVolumeConfigs,
+        playbackRateConfigs: snapshot.playbackRateConfigs,
+        stateTimeline: snapshot.stateTimeline,
+        reactionPlayerState: typeof snapshot.playerReaction?.getPlayerState === 'function'
+          ? Number(snapshot.playerReaction.getPlayerState())
+          : undefined,
+        originalPlayerState: typeof snapshot.playerOriginal?.getPlayerState === 'function'
+          ? Number(snapshot.playerOriginal.getPlayerState())
+          : undefined,
+        originalCurrentTime: typeof snapshot.playerOriginal?.getCurrentTime === 'function'
+          ? Number(snapshot.playerOriginal.getCurrentTime())
+          : undefined,
+        originalDuration: typeof snapshot.playerOriginal?.getDuration === 'function'
+          ? Number(snapshot.playerOriginal.getDuration())
+          : undefined,
+        originalIsMuted,
+        reactionIsMuted,
+        now: Date.now(),
+        yt: ytStates
+      },
+      syncTracking
+    );
+
+    Object.assign(syncTracking, initialTick.nextTracking);
+
+    const initialApplied = applyTwinPlayersSyncActions(initialTick.actions, {
+      snapshot,
+      guards: {
+        changingVolume,
+        changingReactionVolume,
+        changingSpeed
+      },
+      workingState: initialState,
+      ytEndedState: ytStates.ENDED,
+      deps: {
+        setVolumeForOriginalVideo,
+        setVolumeForReactionVideo,
+        setPlaybackRateForOriginalVideo,
+        pauseOriginalVideo,
+        handleStateChangeInOriginalVideo,
+        muteReactionAudio,
+        unmuteReactionAudio,
+        updateState
+      },
+      options: {
+        allowStateActions: false,
+        allowPlaybackRate: false
+      }
+    });
+
+    changingVolume = initialApplied.nextGuards.changingVolume;
+    changingReactionVolume = initialApplied.nextGuards.changingReactionVolume;
+    changingSpeed = initialApplied.nextGuards.changingSpeed;
 
     // Set the original video to the correct starting position and state
     if (Number.isFinite(initialTargetTime)) {
@@ -1913,7 +1733,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     const globalGainValue = reactionData['globalGain'];
     const globalGain = typeof globalGainValue === 'number' && !Number.isNaN(globalGainValue) ? globalGainValue : 1.0;
     const soundLevel = Math.max(0, Math.min(200, Math.round(globalGain * 100)));
-    const currentPlaybackRate = getCurrentPlaybackRateFromConfigs(offsetStartTime || 0, window.playbackRateConfigs, timeOffset);
+    const currentPlaybackRate = getCurrentPlaybackRateFromConfigs(offsetStartTime || 0, playbackRateConfigs, timeOffset);
 
     const playerOriginal = get(state).playerOriginal;
     const playerReaction = get(state).playerReaction;
@@ -2198,7 +2018,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       const globalGainValue = reactionData['globalGain'];
       const globalGain = typeof globalGainValue === 'number' && !Number.isNaN(globalGainValue) ? globalGainValue : 1.0;
       const soundLevel = Math.max(0, Math.min(200, Math.round(globalGain * 100)));
-      const currentPlaybackRate = getCurrentPlaybackRateFromConfigs(offsetStartTime || 0, window.playbackRateConfigs, timeOffset);
+      const currentPlaybackRate = getCurrentPlaybackRateFromConfigs(offsetStartTime || 0, playbackRateConfigs, timeOffset);
 
       const canReuseReactionPlayer =
         Boolean(snapshotBefore.playerReaction) &&
@@ -3329,7 +3149,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   const handlePlayStateChange = (isPlaying: boolean) => {
     debugClickGate('[TwinPlayers] handlePlayStateChange called', { isPlaying }, true);
     if (isPlaying) {
-      if (get(state).isUserPaused) {
+      const wasUserPaused = get(state).isUserPaused;
+      if (wasUserPaused) {
         updateState({ isUserPaused: false });
       }
       const snapshot = get(state);
@@ -3347,8 +3168,15 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
           playbackRate: snapshot.currentPlaybackRate
         });
       }
+
+      // Start BOTH players immediately when the user hits play.
+      // The reaction player is the timeline leader; original will be corrected via
+      // handleStateChangeInReactionVideo + periodic sync.
+      if (wasUserPaused) {
+        lastUserResumeAt = Date.now();
+      }
+      startOriginalVideo();
       startReactionVideo();
-      handleStateChangeInReactionVideo(YT.PlayerState.PAUSED, YT.PlayerState.PLAYING);
       return;
     }
 
@@ -3379,8 +3207,10 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     }
     pauseOriginalVideo();
     pauseReactionVideo();
+
+    // Re-sync should resume both promptly; the reaction timeline will correct drift.
+    startOriginalVideo();
     startReactionVideo();
-    handleStateChangeInReactionVideo(YT.PlayerState.PAUSED, YT.PlayerState.PLAYING);
   };
 
   const showControls = () => {
