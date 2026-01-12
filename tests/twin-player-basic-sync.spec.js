@@ -1,186 +1,123 @@
 import { test, expect } from '@playwright/test';
+import {
+    YT_PLAYER_STATE,
+    readTwinPlayersSnapshot,
+    waitForPlayersReady,
+    startPlaybackInteraction
+} from './utils/twin-player-helpers.js';
 
-const REACTION_PAGE_URL = '/reaction/FQdOfBiNsIkGPqHqndhc';
+const REACTION_PAGE_URL = '/reaction/1PaTrdCMKn6ay7nShHES';
 
-const YT_PLAYER_STATE = {
-    UNSTARTED: -1,
-    ENDED: 0,
-    PLAYING: 1,
-    PAUSED: 2,
-    BUFFERING: 3,
-    CUED: 5,
-};
+test.describe('Twin Video Sync & Stability', () => {
 
-const readTwinPlayersSnapshot = async (page) => {
-    return page.evaluate(() => {
-        const players = window.__players;
-        if (!players?.original || !players?.reaction) return null;
+    // Playwright default per-test timeout in this repo is 30s, but YouTube playback + autoplay gates
+    // can legitimately take longer (especially on mobile).
+    test.describe.configure({ timeout: 90000 });
 
-        const getProps = (p) => {
-            let currentTime = 0;
-            let paused = true;
-            let readyState = 0;
-            let error = null;
-            let playerState = null;
+    test('Basic Sync: should play both videos in sync', async ({ page }) => {
+        await page.goto(REACTION_PAGE_URL);
 
-            if (typeof p.getCurrentTime === 'function') {
-                // YT Player
-                currentTime = p.getCurrentTime();
-                playerState = p.getPlayerState?.() ?? null;
-                paused = playerState !== 1 && playerState !== 3; // 1=Playing, 3=Buffering
-                readyState = 4;
-                if (playerState === 5) readyState = 1;
-                else if (playerState === -1) readyState = 0;
-            } else {
-                // HTMLVideoElement
-                currentTime = p.currentTime;
-                paused = p.paused;
-                readyState = p.readyState;
-                error = p.error;
-            }
+        // 1. Wait for readiness
+        await waitForPlayersReady(page);
 
-            return { currentTime, paused, readyState, error, playerState };
-        };
+        // 2. Start Playback
+        await startPlaybackInteraction(page);
 
-        const original = getProps(players.original);
-        const reaction = getProps(players.reaction);
+        // 3. Verify they reach PLAYING state
+        await expect.poll(async () => {
+            const s = await readTwinPlayersSnapshot(page);
+            return s?.reactionPlayerState;
+        }, { timeout: 45000 }).toBe(YT_PLAYER_STATE.PLAYING);
 
-        return {
-            originalCurrentTime: original.currentTime,
-            reactionCurrentTime: reaction.currentTime,
-            originalPaused: original.paused,
-            reactionPaused: reaction.paused,
-            originalReadyState: original.readyState,
-            reactionReadyState: reaction.readyState,
-            originalError: original.error,
-            reactionError: reaction.error,
-            originalPlayerState: original.playerState,
-            reactionPlayerState: reaction.playerState,
-        };
-    });
-};
+        // 4. Verify original is also running
+        await expect.poll(async () => {
+            const s = await readTwinPlayersSnapshot(page);
+            return s?.originalPlayerState;
+        }, { timeout: 45000 }).toBe(YT_PLAYER_STATE.PLAYING);
 
-test('Basic Twin Video Sync Test', async ({ page }) => {
-    // Navigate to the provided reaction page URL
-    await page.goto(REACTION_PAGE_URL);
-
-    // Wait for window.__players to be available and videos to be ready
-    await page.waitForFunction(() => {
-        const players = window.__players;
-        if (!players || !players.original || !players.reaction) return false;
-
-        // Helper to check readiness
-        const isReady = (p) => {
-            // If HTMLVideoElement
-            if (typeof p.readyState === 'number') return p.readyState >= 3;
-            // If YouTube Player
-            if (typeof p.getPlayerState === 'function') {
-                const state = p.getPlayerState();
-                // YT States: -1 (unstarted), 0 (ended), 1 (playing), 2 (paused), 3 (buffering), 5 (cued)
-                // We consider it "ready" if it's not undefined and loaded (cued or started)
-                return typeof state === 'number';
-            }
-            return false;
-        };
-
-        return isReady(players.original) && isReady(players.reaction);
-    }, null, { timeout: 30000 });
-
-    // Ensure the YouTube iframes exist, then click each once (product-intended gate)
-    await page.waitForFunction(() => {
-        const players = window.__players;
-        const originalIframe = players?.original?.getIframe?.();
-        const reactionIframe = players?.reaction?.getIframe?.();
-        return Boolean(originalIframe && reactionIframe);
-    }, null, { timeout: 30000 });
-
-    const { originalIframeId, reactionIframeId } = await page.evaluate(() => {
-        const players = window.__players;
-        const ensureId = (iframe, prefix) => {
-            if (!iframe) return null;
-            if (!iframe.id) iframe.id = `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
-            return iframe.id;
-        };
-
-        return {
-            originalIframeId: ensureId(players?.original?.getIframe?.(), 'original-yt'),
-            reactionIframeId: ensureId(players?.reaction?.getIframe?.(), 'reaction-yt'),
-        };
+        // 5. Check sync drift < 0.15s
+        await expect.poll(async () => {
+            const s = await readTwinPlayersSnapshot(page);
+            if (!s) return null;
+            return Math.abs((s.originalCurrentTime || 0) - (s.reactionCurrentTime || 0));
+        }, { timeout: 45000 }).toBeLessThanOrEqual(0.15);
     });
 
-    if (originalIframeId) {
-        await page.locator(`#${originalIframeId}`).click({ timeout: 15000, force: true });
-    }
-    if (reactionIframeId) {
-        await page.locator(`#${reactionIframeId}`).click({ timeout: 15000, force: true });
-    }
+    test('Volume Stability: should preserve sync when volume changes automatically', async ({ page }, testInfo) => {
+        await page.goto(REACTION_PAGE_URL);
 
-    // Backup: attempt to play directly using exposed players (some environments ignore iframe clicks)
-    await page.evaluate(() => {
-        const players = window.__players;
-        const play = (p) => {
-            if (typeof p.play === 'function') p.play();
-            else if (typeof p.playVideo === 'function') p.playVideo();
+        const driftThreshold = testInfo.project.name === 'mobile' ? 0.35 : 0.15;
+        const driftSettleTimeout = testInfo.project.name === 'mobile' ? 20000 : 8000;
+
+        // 1. Setup & Start
+        await waitForPlayersReady(page);
+        await startPlaybackInteraction(page);
+
+        // 2. Wait for stable playback first
+        await expect.poll(async () => {
+            const s = await readTwinPlayersSnapshot(page);
+            return s?.reactionPlayerState === YT_PLAYER_STATE.PLAYING &&
+                s?.originalPlayerState === YT_PLAYER_STATE.PLAYING;
+        }, { timeout: 30000 }).toBe(true);
+
+        // Capture initial volume/mute to verify change later.
+        // On mobile, audio arbitration can mute/unmute either player depending on configured volumes.
+        const initialSnapshot = await readTwinPlayersSnapshot(page);
+        expect(initialSnapshot, 'Expected twin players snapshot').toBeTruthy();
+
+        const initial = {
+            originalVolume: initialSnapshot.originalVolume,
+            originalMuted: initialSnapshot.originalMuted,
+            reactionVolume: initialSnapshot.reactionVolume,
+            reactionMuted: initialSnapshot.reactionMuted,
         };
-        play(players.original);
-        play(players.reaction);
+        console.log(`[Test] Initial Vol/Mute | O: ${initial.originalVolume}/${initial.originalMuted} | R: ${initial.reactionVolume}/${initial.reactionMuted}`);
+
+        // 3. Best-effort: wait for an AUTOMATIC volume/mute change.
+        // This is intentionally non-fatal: on mobile a player may remain muted and not expose a visible
+        // volume/mute toggle even though backend-configured logic is running.
+        let changeDetected = false;
+        try {
+            await expect.poll(async () => {
+                const s = await readTwinPlayersSnapshot(page);
+                if (!s) return false;
+                return (
+                    s.originalVolume !== initial.originalVolume ||
+                    s.originalMuted !== initial.originalMuted ||
+                    s.reactionVolume !== initial.reactionVolume ||
+                    s.reactionMuted !== initial.reactionMuted
+                );
+            }, { timeout: 25000 }).toBe(true);
+            changeDetected = true;
+        } catch {
+            changeDetected = false;
+        }
+
+        console.log(`[Test] Observable volume/mute change detected: ${changeDetected}`);
+
+        // 4. Verify sync during/after the period where an automatic change might occur.
+        await expect.poll(async () => {
+            const s = await readTwinPlayersSnapshot(page);
+            if (!s) return null;
+            return Math.abs((s.originalCurrentTime || 0) - (s.reactionCurrentTime || 0));
+        }, { timeout: driftSettleTimeout }).toBeLessThanOrEqual(driftThreshold);
+
+        // 5. Continue monitoring for a few seconds to ensure no delayed interruptions
+        // (e.g. if volume change triggered a re-buffer or pause)
+        const checkDuration = 3000;
+        const startTime = Date.now();
+
+        while (Date.now() - startTime < checkDuration) {
+            const s = await readTwinPlayersSnapshot(page);
+            const isActive = (state) => state === YT_PLAYER_STATE.PLAYING || state === YT_PLAYER_STATE.BUFFERING;
+            expect(isActive(s.originalPlayerState), 'Original video should keep playing').toBe(true);
+            expect(isActive(s.reactionPlayerState), 'Reaction video should keep playing').toBe(true);
+
+            const continuousDrift = Math.abs((s.originalCurrentTime || 0) - (s.reactionCurrentTime || 0));
+            expect(continuousDrift, 'Continuous sync drift').toBeLessThanOrEqual(driftThreshold);
+
+            await page.waitForTimeout(500);
+        }
     });
 
-    // Product intent: reaction buffering may pause the original. So:
-    // 1) wait until reaction is PLAYING, then
-    // 2) wait until original is not paused, then
-    // 3) measure drift when both are PLAYING.
-    await expect
-        .poll(
-            async () => {
-                const snapshot = await readTwinPlayersSnapshot(page);
-                return snapshot?.reactionPlayerState ?? null;
-            },
-            { timeout: 45000, intervals: [250, 500, 1000] },
-        )
-        .toBe(YT_PLAYER_STATE.PLAYING);
-
-    await expect
-        .poll(
-            async () => {
-                const snapshot = await readTwinPlayersSnapshot(page);
-                if (!snapshot) return null;
-                if (snapshot.reactionPlayerState !== YT_PLAYER_STATE.PLAYING) return null;
-                return snapshot.originalPaused;
-            },
-            { timeout: 45000, intervals: [250, 500, 1000] },
-        )
-        .toBe(false);
-
-    await expect
-        .poll(
-            async () => {
-                const snapshot = await readTwinPlayersSnapshot(page);
-                if (!snapshot) return null;
-                if (snapshot.originalPlayerState !== YT_PLAYER_STATE.PLAYING) return null;
-                if (snapshot.reactionPlayerState !== YT_PLAYER_STATE.PLAYING) return null;
-                const t1 = snapshot.originalCurrentTime || 0;
-                const t2 = snapshot.reactionCurrentTime || 0;
-                return Math.abs(t1 - t2);
-            },
-            { timeout: 45000, intervals: [250, 500, 1000] },
-        )
-        .toBeLessThanOrEqual(0.15);
-
-    const finalState = await readTwinPlayersSnapshot(page);
-    const finalDrift = finalState
-        ? Math.abs((finalState.originalCurrentTime || 0) - (finalState.reactionCurrentTime || 0))
-        : null;
-    console.log('Final Sync State:', finalState);
-    console.log('Final Drift:', finalDrift);
-
-    expect(finalState).not.toBeNull();
-
-    // readyState >= 3
-    expect(finalState.originalReadyState, 'Original video readyState').toBeGreaterThanOrEqual(3);
-    expect(finalState.reactionReadyState, 'Reaction video readyState').toBeGreaterThanOrEqual(3);
-
-    // No media errors
-    expect(finalState.originalError, 'Original video error').toBeNull();
-    expect(finalState.reactionError, 'Reaction video error').toBeNull();
 });

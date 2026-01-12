@@ -1,0 +1,146 @@
+/**
+ * Constants for YouTube Player States
+ */
+export const YT_PLAYER_STATE = {
+    UNSTARTED: -1,
+    ENDED: 0,
+    PLAYING: 1,
+    PAUSED: 2,
+    BUFFERING: 3,
+    CUED: 5,
+};
+
+/**
+ * Reads the current state of twin players from the window object.
+ * Returns a snapshot of time, state, readiness, error, and VOLUME.
+ * @param {import('@playwright/test').Page} page
+ */
+export const readTwinPlayersSnapshot = async (page) => {
+    return page.evaluate(() => {
+        const players = window.__players;
+        if (!players?.original || !players?.reaction) return null;
+
+        const getProps = (p) => {
+            let currentTime = 0;
+            let paused = true;
+            let readyState = 0;
+            let error = null;
+            let playerState = null;
+            let volume = -1; // Default indicator for unknown/unavailable
+            let isMuted = false;
+
+            if (typeof p.getCurrentTime === 'function') {
+                // YT Player
+                currentTime = p.getCurrentTime();
+                playerState = p.getPlayerState?.() ?? null;
+                paused = playerState !== 1 && playerState !== 3; // 1=Playing, 3=Buffering
+                readyState = 4;
+                // Try to get volume if available
+                if (typeof p.getVolume === 'function') {
+                    volume = p.getVolume();
+                }
+                if (typeof p.isMuted === 'function') {
+                    isMuted = p.isMuted();
+                }
+
+                if (playerState === 5) readyState = 1;
+                else if (playerState === -1) readyState = 0;
+            } else {
+                // HTMLVideoElement
+                currentTime = p.currentTime;
+                paused = p.paused;
+                readyState = p.readyState;
+                error = p.error;
+                volume = p.volume * 100; // Unify scale 0-100 like YT
+                isMuted = p.muted;
+            }
+
+            return { currentTime, paused, readyState, error, playerState, volume, isMuted };
+        };
+
+        const original = getProps(players.original);
+        const reaction = getProps(players.reaction);
+
+        return {
+            originalCurrentTime: original.currentTime,
+            reactionCurrentTime: reaction.currentTime,
+            originalPaused: original.paused,
+            reactionPaused: reaction.paused,
+            originalReadyState: original.readyState,
+            reactionReadyState: reaction.readyState,
+            originalError: original.error,
+            reactionError: reaction.error,
+            originalPlayerState: original.playerState,
+            reactionPlayerState: reaction.playerState,
+            originalVolume: original.volume,
+            reactionVolume: reaction.volume,
+            originalMuted: original.isMuted,
+            reactionMuted: reaction.isMuted,
+        };
+    });
+};
+
+/**
+ * Waits for twin players to be fully initialized and ready.
+ * @param {import('@playwright/test').Page} page
+ * @param {number} timeout
+ */
+export const waitForPlayersReady = async (page, timeout = 30000) => {
+    await page.waitForFunction(() => {
+        const players = window.__players;
+        if (!players || !players.original || !players.reaction) return false;
+
+        const isReady = (p) => {
+            // If HTMLVideoElement
+            if (typeof p.readyState === 'number') return p.readyState >= 3;
+            // If YouTube Player
+            if (typeof p.getPlayerState === 'function') {
+                const state = p.getPlayerState();
+                return typeof state === 'number'; // Ready if state is accessible
+            }
+            return false;
+        };
+
+        return isReady(players.original) && isReady(players.reaction);
+    }, null, { timeout });
+};
+
+/**
+ * Ensures YouTube iframes are clickable and attempts to start them.
+ * @param {import('@playwright/test').Page} page
+ */
+export const startPlaybackInteraction = async (page) => {
+    // Ensure iframes exist
+    await page.waitForFunction(() => {
+        const players = window.__players;
+        return Boolean(players?.original?.getIframe?.() && players?.reaction?.getIframe?.());
+    }, null, { timeout: 30000 });
+
+    const { originalIframeId, reactionIframeId } = await page.evaluate(() => {
+        const players = window.__players;
+        const ensureId = (iframe, prefix) => {
+            if (!iframe) return null;
+            if (!iframe.id) iframe.id = `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
+            return iframe.id;
+        };
+
+        return {
+            originalIframeId: ensureId(players?.original?.getIframe?.(), 'original-yt'),
+            reactionIframeId: ensureId(players?.reaction?.getIframe?.(), 'reaction-yt'),
+        };
+    });
+
+    if (originalIframeId) await page.locator(`#${originalIframeId}`).click({ force: true }).catch(() => { });
+    if (reactionIframeId) await page.locator(`#${reactionIframeId}`).click({ force: true }).catch(() => { });
+
+    // Backup direct play call
+    await page.evaluate(() => {
+        const players = window.__players;
+        const play = (p) => {
+            if (typeof p.play === 'function') p.play();
+            else if (typeof p.playVideo === 'function') p.playVideo();
+        };
+        play(players.original);
+        play(players.reaction);
+    });
+};
