@@ -222,4 +222,60 @@ test.describe('Twin Video Sync & Stability', () => {
         }
     });
 
+    test('Resume After Config Pause: should resume only reaction when original is paused by timeline', async ({ page }) => {
+        await page.goto(REACTION_PAGE_URL);
+
+        // 1. Wait for readiness & start playback
+        await waitForPlayersReady(page);
+        await startPlaybackInteraction(page);
+
+        // 2. Wait until we are past the configured pause point (~5s) and confirm:
+        //    - reaction is playing
+        //    - original is NOT active (paused/cued/ended)
+        await expect.poll(async () => {
+            const s = await readTwinPlayersSnapshot(page);
+            if (!s) return false;
+            const isActive = (state) => state === YT_PLAYER_STATE.PLAYING || state === YT_PLAYER_STATE.BUFFERING;
+            return (s.reactionCurrentTime || 0) >= 6 && isActive(s.reactionPlayerState) && !isActive(s.originalPlayerState);
+        }, { timeout: 45000 }).toBe(true);
+
+        // 3. Pause via app control (this pauses reaction; original is already paused by config)
+        await page.getByRole('button', { name: 'Pause both videos' }).click({ force: true });
+        await page.getByRole('button', { name: 'Resume both videos' }).waitFor({ timeout: 20000 });
+
+        await expect.poll(async () => {
+            const s = await readTwinPlayersSnapshot(page);
+            if (!s) return false;
+            const isActive = (state) => state === YT_PLAYER_STATE.PLAYING || state === YT_PLAYER_STATE.BUFFERING;
+            return !isActive(s.originalPlayerState) && !isActive(s.reactionPlayerState);
+        }, { timeout: 20000 }).toBe(true);
+
+        // 4. Resume via app control
+        const originalTimeAtResume = await page.evaluate(() => {
+            const p = window.__players?.original;
+            return typeof p?.getCurrentTime === 'function' ? Number(p.getCurrentTime()) : 0;
+        });
+
+        await page.getByRole('button', { name: 'Resume both videos' }).click({ force: true });
+
+        // Reaction should resume playing
+        await expect.poll(async () => {
+            const s = await readTwinPlayersSnapshot(page);
+            return s?.reactionPlayerState;
+        }, { timeout: 45000 }).toBe(YT_PLAYER_STATE.PLAYING);
+
+        // Original should remain paused (and not advance) because the last timeline config is PAUSED.
+        const guardMs = 2500;
+        const start = Date.now();
+        while (Date.now() - start < guardMs) {
+            const s = await readTwinPlayersSnapshot(page);
+            const isActive = (state) => state === YT_PLAYER_STATE.PLAYING || state === YT_PLAYER_STATE.BUFFERING;
+            expect(isActive(s.originalPlayerState), 'Original should not resume playing').toBe(false);
+
+            // Best-effort time stability check (allows a tiny drift due to API jitter)
+            expect(s.originalCurrentTime, 'Original time should not advance').toBeLessThanOrEqual(originalTimeAtResume + 0.15);
+            await page.waitForTimeout(350);
+        }
+    });
+
 });

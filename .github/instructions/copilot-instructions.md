@@ -93,7 +93,12 @@ The agent should behave like a calm, experienced art director who also understan
 - Timelines accept legacy object maps and new array formats; helpers in `lib/helpers/reaction.js` auto-detect both—preserve compatibility when writing data.
 - Backend page caches current doc id on `window.currentReactionDocumentId`; any update helpers depend on that side-effect—set it before calling `updateFirebaseDocument`.
 - `PlaylistQueue.svelte` and playlist helpers use `createPlaylistDocument`/`addToPlaylistDocument`; reaction playback reads playlist context from query params.
-- Playback page (`routes/reaction/[slug]/+page.svelte`) runs twin YT players, syncing original video via timeline configs; guard mutations with `changingState/Volume/Speed` flags to avoid feedback loops.
+- Playback page (`routes/reaction/[slug]/+page.svelte`) runs twin YT players via `useTwinPlayers` and syncs the original video from timelines/configs.
+  - **Sync decision logic is pure**: `computeTwinPlayersSyncTick` lives under `src/lib/helpers/` and returns declarative actions + updated tracking.
+  - **Side effects stay in the composable**: apply actions via `applyTwinPlayersSyncActions`, keep guard flags (`changingVolume/changingReactionVolume/changingSpeed`) to avoid feedback loops.
+  - **Scheduling is boundary-aware**: use a `setTimeout`-based scheduler (not a constant `setInterval`) and wake near timeline boundaries + periodically for drift correction.
+  - **Keep timelines sorted**: scheduling looks up the “next boundary” via binary search over `{ t }` arrays.
+  - **Avoid `window.*` in the sync path**: prefer store-held configs/timelines; `window.*` is for legacy/debug surfaces only.
 - Playlist autoplay toggled via cookies in playback page; reuse `loadNextReactionInPlaylist` when extending queue behavior.
 ## Shared Sessions & Social
 - Co-watch sessions live in Firebase Realtime DB via `lib/helpers/sharedSession.js`; host updates come from backend recorder, viewers subscribe in `routes/shared/[sessionId]/+page.svelte`.
@@ -115,5 +120,6 @@ The agent should behave like a calm, experienced art director who also understan
 ## 12 — Logic placement & small-file strategy
 1. **Composables orchestrate** — keep `use*` composables responsible for lifecycle hooks, store wiring, Firebase calls, YT players, and UI helpers. They should stay stateful and thin.
 2. **Helpers stay stateless** — deterministic logic (rounding, map/array conversions, timeline derivations) belongs under `src/lib/helpers/`. Prefer descriptive names (e.g., `twinPlayersTimeline.ts`) so other modules can reuse them without bringing in composable state.
+  - For twin-player sync: keep “what should happen” in helpers (`twinPlayersSyncTick`, `twinPlayersSyncScheduling`) and keep “do it” (player calls, timers, stores) in the composable.
 3. **Split when needed** — if a file grows past ~300 lines or mixes side effects + pure logic, consider extracting the pure parts into a helper. Document the split briefly so future contributors understand where each responsibility lives.
 4. **Name for intent** — favor folder names that imply behavior (`helpers` vs `composables`). When adding new helpers, update `README.md` or documentation comments with the reasoning so the team remembers the standard.

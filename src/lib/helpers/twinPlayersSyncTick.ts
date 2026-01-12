@@ -9,6 +9,7 @@ export type TwinPlayersSyncTracking = {
   lastOriginalSeekAt: number;
   lastOriginalSeekTarget?: number;
   mobileAudioWinner: 'original' | 'reaction' | null;
+  stateTimelineIndex?: number;
 };
 
 export type TwinPlayersPlayerState = {
@@ -85,6 +86,24 @@ export type TwinPlayersSyncTickResult = {
     currentVolumeReactionVideo?: number;
   };
   enforceMuteModeWithOriginalState?: number;
+  nextBoundaryReactionTime?: number;
+};
+
+const upperBoundByT = (timeline: any[], time: number): number => {
+  let low = 0;
+  let high = timeline.length;
+
+  while (low < high) {
+    const mid = (low + high) >> 1;
+    const midTime = Number(timeline[mid]?.t);
+    if (Number.isFinite(midTime) && midTime <= time) {
+      low = mid + 1;
+    } else {
+      high = mid;
+    }
+  }
+
+  return low;
 };
 
 const hasAnyConfig = (configs: any) => {
@@ -113,7 +132,8 @@ export function computeTwinPlayersSyncTick(
   let nextTracking: TwinPlayersSyncTracking = {
     ...tracking,
     lastOriginalSeekAt: Number.isFinite(tracking.lastOriginalSeekAt) ? tracking.lastOriginalSeekAt : 0,
-    mobileAudioWinner: tracking.mobileAudioWinner ?? null
+    mobileAudioWinner: tracking.mobileAudioWinner ?? null,
+    stateTimelineIndex: Number.isFinite(tracking.stateTimelineIndex) ? tracking.stateTimelineIndex : 0
   };
 
   const reactionCurrentTime = Number(input.reactionCurrentTime);
@@ -274,28 +294,50 @@ export function computeTwinPlayersSyncTick(
   let workingState = input.currentStateOriginalVideo;
 
   if (movingForward && timeline.length) {
-    const eventsInRange = timeline.filter((entry) => {
+    let idx = Number.isFinite(nextTracking.stateTimelineIndex) ? Number(nextTracking.stateTimelineIndex) : 0;
+    if (idx < 0 || idx > timeline.length) {
+      idx = 0;
+    }
+
+    // If we jumped backwards or the cursor is stale, re-seek it.
+    const cursorTime = Number(timeline[Math.max(0, Math.min(idx, timeline.length - 1))]?.t);
+    if (!Number.isFinite(cursorTime) || cursorTime > currentEffective + 0.0001) {
+      idx = upperBoundByT(timeline, previousEffective);
+    }
+
+    while (idx < timeline.length) {
+      const entry = timeline[idx];
       const eventTime = Number(entry?.t);
       if (!Number.isFinite(eventTime)) {
-        return false;
+        idx += 1;
+        continue;
       }
-      return eventTime > previousEffective && eventTime <= currentEffective;
-    });
+      if (eventTime > currentEffective) {
+        break;
+      }
 
-    for (const entry of eventsInRange) {
-      const rawState = Number(entry?.state);
-      let desiredState = Number.isFinite(rawState) ? rawState : -1;
-      if (shouldHoldOriginalWhilePaused && desiredState === yt.PLAYING) {
-        desiredState = yt.PAUSED;
+      if (eventTime > previousEffective && eventTime <= currentEffective) {
+        const rawState = Number(entry?.state);
+        let desiredState = Number.isFinite(rawState) ? rawState : -1;
+        if (shouldHoldOriginalWhilePaused && desiredState === yt.PLAYING) {
+          desiredState = yt.PAUSED;
+        }
+        const desiredTarget = Number(entry?.targetTime ?? entry?.time ?? 0);
+        actions.push({
+          type: 'applyOriginalStateChange',
+          nextState: desiredState,
+          targetTime: desiredTarget
+        });
+        workingState = desiredState;
       }
-      const desiredTarget = Number(entry?.targetTime ?? entry?.time ?? 0);
-      actions.push({
-        type: 'applyOriginalStateChange',
-        nextState: desiredState,
-        targetTime: desiredTarget
-      });
-      workingState = desiredState;
+
+      idx += 1;
     }
+
+    nextTracking = {
+      ...nextTracking,
+      stateTimelineIndex: idx
+    };
   }
 
   const config = getCurrentStateFromStateConfigs(reactionCurrentTime, input.playerConfigs, timeOffset);
@@ -431,10 +473,25 @@ export function computeTwinPlayersSyncTick(
     };
   }
 
+  const nextBoundaryReactionTime = (() => {
+    if (!timeline.length) {
+      return undefined;
+    }
+    const idx = Number.isFinite(nextTracking.stateTimelineIndex) ? Number(nextTracking.stateTimelineIndex) : 0;
+    const next = timeline[Math.max(0, Math.min(idx, timeline.length - 1))];
+    const nextEffective = Number(next?.t);
+    if (!Number.isFinite(nextEffective)) {
+      return undefined;
+    }
+    const nextReaction = nextEffective + timeOffset;
+    return Number.isFinite(nextReaction) ? nextReaction : undefined;
+  })();
+
   return {
     actions,
     nextTracking,
     stateUpdates,
-    enforceMuteModeWithOriginalState: workingState
+    enforceMuteModeWithOriginalState: workingState,
+    nextBoundaryReactionTime
   };
 }

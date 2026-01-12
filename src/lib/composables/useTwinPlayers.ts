@@ -42,6 +42,10 @@ import {
   type TwinPlayersSyncTracking
 } from '$lib/helpers/twinPlayersSyncTick';
 import { applyTwinPlayersSyncActions } from '$lib/helpers/twinPlayersSyncApply';
+import {
+  computeNextSyncDelayMs,
+  getNextTimelineEventReactionTime
+} from '$lib/helpers/twinPlayersSyncScheduling';
 
 declare const YT: any;
 
@@ -319,7 +323,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   let controlHideTimeout: ReturnType<typeof setTimeout> | undefined;
   let overlayPointerRestoreTimeout: ReturnType<typeof setTimeout> | undefined;
   let exitButtonCollapseTimeout: ReturnType<typeof setTimeout> | undefined;
-  let pollInterval: ReturnType<typeof setInterval> | undefined;
+  let syncTimeout: ReturnType<typeof setTimeout> | undefined;
   let durationProbeTimeout: ReturnType<typeof setTimeout> | undefined;
   let durationProbeAttempts = 0;
   let escListener: ((event: KeyboardEvent) => void) | undefined;
@@ -911,6 +915,17 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     }
   };
 
+  const stopSyncScheduler = () => {
+    clearTimeout(syncTimeout);
+    syncTimeout = undefined;
+  };
+
+  const scheduleNextSync = (delayMs: number, run: () => void) => {
+    stopSyncScheduler();
+    const normalized = Math.max(0, Math.min(10_000, Math.round(delayMs)));
+    syncTimeout = setTimeout(run, normalized);
+  };
+
   const handleStateChangeInOriginalVideo = (
     previousState: number,
     nextState: number,
@@ -946,12 +961,13 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   };
 
   const pollVideoCurrentTime = () => {
-    clearInterval(pollInterval);
-    const interval = 300;
+    stopSyncScheduler();
     let reactionPlayerState = YT?.PlayerState?.UNSTARTED ?? -1;
-    pollInterval = setInterval(() => {
+
+    const runSyncCycle = () => {
       const snapshot = get(state);
       if (isSwitchingReactionInPlace) {
+        scheduleNextSync(250, runSyncCycle);
         return;
       }
       const {
@@ -963,6 +979,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         isQueueAutoPlay
       } = snapshot;
       if (!playerReaction || !playerOriginal) {
+        scheduleNextSync(250, runSyncCycle);
         return;
       }
 
@@ -983,6 +1000,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         if (typeof reactionState === 'number') {
           reactionPlayerState = reactionState;
         }
+
+        scheduleNextSync(500, runSyncCycle);
         return;
       }
 
@@ -1013,7 +1032,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         if (!isPlaylistAutoPlay) {
           pauseReactionVideo();
         }
-        clearInterval(pollInterval);
+
+        stopSyncScheduler();
         if (isPlaylistAutoPlay && hasNextIndexInPlaylist) {
           loadNextReactionInPlaylist();
         }
@@ -1114,7 +1134,52 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       if (!isMobileAudio && typeof result.enforceMuteModeWithOriginalState === 'number') {
         enforceReactionMuteMode(result.enforceMuteModeWithOriginalState);
       }
-    }, interval);
+
+      // Boundary-aware scheduling: wake up near the next relevant timeline change.
+      const nextBoundaries = [
+        result.nextBoundaryReactionTime ?? null,
+        getNextTimelineEventReactionTime(snapshot.volumeTimeline, {
+          reactionCurrentTime,
+          timeOffset: snapshot.timeOffset,
+          seekMin: snapshot.seekMin,
+          seekMax: snapshot.seekMax
+        }),
+        getNextTimelineEventReactionTime(snapshot.reactionVolumeTimeline, {
+          reactionCurrentTime,
+          timeOffset: snapshot.timeOffset,
+          seekMin: snapshot.seekMin,
+          seekMax: snapshot.seekMax
+        }),
+        getNextTimelineEventReactionTime(snapshot.playbackRateTimeline, {
+          reactionCurrentTime,
+          timeOffset: snapshot.timeOffset,
+          seekMin: snapshot.seekMin,
+          seekMax: snapshot.seekMax
+        }),
+        getNextTimelineEventReactionTime(snapshot.stateTimeline, {
+          reactionCurrentTime,
+          timeOffset: snapshot.timeOffset,
+          seekMin: snapshot.seekMin,
+          seekMax: snapshot.seekMax
+        })
+      ].filter((t): t is number => typeof t === 'number');
+
+      const nextBoundaryReactionTime = nextBoundaries.length
+        ? Math.min(...nextBoundaries)
+        : null;
+
+      const delayMs = computeNextSyncDelayMs({
+        reactionCurrentTime,
+        reactionPlayerState,
+        ytPlayingState: YT.PlayerState.PLAYING,
+        ytBufferingState: YT.PlayerState.BUFFERING,
+        nextBoundaryReactionTime
+      });
+
+      scheduleNextSync(delayMs, runSyncCycle);
+    };
+
+    runSyncCycle();
   };
 
   const resetReactionDurationProbe = () => {
@@ -1171,7 +1236,28 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
           // ignore
         }
 
-        startOriginalVideo();
+        const reactionNow = typeof snapshot.playerReaction?.getCurrentTime === 'function'
+          ? Number(snapshot.playerReaction.getCurrentTime())
+          : Number(snapshot.reactionCurrentTime);
+
+        const cfg = getCurrentStateFromStateConfigs(
+          Number.isFinite(reactionNow) ? reactionNow : 0,
+          snapshot.playerConfigs,
+          snapshot.timeOffset
+        );
+        const rawCfgState = Number(cfg.state);
+        const desiredOriginalState = Number.isFinite(rawCfgState)
+          ? rawCfgState
+          : YT.PlayerState.PLAYING;
+
+        if (desiredOriginalState === YT.PlayerState.PLAYING) {
+          startOriginalVideo();
+        } else {
+          pauseOriginalVideo();
+          if (snapshot.currentStateOriginalVideo !== desiredOriginalState) {
+            updateState({ currentStateOriginalVideo: desiredOriginalState });
+          }
+        }
         return;
       }
 
@@ -1947,8 +2033,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     }
 
     isSwitchingReactionInPlace = true;
-    clearInterval(pollInterval);
-    pollInterval = undefined;
+    stopSyncScheduler();
 
     try {
 
@@ -3175,8 +3260,35 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       if (wasUserPaused) {
         lastUserResumeAt = Date.now();
       }
-      startOriginalVideo();
-      startReactionVideo();
+
+      // If the current timeline config wants the original paused (e.g. pause at 5s),
+      // do NOT resume the original when the user resumes playback.
+      const reactionNow = typeof snapshot.playerReaction?.getCurrentTime === 'function'
+        ? Number(snapshot.playerReaction.getCurrentTime())
+        : Number(snapshot.reactionCurrentTime);
+
+      const cfg = getCurrentStateFromStateConfigs(
+        Number.isFinite(reactionNow) ? reactionNow : 0,
+        snapshot.playerConfigs,
+        snapshot.timeOffset
+      );
+      const rawCfgState = Number(cfg.state);
+      const desiredOriginalState = Number.isFinite(rawCfgState)
+        ? rawCfgState
+        : YT.PlayerState.PLAYING;
+
+      if (desiredOriginalState === YT.PlayerState.PLAYING) {
+        // Preserve the previous behavior of starting the original promptly on user resume
+        // (helps keep start deltas tight) when the timeline indicates it should be playing.
+        startOriginalVideo();
+        startReactionVideo();
+      } else {
+        startReactionVideo();
+        pauseOriginalVideo();
+        if (snapshot.currentStateOriginalVideo !== desiredOriginalState) {
+          updateState({ currentStateOriginalVideo: desiredOriginalState });
+        }
+      }
       return;
     }
 
@@ -3548,7 +3660,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     clearTimeout(overlayPointerRestoreTimeout ?? undefined);
     clearTimeout(exitButtonCollapseTimeout);
     clearTimeout(playerReadyTimeout);
-    clearInterval(pollInterval);
+    stopSyncScheduler();
     clearInterval(gateWatchdogInterval);
     gateWatchdogInterval = undefined;
     resetReactionDurationProbe();
