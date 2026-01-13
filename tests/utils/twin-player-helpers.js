@@ -133,6 +133,59 @@ export const startPlaybackInteraction = async (page) => {
     if (originalIframeId) await page.locator(`#${originalIframeId}`).click({ force: true }).catch(() => { });
     if (reactionIframeId) await page.locator(`#${reactionIframeId}`).click({ force: true }).catch(() => { });
 
+    const isMobileLikeUA = await page.evaluate(() => /iPhone|iPad|Android|Mobile/i.test(navigator.userAgent));
+
+    // On mobile browsers (esp. iOS/WebKit), calling `playVideo()` from JS outside of a
+    // user gesture is often blocked. Best-effort: click YouTube's own UI inside the
+    // iframe to initiate playback with a real user gesture.
+    if (isMobileLikeUA) {
+        const tryStartYoutubePlaybackInFrame = async (iframeId) => {
+            if (!iframeId) return;
+            const frame = page.frameLocator(`#${iframeId}`);
+
+            // YouTube embeds can show a "Show player controls" affordance first.
+            await frame
+                .getByRole('button', { name: /show player controls/i })
+                .first()
+                .click({ timeout: 2500 })
+                .catch(() => { });
+
+            // Try common play button labels (varies by locale/version).
+            await frame
+                .getByRole('button', { name: /^play$/i })
+                .first()
+                .click({ timeout: 2500 })
+                .catch(() => { });
+            await frame
+                .getByRole('button', { name: /^replay$/i })
+                .first()
+                .click({ timeout: 2500 })
+                .catch(() => { });
+
+            // Most reliable: click the big play overlay if present.
+            await frame
+                .locator('.ytp-large-play-button')
+                .first()
+                .click({ timeout: 2500 })
+                .catch(() => { });
+
+            // Another fallback: click the player surface.
+            await frame
+                .locator('body')
+                .click({ timeout: 2500 })
+                .catch(() => { });
+
+            // Fallback: click the iframe again (often toggles play).
+            await page
+                .locator(`#${iframeId}`)
+                .click({ timeout: 2500, force: true })
+                .catch(() => { });
+        };
+
+        await tryStartYoutubePlaybackInFrame(originalIframeId);
+        await tryStartYoutubePlaybackInFrame(reactionIframeId);
+    }
+
     // Backup direct play call
     await page.evaluate(() => {
         const players = window.__players;
