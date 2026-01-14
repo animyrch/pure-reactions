@@ -123,3 +123,11 @@ The agent should behave like a calm, experienced art director who also understan
   - For twin-player sync: keep “what should happen” in helpers (`twinPlayersSyncTick`, `twinPlayersSyncScheduling`) and keep “do it” (player calls, timers, stores) in the composable.
 3. **Split when needed** — if a file grows past ~300 lines or mixes side effects + pure logic, consider extracting the pure parts into a helper. Document the split briefly so future contributors understand where each responsibility lives.
 4. **Name for intent** — favor folder names that imply behavior (`helpers` vs `composables`). When adding new helpers, update `README.md` or documentation comments with the reasoning so the team remembers the standard.
+
+## 13 — Browser testing reference (Playwright fixtures)
+* When you run or describe browser tests, use the same reaction slugs and video IDs that the Playwright twin-player suite targets so the experience matches what CI exercises. Those IDs are defined in `tests/fixtures/reactions/*.json` and referenced by `tests/twin-player-basic-sync.spec.js`.
+* Keep the following mapping handy for quick reference and share it when explaining a test scenario to collaborators or the agent:
+  - Basic Sync → Reaction page `/reaction/1PaTrdCMKn6ay7nShHES`, video ID `8-3PahRtgF4`, fixture `tests/fixtures/reactions/twin-basic-sync.json`.
+  - Play Trigger → `/reaction/8O1sPJr6atB0K2CvyItV`, video ID `qg6b4b0FAB4`, fixture `tests/fixtures/reactions/twin-play-trigger.json`.
+  - Volume Stability → `/reaction/Dw3UZ6PqZH37E5pbKmhZ`, video ID `dHh_gt4sBbw`, fixture `tests/fixtures/reactions/twin-volume-stability.json`.
+  - Resume After Config Pause → `/reaction/BUOR5TM6yAHSClCCRvIp`, video ID `GQ_SlNONhx4`, fixture `tests/fixtures/reactions/twin-resume-after-config-pause.json`.

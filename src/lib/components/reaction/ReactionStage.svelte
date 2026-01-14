@@ -1,7 +1,7 @@
 <script>
     import ControlDock from "$lib/components/reaction/ControlDock.svelte";
     import MissingReactionPlaceholder from "$lib/components/reaction/MissingReactionPlaceholder.svelte";
-    import { createEventDispatcher } from "svelte";
+    import { createEventDispatcher, onMount, onDestroy } from "svelte";
 
     export let isFullscreen = false;
     export let isControlSurfaceVisible = false;
@@ -28,10 +28,65 @@
 
     const dispatch = createEventDispatcher();
 
+    // Mobile landscape detection & control visibility
+    let isMobileLandscape = false;
+    let controlsVisible = true;
+    let controlsTimeout;
+    let landscapeMediaQuery;
+
+    function handleMediaQueryChange(e) {
+        isMobileLandscape = e.matches;
+        // Reset controls visibility when entering/exiting mobile landscape
+        if (isMobileLandscape) {
+            showControls();
+        } else {
+            controlsVisible = true; // Always visible in other modes unless handled elsewhere
+            if (controlsTimeout) clearTimeout(controlsTimeout);
+        }
+    }
+
+    function showControls() {
+        if (!isMobileLandscape && !isFullscreen) return; // Only apply auto-hide in mobile landscape or fullscreen (if desired, currently targeting mobile landscape per request)
+
+        // Actually, request says: "The control dock should be visible as a bottom overlay when the user goes into landscape mode... disappears after 5 seconds"
+        // So we strictly enforce this logic when isMobileLandscape is true.
+
+        controlsVisible = true;
+        if (controlsTimeout) clearTimeout(controlsTimeout);
+        controlsTimeout = setTimeout(() => {
+            if (isMobileLandscape) {
+                controlsVisible = false;
+            }
+        }, 5000);
+    }
+
+    function handleInteraction() {
+        if (isMobileLandscape) {
+            showControls();
+        }
+    }
+
+    /* 
+       Computed stickyControlsClass:
+       - If isMobileLandscape: toggle opacity based on controlsVisible.
+       - Else: stick to default passed prop (or 'opacity-100' logic from parent if it was dynamic, but here we can just pipe it or override).
+       The parent passes `stickyControlsClass`, but for mobile landscape we need to override it.
+    */
+    $: effectiveStickyControlsClass = isMobileLandscape
+        ? controlsVisible
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
+        : stickyControlsClass;
+
     const handleExitClick = () => dispatch("exitClick");
     const handleExitEnter = () => dispatch("exitEnter");
     const handleExitLeave = () => dispatch("exitLeave");
-    const handlePointerMove = (e) => dispatch("pointerMove", e);
+    const handlePointerMove = (e) => {
+        dispatch("pointerMove", e);
+        // We can treat pointer move as interaction for desktop,
+        // but for mobile touch 'pointerdown' or 'click' is better.
+        // Let's hook a general interaction handler to the wrapper.
+    };
     const handlePointerDown = (e) => dispatch("pointerDown", e);
     const handlePointerLeave = (e) => dispatch("pointerLeave", e);
     const handleMissingReactionSubmit = (e) =>
@@ -43,15 +98,48 @@
     const handleToggleCinematicBars = () => dispatch("toggleCinematicBars");
     const handleEnterFullscreen = () => dispatch("enterFullscreen");
     const handleSeek = (time) => dispatch("seek", time);
+
+    onMount(() => {
+        // Match CSS: @media (orientation: landscape) and (max-width: 1023px), (orientation: landscape) and (max-height: 600px)
+        landscapeMediaQuery = window.matchMedia(
+            "(orientation: landscape) and (max-width: 1023px), (orientation: landscape) and (max-height: 600px)",
+        );
+
+        isMobileLandscape = landscapeMediaQuery.matches;
+        landscapeMediaQuery.addEventListener("change", handleMediaQueryChange);
+
+        if (isMobileLandscape) {
+            showControls();
+        }
+    });
+
+    onDestroy(() => {
+        if (landscapeMediaQuery) {
+            landscapeMediaQuery.removeEventListener(
+                "change",
+                handleMediaQueryChange,
+            );
+        }
+        if (controlsTimeout) clearTimeout(controlsTimeout);
+    });
 </script>
 
-<section
+<div
     class={`theater-wrapper ${
         isFullscreen
             ? "theater-wrapper--fullscreen fixed inset-0 z-50 m-0 h-screen w-screen overflow-hidden rounded-none bg-black px-0 py-0 text-text-primary shadow-none"
             : "relative w-full max-w-none bg-black text-text-primary shadow-none md:shadow-elevated md:mx-auto md:my-10 md:rounded-2xl md:bg-surface/80 md:px-4 md:py-8 md:backdrop-blur sm:px-6 lg:px-10 xl:rounded-3xl"
     }`}
     style="--control-dock-space: 80px;"
+    role="button"
+    tabindex="0"
+    aria-label="Show controls"
+    on:click={handleInteraction}
+    on:touchstart={handleInteraction}
+    on:keydown={(e) => {
+        if (e.key === "Enter" || e.key === " ") handleInteraction();
+        handleInteraction(); // Any key shows controls? maybe just Enter/Space.
+    }}
 >
     <!-- Fullscreen overlay & exit button (only shown when fullscreen) -->
     {#if isFullscreen}
@@ -187,7 +275,7 @@
     {#if playerOriginal && (playerReaction || isReactionMissing)}
         <ControlDock
             {isFullscreen}
-            {stickyControlsClass}
+            stickyControlsClass={effectiveStickyControlsClass}
             {bothVideosStarted}
             {isPlaylist}
             {isPlaylistAutoPlay}
@@ -203,13 +291,36 @@
             seekMax={Math.min(reactionFinishTime || 0, reactionDuration || 0)}
             onSeek={handleSeek}
         />
+        <!-- Debug Helper -->
+        <div class="debug-info">
+            Wait for layout... if this is red, base styles active.
+            <br />
+            W: <span id="debug-w">-</span> H: <span id="debug-h">-</span>
+        </div>
+        <script>
+            const updateDebug = () => {
+                const w = document.getElementById("debug-w");
+                if (w) w.innerText = window.innerWidth;
+                const h = document.getElementById("debug-h");
+                if (h) h.innerText = window.innerHeight;
+            };
+            window.addEventListener("resize", updateDebug);
+            setTimeout(updateDebug, 500);
+        </script>
     {/if}
-</section>
+</div>
 
 <style>
-    @media (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-width: 1023px),
-        (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-height: 600px) {
-        :global(section.theater-wrapper) {
+    /* 
+       Targeting:
+       1. Standard mobile widths (max-width: 1023px)
+       2. Short heights (max-height: 768px - covering 720p legacy phones/phablets)
+       3. Wide aspect ratios (min-aspect-ratio: 1.5 - covering 16:10 & 16:9) with constrained height (max-height: 900px)
+    */
+    @media (orientation: landscape) and (max-width: 1023px),
+        (orientation: landscape) and (max-height: 768px),
+        (orientation: landscape) and (min-aspect-ratio: 1.5) and (max-height: 900px) {
+        :global(div.theater-wrapper) {
             position: fixed;
             inset: 0;
             z-index: 50;
@@ -226,60 +337,54 @@
             position: absolute;
             inset: 0;
             z-index: 50;
-            display: flex;
-            flex-direction: row;
-            align-items: center;
-            gap: 0;
+            display: block; /* Changing from flex to block to allow absolute positioning of children */
             padding: 0;
-            padding-bottom: var(--control-dock-space);
             background: black;
         }
 
-        .theater-wrapper [data-stage="original"],
-        .theater-wrapper [data-stage="reaction"] {
-            position: relative;
-            inset: auto;
-            top: auto;
-            right: auto;
-            margin: 0;
-        }
-
         .theater-wrapper [data-stage="original"] {
-            flex: 0 0 60%;
-        }
-
-        .theater-wrapper [data-stage="reaction"] {
-            flex: 0 0 40%;
-            width: auto;
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            z-index: 10;
         }
 
         .theater-wrapper [data-stage="original-frame"] {
-            display: block;
-            height: auto;
+            width: 100%;
+            height: 100%;
         }
 
         .theater-wrapper [data-stage="original-frame-inner"] {
             width: 100%;
-            aspect-ratio: 16 / 9;
-            height: auto;
-            max-height: calc(100vh - var(--control-dock-space));
+            height: 100%;
+            max-height: none;
+            aspect-ratio: auto;
         }
 
         .theater-wrapper [data-stage="reaction"] {
-            aspect-ratio: 16 / 9;
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 35% !important; /* Request: "It should take 35 percent of the width" - Override Tailwind class */
             height: auto;
+            aspect-ratio: 16 / 9;
+            z-index: 60;
+            margin: 0;
+            /* Add some styling to make it pop over the original */
+            border-radius: 0.5rem; /* rounded-lg */
+            overflow: hidden;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.5); /* shadow-xl */
         }
     }
 
     @supports (height: 100dvh) {
-        @media (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-width: 1023px),
-            (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-height: 600px) {
-            :global(section.theater-wrapper) {
+        @media (orientation: landscape) and (max-width: 1023px),
+            (orientation: landscape) and (max-height: 768px),
+            (orientation: landscape) and (min-aspect-ratio: 1.5) and (max-height: 900px) {
+            :global(div.theater-wrapper) {
                 height: 100dvh;
-            }
-
-            .theater-wrapper [data-stage="original-frame-inner"] {
-                max-height: calc(100dvh - var(--control-dock-space));
             }
         }
     }
