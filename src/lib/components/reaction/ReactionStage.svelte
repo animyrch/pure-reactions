@@ -317,9 +317,9 @@
        2. Short heights (max-height: 768px - covering 720p legacy phones/phablets)
        3. Wide aspect ratios (min-aspect-ratio: 1.5 - covering 16:10 & 16:9) with constrained height (max-height: 900px)
     */
-    @media (orientation: landscape) and (max-width: 1023px),
-        (orientation: landscape) and (max-height: 768px),
-        (orientation: landscape) and (min-aspect-ratio: 1.5) and (max-height: 900px) {
+    @media (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-width: 1023px),
+        (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-height: 768px),
+        (hover: none) and (pointer: coarse) and (orientation: landscape) and (min-aspect-ratio: 1.5) and (max-height: 900px) {
         :global(div.theater-wrapper) {
             position: fixed;
             inset: 0;
@@ -380,9 +380,9 @@
     }
 
     @supports (height: 100dvh) {
-        @media (orientation: landscape) and (max-width: 1023px),
-            (orientation: landscape) and (max-height: 768px),
-            (orientation: landscape) and (min-aspect-ratio: 1.5) and (max-height: 900px) {
+        @media (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-width: 1023px),
+            (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-height: 768px),
+            (hover: none) and (pointer: coarse) and (orientation: landscape) and (min-aspect-ratio: 1.5) and (max-height: 900px) {
             :global(div.theater-wrapper) {
                 height: 100dvh;
             }
