@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "description": "Twin-player fixture: Basic Sync test",
+  "docs": [
+    {
+      "id": "1PaTrdCMKn6ay7nShHES",
+      "data": {
+        "isPublished": false,
+        "offsetStartTime": 0,
+        "originalVideoAuthor": "@the_animaniace",
+        "originalVideoId": "8-3PahRtgF4",
+        "originalVideoTitle": "The original Dragon Ball was UNHINGED 💀 | Mercenary Tao HUNTS down the Goku #dbd #dragonballz #goku",
+        "playbackTimeline": [
+          {
+            "rate": 1,
+            "t": 0
+          }
+        ],
+        "playlistId": "",
+        "reactionVideoAuthor": "@the_animaniace",
+        "reactionVideoId": "8-3PahRtgF4",
+        "reactionVideoTitle": "The original Dragon Ball was UNHINGED 💀 | Mercenary Tao HUNTS down the Goku #dbd #dragonballz #goku",
+        "reactionVolumeTimeline": [],
+        "reactorId": "jOH8zi59HPWyoyywMQVygllqSUz2",
+        "stateTimeline": [
+          {
+            "state": 1,
+            "t": 0,
+            "targetTime": 0
+          }
+        ],
+        "volumeTimeline": [],
+        "youtubePlaylistId": "",
+        "updatedAt": "2026-01-13T20:03:24Z"
+      }
+    }
+  ]
+}

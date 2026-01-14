@@ -16,6 +16,11 @@ npm create svelte@latest my-app
 
 ## Developing
 
+### Node version
+
+This repo expects **Node.js 20+** (see `.nvmrc`).
+If you use `nvm`: `nvm install && nvm use`.
+
 Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
 
 ```bash

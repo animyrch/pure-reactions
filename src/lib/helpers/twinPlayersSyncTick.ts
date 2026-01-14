@@ -188,7 +188,7 @@ export function computeTwinPlayersSyncTick(
         }
       }
 
-      return { actions, nextTracking, stateUpdates };
+      // Do not return here: state/time sync (including pause configs) must still run.
     }
 
     const delta = intendedOriginalVolume - intendedReactionVolume;

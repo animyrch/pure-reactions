@@ -9,6 +9,7 @@ import {
     query,
     where,
     serverTimestamp,
+    deleteField,
     orderBy,
     or,
     limit,
@@ -43,6 +44,8 @@ export const auth = getAuth(app);
 const createCollection = (db, params, caller) => {
     return collection(db, params);
 };
+
+export const firestoreDeleteField = () => deleteField();
 
 export const slugifyQueueName = (value) =>
     (value || '')

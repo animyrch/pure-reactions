@@ -135,10 +135,32 @@ export const startPlaybackInteraction = async (page) => {
 
     const isMobileLikeUA = await page.evaluate(() => /iPhone|iPad|Android|Mobile/i.test(navigator.userAgent));
 
+    // If both players are already playing/buffering, don't spend extra time poking around inside
+    // the iframe UI (those lookups can cost multiple seconds per step on mobile).
+    const alreadyActive = await page.evaluate(() => {
+        const players = window.__players;
+        const isActive = (p) => {
+            try {
+                if (typeof p?.getPlayerState === 'function') {
+                    const s = p.getPlayerState();
+                    return s === 1 || s === 3;
+                }
+                if (typeof p?.paused === 'boolean') {
+                    return !p.paused;
+                }
+            } catch {
+                // ignore
+            }
+            return false;
+        };
+
+        return Boolean(players?.original && players?.reaction && isActive(players.original) && isActive(players.reaction));
+    });
+
     // On mobile browsers (esp. iOS/WebKit), calling `playVideo()` from JS outside of a
     // user gesture is often blocked. Best-effort: click YouTube's own UI inside the
     // iframe to initiate playback with a real user gesture.
-    if (isMobileLikeUA) {
+    if (isMobileLikeUA && !alreadyActive) {
         const tryStartYoutubePlaybackInFrame = async (iframeId) => {
             if (!iframeId) return;
             const frame = page.frameLocator(`#${iframeId}`);

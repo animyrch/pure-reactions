@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "description": "Twin-player fixture: Resume After Config Pause test",
+  "docs": [
+    {
+      "id": "BUOR5TM6yAHSClCCRvIp",
+      "data": {
+        "isPublished": false,
+        "offsetStartTime": 0,
+        "originalVideoAuthor": "@TJPAnime",
+        "originalVideoId": "GQ_SlNONhx4",
+        "originalVideoTitle": "Vegeta Admits To Goku That Buu's Stronger!",
+        "playbackTimeline": [
+          {
+            "rate": 1,
+            "t": 0
+          }
+        ],
+        "playlistId": "",
+        "reactionVideoAuthor": "@TJPAnime",
+        "reactionVideoId": "GQ_SlNONhx4",
+        "reactionVideoTitle": "Vegeta Admits To Goku That Buu's Stronger!",
+        "reactorId": "jOH8zi59HPWyoyywMQVygllqSUz2",
+        "stateTimeline": [
+          {
+            "state": 1,
+            "t": 0,
+            "targetTime": 0
+          },
+          {
+            "state": 2,
+            "t": 5,
+            "targetTime": 5
+          },
+          {
+            "state": 1,
+            "t": 12,
+            "targetTime": 12
+          }
+        ],
+        "volumeTimeline": [],
+        "youtubePlaylistId": ""
+      }
+    }
+  ]
+}

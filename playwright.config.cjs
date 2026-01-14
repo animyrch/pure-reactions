@@ -4,6 +4,7 @@ module.exports = defineConfig({
     testDir: './tests',
     timeout: 30000,
     retries: 0,
+    globalSetup: require.resolve('./tests/global-setup.cjs'),
     use: {
         headless: true,
     },

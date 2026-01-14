@@ -1,5 +1,42 @@
 # Test & Debug Features
 
+## Firestore Fixtures (E2E / Emulator / Prod)
+
+This repo includes a small set of **reaction document fixtures** under `tests/fixtures/`.
+They can be seeded into either:
+- a **Firestore emulator** (recommended for Playwright e2e)
+- a **live Firebase project** (for verifying behavior against prod data)
+
+### Seed into Firestore emulator (recommended)
+
+1) Start a Firestore emulator (you can use the Firebase CLI).
+2) Run Playwright with emulator env enabled (global setup will seed if missing):
+
+`PUBLIC_FIREBASE_USE_EMULATORS=true PUBLIC_FIRESTORE_EMULATOR_HOST=127.0.0.1 PUBLIC_FIRESTORE_EMULATOR_PORT=8080 npm run test:e2e`
+
+The seeder writes to the collection from `.env` (`PUBLIC_FIREBASE_COLLECTION_REACTION_BINOMES`).
+
+### Seed into a live Firebase project (guarded)
+
+This is intentionally hard to do by accident.
+
+- Set credentials via `GOOGLE_APPLICATION_CREDENTIALS=/abs/path/to/serviceAccount.json`
+  (or `FIREBASE_SERVICE_ACCOUNT_JSON='{"type":"service_account",...}'`).
+- Explicitly allow prod seeding: `ALLOW_PROD_SEED=1`
+- Run:
+
+Seed a single per-test fixture:
+
+`FIREBASE_SEED_TARGET=prod ALLOW_PROD_SEED=1 node scripts/seed-firestore-fixtures.mjs --fixture tests/fixtures/reactions/twin-basic-sync.json`
+
+Seed all twin-player fixtures (one reaction doc per test case):
+
+`FIREBASE_SEED_TARGET=prod ALLOW_PROD_SEED=1 npm run seed:twin-fixtures`
+
+By default the seeder is **idempotent**: it only creates docs that do not exist.
+
+If you update a fixture but keep the same document id, you must delete the existing doc (or use a new id) for the seeder to apply the change.
+
 This document tracks **intentional test/debug knobs** (mostly query params) that help us reproduce issues, compare behavior, and validate fixes.
 
 ## Query Params

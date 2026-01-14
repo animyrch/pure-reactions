@@ -9,6 +9,7 @@ import {
 import {
   getReaction,
   updateFirebaseDocument,
+  firestoreDeleteField,
   getPlaylist,
   getQueueBySlug
 } from '$lib/helpers/firebase';
@@ -1470,7 +1471,13 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       pauseOriginalVideo();
     }
 
+
+    // Force the reaction video to the correct time BEFORE starting playback.
+    // This addresses the drift issue where one player might have progressed slightly
+    // while waiting for the other in the click gate.
     goToSecondsInReactionVideo(startTime);
+    debugClickGate('[TwinPlayers] startVideos forced reaction seek', { startTime });
+
     setPlaybackRateForOriginalVideo(snapshot.currentPlaybackRate);
     startReactionVideo();
     pollVideoCurrentTime();
@@ -2736,7 +2743,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         state: Number(entry.state),
         targetTime: Number(entry.targetTime ?? 0)
       })),
-      reactionConfigs: nextPlayerConfigs
+      reactionConfigs: firestoreDeleteField()
     });
 
     if (typeof window !== 'undefined') {
@@ -2768,7 +2775,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         t: Number(entry.t),
         volume: roundVolume(Number(entry.volume ?? 100))
       })),
-      volumeConfigs: nextVolumeConfigs
+      volumeConfigs: firestoreDeleteField()
     });
 
     if (typeof window !== 'undefined') {
@@ -2799,7 +2806,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         t: Number(entry.t),
         volume: roundVolume(Number(entry.volume ?? 100))
       })),
-      reactionVolumeConfigs: nextVolumeConfigs
+      reactionVolumeConfigs: firestoreDeleteField()
     });
 
     if (typeof window !== 'undefined') {
@@ -2830,7 +2837,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         t: Number(entry.t),
         rate: roundPlaybackRate(Number(entry.rate ?? 1))
       })),
-      playbackRateConfigs: nextPlaybackRateConfigs
+      playbackRateConfigs: firestoreDeleteField()
     });
 
     if (typeof window !== 'undefined') {

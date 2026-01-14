@@ -7,6 +7,7 @@
         updateFirebaseDocument,
         createPlaylistDocument,
         addToPlaylistDocument,
+        firestoreDeleteField,
     } from "$lib/helpers/firebase";
     import { handlePrivateRoute, goToRoute } from "$lib/helpers/routing";
     import { isMobileDevice } from "$lib/helpers/system";
@@ -965,7 +966,7 @@
             startTime,
             playlistBufferTime || 0,
         );
-        console.log("finish reaction", reactionVideoTime);
+        // console.log("finish reaction", reactionVideoTime);
 
         const isPlaylistFlow = Boolean(playlistId);
         const playlistHasItems =
@@ -1010,9 +1011,9 @@
                 volumeTimeline,
                 playbackTimeline,
                 // Remove legacy object-map formats now that arrays are saved
-                reactionConfigs: null,
-                volumeConfigs: null,
-                playbackRateConfigs: null,
+                reactionConfigs: firestoreDeleteField(),
+                volumeConfigs: firestoreDeleteField(),
+                playbackRateConfigs: firestoreDeleteField(),
             });
         } catch (e) {
             console.error("Failed to persist array timelines", e);

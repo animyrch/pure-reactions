@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "description": "Reaction binome fixture for Playwright twin-player tests.",
+  "docs": [
+    {
+      "id": "1PaTrdCMKn6ay7nShHES",
+      "data": {
+        "isPublished": false,
+        "offsetStartTime": 0,
+        "originalVideoAuthor": "@the_animaniace",
+        "originalVideoId": "8-3PahRtgF4",
+        "originalVideoTitle": "The original Dragon Ball was UNHINGED 💀 | Mercenary Tao HUNTS down the Goku #dbd #dragonballz #goku",
+        "playbackRateConfigs": null,
+        "playbackTimeline": [
+            {
+            "rate": 1,
+            "t": 0
+            }
+        ],
+        "playlistId": "",
+        "reactionConfigs": {
+            "0.0": {
+            "state": 1,
+            "time": "0.00"
+            },
+            "5.0": {
+            "state": 2,
+            "time": "5.29"
+            }
+        },
+        "reactionVideoAuthor": "@the_animaniace",
+        "reactionVideoId": "8-3PahRtgF4",
+        "reactionVideoTitle": "The original Dragon Ball was UNHINGED 💀 | Mercenary Tao HUNTS down the Goku #dbd #dragonballz #goku",
+        "reactionVolumeConfigs": {
+            "2.0": {
+            "volume": 10
+            }
+        },
+        "reactionVolumeTimeline": [
+            {
+            "t": 2,
+            "volume": 10
+            }
+        ],
+        "reactorId": "jOH8zi59HPWyoyywMQVygllqSUz2",
+        "stateTimeline": [
+            {
+            "state": 1,
+            "t": 0,
+            "targetTime": 0
+            },
+            {
+            "state": 2,
+            "t": 5,
+            "targetTime": 5.29
+            }
+        ],
+        "volumeConfigs": {
+            "2.0": {
+            "volume": 20
+            }
+        },
+        "volumeTimeline": [
+            {
+            "t": 2,
+            "volume": 20
+            }
+        ],
+        "youtubePlaylistId": ""
+        }
+    }
+  ]
+}

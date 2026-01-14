@@ -8,3 +8,4 @@ node_modules
 !.env.example
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+pure-reactions-firebase-adminsdk-tki7b-04e5ffe316
