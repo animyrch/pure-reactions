@@ -12,8 +12,8 @@
     "lint": "eslint . --ext .js,.svelte",
     "e2e": "playwright test",
     "test:e2e": "playwright test",
-    "seed:firestore": "node scripts/seed-firestore-fixtures.mjs",
-    "seed:twin-fixtures": "node scripts/seed-twin-player-fixtures.mjs",
+    "seed:firestore": "GOOGLE_APPLICATION_CREDENTIALS=./pure-reactions-firebase-adminsdk-tki7b-04e5ffe316.json node scripts/seed-firestore-fixtures.mjs",
+    "seed:twin-fixtures": "GOOGLE_APPLICATION_CREDENTIALS=./pure-reactions-firebase-adminsdk-tki7b-04e5ffe316.json node scripts/seed-twin-player-fixtures.mjs",
     "migrate:delete-legacy-timelines": "GOOGLE_APPLICATION_CREDENTIALS=./pure-reactions-firebase-adminsdk-tki7b-04e5ffe316.json node scripts/migrate-delete-legacy-timelines.mjs"
   },
   "devDependencies": {

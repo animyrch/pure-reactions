@@ -207,7 +207,8 @@
 </section>
 
 <style>
-    @media (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-width: 1023px) {
+    @media (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-width: 1023px),
+        (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-height: 600px) {
         :global(section.theater-wrapper) {
             position: fixed;
             inset: 0;
@@ -271,7 +272,8 @@
     }
 
     @supports (height: 100dvh) {
-        @media (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-width: 1023px) {
+        @media (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-width: 1023px),
+            (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-height: 600px) {
             :global(section.theater-wrapper) {
                 height: 100dvh;
             }
