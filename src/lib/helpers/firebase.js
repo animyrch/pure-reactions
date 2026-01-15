@@ -559,6 +559,7 @@ export const getReactionsToOriginalVideo = async (originalVideoId, exceptReactio
         const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'getReactionsToOriginalVideo');
         const queryRef = query(reactionsCollection,
             where("originalVideoId", "==", originalVideoId),
+            where('isPublished', '==', true),
             where("reactionVideoId", "!=", exceptReactionVideoId),
             orderBy('reactionVideoId', 'desc'),
             orderBy('createdAt', 'desc')
