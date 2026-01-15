@@ -1,6 +1,7 @@
 <script>
   import { createEventDispatcher, onDestroy } from "svelte";
   import { PlaySolid, PauseSolid } from "flowbite-svelte-icons";
+  import AdvancedVolumeControl from "./AdvancedVolumeControl.svelte";
 
   export let currentTime = 0;
   export let duration = 0;
@@ -136,6 +137,10 @@
 
   let activeVolumeInput = "100";
   let activePlaybackRateInput = "1";
+
+  // Advanced options state
+  let showAdvancedPending = false;
+  let showAdvancedActive = false;
 
   const PENDING_TARGET_MINUTES_INPUT_ID = "pending-target-minutes";
   const PENDING_TARGET_SECONDS_INPUT_ID = "pending-target-seconds";
@@ -994,6 +999,7 @@
     pendingReactionSeconds = 0;
     pendingVolumeInput = "100";
     pendingPlaybackRateInput = "1";
+    showAdvancedPending = false;
   };
 
   const closeMarkerEditor = () => {
@@ -1007,6 +1013,7 @@
     activeMarkerIsDirty = false;
     activeVolumeInput = "100";
     activePlaybackRateInput = "1";
+    showAdvancedActive = false;
   };
 
   const handleTimelineClick = (event) => {
@@ -1112,16 +1119,6 @@
       closeConfigPopup();
       closeMarkerEditor();
     }
-  };
-
-  const confirmConfigCreation = (state) => {
-    if (!pendingConfig) return;
-    dispatch("createPlayerConfig", {
-      state,
-      timeInReaction: pendingConfig.reactionTime,
-      targetTime: pendingTargetSeconds,
-    });
-    closeConfigPopup();
   };
 
   const confirmVolumeCreation = () => {
@@ -1311,6 +1308,35 @@
     Math.abs(marker.timeInReaction - activeMarker.initialTimeInReaction) <
       0.001;
 
+  const mirrorVolumeConfig = (event) => {
+    const config = pendingConfig || activeMarker;
+    if (!config) return;
+
+    const { volume } = event.detail;
+
+    const currentTrack = config.trackId;
+    const timeInReaction = Number.isFinite(config.reactionTime)
+      ? config.reactionTime
+      : config.timeInReaction;
+
+    if (currentTrack === "volume") {
+      // Mirror to reactionVolume
+      dispatch("createReactionVolumeConfig", {
+        timeInReaction,
+        volume,
+      });
+    } else if (currentTrack === "reactionVolume") {
+      // Mirror to volume
+      dispatch("createVolumeConfig", {
+        timeInReaction,
+        volume,
+      });
+    }
+
+    if (pendingConfig) closeConfigPopup();
+    if (activeMarker) closeMarkerEditor();
+  };
+
   // Playhead drag handlers
   const updatePlayheadDrag = (event) => {
     if (!isDraggingPlayhead || !playheadDragRect) return;
@@ -1377,6 +1403,7 @@
     aria-label="Reaction playback timeline"
     bind:this={timelineContainer}
   >
+
     {#if hoverIndicatorLeft && hoverTimeLabel && !pendingConfig && !activeMarker}
       <div
         class="pointer-events-none absolute -top-6 flex -translate-x-1/2 justify-center text-[10px] font-medium text-text-primary"
@@ -1656,14 +1683,28 @@
           </div>
         {:else if pendingConfig.trackId === "volume" || pendingConfig.trackId === "reactionVolume"}
           <div class="flex flex-col gap-2">
-            <label
-              class="text-[11px] font-semibold uppercase tracking-wide text-text-muted"
-              for="pending-volume"
-            >
-              {pendingConfig.trackId === "reactionVolume"
-                ? "Reaction volume"
-                : "Original volume"}
-            </label>
+            <div class="flex items-center justify-between gap-2">
+              <label
+                class="text-[11px] font-semibold uppercase tracking-wide text-text-muted"
+                for="pending-volume"
+              >
+                {pendingConfig.trackId === "reactionVolume"
+                  ? "Reaction volume"
+                  : "Original volume"}
+              </label>
+              <button
+                type="button"
+                class="inline-flex items-center gap-1 rounded-md border border-border-subtle/60 bg-surface/70 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-text-muted transition hover:border-accent-primary/40 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                aria-expanded={showAdvancedPending}
+                aria-controls="pending-advanced-options"
+                on:mouseenter={() => (showAdvancedPending = true)}
+                on:click|stopPropagation={() => {
+                  showAdvancedPending = !showAdvancedPending;
+                }}
+              >
+                Advanced
+              </button>
+            </div>
             <div class="flex gap-2">
               <input
                 id="pending-volume"
@@ -1687,6 +1728,11 @@
                 Set volume
               </button>
             </div>
+            {#if showAdvancedPending}
+              <div id="pending-advanced-options">
+                <AdvancedVolumeControl on:mirror={mirrorVolumeConfig} />
+              </div>
+            {/if}
           </div>
         {/if}
         <button
@@ -1870,14 +1916,16 @@
           </div>
         {:else if activeMarker.trackId === "volume" || activeMarker.trackId === "reactionVolume"}
           <div class="flex flex-col gap-2">
-            <label
-              class="text-[11px] font-semibold uppercase tracking-wide text-text-muted"
-              for="active-volume"
-            >
-              {activeMarker.trackId === "reactionVolume"
-                ? "Reaction volume"
-                : "Original volume"}
-            </label>
+            <div class="flex items-center justify-between gap-2">
+              <label
+                class="text-[11px] font-semibold uppercase tracking-wide text-text-muted"
+                for="active-volume"
+              >
+                {activeMarker.trackId === "reactionVolume"
+                  ? "Reaction volume"
+                  : "Original volume"}
+              </label>
+            </div>
             <div class="flex gap-2">
               <input
                 id="active-volume"
@@ -1904,16 +1952,37 @@
                 Set volume
               </button>
             </div>
+            {#if showAdvancedActive}
+              <div id="active-advanced-options">
+                <AdvancedVolumeControl on:mirror={mirrorVolumeConfig} />
+              </div>
+            {/if}
           </div>
         {/if}
         <div class="flex items-center justify-between gap-2">
-          <button
-            type="button"
-            class="rounded-md border border-danger/40 bg-danger/10 px-2 py-1 font-semibold text-danger transition hover:border-danger/60 hover:bg-danger/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/40"
-            on:click|stopPropagation={handleActiveMarkerDelete}
-          >
-            Delete cue
-          </button>
+          <div class="flex items-center gap-2">
+            {#if activeMarker.trackId === "volume" || activeMarker.trackId === "reactionVolume"}
+              <button
+                type="button"
+                class="inline-flex items-center gap-1 rounded-md border border-border-subtle/60 bg-surface/70 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-text-muted transition hover:border-accent-primary/40 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                aria-expanded={showAdvancedActive}
+                aria-controls="active-advanced-options"
+                on:mouseenter={() => (showAdvancedActive = true)}
+                on:click|stopPropagation={() => {
+                  showAdvancedActive = !showAdvancedActive;
+                }}
+              >
+                Advanced
+              </button>
+            {/if}
+            <button
+              type="button"
+              class="rounded-md border border-danger/40 bg-danger/10 px-2 py-1 font-semibold text-danger transition hover:border-danger/60 hover:bg-danger/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/40"
+              on:click|stopPropagation={handleActiveMarkerDelete}
+            >
+              Delete cue
+            </button>
+          </div>
           <button
             type="button"
             class="rounded-md bg-transparent px-2 py-1 text-[11px] font-medium text-text-muted transition hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-subtle"
