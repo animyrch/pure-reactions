@@ -21,6 +21,9 @@
     export let reactionFinishTime = 0;
     export let missingReactionLoading = false;
     export let missingReactionError = "";
+    export let fullscreenPrimaryVideo = "original";
+    export let fullscreenOverlayWidthPercent = 35;
+    export let fullscreenOverlayCorner = "top-right";
 
     export let alwaysShowMissingPlaceholder = false;
 
@@ -99,6 +102,39 @@
     const handleEnterFullscreen = () => dispatch("enterFullscreen");
     const handleSeek = (time) => dispatch("seek", time);
 
+    const OVERLAY_WIDTH_MIN = 5;
+    const OVERLAY_WIDTH_MAX = 50;
+    const OVERLAY_WIDTH_STEP = 5;
+    const DEFAULT_OVERLAY_WIDTH = 35;
+
+    const normalizeOverlayWidth = (value) => {
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed)) return DEFAULT_OVERLAY_WIDTH;
+        const snapped =
+            Math.round(parsed / OVERLAY_WIDTH_STEP) * OVERLAY_WIDTH_STEP;
+        return Math.max(OVERLAY_WIDTH_MIN, Math.min(OVERLAY_WIDTH_MAX, snapped));
+    };
+
+    const overlayCornerClasses = {
+        "top-left": "left-6 top-6",
+        "top-right": "right-6 top-6",
+        "bottom-left": "left-6 bottom-6",
+        "bottom-right": "right-6 bottom-6",
+    };
+
+    $: normalizedOverlayWidth = normalizeOverlayWidth(
+        fullscreenOverlayWidthPercent,
+    );
+    $: normalizedOverlayCorner =
+        fullscreenOverlayCorner in overlayCornerClasses
+            ? fullscreenOverlayCorner
+            : "top-right";
+    $: overlayCornerClass = overlayCornerClasses[normalizedOverlayCorner];
+    $: isReactionPrimary = fullscreenPrimaryVideo === "reaction";
+    $: isOverlayLayout = isFullscreen || isMobileLandscape;
+    $: isOriginalOverlay = isOverlayLayout && isReactionPrimary;
+    $: isReactionOverlay = isOverlayLayout && !isReactionPrimary;
+
     onMount(() => {
         // Match CSS: @media (orientation: landscape) and (max-width: 1023px), (orientation: landscape) and (max-height: 600px)
         landscapeMediaQuery = window.matchMedia(
@@ -130,7 +166,9 @@
             ? "theater-wrapper--fullscreen fixed inset-0 z-50 m-0 h-screen w-screen overflow-hidden rounded-none bg-black px-0 py-0 text-text-primary shadow-none"
             : "relative w-full max-w-none bg-black text-text-primary shadow-none md:shadow-elevated md:mx-auto md:my-10 md:rounded-2xl md:bg-surface/80 md:px-4 md:py-8 md:backdrop-blur sm:px-6 lg:px-10 xl:rounded-3xl"
     }`}
-    style="--control-dock-space: 80px;"
+    style={`--control-dock-space: 80px; --overlay-width: ${normalizedOverlayWidth}%;`}
+    data-overlay-corner={normalizedOverlayCorner}
+    data-fullscreen-primary={isReactionPrimary ? "reaction" : "original"}
     role="button"
     tabindex="0"
     aria-label="Show controls"
@@ -200,14 +238,24 @@
         <!-- Original video player container -->
         <div
             data-stage="original"
-            class={isFullscreen
-                ? "absolute inset-0"
+            data-stage-role={isOverlayLayout
+                ? isOriginalOverlay
+                    ? "overlay"
+                    : "primary"
+                : "grid"}
+            class={isOverlayLayout
+                ? isOriginalOverlay
+                    ? `pointer-events-auto absolute ${overlayCornerClass} z-50`
+                    : "absolute inset-0"
                 : "relative overflow-hidden bg-black shadow-elevated rounded-none md:rounded-xl"}
+            style={isOriginalOverlay ? "width: var(--overlay-width);" : ""}
         >
             <div
                 data-stage="original-frame"
-                class={isFullscreen
-                    ? "h-full w-full"
+                class={isOverlayLayout
+                    ? isOriginalOverlay
+                        ? "relative w-full aspect-cinematic overflow-hidden rounded-lg bg-black/80 shadow-elevated"
+                        : "h-full w-full"
                     : "relative w-full h-[56.25vw] md:h-auto md:aspect-[16/9]"}
             >
                 <div
@@ -236,13 +284,23 @@
         {#if !isReactionMissing}
             <div
                 data-stage="reaction"
-                class={isFullscreen
-                    ? "pointer-events-auto absolute right-6 top-6 z-50 w-[min(28%,320px)]"
+                data-stage-role={isOverlayLayout
+                    ? isReactionOverlay
+                        ? "overlay"
+                        : "primary"
+                    : "grid"}
+                class={isOverlayLayout
+                    ? isReactionOverlay
+                        ? `pointer-events-auto absolute ${overlayCornerClass} z-50`
+                        : "absolute inset-0"
                     : "relative overflow-hidden bg-black/80 shadow-surface w-[80vw] h-[45vw] mx-auto mt-4 rounded-lg md:w-auto md:h-auto md:mt-0 md:mx-0 md:rounded-xl md:aspect-[16/9]"}
+                style={isReactionOverlay ? "width: var(--overlay-width);" : ""}
             >
                 <div
-                    class={isFullscreen
-                        ? "relative aspect-cinematic overflow-hidden rounded-lg bg-black/80 shadow-elevated"
+                    class={isOverlayLayout
+                        ? isReactionOverlay
+                            ? "relative aspect-cinematic overflow-hidden rounded-lg bg-black/80 shadow-elevated"
+                            : "relative h-full w-full"
                         : "relative h-full w-full"}
                 >
                     <div
@@ -342,7 +400,7 @@
             background: black;
         }
 
-        .theater-wrapper [data-stage="original"] {
+        .theater-wrapper [data-stage-role="primary"] {
             position: absolute;
             inset: 0;
             width: 100%;
@@ -351,31 +409,52 @@
             z-index: 10;
         }
 
-        .theater-wrapper [data-stage="original-frame"] {
+        .theater-wrapper [data-stage-role="primary"] [data-stage="original-frame"] {
             width: 100%;
             height: 100%;
         }
 
-        .theater-wrapper [data-stage="original-frame-inner"] {
+        .theater-wrapper [data-stage-role="primary"] [data-stage="original-frame-inner"] {
             width: 100%;
             height: 100%;
             max-height: none;
             aspect-ratio: auto;
         }
 
-        .theater-wrapper [data-stage="reaction"] {
+        .theater-wrapper [data-stage-role="overlay"] {
             position: absolute;
-            top: 0;
-            right: 0;
-            width: 35% !important; /* Request: "It should take 35 percent of the width" - Override Tailwind class */
+            width: var(--overlay-width) !important;
             height: auto;
             aspect-ratio: 16 / 9;
             z-index: 60;
             margin: 0;
-            /* Add some styling to make it pop over the original */
             border-radius: 0.5rem; /* rounded-lg */
             overflow: hidden;
             box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.5); /* shadow-xl */
+        }
+
+        .theater-wrapper[data-overlay-corner="top-left"]
+            [data-stage-role="overlay"] {
+            top: 0;
+            left: 0;
+        }
+
+        .theater-wrapper[data-overlay-corner="top-right"]
+            [data-stage-role="overlay"] {
+            top: 0;
+            right: 0;
+        }
+
+        .theater-wrapper[data-overlay-corner="bottom-left"]
+            [data-stage-role="overlay"] {
+            bottom: 0;
+            left: 0;
+        }
+
+        .theater-wrapper[data-overlay-corner="bottom-right"]
+            [data-stage-role="overlay"] {
+            bottom: 0;
+            right: 0;
         }
     }
 

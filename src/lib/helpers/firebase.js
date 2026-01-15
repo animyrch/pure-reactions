@@ -73,6 +73,9 @@ export const createReactionDocument = async ({
             playbackRateConfigs: {},
             reactorId: userId,
             offsetStartTime,
+            fullscreenPrimaryVideo: "original",
+            fullscreenOverlayWidthPercent: 35,
+            fullscreenOverlayCorner: "top-right",
             createdAt: serverTimestamp()
         };
 

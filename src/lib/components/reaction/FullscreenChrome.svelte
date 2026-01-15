@@ -3,6 +3,9 @@
   export let isExitButtonExpanded = false;
   export let showCinematicBars = false;
   export let isReactionMissing = false;
+  export let fullscreenPrimaryVideo = "original";
+  export let fullscreenOverlayWidthPercent = 35;
+  export let fullscreenOverlayCorner = "top-right";
   export let onExitClick = () => {};
   export let onExitEnter = () => {};
   export let onExitLeave = () => {};
@@ -12,6 +15,37 @@
 
   let overlayElement;
   export { overlayElement as overlayRef };
+
+  const OVERLAY_WIDTH_MIN = 5;
+  const OVERLAY_WIDTH_MAX = 50;
+  const OVERLAY_WIDTH_STEP = 5;
+  const DEFAULT_OVERLAY_WIDTH = 35;
+
+  const normalizeOverlayWidth = (value) => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return DEFAULT_OVERLAY_WIDTH;
+    const snapped = Math.round(parsed / OVERLAY_WIDTH_STEP) * OVERLAY_WIDTH_STEP;
+    return Math.max(OVERLAY_WIDTH_MIN, Math.min(OVERLAY_WIDTH_MAX, snapped));
+  };
+
+  const overlayCornerClasses = {
+    "top-left": "left-6 top-6",
+    "top-right": "right-6 top-6",
+    "bottom-left": "left-6 bottom-6",
+    "bottom-right": "right-6 bottom-6",
+  };
+
+  $: normalizedOverlayWidth = normalizeOverlayWidth(
+    fullscreenOverlayWidthPercent,
+  );
+  $: normalizedOverlayCorner =
+    fullscreenOverlayCorner in overlayCornerClasses
+      ? fullscreenOverlayCorner
+      : "top-right";
+  $: overlayCornerClass = overlayCornerClasses[normalizedOverlayCorner];
+  $: isReactionPrimary = fullscreenPrimaryVideo === "reaction";
+  $: isOriginalOverlay = isReactionPrimary;
+  $: isReactionOverlay = !isReactionPrimary;
 </script>
 
 <div class="relative h-full w-full overflow-hidden">
@@ -60,8 +94,21 @@
     on:pointerdown={onPointerDown}
     on:pointerleave={onPointerLeave}
   ></div>
-  <div class="absolute inset-0">
-    <div id="player-original" class="h-full w-full"></div>
+  <div
+    data-stage="original"
+    data-stage-role={isOriginalOverlay ? "overlay" : "primary"}
+    class={isOriginalOverlay
+      ? `pointer-events-auto absolute ${overlayCornerClass} z-50`
+      : "absolute inset-0"}
+    style={isOriginalOverlay ? `width: ${normalizedOverlayWidth}%;` : ""}
+  >
+    <div
+      class={isOriginalOverlay
+        ? "relative w-full aspect-cinematic overflow-hidden rounded-lg bg-black/80 shadow-elevated"
+        : "relative h-full w-full"}
+    >
+      <div id="player-original" class="absolute inset-0 h-full w-full"></div>
+    </div>
   </div>
   {#if showCinematicBars}
     <div
@@ -75,10 +122,17 @@
   {/if}
   {#if !isReactionMissing}
     <div
-      class="pointer-events-auto absolute right-6 top-6 z-50 w-[min(28%,320px)]"
+      data-stage="reaction"
+      data-stage-role={isReactionOverlay ? "overlay" : "primary"}
+      class={isReactionOverlay
+        ? `pointer-events-auto absolute ${overlayCornerClass} z-50`
+        : "absolute inset-0"}
+      style={isReactionOverlay ? `width: ${normalizedOverlayWidth}%;` : ""}
     >
       <div
-        class="relative aspect-cinematic overflow-hidden rounded-lg bg-black/80 shadow-elevated"
+        class={isReactionOverlay
+          ? "relative aspect-cinematic overflow-hidden rounded-lg bg-black/80 shadow-elevated"
+          : "relative h-full w-full"}
       >
         <div id="player-reaction" class="absolute inset-0 h-full w-full"></div>
         {#if showCinematicBars}

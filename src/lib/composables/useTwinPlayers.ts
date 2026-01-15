@@ -63,6 +63,9 @@ declare global {
 
 type Nullable<T> = T | null | undefined;
 
+type FullscreenPrimaryVideo = 'original' | 'reaction';
+type FullscreenOverlayCorner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+
 type TwinPlayersState = {
   isLoading: boolean;
   isReactionMissing: boolean;
@@ -120,6 +123,9 @@ type TwinPlayersState = {
   soundLevel: number;
   isReactionMuteModeEnabled: boolean;
   isReactionAutoMuted: boolean;
+  fullscreenPrimaryVideo: FullscreenPrimaryVideo;
+  fullscreenOverlayWidthPercent: number;
+  fullscreenOverlayCorner: FullscreenOverlayCorner;
   pageSlug: string;
   isOutOfSync: boolean;
   seekMin: number;
@@ -253,6 +259,32 @@ const iframeOptionDefault = {
   height: '100%'
 };
 
+const DEFAULT_FULLSCREEN_PRIMARY_VIDEO: FullscreenPrimaryVideo = 'original';
+const DEFAULT_FULLSCREEN_OVERLAY_WIDTH_PERCENT = 35;
+const DEFAULT_FULLSCREEN_OVERLAY_CORNER: FullscreenOverlayCorner = 'top-right';
+const FULLSCREEN_OVERLAY_WIDTH_MIN = 5;
+const FULLSCREEN_OVERLAY_WIDTH_MAX = 50;
+const FULLSCREEN_OVERLAY_WIDTH_STEP = 5;
+
+const normalizeFullscreenPrimaryVideo = (value: unknown): FullscreenPrimaryVideo =>
+  value === 'reaction' ? 'reaction' : 'original';
+
+const normalizeFullscreenOverlayCorner = (value: unknown): FullscreenOverlayCorner => {
+  if (value === 'top-left' || value === 'top-right' || value === 'bottom-left' || value === 'bottom-right') {
+    return value;
+  }
+  return DEFAULT_FULLSCREEN_OVERLAY_CORNER;
+};
+
+const normalizeFullscreenOverlayWidthPercent = (value: unknown): number => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return DEFAULT_FULLSCREEN_OVERLAY_WIDTH_PERCENT;
+  }
+  const snapped = Math.round(parsed / FULLSCREEN_OVERLAY_WIDTH_STEP) * FULLSCREEN_OVERLAY_WIDTH_STEP;
+  return Math.max(FULLSCREEN_OVERLAY_WIDTH_MIN, Math.min(FULLSCREEN_OVERLAY_WIDTH_MAX, snapped));
+};
+
 export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOptions) {
   const { slug, userId } = data;
   const initialUrlState = getInitialUrlState();
@@ -315,6 +347,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     soundLevel: 100,
     isReactionMuteModeEnabled: false,
     isReactionAutoMuted: false,
+    fullscreenPrimaryVideo: DEFAULT_FULLSCREEN_PRIMARY_VIDEO,
+    fullscreenOverlayWidthPercent: DEFAULT_FULLSCREEN_OVERLAY_WIDTH_PERCENT,
+    fullscreenOverlayCorner: DEFAULT_FULLSCREEN_OVERLAY_CORNER,
     pageSlug: slug,
     isOutOfSync: false,
     seekMin: 0,
@@ -1788,7 +1823,10 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         reactionDuration: 0,
         playerEventTimeline: [],
         isReactionMuteModeEnabled: false,
-        isReactionAutoMuted: false
+        isReactionAutoMuted: false,
+        fullscreenPrimaryVideo: DEFAULT_FULLSCREEN_PRIMARY_VIDEO,
+        fullscreenOverlayWidthPercent: DEFAULT_FULLSCREEN_OVERLAY_WIDTH_PERCENT,
+        fullscreenOverlayCorner: DEFAULT_FULLSCREEN_OVERLAY_CORNER
       });
       return;
     }
@@ -1827,7 +1865,10 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         reactionDuration: 0,
         playerEventTimeline: [],
         isReactionMuteModeEnabled: Boolean(reactionData?.muteReactionWhileOriginalPlays),
-        isReactionAutoMuted: false
+        isReactionAutoMuted: false,
+        fullscreenPrimaryVideo: DEFAULT_FULLSCREEN_PRIMARY_VIDEO,
+        fullscreenOverlayWidthPercent: DEFAULT_FULLSCREEN_OVERLAY_WIDTH_PERCENT,
+        fullscreenOverlayCorner: DEFAULT_FULLSCREEN_OVERLAY_CORNER
       });
       return;
     }
@@ -1841,6 +1882,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     const globalGainValue = reactionData['globalGain'];
     const globalGain = typeof globalGainValue === 'number' && !Number.isNaN(globalGainValue) ? globalGainValue : 1.0;
     const soundLevel = Math.max(0, Math.min(200, Math.round(globalGain * 100)));
+    const fullscreenPrimaryVideo = normalizeFullscreenPrimaryVideo(reactionData['fullscreenPrimaryVideo']);
+    const fullscreenOverlayWidthPercent = normalizeFullscreenOverlayWidthPercent(reactionData['fullscreenOverlayWidthPercent']);
+    const fullscreenOverlayCorner = normalizeFullscreenOverlayCorner(reactionData['fullscreenOverlayCorner']);
     const currentPlaybackRate = getCurrentPlaybackRateFromConfigs(offsetStartTime || 0, playbackRateConfigs, timeOffset);
 
     const playerOriginal = get(state).playerOriginal;
@@ -1984,6 +2028,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       soundLevel,
       isReactionMuteModeEnabled: Boolean(reactionData?.muteReactionWhileOriginalPlays),
       isReactionAutoMuted: false,
+      fullscreenPrimaryVideo,
+      fullscreenOverlayWidthPercent,
+      fullscreenOverlayCorner,
       currentPlaybackRate,
       playerOriginal: newPlayerOriginal,
       playerReaction: newPlayerReaction,
@@ -2125,6 +2172,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       const globalGainValue = reactionData['globalGain'];
       const globalGain = typeof globalGainValue === 'number' && !Number.isNaN(globalGainValue) ? globalGainValue : 1.0;
       const soundLevel = Math.max(0, Math.min(200, Math.round(globalGain * 100)));
+      const fullscreenPrimaryVideo = normalizeFullscreenPrimaryVideo(reactionData['fullscreenPrimaryVideo']);
+      const fullscreenOverlayWidthPercent = normalizeFullscreenOverlayWidthPercent(reactionData['fullscreenOverlayWidthPercent']);
+      const fullscreenOverlayCorner = normalizeFullscreenOverlayCorner(reactionData['fullscreenOverlayCorner']);
       const currentPlaybackRate = getCurrentPlaybackRateFromConfigs(offsetStartTime || 0, playbackRateConfigs, timeOffset);
 
       const canReuseReactionPlayer =
@@ -2197,6 +2247,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         soundLevel,
         isReactionMuteModeEnabled: Boolean(reactionData?.muteReactionWhileOriginalPlays),
         isReactionAutoMuted: false,
+        fullscreenPrimaryVideo,
+        fullscreenOverlayWidthPercent,
+        fullscreenOverlayCorner,
         currentPlaybackRate,
         playerOriginal: snapshotBefore.playerOriginal,
         playerReaction: nextPlayerReaction,
@@ -2708,6 +2761,24 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     await updateFirebaseDocument({ muteReactionWhileOriginalPlays: nextValue });
     updateState({ isReactionMuteModeEnabled: nextValue });
     enforceReactionMuteMode();
+  };
+
+  const setFullscreenPrimaryVideo = async (value: FullscreenPrimaryVideo) => {
+    const normalized = normalizeFullscreenPrimaryVideo(value);
+    await updateFirebaseDocument({ fullscreenPrimaryVideo: normalized });
+    updateState({ fullscreenPrimaryVideo: normalized });
+  };
+
+  const setFullscreenOverlayWidthPercent = async (value: number) => {
+    const normalized = normalizeFullscreenOverlayWidthPercent(value);
+    await updateFirebaseDocument({ fullscreenOverlayWidthPercent: normalized });
+    updateState({ fullscreenOverlayWidthPercent: normalized });
+  };
+
+  const setFullscreenOverlayCorner = async (value: FullscreenOverlayCorner) => {
+    const normalized = normalizeFullscreenOverlayCorner(value);
+    await updateFirebaseDocument({ fullscreenOverlayCorner: normalized });
+    updateState({ fullscreenOverlayCorner: normalized });
   };
 
   const performPostSaveRewind = (referenceTime: number) => {
@@ -3719,6 +3790,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       setReactionFinishTime,
       setSoundLevel,
       setReactionMuteMode,
+      setFullscreenPrimaryVideo,
+      setFullscreenOverlayWidthPercent,
+      setFullscreenOverlayCorner,
       createPlayerConfig,
       createVolumeConfig,
       createReactionVolumeConfig,

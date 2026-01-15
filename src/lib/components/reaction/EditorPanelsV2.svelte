@@ -1,6 +1,7 @@
 <script>
   import AccessibleInput from "$lib/components/design-system/AccessibleInput.svelte";
   import CinematicButton from "$lib/components/design-system/CinematicButton.svelte";
+  import FullscreenLayoutPanel from "$lib/components/reaction/FullscreenLayoutPanel.svelte";
   import ConfigEditorV2 from "$lib/components/Video/ConfigEditorV2.svelte";
   import { showToast } from "$lib/stores/toast";
   import { TOASTS } from "$lib/constants/toasts";
@@ -28,6 +29,9 @@
   export let reactionCurrentTime = 0;
   export let reactionDuration = 0;
   export let playerEventTimeline = [];
+  export let fullscreenPrimaryVideo = "original";
+  export let fullscreenOverlayWidthPercent = 35;
+  export let fullscreenOverlayCorner = "top-right";
   export let onCreatePlayerConfig = async () => {};
   export let onCreateVolumeConfig = async () => {};
   export let onCreateReactionVolumeConfig = async () => {};
@@ -47,6 +51,9 @@
   export let onSetReactionFinishTime = () => {};
   export let onSetSoundLevel = () => {};
   export let onSetReactionMuteMode = () => {};
+  export let onSetFullscreenPrimaryVideo = () => {};
+  export let onSetFullscreenOverlayWidthPercent = () => {};
+  export let onSetFullscreenOverlayCorner = () => {};
   export let onToggleFineTuneMode = () => {};
   export let onSeek = (_time) => {};
 
@@ -119,6 +126,7 @@
     soundLevelValue = Number.isFinite(soundLevel) ? soundLevel : 100;
   }
 
+
   $: trimmedReactionVideoIdValue = (reactionVideoIdValue ?? "").trim();
   $: currentReactionVideoId = (reactionVideoId ?? "").trim();
   $: isReactionVideoIdDirty =
@@ -170,6 +178,7 @@
   $: isSoundLevelDirty =
     Number.isFinite(soundLevelValue) && soundLevelValue !== soundLevel;
 
+
   const handleReactionVideoSubmit = () => {
     if (!trimmedReactionVideoIdValue) return;
     onSetReactionVideoId(trimmedReactionVideoIdValue);
@@ -206,6 +215,7 @@
     soundLevelValue = Number.isNaN(value) ? SOUND_LEVEL_MIN : value;
   };
 
+
   const handleToggleFineTuneMode = () => {
     onToggleFineTuneMode();
   };
@@ -213,6 +223,7 @@
   const handleToggleReactionMuteMode = () => {
     onSetReactionMuteMode(!isReactionMuteModeEnabled);
   };
+
 
   const handleCreatePlayerConfig = async (event) => {
     const detail = event?.detail;
@@ -639,6 +650,17 @@
         </div>
       </div>
     </section>
+  {/if}
+
+  {#if isEditModeOn && !isFineTuneModeOn}
+    <FullscreenLayoutPanel
+      {fullscreenPrimaryVideo}
+      {fullscreenOverlayWidthPercent}
+      {fullscreenOverlayCorner}
+      {onSetFullscreenPrimaryVideo}
+      {onSetFullscreenOverlayWidthPercent}
+      {onSetFullscreenOverlayCorner}
+    />
   {/if}
 
   {#if isEditModeOn}

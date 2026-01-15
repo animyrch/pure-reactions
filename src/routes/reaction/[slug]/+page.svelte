@@ -207,6 +207,9 @@
     reactionDuration={$state.reactionDuration}
     offsetStartTime={$state.offsetStartTime}
     reactionFinishTime={$state.reactionFinishTime}
+    fullscreenPrimaryVideo={$state.fullscreenPrimaryVideo}
+    fullscreenOverlayWidthPercent={$state.fullscreenOverlayWidthPercent}
+    fullscreenOverlayCorner={$state.fullscreenOverlayCorner}
     missingReactionLoading={isSettingReactionVideoId}
     missingReactionError={reactionVideoIdError}
     bind:overlayRef

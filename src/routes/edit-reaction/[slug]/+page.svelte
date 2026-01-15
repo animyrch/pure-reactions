@@ -100,6 +100,24 @@
     );
   };
 
+  const handleSetFullscreenPrimaryVideo = async (value) => {
+    await actions.editActionEntryPoint(() =>
+      actions.setFullscreenPrimaryVideo(value),
+    );
+  };
+
+  const handleSetFullscreenOverlayWidthPercent = async (value) => {
+    await actions.editActionEntryPoint(() =>
+      actions.setFullscreenOverlayWidthPercent(value),
+    );
+  };
+
+  const handleSetFullscreenOverlayCorner = async (value) => {
+    await actions.editActionEntryPoint(() =>
+      actions.setFullscreenOverlayCorner(value),
+    );
+  };
+
   const handleExitEditor = () => {
     if ($state.isEditModeOn) {
       actions.closeEditMode();
@@ -224,6 +242,9 @@
           reactionCurrentTime={$state.reactionCurrentTime}
           reactionDuration={$state.reactionDuration}
           playerEventTimeline={$state.playerEventTimeline}
+          fullscreenPrimaryVideo={$state.fullscreenPrimaryVideo}
+          fullscreenOverlayWidthPercent={$state.fullscreenOverlayWidthPercent}
+          fullscreenOverlayCorner={$state.fullscreenOverlayCorner}
           onCreatePlayerConfig={actions.createPlayerConfig}
           onCreateVolumeConfig={actions.createVolumeConfig}
           onCreateReactionVolumeConfig={actions.createReactionVolumeConfig}
@@ -242,6 +263,9 @@
           onSetReactionFinishTime={handleSetReactionFinishTime}
           onSetSoundLevel={handleSetSoundLevel}
           onSetReactionMuteMode={handleSetReactionMuteMode}
+          onSetFullscreenPrimaryVideo={handleSetFullscreenPrimaryVideo}
+          onSetFullscreenOverlayWidthPercent={handleSetFullscreenOverlayWidthPercent}
+          onSetFullscreenOverlayCorner={handleSetFullscreenOverlayCorner}
           onToggleFineTuneMode={actions.toggleFineTuneMode}
           onSeek={actions.seekTo}
         />
@@ -262,6 +286,9 @@
         isExitButtonExpanded={$state.isExitButtonExpanded}
         showCinematicBars={$state.showCinematicBars}
         isReactionMissing={$state.isReactionMissing}
+        fullscreenPrimaryVideo={$state.fullscreenPrimaryVideo}
+        fullscreenOverlayWidthPercent={$state.fullscreenOverlayWidthPercent}
+        fullscreenOverlayCorner={$state.fullscreenOverlayCorner}
         bind:overlayRef
         onExitClick={actions.handleExitFullscreenClick}
         onExitEnter={actions.handleExitButtonEnter}
