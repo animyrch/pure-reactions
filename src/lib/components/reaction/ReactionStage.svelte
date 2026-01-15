@@ -292,11 +292,11 @@
             onSeek={handleSeek}
         />
         <!-- Debug Helper -->
-        <div class="debug-info">
+        <!-- <div class="debug-info">
             Wait for layout... if this is red, base styles active.
             <br />
             W: <span id="debug-w">-</span> H: <span id="debug-h">-</span>
-        </div>
+        </div> -->
         <script>
             const updateDebug = () => {
                 const w = document.getElementById("debug-w");
