@@ -161,11 +161,13 @@
 <style>
     section {
         padding-block: 1rem;
+        padding-inline: 1rem;
     }
 
     @media (min-width: 640px) {
         section {
             padding-block: 1.5rem;
+            padding-inline: 0;
         }
     }
 
@@ -201,7 +203,25 @@
 
     .carousel-item {
         scroll-snap-align: start;
-        flex: 0 0 14rem;
+        flex: 0 0 min(14rem, 82vw);
+        max-width: 82vw;
+    }
+
+    @media (max-width: 639px) {
+        .carousel-item {
+            flex-basis: min(12.5rem, 78vw);
+            max-width: 78vw;
+        }
+
+        .carousel-item :global(.thumbnail-card) {
+            padding: 0.5rem;
+        }
+
+        .carousel-item :global(.thumbnail-image.reaction) {
+            width: 38%;
+            max-width: 140px;
+            transform: translate(6%, -6%) scale(0.95);
+        }
     }
 
     @media (min-width: 640px) {
