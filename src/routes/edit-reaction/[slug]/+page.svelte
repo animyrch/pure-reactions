@@ -205,6 +205,19 @@
     >
       <h1 class="text-xl font-semibold text-text-primary">Edit Reaction</h1>
       <div class="flex items-center gap-2">
+        
+        <CinematicButton
+          type="button"
+          size="sm"
+          variant={$state.isFineTuneModeOn ? "muted" : "secondary"}
+          on:click={actions.toggleFineTuneMode}
+        >
+          <span
+            >{$state.isFineTuneModeOn
+              ? "Disable fine-tune mode"
+              : "Enable fine-tune mode"}</span
+          >
+        </CinematicButton>
         <CinematicButton
           variant="secondary"
           size="sm"
@@ -213,6 +226,7 @@
         >
           <span>View Live Page</span>
         </CinematicButton>
+
       </div>
     </div>
 

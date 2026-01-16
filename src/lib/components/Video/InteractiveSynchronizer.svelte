@@ -1709,18 +1709,6 @@
                   ? "Reaction volume"
                   : "Original volume"}
               </label>
-              <button
-                type="button"
-                class="inline-flex items-center gap-1 rounded-md border border-border-subtle/60 bg-surface/70 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-text-muted transition hover:border-accent-primary/40 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
-                aria-expanded={showAdvancedPending}
-                aria-controls="pending-advanced-options"
-                on:mouseenter={() => (showAdvancedPending = true)}
-                on:click|stopPropagation={() => {
-                  showAdvancedPending = !showAdvancedPending;
-                }}
-              >
-                Advanced
-              </button>
             </div>
             <div class="flex gap-2">
               <input

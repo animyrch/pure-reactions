@@ -663,7 +663,7 @@
     />
   {/if}
 
-  {#if isEditModeOn}
+  {#if isEditModeOn && isFineTuneModeOn}
     <section
       class="rounded-3xl border border-border-subtle bg-surface/80 px-6 py-6 shadow-elevated"
     >
@@ -679,18 +679,6 @@
             full control.
           </p>
         </div>
-        <CinematicButton
-          type="button"
-          size="sm"
-          variant={isFineTuneModeOn ? "muted" : "secondary"}
-          on:click={handleToggleFineTuneMode}
-        >
-          <span
-            >{isFineTuneModeOn
-              ? "Disable fine-tune mode"
-              : "Enable fine-tune mode"}</span
-          >
-        </CinematicButton>
       </header>
 
       {#if isFineTuneModeOn}
