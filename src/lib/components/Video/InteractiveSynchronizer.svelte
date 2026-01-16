@@ -1121,6 +1121,23 @@
     }
   };
 
+  const confirmConfigCreation = (rawState) => {
+    if (!pendingConfig) return;
+    const timeInReaction = Number.isFinite(pendingReactionSeconds)
+      ? pendingReactionSeconds
+      : pendingConfig.reactionTime;
+    const targetTime = Number.isFinite(pendingTargetSeconds)
+      ? pendingTargetSeconds
+      : pendingConfig.targetTime;
+    const state = Number.isFinite(rawState) ? Number(rawState) : 2;
+    dispatch("createPlayerConfig", {
+      timeInReaction,
+      targetTime,
+      state,
+    });
+    closeConfigPopup();
+  };
+
   const confirmVolumeCreation = () => {
     if (!pendingConfig) return;
     const volume = Math.round(
