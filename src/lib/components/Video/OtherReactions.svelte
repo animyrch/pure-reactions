@@ -1,7 +1,7 @@
 <script>
     import ReactionsListElement from "$lib/components/ReactionsListElement.svelte";
     import { onMount } from "svelte";
-    import { getReactionsToOriginalVideo } from '$lib/helpers/firebase';
+    import { getReactionsToOriginalVideo } from "$lib/helpers/firebase";
 
     export let originalVideoId;
     export let reactionVideoId;
@@ -9,13 +9,13 @@
     let otherReactions = [];
     let itemRefs = [];
     let activeIndex = -1;
-    let fetchKey = '';
+    let fetchKey = "";
 
-    let viewAllHref = '/search';
+    let viewAllHref = "/search";
 
     $: viewAllHref = originalVideoId
         ? `/search?originalVideoId=${encodeURIComponent(originalVideoId)}`
-        : '/search';
+        : "/search";
 
     async function loadOtherReactions() {
         if (!originalVideoId || !reactionVideoId) {
@@ -25,11 +25,14 @@
         }
 
         try {
-            const reactions = await getReactionsToOriginalVideo(originalVideoId, reactionVideoId);
+            const reactions = await getReactionsToOriginalVideo(
+                originalVideoId,
+                reactionVideoId,
+            );
             otherReactions = reactions;
             activeIndex = -1;
         } catch (error) {
-            console.error('Failed to load related reactions:', error);
+            console.error("Failed to load related reactions:", error);
             otherReactions = [];
             activeIndex = -1;
         }
@@ -53,7 +56,7 @@
         return {
             destroy() {
                 itemRefs = itemRefs.filter((_, index) => index !== idx);
-            }
+            },
         };
     }
 
@@ -62,15 +65,21 @@
         const target = items[index];
         if (!target) return;
 
-        const focusable = target.querySelector('a, button, [tabindex]:not([tabindex="-1"])');
+        const focusable = target.querySelector(
+            'a, button, [tabindex]:not([tabindex="-1"])',
+        );
         const elementToFocus = focusable || target;
         elementToFocus.focus({ preventScroll: true });
-        target.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        target.scrollIntoView({
+            behavior: "smooth",
+            inline: "center",
+            block: "nearest",
+        });
         activeIndex = index;
     }
 
     function handleCarouselKeydown(event) {
-        if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') {
+        if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") {
             return;
         }
 
@@ -80,7 +89,9 @@
         }
 
         const activeElement = document.activeElement;
-        let currentIndex = items.findIndex((item) => item.contains(activeElement));
+        let currentIndex = items.findIndex((item) =>
+            item.contains(activeElement),
+        );
 
         if (currentIndex === -1) {
             event.preventDefault();
@@ -89,8 +100,11 @@
         }
 
         event.preventDefault();
-        const direction = event.key === 'ArrowRight' ? 1 : -1;
-        const nextIndex = Math.min(Math.max(currentIndex + direction, 0), items.length - 1);
+        const direction = event.key === "ArrowRight" ? 1 : -1;
+        const nextIndex = Math.min(
+            Math.max(currentIndex + direction, 0),
+            items.length - 1,
+        );
         if (nextIndex !== currentIndex) {
             focusItem(nextIndex);
         }
@@ -99,13 +113,21 @@
 
 {#if otherReactions.length > 0}
     <section class="space-y-4">
-        <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-                <p class="text-xs uppercase tracking-[0.3em] text-slate-500">More reactions</p>
-                <h2 class="text-2xl font-semibold text-white">Other creators reacting to this video</h2>
+        <div
+            class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between"
+        >
+            <div class="space-y-1 sm:space-y-2">
+                <p
+                    class="text-[0.625rem] uppercase tracking-[0.3em] text-text-muted sm:text-xs"
+                >
+                    More reactions
+                </p>
+                <h2 class="text-lg font-semibold text-text-primary sm:text-2xl">
+                    Other creators reacting to this video
+                </h2>
             </div>
             <a
-                class="inline-flex items-center gap-2 text-sm font-medium text-blue-200 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+                class="inline-flex items-center gap-1.5 text-xs font-medium text-accent-primary transition hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:gap-2 sm:text-sm"
                 href={viewAllHref}
             >
                 View all reactions
@@ -138,17 +160,29 @@
 
 <style>
     section {
-        padding-block: 1.5rem;
+        padding-block: 1rem;
+    }
+
+    @media (min-width: 640px) {
+        section {
+            padding-block: 1.5rem;
+        }
     }
 
     .carousel {
         display: flex;
-        gap: 1rem;
+        gap: 0.75rem;
         overflow-x: auto;
         padding-bottom: 0.75rem;
         scroll-snap-type: x mandatory;
         scroll-padding-left: 1rem;
         scrollbar-width: thin;
+    }
+
+    @media (min-width: 640px) {
+        .carousel {
+            gap: 1rem;
+        }
     }
 
     .carousel:focus-visible {
@@ -167,7 +201,7 @@
 
     .carousel-item {
         scroll-snap-align: start;
-        flex: 0 0 min(75vw, 18rem);
+        flex: 0 0 14rem;
     }
 
     @media (min-width: 640px) {
