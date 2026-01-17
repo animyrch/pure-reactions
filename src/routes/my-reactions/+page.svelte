@@ -18,22 +18,25 @@
         isLoading = true;
         combinedItems = [];
         setTimeout(async () => {
-            const reactions = await getUserReactions(data.userId, filter); // Pass the filter to the getAllReactions function
+            const reactions = await getUserReactions(data.userId, filter); // Pass the filter to getUserReactions
             const playlists = await getUserPlaylists(data.userId);
 			
 			// Transform playlists to match reaction structure
-			const transformedPlaylists = playlists.map(playlist => ({
-				id: playlist.id,
-				type: 'playlist',
-				data: {
-					playlistId: playlist.id,
-					reactionVideoId: playlist.firstReactionBinomeData?.reactionVideoId,
-					originalVideoId: playlist.firstReactionBinomeData?.originalVideoId,
-					reactionVideoTitle: playlist.firstReactionBinomeData?.reactionVideoTitle,
-					reactionVideoAuthor: playlist.firstReactionBinomeData?.reactionVideoAuthor,
-					originalVideoTitle: playlist.firstReactionBinomeData?.originalVideoTitle,
-				}
-			}));
+			// Filter out playlists without required data to prevent broken rendering
+			const transformedPlaylists = playlists
+				.filter(playlist => playlist.firstReactionBinomeData)
+				.map(playlist => ({
+					id: playlist.id,
+					type: 'playlist',
+					data: {
+						playlistId: playlist.id,
+						reactionVideoId: playlist.firstReactionBinomeData.reactionVideoId,
+						originalVideoId: playlist.firstReactionBinomeData.originalVideoId,
+						reactionVideoTitle: playlist.firstReactionBinomeData.reactionVideoTitle,
+						reactionVideoAuthor: playlist.firstReactionBinomeData.reactionVideoAuthor,
+						originalVideoTitle: playlist.firstReactionBinomeData.originalVideoTitle,
+					}
+				}));
 
 			// Combine reactions and playlists
 			combinedItems = [...reactions, ...transformedPlaylists];
