@@ -24,6 +24,13 @@
     isPlaybackRoute && ($reactionDial.isFullscreen || isMobileLandscapeTheater);
 
   onMount(() => {
+    // Register service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(err => {
+        console.log('Service worker registration failed:', err);
+      });
+    }
+
     const unsubscribe = prefersReducedMotion.subscribe((value) => {
       reduceMotion = value;
       document.documentElement.classList.toggle("motion-reduce", value);
