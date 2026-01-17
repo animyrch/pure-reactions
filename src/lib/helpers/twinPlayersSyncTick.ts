@@ -393,8 +393,8 @@ export function computeTwinPlayersSyncTick(
   const tolerance = isMobileLazySyncEnabled
     ? 2.0
     : (effectiveConfigState === yt.PLAYING
-        ? (input.isMobilePlaybackDevice ? 0.9 : 0.15)
-        : (input.isMobilePlaybackDevice ? 0.05 : 0.01));
+        ? 0.9
+        : 0.05);
 
   let targetMismatch = false;
   let driftAbs = Number.NaN;
@@ -402,7 +402,7 @@ export function computeTwinPlayersSyncTick(
   if (Number.isFinite(computedTargetTime)) {
     if (Number.isFinite(actualOriginalTime)) {
       driftAbs = Math.abs(actualOriginalTime - computedTargetTime);
-      if (input.isMobilePlaybackDevice && effectiveConfigState === yt.PLAYING) {
+      if (effectiveConfigState === yt.PLAYING) {
         const quantize = (value: number, step: number) => Math.round(value / step) * step;
         targetMismatch =
           Math.abs(quantize(actualOriginalTime, 0.5) - quantize(computedTargetTime, 0.5)) > tolerance;
@@ -429,22 +429,12 @@ export function computeTwinPlayersSyncTick(
   const now = input.now;
   const shouldApplyState = workingState !== effectiveConfigState;
 
-  const DESKTOP_SEEK_COOLDOWN_MS = 4500;
-  const DESKTOP_MIN_DRIFT_TO_SEEK = 0.15;
-
   const shouldApplySeek = targetMismatch && (
-    input.isMobilePlaybackDevice
-      ? (
-          isMobileLazySyncEnabled
-            ? (Number.isFinite(driftAbs)
-                && driftAbs > 2.0
-                && now - nextTracking.lastOriginalSeekAt > 3500)
-            : (Number.isFinite(driftAbs) && (driftAbs > 2.5 || now - nextTracking.lastOriginalSeekAt > 3500))
-        )
-      : (configWantsToPlay
-          && Number.isFinite(driftAbs)
-          && driftAbs > DESKTOP_MIN_DRIFT_TO_SEEK
-          && now - nextTracking.lastOriginalSeekAt > DESKTOP_SEEK_COOLDOWN_MS)
+    isMobileLazySyncEnabled
+      ? (Number.isFinite(driftAbs)
+          && driftAbs > 2.0
+          && now - nextTracking.lastOriginalSeekAt > 3500)
+      : (Number.isFinite(driftAbs) && (driftAbs > 2.5 || now - nextTracking.lastOriginalSeekAt > 3500))
   );
 
   if (shouldApplySync && configIsInRange && (shouldApplyState || shouldApplySeek)) {
@@ -457,7 +447,7 @@ export function computeTwinPlayersSyncTick(
         nextState: effectiveConfigState,
         targetTime: computedTargetTime,
         options: {
-          throttleMs: input.isMobilePlaybackDevice ? 3500 : DESKTOP_SEEK_COOLDOWN_MS,
+          throttleMs: 3500,
           allowSeekAhead: !(Number.isFinite(driftAbs) && driftAbs < 1.25),
           forceSeek: shouldApplyState
         }
