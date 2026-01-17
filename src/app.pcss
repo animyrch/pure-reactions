@@ -3,6 +3,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* iOS Safe Area Utilities */
+@layer utilities {
+  .safe-padding-x {
+    padding-left: max(1rem, var(--safe-area-inset-left));
+    padding-right: max(1rem, var(--safe-area-inset-right));
+  }
+  
+  .safe-padding-bottom {
+    padding-bottom: max(3rem, calc(3rem + var(--safe-area-inset-bottom)));
+  }
+}
+
 [data-svelte-transition] {
   transition: opacity 0.3s ease-in-out;
 }
