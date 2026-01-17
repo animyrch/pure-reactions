@@ -170,7 +170,8 @@
 
 <div
   bind:this={dialRef}
-  class="speed-dial fixed bottom-6 left-6 z-[95] flex flex-col items-start gap-2"
+  class="speed-dial fixed z-[95] flex flex-col items-start gap-2"
+  style="bottom: calc(var(--fab-offset-bottom) + var(--safe-area-inset-bottom)); left: calc(var(--fab-offset-left) + var(--safe-area-inset-left));"
   data-open={isOpen}
 >
   <ul
@@ -357,8 +358,7 @@
 
   @media (max-width: 640px) {
     .speed-dial {
-      left: 1.25rem;
-      bottom: 1.25rem;
+      /* Safe area insets are already applied via inline styles */
     }
 
     .fab-button {
