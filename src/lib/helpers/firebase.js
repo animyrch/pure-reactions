@@ -194,9 +194,7 @@ export const getAllReactions = async (sortBy, follows) => {
     try {
         const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'getAllReactions');
         let baseQuery = query(reactionsCollection,
-            where('reactionVideoId', '!=', ''),
             where('isPublished', '==', true),
-            orderBy('reactionVideoId', 'desc'),
             orderBy('createdAt', 'desc')
         );
         if (sortBy === SORTINGS.FOLLOWING && follows && follows.length) {
@@ -219,9 +217,7 @@ export const getReactionsByPage = async (lastDoc, limitBy, sortBy, follows) => {
     try {
         const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'getReactionsByPage');
         let baseQuery = query(reactionsCollection,
-            where('reactionVideoId', '!=', ''),
             where('isPublished', '==', true),
-            orderBy('reactionVideoId', 'desc'),
             orderBy('createdAt', 'desc')
         );
         if (sortBy === SORTINGS.FOLLOWING && follows && follows.length) {
