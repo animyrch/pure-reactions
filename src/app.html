@@ -4,6 +4,11 @@
 <head>
 	<meta charset="utf-8" />
 	<link rel="icon" href="%sveltekit.assets%/favicon.svg" />
+	<link rel="manifest" href="%sveltekit.assets%/manifest.json" />
+	<link rel="apple-touch-icon" href="%sveltekit.assets%/apple-touch-icon.png" />
+	<meta name="theme-color" content="#050505" />
+	<meta name="apple-mobile-web-app-capable" content="yes" />
+	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 	<style>
 		/* Reset some default styles */
 		* {
@@ -32,6 +37,18 @@
 		select {
 			color: #050505;
 			color-scheme: light;
+		}
+
+		/* iOS Safe Area Support */
+		:root {
+			--safe-area-inset-top: env(safe-area-inset-top, 0px);
+			--safe-area-inset-right: env(safe-area-inset-right, 0px);
+			--safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+			--safe-area-inset-left: env(safe-area-inset-left, 0px);
+			
+			/* Base positioning values for FAB */
+			--fab-offset-bottom: 1.5rem;
+			--fab-offset-left: 1.5rem;
 		}
 	</style>
 	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
