@@ -17,8 +17,8 @@ test.describe('Homepage Reactions Sorting', () => {
             state: 'visible'
         });
         
-        // Give a moment for reactions to fully render
-        await page.waitForTimeout(1000);
+        // Wait for network to be idle to ensure reactions are fully loaded
+        await page.waitForLoadState('networkidle');
         
         // Get all reaction card elements
         const reactionElements = await page.$$('.reactions-grid .card-shell[role="listitem"]');
@@ -48,7 +48,8 @@ test.describe('Homepage Reactions Sorting', () => {
             state: 'visible'
         });
         
-        await page.waitForTimeout(1000);
+        // Wait for network to be idle
+        await page.waitForLoadState('networkidle');
         
         // Get initial count of reactions
         const initialReactionElements = await page.$$('.reactions-grid .card-shell[role="listitem"]');
@@ -60,8 +61,18 @@ test.describe('Homepage Reactions Sorting', () => {
         // Scroll to bottom to trigger pagination/infinite scroll
         await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
         
-        // Wait for more reactions to potentially load
-        await page.waitForTimeout(3000);
+        // Wait for the reaction count to potentially increase or for network to be idle
+        // This uses waitForFunction to wait until either more reactions load or a timeout
+        await page.waitForFunction(
+            (expectedCount) => {
+                const elements = document.querySelectorAll('.reactions-grid .card-shell[role="listitem"]');
+                return elements.length > expectedCount;
+            },
+            initialCount,
+            { timeout: 5000 }
+        ).catch(() => {
+            // It's okay if this times out - might mean all reactions fit on one page
+        });
         
         // Get new count of reactions
         const afterScrollReactionElements = await page.$$('.reactions-grid .card-shell[role="listitem"]');
