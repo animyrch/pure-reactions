@@ -3,6 +3,8 @@ import { defineConfig } from 'vite';
 import { enhancedImages } from '@sveltejs/enhanced-img';
 import { SvelteKitPWA } from '@vite-pwa/sveltekit';
 
+const ONE_YEAR_IN_SECONDS = 60 * 60 * 24 * 365;
+
 export default defineConfig({
 	plugins: [
 		enhancedImages(),
@@ -20,7 +22,7 @@ export default defineConfig({
 							cacheName: 'google-fonts-cache',
 							expiration: {
 								maxEntries: 10,
-								maxAgeSeconds: 60 * 60 * 24 * 365 // <== 365 days
+								maxAgeSeconds: ONE_YEAR_IN_SECONDS
 							},
 							cacheableResponse: {
 								statuses: [0, 200]
@@ -34,7 +36,7 @@ export default defineConfig({
 							cacheName: 'gstatic-fonts-cache',
 							expiration: {
 								maxEntries: 10,
-								maxAgeSeconds: 60 * 60 * 24 * 365 // <== 365 days
+								maxAgeSeconds: ONE_YEAR_IN_SECONDS
 							},
 							cacheableResponse: {
 								statuses: [0, 200]

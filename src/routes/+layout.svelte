@@ -27,7 +27,7 @@
     // Register service worker
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(err => {
-        console.log('Service worker registration failed:', err);
+        console.error('Service worker registration failed:', err);
       });
     }
 
