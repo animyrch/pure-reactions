@@ -26,8 +26,6 @@ test.describe('Homepage Reactions Sorting', () => {
         // Verify we have at least some reactions loaded
         expect(reactionElements.length).toBeGreaterThan(0);
         
-        console.log(`Found ${reactionElements.length} reaction elements on the page`);
-        
         // Verify that the reactions grid is present and has content
         // The actual createdAt timestamps are not visible in the UI in a parseable format,
         // but we verify the page loads and displays reactions (implying the query worked)
@@ -55,7 +53,6 @@ test.describe('Homepage Reactions Sorting', () => {
         // Get initial count of reactions
         const initialReactionElements = await page.$$('.reactions-grid .card-shell[role="listitem"]');
         const initialCount = initialReactionElements.length;
-        console.log(`Initial reaction count: ${initialCount}`);
         
         // Verify we have reactions before attempting to scroll
         expect(initialCount).toBeGreaterThan(0);
@@ -69,7 +66,6 @@ test.describe('Homepage Reactions Sorting', () => {
         // Get new count of reactions
         const afterScrollReactionElements = await page.$$('.reactions-grid .card-shell[role="listitem"]');
         const afterScrollCount = afterScrollReactionElements.length;
-        console.log(`After scroll reaction count: ${afterScrollCount}`);
         
         // Verify that pagination works - either more reactions loaded or we have the same count
         // (if all reactions fit on one page)

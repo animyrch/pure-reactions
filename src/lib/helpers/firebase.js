@@ -553,6 +553,9 @@ export const getReactionsToOriginalVideo = async (originalVideoId, exceptReactio
     }
     try {
         const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'getReactionsToOriginalVideo');
+        // Note: This function uses where('reactionVideoId', '!=', exceptReactionVideoId) to exclude a specific reaction.
+        // Due to Firestore constraints, inequality filters require ordering by the same field first.
+        // Unlike the home page queries, this is intentional here to exclude the current reaction being viewed.
         const queryRef = query(reactionsCollection,
             where("originalVideoId", "==", originalVideoId),
             where('isPublished', '==', true),
