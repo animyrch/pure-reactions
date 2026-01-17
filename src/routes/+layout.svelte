@@ -91,7 +91,7 @@
   <Toast {toast} key={toast.id} />
 {/each}
 
-<div class="app-container w-full pt-[5rem] sm:pt-[5.5rem] safe-padding-x">
+<div class="app-container w-full safe-padding-x safe-padding-top">
   {#key $page.url.pathname}
     <div
       transition:fade={{

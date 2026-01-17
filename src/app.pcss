@@ -10,8 +10,18 @@
     padding-right: max(1rem, var(--safe-area-inset-right));
   }
   
+  .safe-padding-top {
+    padding-top: calc(5rem + var(--safe-area-inset-top));
+  }
+  
   .safe-padding-bottom {
     padding-bottom: calc(3rem + var(--safe-area-inset-bottom));
+  }
+  
+  @media (min-width: 640px) {
+    .safe-padding-top {
+      padding-top: calc(5.5rem + var(--safe-area-inset-top));
+    }
   }
 }
 
