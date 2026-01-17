@@ -53,6 +53,7 @@
     background: rgba(10, 12, 16, 0.65);
     backdrop-filter: blur(14px);
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding-top: var(--safe-area-inset-top);
   }
 
   .logo-wrapper :global(svg) {

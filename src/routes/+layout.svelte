@@ -83,7 +83,7 @@
 
 <GoogleAnalytics />
 
-<header class="w-full px-4">
+<header class="w-full safe-padding-x">
   <TopNavigation />
 </header>
 
@@ -91,7 +91,7 @@
   <Toast {toast} key={toast.id} />
 {/each}
 
-<div class="app-container w-full px-4 pt-[5rem] sm:pt-[5.5rem]">
+<div class="app-container w-full pt-[5rem] sm:pt-[5.5rem] safe-padding-x">
   {#key $page.url.pathname}
     <div
       transition:fade={{
@@ -108,7 +108,7 @@
   <SpeedDialNavigation />
 {/if}
 
-<footer class="mb-12">
+<footer class="safe-padding-bottom">
   <p>&copy; 2023 Pure Reactions</p>
 </footer>
 
