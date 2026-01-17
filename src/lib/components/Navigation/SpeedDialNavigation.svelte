@@ -171,7 +171,7 @@
 <div
   bind:this={dialRef}
   class="speed-dial fixed z-[95] flex flex-col items-start gap-2"
-  style="bottom: calc(1.5rem + var(--safe-area-inset-bottom)); left: calc(1.5rem + var(--safe-area-inset-left));"
+  style="bottom: calc(var(--fab-offset-bottom) + var(--safe-area-inset-bottom)); left: calc(var(--fab-offset-left) + var(--safe-area-inset-left));"
   data-open={isOpen}
 >
   <ul
