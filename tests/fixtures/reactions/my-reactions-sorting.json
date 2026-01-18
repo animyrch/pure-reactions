@@ -1,0 +1,102 @@
+{
+  "version": 1,
+  "description": "My reactions fixture: Test sorting by createdAt desc",
+  "docs": [
+    {
+      "id": "myReactionOldest001",
+      "data": {
+        "isPublished": true,
+        "offsetStartTime": 0,
+        "originalVideoAuthor": "@creator1",
+        "originalVideoId": "oldestVideoId",
+        "originalVideoTitle": "Oldest Reaction Video",
+        "playbackTimeline": [
+          {
+            "rate": 1,
+            "t": 0
+          }
+        ],
+        "playlistId": "",
+        "reactionVideoAuthor": "@testReactor",
+        "reactionVideoId": "reactionOldest",
+        "reactionVideoTitle": "Oldest Reaction",
+        "reactionVolumeTimeline": [],
+        "reactorId": "testUserId123",
+        "stateTimeline": [
+          {
+            "state": 1,
+            "t": 0,
+            "targetTime": 0
+          }
+        ],
+        "volumeTimeline": [],
+        "youtubePlaylistId": "",
+        "updatedAt": "2026-01-01T10:00:00Z"
+      }
+    },
+    {
+      "id": "myReactionMiddle002",
+      "data": {
+        "isPublished": true,
+        "offsetStartTime": 0,
+        "originalVideoAuthor": "@creator2",
+        "originalVideoId": "middleVideoId",
+        "originalVideoTitle": "Middle Reaction Video",
+        "playbackTimeline": [
+          {
+            "rate": 1,
+            "t": 0
+          }
+        ],
+        "playlistId": "",
+        "reactionVideoAuthor": "@testReactor",
+        "reactionVideoId": "reactionMiddle",
+        "reactionVideoTitle": "Middle Reaction",
+        "reactionVolumeTimeline": [],
+        "reactorId": "testUserId123",
+        "stateTimeline": [
+          {
+            "state": 1,
+            "t": 0,
+            "targetTime": 0
+          }
+        ],
+        "volumeTimeline": [],
+        "youtubePlaylistId": "",
+        "updatedAt": "2026-01-10T10:00:00Z"
+      }
+    },
+    {
+      "id": "myReactionNewest003",
+      "data": {
+        "isPublished": true,
+        "offsetStartTime": 0,
+        "originalVideoAuthor": "@creator3",
+        "originalVideoId": "newestVideoId",
+        "originalVideoTitle": "Newest Reaction Video",
+        "playbackTimeline": [
+          {
+            "rate": 1,
+            "t": 0
+          }
+        ],
+        "playlistId": "",
+        "reactionVideoAuthor": "@testReactor",
+        "reactionVideoId": "reactionNewest",
+        "reactionVideoTitle": "Newest Reaction",
+        "reactionVolumeTimeline": [],
+        "reactorId": "testUserId123",
+        "stateTimeline": [
+          {
+            "state": 1,
+            "t": 0,
+            "targetTime": 0
+          }
+        ],
+        "volumeTimeline": [],
+        "youtubePlaylistId": "",
+        "updatedAt": "2026-01-18T10:00:00Z"
+      }
+    }
+  ]
+}
