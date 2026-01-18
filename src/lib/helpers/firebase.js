@@ -459,18 +459,26 @@ export const removeReactionFromQueue = async ({ queueSlug, reactionId, userId })
 };
 
 
-export const getUserPlaylists = async (userId) => {
+export const getUserPlaylists = async (userId, filter) => {
     let playlists = [];
     if (!userId) {
         return playlists;
     }
     try {
         const playlistsCollection = createCollection(db, COLLECTION_PLAYLISTS, 'getUserPlaylists');
-        const queryRef = query(
+        let queryRef = query(
             playlistsCollection,
             where("reactorId", "==", userId),
             orderBy('createdAt', 'desc')
         );
+        
+        // Apply published filter if specified
+        if (filter === FILTERS.PUBLISHED) {
+            queryRef = query(queryRef, where('isPublished', '==', true));
+        } else if (filter === FILTERS.UNPUBLISHED) {
+            queryRef = query(queryRef, where('isPublished', '==', false));
+        }
+        
         const querySnapshot = await getDocs(queryRef);
 
         // Use Promise.all to handle asynchronous fetching for each playlist
