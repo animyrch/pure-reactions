@@ -1,8 +1,3 @@
-# Pure Reactions – Copilot Brief
-
----
-applyTo: '**'
----
 # Pure Reactions — AI Agent Instructions (Cinematic Authentic)
 
 > **Purpose:** Provide a single-source, action-oriented instruction set for any AI agent (design assistant, frontend helper, content curator) working on the visual identity and UI/UX of **purereactions.com** under the *Cinematic Authentic* visual language.
