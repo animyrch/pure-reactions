@@ -275,7 +275,7 @@ export const getQueuesByPage = async (lastDoc, limitBy, userId) => {
     };
 };
 
-export const getUserReactions = async (userId, filter) => {
+export const getUserReactions = async (userId, filter = FILTERS.ALL) => {
     let reactions = [];
     if (!userId) {
         return reactions;
@@ -465,7 +465,7 @@ export const removeReactionFromQueue = async ({ queueSlug, reactionId, userId })
 };
 
 
-export const getUserPlaylists = async (userId, filter) => {
+export const getUserPlaylists = async (userId, filter = FILTERS.ALL) => {
     let playlists = [];
     if (!userId) {
         return playlists;
