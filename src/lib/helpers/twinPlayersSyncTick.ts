@@ -298,8 +298,6 @@ export function computeTwinPlayersSyncTick(
       stateUpdates.fullscreenOverlayVisible = desiredOverlayVisible;
     }
   }
-    stateUpdates.currentPlaybackRate = desiredPlaybackRate;
-  }
 
   // 3) State/time sync (original)
   const reactionPlayerState = input.reactionPlayerState;
