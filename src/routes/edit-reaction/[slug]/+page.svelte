@@ -303,6 +303,7 @@
         fullscreenPrimaryVideo={$state.fullscreenPrimaryVideo}
         fullscreenOverlayWidthPercent={$state.fullscreenOverlayWidthPercent}
         fullscreenOverlayCorner={$state.fullscreenOverlayCorner}
+        fullscreenOverlayVisible={$state.fullscreenOverlayVisible}
         bind:overlayRef
         onExitClick={actions.handleExitFullscreenClick}
         onExitEnter={actions.handleExitButtonEnter}

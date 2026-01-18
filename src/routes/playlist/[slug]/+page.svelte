@@ -237,6 +237,7 @@
     fullscreenPrimaryVideo={$state.fullscreenPrimaryVideo}
     fullscreenOverlayWidthPercent={$state.fullscreenOverlayWidthPercent}
     fullscreenOverlayCorner={$state.fullscreenOverlayCorner}
+    fullscreenOverlayVisible={$state.fullscreenOverlayVisible}
     missingReactionLoading={false}
     missingReactionError=""
     alwaysShowMissingPlaceholder={true}

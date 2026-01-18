@@ -24,6 +24,7 @@
     export let fullscreenPrimaryVideo = "original";
     export let fullscreenOverlayWidthPercent = 35;
     export let fullscreenOverlayCorner = "top-right";
+    export let fullscreenOverlayVisible = true;
 
     export let alwaysShowMissingPlaceholder = false;
 
@@ -245,7 +246,7 @@
                 : "grid"}
             class={isOverlayLayout
                 ? isOriginalOverlay
-                    ? `pointer-events-auto absolute ${overlayCornerClass} z-50`
+                    ? `pointer-events-auto absolute ${overlayCornerClass} z-50 transition-opacity duration-300 ease-cinematic ${fullscreenOverlayVisible ? "opacity-100" : "opacity-0 pointer-events-none"}`
                     : "absolute inset-0"
                 : "relative overflow-hidden bg-black shadow-elevated rounded-none md:rounded-xl"}
             style={isOriginalOverlay ? "width: var(--overlay-width);" : ""}
@@ -291,7 +292,7 @@
                     : "grid"}
                 class={isOverlayLayout
                     ? isReactionOverlay
-                        ? `pointer-events-auto absolute ${overlayCornerClass} z-50`
+                        ? `pointer-events-auto absolute ${overlayCornerClass} z-50 transition-opacity duration-300 ease-cinematic ${fullscreenOverlayVisible ? "opacity-100" : "opacity-0 pointer-events-none"}`
                         : "absolute inset-0"
                     : "relative overflow-hidden bg-black/80 shadow-surface w-[80vw] h-[45vw] mx-auto mt-4 rounded-lg md:w-auto md:h-auto md:mt-0 md:mx-0 md:rounded-xl md:aspect-[16/9]"}
                 style={isReactionOverlay ? "width: var(--overlay-width);" : ""}
