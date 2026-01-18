@@ -516,6 +516,7 @@ export const getReactionsByReactorName = async (reactorName) => {
         const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'getReactionsByReactorName');
         const queryRef = query(reactionsCollection,
             where("reactionVideoAuthor", "==", reactorName),
+            where('isPublished', '==', true),
             orderBy('createdAt', 'desc')
         );
         const querySnapshot = await getDocs(queryRef);
@@ -538,6 +539,7 @@ export const getReactionsByCreatorName = async (creatorName) => {
         const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'getReactionsByCreatorName');
         const queryRef = query(reactionsCollection,
             where("originalVideoAuthor", "==", creatorName),
+            where('isPublished', '==', true),
             orderBy('createdAt', 'desc')
         );
         const querySnapshot = await getDocs(queryRef);
