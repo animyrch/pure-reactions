@@ -22,18 +22,16 @@
         isLoading = true;
         combinedItems = [];
         setTimeout(async () => {
-			let reactions = [];
-			let playlists = [];
-
-			// Load reactions if needed
-			if (typeFilter === TYPE_FILTERS.ALL || typeFilter === TYPE_FILTERS.REACTIONS_ONLY) {
-            	reactions = await getUserReactions(data.userId, publishedFilter);
-			}
-
-			// Load playlists if needed
-			if (typeFilter === TYPE_FILTERS.ALL || typeFilter === TYPE_FILTERS.PLAYLISTS_ONLY) {
-            	playlists = await getUserPlaylists(data.userId, publishedFilter);
-			}
+			// Load data in parallel when both are needed
+			const loadReactionsPromise = (typeFilter === TYPE_FILTERS.ALL || typeFilter === TYPE_FILTERS.REACTIONS_ONLY)
+				? getUserReactions(data.userId, publishedFilter)
+				: Promise.resolve([]);
+			
+			const loadPlaylistsPromise = (typeFilter === TYPE_FILTERS.ALL || typeFilter === TYPE_FILTERS.PLAYLISTS_ONLY)
+				? getUserPlaylists(data.userId, publishedFilter)
+				: Promise.resolve([]);
+			
+			const [reactions, playlists] = await Promise.all([loadReactionsPromise, loadPlaylistsPromise]);
 			
 			// Transform playlists to match reaction structure
 			// Filter out playlists without required data to prevent broken rendering

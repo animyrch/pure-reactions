@@ -282,17 +282,23 @@ export const getUserReactions = async (userId, filter) => {
     }
     try {
         const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'getUserReactions');
-        let baseQuery = query(reactionsCollection,
+        
+        // Build query conditions
+        const queryConditions = [
             where("reactorId", "==", userId),
             where("playlistId", "==", ""),
             orderBy('playlistId', 'desc'),
             orderBy('createdAt', 'desc')
-        );
+        ];
+        
+        // Add published filter if specified
         if (filter === FILTERS.PUBLISHED) {
-            baseQuery = query(baseQuery, where('isPublished', '==', true));
+            queryConditions.push(where('isPublished', '==', true));
         } else if (filter === FILTERS.UNPUBLISHED) {
-            baseQuery = query(baseQuery, where('isPublished', '==', false));
+            queryConditions.push(where('isPublished', '==', false));
         }
+        
+        const baseQuery = query(reactionsCollection, ...queryConditions);
         const querySnapshot = await getDocs(baseQuery);
         reactions = querySnapshot.docs.map((doc) => ({
             id: doc.id,
@@ -466,19 +472,21 @@ export const getUserPlaylists = async (userId, filter) => {
     }
     try {
         const playlistsCollection = createCollection(db, COLLECTION_PLAYLISTS, 'getUserPlaylists');
-        let queryRef = query(
-            playlistsCollection,
+        
+        // Build query conditions
+        const queryConditions = [
             where("reactorId", "==", userId),
             orderBy('createdAt', 'desc')
-        );
+        ];
         
-        // Apply published filter if specified
+        // Add published filter if specified
         if (filter === FILTERS.PUBLISHED) {
-            queryRef = query(queryRef, where('isPublished', '==', true));
+            queryConditions.push(where('isPublished', '==', true));
         } else if (filter === FILTERS.UNPUBLISHED) {
-            queryRef = query(queryRef, where('isPublished', '==', false));
+            queryConditions.push(where('isPublished', '==', false));
         }
         
+        const queryRef = query(playlistsCollection, ...queryConditions);
         const querySnapshot = await getDocs(queryRef);
 
         // Use Promise.all to handle asynchronous fetching for each playlist
