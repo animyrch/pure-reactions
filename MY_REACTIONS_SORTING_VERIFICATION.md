@@ -58,9 +58,10 @@ The query includes both `orderBy('playlistId', 'desc')` and `orderBy('createdAt'
    - Includes a skipped integration test template for future auth-enabled testing
 
 2. **`tests/fixtures/reactions/my-reactions-sorting.json`**
-   - Contains three test reactions with different timestamps
+   - Contains three test reactions for ordering validation
    - All reactions share the same `reactorId` for testing
    - Demonstrates the expected data structure
+   - Note: The seed script (`scripts/seed-firestore-fixtures.mjs`) automatically adds `createdAt` and `updatedAt` timestamps when seeding fixtures
 
 ### Test Results:
 ```
