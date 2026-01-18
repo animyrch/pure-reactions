@@ -108,11 +108,13 @@ type TwinPlayersState = {
   volumeTimeline: any[];
   reactionVolumeTimeline: any[];
   playbackRateTimeline: any[];
+  overlayVisibilityTimeline: any[];
   playerEventTimeline: any[];
   currentPlaybackRate: number;
   currentStateOriginalVideo: number;
   currentVolumeOriginalVideo: number;
   currentVolumeReactionVideo: number;
+  fullscreenOverlayVisible: boolean;
   reactionCurrentTime: number;
   reactionDuration: number;
   offsetStartTime: number;
@@ -166,6 +168,11 @@ type CreatePlaybackRateConfigParams = {
   rate: number;
 };
 
+type CreateOverlayVisibilityConfigParams = {
+  timeInReaction: number;
+  visible: boolean;
+};
+
 type UpdatePlayerConfigParams = {
   timeInReaction: number;
   targetTime?: number;
@@ -200,6 +207,16 @@ type UpdatePlaybackRateConfigParams = {
 };
 
 type DeletePlaybackRateConfigParams = {
+  timeInReaction: number;
+};
+
+type UpdateOverlayVisibilityConfigParams = {
+  timeInReaction: number;
+  visible?: boolean;
+  previousTimeInReaction?: number;
+};
+
+type DeleteOverlayVisibilityConfigParams = {
   timeInReaction: number;
 };
 
@@ -332,11 +349,13 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     volumeTimeline: [],
     reactionVolumeTimeline: [],
     playbackRateTimeline: [],
+    overlayVisibilityTimeline: [],
     playerEventTimeline: [],
     currentPlaybackRate: 1,
     currentStateOriginalVideo: -1,
     currentVolumeOriginalVideo: 100,
     currentVolumeReactionVideo: 100,
+    fullscreenOverlayVisible: true,
     reactionCurrentTime: 0,
     reactionDuration: 0,
     offsetStartTime: 0,
@@ -1119,10 +1138,12 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
           timeOffset: snapshot.timeOffset,
           globalGain: snapshot.globalGain,
           isFineTuneModeOn: snapshot.isFineTuneModeOn,
+          isFullscreen: snapshot.isFullscreen,
           currentStateOriginalVideo: snapshot.currentStateOriginalVideo,
           currentPlaybackRate: snapshot.currentPlaybackRate,
           currentVolumeOriginalVideo: snapshot.currentVolumeOriginalVideo,
           currentVolumeReactionVideo: snapshot.currentVolumeReactionVideo,
+          currentFullscreenOverlayVisible: snapshot.fullscreenOverlayVisible,
           isReactionMuteModeEnabled: snapshot.isReactionMuteModeEnabled,
           isReactionAutoMuted: snapshot.isReactionAutoMuted,
           isMobileAudioEnvironment: isMobileAudio,
@@ -1132,6 +1153,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
           volumeConfigs: snapshot.volumeConfigs,
           reactionVolumeConfigs: snapshot.reactionVolumeConfigs,
           playbackRateConfigs: snapshot.playbackRateConfigs,
+          overlayVisibilityTimeline: snapshot.overlayVisibilityTimeline,
           stateTimeline: snapshot.stateTimeline,
           reactionPlayerState,
           originalPlayerState,
@@ -1184,6 +1206,11 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         enforceReactionMuteMode(result.enforceMuteModeWithOriginalState);
       }
 
+      // Apply overlay visibility state updates
+      if (typeof result.stateUpdates.fullscreenOverlayVisible === 'boolean') {
+        updateState({ fullscreenOverlayVisible: result.stateUpdates.fullscreenOverlayVisible });
+      }
+
       // Boundary-aware scheduling: wake up near the next relevant timeline change.
       const nextBoundaries = [
         result.nextBoundaryReactionTime ?? null,
@@ -1200,6 +1227,12 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
           seekMax: snapshot.seekMax
         }),
         getNextTimelineEventReactionTime(snapshot.playbackRateTimeline, {
+          reactionCurrentTime,
+          timeOffset: snapshot.timeOffset,
+          seekMin: snapshot.seekMin,
+          seekMax: snapshot.seekMax
+        }),
+        getNextTimelineEventReactionTime(snapshot.overlayVisibilityTimeline, {
           reactionCurrentTime,
           timeOffset: snapshot.timeOffset,
           seekMin: snapshot.seekMin,
@@ -1426,10 +1459,12 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         timeOffset: snapshot.timeOffset,
         globalGain: snapshot.globalGain,
         isFineTuneModeOn: snapshot.isFineTuneModeOn,
+        isFullscreen: snapshot.isFullscreen,
         currentStateOriginalVideo: initialState,
         currentPlaybackRate: snapshot.currentPlaybackRate,
         currentVolumeOriginalVideo: snapshot.currentVolumeOriginalVideo,
         currentVolumeReactionVideo: snapshot.currentVolumeReactionVideo,
+        currentFullscreenOverlayVisible: snapshot.fullscreenOverlayVisible,
         isReactionMuteModeEnabled: snapshot.isReactionMuteModeEnabled,
         isReactionAutoMuted: snapshot.isReactionAutoMuted,
         isMobileAudioEnvironment: isMobileAudio,
@@ -1439,6 +1474,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         volumeConfigs: snapshot.volumeConfigs,
         reactionVolumeConfigs: snapshot.reactionVolumeConfigs,
         playbackRateConfigs: snapshot.playbackRateConfigs,
+        overlayVisibilityTimeline: snapshot.overlayVisibilityTimeline,
         stateTimeline: snapshot.stateTimeline,
         reactionPlayerState: typeof snapshot.playerReaction?.getPlayerState === 'function'
           ? Number(snapshot.playerReaction.getPlayerState())
@@ -1839,7 +1875,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       stateTimeline,
       volumeTimeline,
       reactionVolumeTimeline,
-      playbackRateTimeline
+      playbackRateTimeline,
+      overlayVisibilityTimeline
     } = deriveTimelines(reactionData);
 
     window.playerConfigs = reactionData['stateTimeline'] || reactionData['reactionConfigs'];
@@ -2012,6 +2049,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       volumeTimeline,
       reactionVolumeTimeline,
       playbackRateTimeline,
+      overlayVisibilityTimeline,
       playerEventTimeline: normalizedPlayerEvents,
       reactionVideoId,
       originalVideoId,
@@ -2036,6 +2074,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       playerReaction: newPlayerReaction,
       currentStateOriginalVideo: -1,
       currentVolumeOriginalVideo: 100,
+      fullscreenOverlayVisible: true,
       bothVideosStarted: false,
       isUserPaused: false,
       reactionCurrentTime: offsetStartTime || 0,
@@ -2149,7 +2188,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         stateTimeline,
         volumeTimeline,
         reactionVolumeTimeline,
-        playbackRateTimeline
+        playbackRateTimeline,
+        overlayVisibilityTimeline
       } = deriveTimelines(reactionData);
 
       window.playerConfigs = reactionData['stateTimeline'] || reactionData['reactionConfigs'];
@@ -2231,6 +2271,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         volumeTimeline,
         reactionVolumeTimeline,
         playbackRateTimeline,
+        overlayVisibilityTimeline,
         playerEventTimeline: normalizedPlayerEvents,
         reactionVideoId,
         originalVideoId,
@@ -2255,6 +2296,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         playerReaction: nextPlayerReaction,
         currentStateOriginalVideo: -1,
         currentVolumeOriginalVideo: 100,
+        fullscreenOverlayVisible: true,
         currentVolumeReactionVideo: 100,
         bothVideosStarted: preserveReactionTime ? snapshotBefore.bothVideosStarted : Boolean(options.autoPlay),
         reactionCurrentTime: typeof previousReactionTime === 'number' ? previousReactionTime : offsetStartTime || 0,
@@ -3524,7 +3566,10 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
   const handleExitFullscreenClick = () => {
     openWithHalfscreen();
-    updateState({ isControlSurfaceVisible: false });
+    updateState({ 
+      isControlSurfaceVisible: false,
+      fullscreenOverlayVisible: true
+    });
     clearTimeout(controlHideTimeout);
     collapseExitButton(true);
   };

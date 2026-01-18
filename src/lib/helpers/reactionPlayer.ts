@@ -70,6 +70,7 @@ export function deriveTimelines(obtainedData: ReactionDocument) {
   const rawVolumeTimeline = obtainedData?.['volumeTimeline'];
   const rawReactionVolumeTimeline = obtainedData?.['reactionVolumeTimeline'];
   const rawPlaybackTimeline = obtainedData?.['playbackTimeline'];
+  const rawOverlayVisibilityTimeline = obtainedData?.['overlayVisibilityTimeline'];
 
   const reactionConfigs = obtainedData?.['reactionConfigs'];
   const volumeConfigsRaw = obtainedData?.['volumeConfigs'];
@@ -158,6 +159,10 @@ export function deriveTimelines(obtainedData: ReactionDocument) {
         })
       );
 
+  const overlayVisibilityTimeline = Array.isArray(rawOverlayVisibilityTimeline) && rawOverlayVisibilityTimeline.length
+    ? rawOverlayVisibilityTimeline
+    : [];
+
   return {
     playerConfigs,
     volumeConfigs,
@@ -166,7 +171,8 @@ export function deriveTimelines(obtainedData: ReactionDocument) {
     stateTimeline,
     volumeTimeline,
     reactionVolumeTimeline,
-    playbackRateTimeline
+    playbackRateTimeline,
+    overlayVisibilityTimeline
   };
 }
 
