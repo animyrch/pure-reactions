@@ -26,6 +26,7 @@
   export let reactionVolumeTimeline = [];
   export let playbackRateConfigs = {};
   export let playbackRateTimeline = [];
+  export let overlayVisibilityTimeline = [];
   export let reactionCurrentTime = 0;
   export let reactionDuration = 0;
   export let playerEventTimeline = [];
@@ -36,6 +37,7 @@
   export let onCreateVolumeConfig = async () => {};
   export let onCreateReactionVolumeConfig = async () => {};
   export let onCreatePlaybackRateConfig = async () => {};
+  export let onCreateOverlayVisibilityConfig = async () => {};
   export let onUpdatePlayerConfig = async () => {};
   export let onDeletePlayerConfig = async () => {};
   export let onUpdateVolumeConfig = async () => {};
@@ -44,6 +46,8 @@
   export let onDeleteReactionVolumeConfig = async () => {};
   export let onUpdatePlaybackRateConfig = async () => {};
   export let onDeletePlaybackRateConfig = async () => {};
+  export let onUpdateOverlayVisibilityConfig = async () => {};
+  export let onDeleteOverlayVisibilityConfig = async () => {};
 
   export let onSetReactionVideoId = () => {};
   export let onSetOffsetStartTime = () => {};
@@ -276,6 +280,18 @@
     }
   };
 
+  const handleCreateOverlayVisibilityConfig = async (event) => {
+    const detail = event?.detail;
+    if (!detail) return;
+    try {
+      await onCreateOverlayVisibilityConfig(detail);
+      showToast("Overlay visibility cue added.", TOASTS.SUCCESS);
+    } catch (error) {
+      console.error("Failed to add overlay visibility config", error);
+      showToast("Unable to add that visibility cue. Try again.", TOASTS.WARNING);
+    }
+  };
+
   const handleUpdatePlayerConfig = async (event) => {
     const detail = event?.detail;
     if (!detail) return;
@@ -375,6 +391,30 @@
     } catch (error) {
       console.error("Failed to delete playback rate config", error);
       showToast("Unable to remove that speed cue. Try again.", TOASTS.WARNING);
+    }
+  };
+
+  const handleUpdateOverlayVisibilityConfig = async (event) => {
+    const detail = event?.detail;
+    if (!detail) return;
+    try {
+      await onUpdateOverlayVisibilityConfig(detail);
+      showToast("Overlay visibility cue updated.", TOASTS.SUCCESS);
+    } catch (error) {
+      console.error("Failed to update overlay visibility config", error);
+      showToast("Unable to update that visibility cue. Try again.", TOASTS.WARNING);
+    }
+  };
+
+  const handleDeleteOverlayVisibilityConfig = async (event) => {
+    const detail = event?.detail;
+    if (!detail) return;
+    try {
+      await onDeleteOverlayVisibilityConfig(detail);
+      showToast("Overlay visibility cue removed.", TOASTS.SUCCESS);
+    } catch (error) {
+      console.error("Failed to delete overlay visibility config", error);
+      showToast("Unable to remove that visibility cue. Try again.", TOASTS.WARNING);
     }
   };
 
@@ -695,6 +735,7 @@
               {reactionVolumeTimeline}
               {playbackRateConfigs}
               {playbackRateTimeline}
+              {overlayVisibilityTimeline}
               {reactionCurrentTime}
               {reactionDuration}
               seekMin={offsetStartTime}
@@ -706,6 +747,7 @@
               on:createVolumeConfig={handleCreateVolumeConfig}
               on:createReactionVolumeConfig={handleCreateReactionVolumeConfig}
               on:createPlaybackRateConfig={handleCreatePlaybackRateConfig}
+              on:createOverlayVisibilityConfig={handleCreateOverlayVisibilityConfig}
               on:updatePlayerConfig={handleUpdatePlayerConfig}
               on:deletePlayerConfig={handleDeletePlayerConfig}
               on:updateVolumeConfig={handleUpdateVolumeConfig}
@@ -714,6 +756,8 @@
               on:deleteReactionVolumeConfig={handleDeleteReactionVolumeConfig}
               on:updatePlaybackRateConfig={handleUpdatePlaybackRateConfig}
               on:deletePlaybackRateConfig={handleDeletePlaybackRateConfig}
+              on:updateOverlayVisibilityConfig={handleUpdateOverlayVisibilityConfig}
+              on:deleteOverlayVisibilityConfig={handleDeleteOverlayVisibilityConfig}
               on:seek={handleSeek}
             />
           </div>

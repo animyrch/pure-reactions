@@ -13,6 +13,7 @@
   export let reactionVolumeTimeline = [];
   export let playbackRateConfigs = {};
   export let playbackRateTimeline = [];
+  export let overlayVisibilityTimeline = [];
   export let reactionCurrentTime = 0;
   export let reactionDuration = 0;
   export let seekMin = 0;
@@ -184,6 +185,26 @@
       .filter(Boolean);
   };
 
+  const normalizeOverlayVisibilityEvents = (timeline) => {
+    if (Array.isArray(timeline) && timeline.length) {
+      return timeline
+        .map((event, index) => {
+          const timeInReaction = parseSeconds(event?.t);
+          const visible = typeof event?.visible === 'boolean' ? event.visible : true;
+          if (!Number.isFinite(timeInReaction)) return null;
+          return {
+            id: `overlay-visibility-array-${index}-${timeInReaction}`,
+            type: "overlayVisibility",
+            trackId: "overlayVisibility",
+            timeInReaction,
+            visible,
+          };
+        })
+        .filter(Boolean);
+    }
+    return [];
+  };
+
   $: volumeEvents = normalizeVolumeEvents(
     volumeTimeline,
     volumeConfigs,
@@ -206,12 +227,16 @@
     playbackRateTimeline,
     playbackRateConfigs,
   );
+  $: overlayVisibilityEvents = normalizeOverlayVisibilityEvents(
+    overlayVisibilityTimeline,
+  );
 
   $: timelineEntries = [
     ...volumeEvents,
     ...reactionVolumeEvents,
     ...playerEvents,
     ...playbackEvents,
+    ...overlayVisibilityEvents,
   ].sort((a, b) => a.timeInReaction - b.timeInReaction);
 
   $: summary = {
@@ -220,6 +245,7 @@
     reactionVolume: reactionVolumeEvents.length,
     player: playerEvents.length,
     speed: playbackEvents.length,
+    overlayVisibility: overlayVisibilityEvents.length,
     spanStart: timelineEntries[0]?.timeInReaction ?? null,
     spanEnd:
       timelineEntries[timelineEntries.length - 1]?.timeInReaction ?? null,
@@ -342,6 +368,7 @@
       {volumeEvents}
       {reactionVolumeEvents}
       playbackRateEvents={playbackEvents}
+      overlayVisibilityEvents={overlayVisibilityEvents}
       on:createPlayerConfig={(event) =>
         dispatch("createPlayerConfig", event.detail)}
       on:createVolumeConfig={(event) =>
@@ -350,6 +377,8 @@
         dispatch("createReactionVolumeConfig", event.detail)}
       on:createPlaybackRateConfig={(event) =>
         dispatch("createPlaybackRateConfig", event.detail)}
+      on:createOverlayVisibilityConfig={(event) =>
+        dispatch("createOverlayVisibilityConfig", event.detail)}
       on:updatePlayerConfig={(event) =>
         dispatch("updatePlayerConfig", event.detail)}
       on:deletePlayerConfig={(event) =>
@@ -366,6 +395,10 @@
         dispatch("updatePlaybackRateConfig", event.detail)}
       on:deletePlaybackRateConfig={(event) =>
         dispatch("deletePlaybackRateConfig", event.detail)}
+      on:updateOverlayVisibilityConfig={(event) =>
+        dispatch("updateOverlayVisibilityConfig", event.detail)}
+      on:deleteOverlayVisibilityConfig={(event) =>
+        dispatch("deleteOverlayVisibilityConfig", event.detail)}
       on:seek={(event) => dispatch("seek", event.detail)}
     />
   </div>

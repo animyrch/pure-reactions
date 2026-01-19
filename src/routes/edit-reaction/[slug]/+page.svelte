@@ -253,6 +253,7 @@
           reactionVolumeTimeline={$state.reactionVolumeTimeline}
           playbackRateConfigs={$state.playbackRateConfigs}
           playbackRateTimeline={$state.playbackRateTimeline}
+          overlayVisibilityTimeline={$state.overlayVisibilityTimeline}
           reactionCurrentTime={$state.reactionCurrentTime}
           reactionDuration={$state.reactionDuration}
           playerEventTimeline={$state.playerEventTimeline}
@@ -263,6 +264,7 @@
           onCreateVolumeConfig={actions.createVolumeConfig}
           onCreateReactionVolumeConfig={actions.createReactionVolumeConfig}
           onCreatePlaybackRateConfig={actions.createPlaybackRateConfig}
+          onCreateOverlayVisibilityConfig={actions.createOverlayVisibilityConfig}
           onUpdatePlayerConfig={actions.updatePlayerConfig}
           onDeletePlayerConfig={actions.deletePlayerConfig}
           onUpdateVolumeConfig={actions.updateVolumeConfig}
@@ -271,6 +273,8 @@
           onDeleteReactionVolumeConfig={actions.deleteReactionVolumeConfig}
           onUpdatePlaybackRateConfig={actions.updatePlaybackRateConfig}
           onDeletePlaybackRateConfig={actions.deletePlaybackRateConfig}
+          onUpdateOverlayVisibilityConfig={actions.updateOverlayVisibilityConfig}
+          onDeleteOverlayVisibilityConfig={actions.deleteOverlayVisibilityConfig}
           onSetReactionVideoId={handleSetReactionVideoId}
           onSetOffsetStartTime={handleSetOffsetStartTime}
           onSetIntroBufferTime={handleSetIntroBufferTime}

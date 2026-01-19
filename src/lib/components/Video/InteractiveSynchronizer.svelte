@@ -1,6 +1,6 @@
 <script>
   import { createEventDispatcher, onDestroy } from "svelte";
-  import { PlaySolid, PauseSolid } from "flowbite-svelte-icons";
+  import { PlaySolid, PauseSolid, EyeSolid, EyeSlashSolid } from "flowbite-svelte-icons";
   import AdvancedVolumeControl from "./AdvancedVolumeControl.svelte";
 
   export let currentTime = 0;
@@ -9,6 +9,7 @@
   export let volumeEvents = [];
   export let reactionVolumeEvents = [];
   export let playbackRateEvents = [];
+  export let overlayVisibilityEvents = [];
   export let seekMin = 0;
   export let seekMax = Number.POSITIVE_INFINITY;
 
@@ -72,6 +73,10 @@
       "border border-accent-secondary/50 bg-accent-secondary/10 text-accent-secondary",
     volume:
       "border border-accent-primary/30 bg-accent-primary/10 text-accent-primary",
+    overlayVisible:
+      "border border-accent-primary/30 bg-accent-primary/10 text-accent-primary",
+    overlayHidden:
+      "border border-border-strong/60 bg-background/90 text-text-muted",
   };
 
   const TIMELINE_REGION_SELECTOR = '[data-timeline-region="true"]';
@@ -134,9 +139,11 @@
 
   let pendingVolumeInput = "100";
   let pendingPlaybackRateInput = "1";
+  let pendingOverlayVisibleInput = true;
 
   let activeVolumeInput = "100";
   let activePlaybackRateInput = "1";
+  let activeOverlayVisibleInput = true;
 
   // Advanced options state
   let showAdvancedPending = false;
@@ -276,6 +283,16 @@
         )
         .sort((a, b) => a.timeInReaction - b.timeInReaction)
     : [];
+  $: overlayVisibilityEventsSorted = Array.isArray(overlayVisibilityEvents)
+    ? [...overlayVisibilityEvents]
+        .map((event) => ({
+          ...event,
+          timeInReaction: sanitizeNumber(event?.timeInReaction ?? event?.t),
+          visible: typeof event?.visible === 'boolean' ? event.visible : true,
+        }))
+        .filter((event) => Number.isFinite(event.timeInReaction))
+        .sort((a, b) => a.timeInReaction - b.timeInReaction)
+    : [];
   $: playerMarkers = playerEventsSorted
     .map((event, index) => {
       if (!Number.isFinite(event?.timeInReaction)) return null;
@@ -382,6 +399,33 @@
       };
     })
     .filter(Boolean);
+  $: overlayVisibilityMarkers = overlayVisibilityEventsSorted
+    .map((event, index) => {
+      const timeInReaction = event.timeInReaction;
+      const visible = event.visible;
+      if (!Number.isFinite(timeInReaction)) return null;
+      const normalized =
+        effectiveDuration <= 0
+          ? 0
+          : clamp01(timeInReaction / effectiveDuration);
+      const icon = visible ? EyeSolid : EyeSlashSolid;
+      const tone = visible ? "overlayVisible" : "overlayHidden";
+      const label = visible ? "Show overlay" : "Hide overlay";
+      return {
+        id: event?.id ?? `overlay-visibility-marker-${index}`,
+        trackId: "overlayVisibility",
+        label,
+        tone,
+        position: `${(normalized * 100).toFixed(3)}%`,
+        ratio: normalized,
+        timeLabel: formatTimecode(timeInReaction),
+        timeInReaction,
+        visible,
+        icon,
+        editable: true,
+      };
+    })
+    .filter(Boolean);
   $: if (effectiveDuration <= 0) {
     hoverViewportRatio = null;
     hoverTimeLabel = null;
@@ -404,11 +448,16 @@
     ? playbackRateEventsSorted[playbackRateEventsSorted.length - 1]
         .timeInReaction
     : 0;
+  $: maxOverlayVisibilityEventTime = overlayVisibilityEventsSorted.length
+    ? overlayVisibilityEventsSorted[overlayVisibilityEventsSorted.length - 1]
+        .timeInReaction
+    : 0;
   $: maxEventTime = Math.max(
     maxPlayerEventTime,
     maxVolumeEventTime,
     maxReactionVolumeEventTime,
     maxPlaybackRateEventTime,
+    maxOverlayVisibilityEventTime,
   );
   $: effectiveDuration =
     safeDuration > 0 ? safeDuration : Math.max(maxEventTime, safeCurrentTime);
@@ -451,6 +500,13 @@
       id: "reactionVolume",
       label: "Volume Reaction",
       markers: reactionVolumeMarkers,
+      showProgress: false,
+      interactive: false,
+    },
+    {
+      id: "overlayVisibility",
+      label: "Overlay Visibility",
+      markers: overlayVisibilityMarkers,
       showProgress: false,
       interactive: false,
     },
@@ -999,6 +1055,7 @@
     pendingReactionSeconds = 0;
     pendingVolumeInput = "100";
     pendingPlaybackRateInput = "1";
+    pendingOverlayVisibleInput = true;
     showAdvancedPending = false;
   };
 
@@ -1013,6 +1070,7 @@
     activeMarkerIsDirty = false;
     activeVolumeInput = "100";
     activePlaybackRateInput = "1";
+    activeOverlayVisibleInput = true;
     showAdvancedActive = false;
   };
 
@@ -1085,6 +1143,18 @@
       ? previousRateEvent.rate
       : 1;
     pendingPlaybackRateInput = String(Math.round(initialRate * 100) / 100);
+
+    const previousOverlayEvent = [...overlayVisibilityEventsSorted]
+      .filter(
+        (entry) =>
+          Number.isFinite(entry?.timeInReaction) &&
+          entry.timeInReaction <= reactionTime,
+      )
+      .pop();
+    const initialVisible = typeof previousOverlayEvent?.visible === 'boolean'
+      ? previousOverlayEvent.visible
+      : true;
+    pendingOverlayVisibleInput = initialVisible;
 
     refreshPendingDerivedValues();
   };
@@ -1174,6 +1244,15 @@
     closeConfigPopup();
   };
 
+  const confirmOverlayVisibilityCreation = () => {
+    if (!pendingConfig) return;
+    dispatch("createOverlayVisibilityConfig", {
+      timeInReaction: pendingConfig.reactionTime,
+      visible: pendingOverlayVisibleInput,
+    });
+    closeConfigPopup();
+  };
+
   const openMarkerEditor = (marker) => {
     if (!marker) return;
     pendingConfig = null;
@@ -1230,6 +1309,12 @@
         Number.isFinite(marker.rate) && marker.rate > 0 ? marker.rate : 1;
       activePlaybackRateInput = String(Math.round(initialRate * 100) / 100);
     }
+
+    if (trackId === "overlayVisibility") {
+      const initialVisible = typeof marker.visible === 'boolean' ? marker.visible : true;
+      activeOverlayVisibleInput = initialVisible;
+    }
+
     activeMarkerIsDirty = false;
     refreshActiveDerivedValues();
   };
@@ -1273,6 +1358,16 @@
     closeMarkerEditor();
   };
 
+  const confirmOverlayVisibilityUpdate = () => {
+    if (!activeMarker) return;
+    dispatch("updateOverlayVisibilityConfig", {
+      timeInReaction: activeMarker.timeInReaction,
+      visible: activeOverlayVisibleInput,
+      previousTimeInReaction: activeMarker.initialTimeInReaction,
+    });
+    closeMarkerEditor();
+  };
+
   const handleActiveMarkerDelete = () => {
     if (!activeMarker) return;
     if (activeMarker.trackId === "volume") {
@@ -1285,6 +1380,10 @@
       });
     } else if (activeMarker.trackId === "speed") {
       dispatch("deletePlaybackRateConfig", {
+        timeInReaction: activeMarker.initialTimeInReaction,
+      });
+    } else if (activeMarker.trackId === "overlayVisibility") {
+      dispatch("deleteOverlayVisibilityConfig", {
         timeInReaction: activeMarker.initialTimeInReaction,
       });
     } else {
@@ -1739,6 +1838,38 @@
               </div>
             {/if}
           </div>
+        {:else if pendingConfig.trackId === "overlayVisibility"}
+          <div class="flex flex-col gap-2">
+            <label
+              class="text-[11px] font-semibold uppercase tracking-wide text-text-muted"
+              for="pending-overlay-visible"
+            >
+              Overlay visibility in fullscreen
+            </label>
+            <div class="flex gap-2 items-center">
+              <label class="flex items-center gap-2 flex-1 cursor-pointer">
+                <input
+                  id="pending-overlay-visible"
+                  type="checkbox"
+                  class="h-4 w-4 rounded border-border-strong/50 bg-surface/90 text-accent-primary focus:ring-2 focus:ring-accent-primary/40"
+                  bind:checked={pendingOverlayVisibleInput}
+                />
+                <span class="text-sm text-text-primary">Show overlay</span>
+              </label>
+              <button
+                type="button"
+                class="rounded-md border border-border-strong/70 bg-surface/90 px-3 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                on:click|stopPropagation={confirmOverlayVisibilityCreation}
+              >
+                Set visibility
+              </button>
+            </div>
+            <p class="text-[10px] text-text-muted">
+              {pendingOverlayVisibleInput 
+                ? "Overlay will be shown at this timestamp when in fullscreen."
+                : "Overlay will be hidden at this timestamp until another config changes it."}
+            </p>
+          </div>
         {/if}
         <button
           type="button"
@@ -1962,6 +2093,41 @@
                 <AdvancedVolumeControl on:mirror={mirrorVolumeConfig} />
               </div>
             {/if}
+          </div>
+        {:else if activeMarker.trackId === "overlayVisibility"}
+          <div class="flex flex-col gap-2">
+            <label
+              class="text-[11px] font-semibold uppercase tracking-wide text-text-muted"
+              for="active-overlay-visible"
+            >
+              Overlay visibility in fullscreen
+            </label>
+            <div class="flex gap-2 items-center">
+              <label class="flex items-center gap-2 flex-1 cursor-pointer">
+                <input
+                  id="active-overlay-visible"
+                  type="checkbox"
+                  class="h-4 w-4 rounded border-border-strong/50 bg-surface/90 text-accent-primary focus:ring-2 focus:ring-accent-primary/40"
+                  bind:checked={activeOverlayVisibleInput}
+                  on:change={() => {
+                    activeMarkerIsDirty = true;
+                  }}
+                />
+                <span class="text-sm text-text-primary">Show overlay</span>
+              </label>
+              <button
+                type="button"
+                class="rounded-md border border-border-strong/70 bg-surface/90 px-3 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                on:click|stopPropagation={confirmOverlayVisibilityUpdate}
+              >
+                Set visibility
+              </button>
+            </div>
+            <p class="text-[10px] text-text-muted">
+              {activeOverlayVisibleInput 
+                ? "Overlay will be shown at this timestamp when in fullscreen."
+                : "Overlay will be hidden at this timestamp until another config changes it."}
+            </p>
           </div>
         {/if}
         <div class="flex items-center justify-between gap-2">
