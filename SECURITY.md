@@ -15,7 +15,7 @@ We release patches for security vulnerabilities for the following versions:
 
 | Version | Supported          |
 | ------- | ------------------ |
-| latest  | :white_check_mark: |
+| prod  | :white_check_mark: |
 
 ## Security Best Practices
 
