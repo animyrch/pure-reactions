@@ -4,7 +4,7 @@ Thank you for your interest in contributing to Pure Reactions! This document pro
 
 ## Code of Conduct
 
-By participating in this project, you agree to maintain a respectful and collaborative environment for all contributors.
+By participating in this project, you agree to maintain a respectful and collaborative environment for all contributors with regard to all interactions around the codebase such as PR discussions and commit messages.
 
 ## Getting Started
 
