@@ -286,17 +286,15 @@ export function computeTwinPlayersSyncTick(
     stateUpdates.currentPlaybackRate = desiredPlaybackRate;
   }
 
-  // 2.5) Overlay visibility (fullscreen only)
-  if (input.isFullscreen) {
-    const desiredOverlayVisible = getCurrentOverlayVisibilityFromConfigs(
-      reactionCurrentTime,
-      input.overlayVisibilityTimeline,
-      timeOffset
-    );
+  // 2.5) Overlay visibility (applies in overlay layout mode)
+  const desiredOverlayVisible = getCurrentOverlayVisibilityFromConfigs(
+    reactionCurrentTime,
+    input.overlayVisibilityTimeline,
+    timeOffset
+  );
 
-    if (desiredOverlayVisible !== input.currentFullscreenOverlayVisible) {
-      stateUpdates.fullscreenOverlayVisible = desiredOverlayVisible;
-    }
+  if (desiredOverlayVisible !== input.currentFullscreenOverlayVisible) {
+    stateUpdates.fullscreenOverlayVisible = desiredOverlayVisible;
   }
 
   // 3) State/time sync (original)

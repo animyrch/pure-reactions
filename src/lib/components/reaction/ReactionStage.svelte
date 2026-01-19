@@ -82,8 +82,8 @@
             : "opacity-0 pointer-events-none"
         : stickyControlsClass;
 
-    // Overlay visibility control only applies in fullscreen, not mobile landscape
-    $: effectiveOverlayClass = isFullscreen && !fullscreenOverlayVisible
+    // Overlay visibility control applies in both fullscreen and mobile landscape
+    $: effectiveOverlayClass = isOverlayLayout && !fullscreenOverlayVisible
         ? "opacity-0 pointer-events-none"
         : "opacity-100 pointer-events-auto";
 
