@@ -494,11 +494,11 @@ export const getUserPlaylists = async (userId, filter = FILTERS.ALL) => {
                 // Firestore 'in' queries are limited to 10 items, so we batch if needed
                 const batchSize = 10;
                 const reactionIds = playlistData.reactionBinomeIds;
+                const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'getUserPlaylists_reactions');
                 
                 // Process reactions in batches of 10
                 for (let i = 0; i < reactionIds.length; i += batchSize) {
                     const batchIds = reactionIds.slice(i, i + batchSize);
-                    const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'getUserPlaylists_reactions');
                     const reactionsQuery = query(
                         reactionsCollection,
                         where('__name__', 'in', batchIds)
@@ -515,11 +515,9 @@ export const getUserPlaylists = async (userId, filter = FILTERS.ALL) => {
                         }
                     });
                     
-                    // Early exit if we've found what we need for filtering
-                    if (hasPublishedReaction && filter === FILTERS.PUBLISHED) {
-                        break;
-                    }
-                    if (!hasPublishedReaction && i + batchSize >= reactionIds.length && filter === FILTERS.UNPUBLISHED) {
+                    // Early exit optimization: if we found a published reaction and we're filtering for published,
+                    // and we already have display data, we can stop
+                    if (hasPublishedReaction && filter === FILTERS.PUBLISHED && firstReactionBinomeData) {
                         break;
                     }
                 }
