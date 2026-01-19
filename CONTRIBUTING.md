@@ -31,7 +31,7 @@ By participating in this project, you agree to maintain a respectful and collabo
 3. Set up environment variables:
    - Copy `.env.example` to `.env`
    - Fill in your Firebase, Algolia, and YouTube API credentials
-   - Place your Firebase Admin SDK JSON file in the root (it will be automatically ignored by git)
+   - Place your Firebase Admin SDK JSON file in the secrets folder (it will be automatically ignored by git)
 
 4. Start the development server:
    ```bash
