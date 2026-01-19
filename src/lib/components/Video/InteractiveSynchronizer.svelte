@@ -1613,7 +1613,7 @@
                 {#if marker.editable}
                   <button
                     type="button"
-                    class={`pointer-events-auto relative inline-flex items-center justify-center rounded-full transition backdrop-blur-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 hover:z-30 focus-visible:z-30 ${marker.icon ? "h-4 w-4 hover:h-8 hover:w-8 hover:z-30" : "min-w-[2.25rem] px-2 py-1 text-[10px] font-semibold leading-none"} ${MARKER_STYLES[marker.tone] ?? "bg-background/80 text-text-muted"} ${isMarkerActive(marker) ? "ring-2 ring-accent-primary/60" : ""}`}
+                    class={`pointer-events-auto relative inline-flex items-center justify-center rounded-full transition backdrop-blur-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 hover:z-30 focus-visible:z-30 ${marker.icon ? "h-7 w-7 hover:h-9 hover:w-9 hover:z-30" : "min-w-[2.25rem] px-2 py-1 text-[10px] font-semibold leading-none"} ${MARKER_STYLES[marker.tone] ?? "bg-background/80 text-text-muted"} ${isMarkerActive(marker) ? "ring-2 ring-accent-primary/60" : ""}`}
                     title={`${marker.label} at ${marker.timeLabel}`}
                     aria-label={`${marker.label} at ${marker.timeLabel}`}
                     data-marker-interaction="true"
@@ -1628,7 +1628,7 @@
                     {#if marker.icon}
                       <svelte:component
                         this={marker.icon}
-                        class="h-2 w-2 hover:h-4 hover:w-4 hover:z-30 transition-transform"
+                        class="h-4 w-4 hover:h-5 hover:w-5 hover:z-30 transition-transform"
                         aria-hidden="true"
                       />
                     {:else}
