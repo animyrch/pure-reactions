@@ -7,7 +7,6 @@ node_modules
 .env.*
 !.env.example
 vite.config.js.timestamp-*
-pure-reactions-firebase-adminsdk-*.json
-*-firebase-adminsdk-*.json
 test-results
 /.netlify
+/secrets
