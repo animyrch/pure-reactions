@@ -596,6 +596,7 @@
         initialState,
         initialVolume,
         initialRate,
+        initialVisible,
       } = activeMarker;
       activeMarker = {
         ...activeMarker,
@@ -606,6 +607,7 @@
         initialState,
         initialVolume,
         initialRate,
+        initialVisible,
       };
     }
   }
@@ -628,7 +630,7 @@
         ? clamp01((activeReactionSeconds - safeViewportStart) / viewportSpan)
         : 0;
     if (Math.abs(nextRatio - activeMarker.ratio) > 0.0005) {
-      const { initialTimeInReaction, initialTargetTime, initialState } =
+      const { initialTimeInReaction, initialTargetTime, initialState, initialVolume, initialRate, initialVisible } =
         activeMarker;
       activeMarker = {
         ...activeMarker,
@@ -638,6 +640,9 @@
         initialTimeInReaction,
         initialTargetTime,
         initialState,
+        initialVolume,
+        initialRate,
+        initialVisible,
       };
     }
   }
@@ -1009,6 +1014,7 @@
         initialState,
         initialVolume,
         initialRate,
+        initialVisible,
       } = activeMarker;
       const nextRatio =
         viewportSpan > 0
@@ -1024,6 +1030,7 @@
         initialState,
         initialVolume,
         initialRate,
+        initialVisible,
       };
     }
   };
@@ -1275,11 +1282,13 @@
       state: markerState,
       volume: marker.volume,
       rate: marker.rate,
+      visible: marker.visible,
       initialTimeInReaction: marker.timeInReaction,
       initialTargetTime: markerTargetTime,
       initialState: markerState,
       initialVolume: marker.volume,
       initialRate: marker.rate,
+      initialVisible: marker.visible,
     };
     const reactionFormatted = formatSecondsForInput(marker.timeInReaction);
     activeReactionMinutesInput = reactionFormatted.minutes;
