@@ -473,18 +473,12 @@ export const getUserPlaylists = async (userId, filter = FILTERS.ALL) => {
     try {
         const playlistsCollection = createCollection(db, COLLECTION_PLAYLISTS, 'getUserPlaylists');
         
-        // Build query conditions
+        // Build query conditions - note: playlists don't have isPublished field
+        // A playlist is considered published if any reaction in it is published
         const queryConditions = [
             where("reactorId", "==", userId),
             orderBy('createdAt', 'desc')
         ];
-        
-        // Add published filter if specified
-        if (filter === FILTERS.PUBLISHED) {
-            queryConditions.push(where('isPublished', '==', true));
-        } else if (filter === FILTERS.UNPUBLISHED) {
-            queryConditions.push(where('isPublished', '==', false));
-        }
         
         const queryRef = query(playlistsCollection, ...queryConditions);
         const querySnapshot = await getDocs(queryRef);
@@ -493,16 +487,37 @@ export const getUserPlaylists = async (userId, filter = FILTERS.ALL) => {
         playlists = await Promise.all(querySnapshot.docs.map(async (docSnapshot) => {
             const playlistData = docSnapshot.data();
             let firstReactionBinomeData = null;
+            let hasPublishedReaction = false;
 
             // Check if reactionBinomeIds exists and has at least one element
             if (playlistData.reactionBinomeIds && playlistData.reactionBinomeIds.length > 0) {
-                const firstReactionBinomeId = playlistData.reactionBinomeIds[0];
-                // Get a reference to the reaction binome document
-                const reactionBinomeRef = doc(db, COLLECTION_REACTION_BINOMES, firstReactionBinomeId);
-                const reactionBinomeSnap = await getDoc(reactionBinomeRef);
-                if (reactionBinomeSnap.exists()) {
-                    firstReactionBinomeData = reactionBinomeSnap.data();
-                }
+                // Fetch all reactions in the playlist to determine published status
+                const reactionPromises = playlistData.reactionBinomeIds.map(async (reactionId) => {
+                    const reactionRef = doc(db, COLLECTION_REACTION_BINOMES, reactionId);
+                    const reactionSnap = await getDoc(reactionRef);
+                    if (reactionSnap.exists()) {
+                        const reactionData = reactionSnap.data();
+                        if (reactionData.isPublished) {
+                            hasPublishedReaction = true;
+                        }
+                        return reactionData;
+                    }
+                    return null;
+                });
+                
+                const allReactions = await Promise.all(reactionPromises);
+                // Use first valid reaction for display
+                firstReactionBinomeData = allReactions.find(r => r !== null);
+            }
+
+            // Apply filter based on whether playlist has published/unpublished reactions
+            // A playlist is "published" if it has at least one published reaction
+            // A playlist is "unpublished" if it has no published reactions
+            if (filter === FILTERS.PUBLISHED && !hasPublishedReaction) {
+                return null; // Exclude this playlist
+            }
+            if (filter === FILTERS.UNPUBLISHED && hasPublishedReaction) {
+                return null; // Exclude this playlist
             }
 
             // Return a new object that includes the playlist data and the first reaction binome data
@@ -513,7 +528,8 @@ export const getUserPlaylists = async (userId, filter = FILTERS.ALL) => {
             };
         }));
 
-        return playlists;
+        // Filter out null entries
+        return playlists.filter(p => p !== null);
     } catch (error) {
         console.error('Error getting documents filtered by user: ', error);
     }
