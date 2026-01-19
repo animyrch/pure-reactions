@@ -82,9 +82,10 @@
             : "opacity-0 pointer-events-none"
         : stickyControlsClass;
 
-    $: effectiveOverlayClass = fullscreenOverlayVisible
-        ? "opacity-100 pointer-events-auto"
-        : "opacity-0 pointer-events-none";
+    // Overlay visibility control only applies in fullscreen, not mobile landscape
+    $: effectiveOverlayClass = isFullscreen && !fullscreenOverlayVisible
+        ? "opacity-0 pointer-events-none"
+        : "opacity-100 pointer-events-auto";
 
     const handleExitClick = () => dispatch("exitClick");
     const handleExitEnter = () => dispatch("exitEnter");
