@@ -275,24 +275,30 @@ export const getQueuesByPage = async (lastDoc, limitBy, userId) => {
     };
 };
 
-export const getUserReactions = async (userId, filter) => {
+export const getUserReactions = async (userId, filter = FILTERS.ALL) => {
     let reactions = [];
     if (!userId) {
         return reactions;
     }
     try {
         const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'getUserReactions');
-        let baseQuery = query(reactionsCollection,
+        
+        // Build query conditions
+        const queryConditions = [
             where("reactorId", "==", userId),
             where("playlistId", "==", ""),
             orderBy('playlistId', 'desc'),
             orderBy('createdAt', 'desc')
-        );
+        ];
+        
+        // Add published filter if specified
         if (filter === FILTERS.PUBLISHED) {
-            baseQuery = query(baseQuery, where('isPublished', '==', true));
+            queryConditions.push(where('isPublished', '==', true));
         } else if (filter === FILTERS.UNPUBLISHED) {
-            baseQuery = query(baseQuery, where('isPublished', '==', false));
+            queryConditions.push(where('isPublished', '==', false));
         }
+        
+        const baseQuery = query(reactionsCollection, ...queryConditions);
         const querySnapshot = await getDocs(baseQuery);
         reactions = querySnapshot.docs.map((doc) => ({
             id: doc.id,
@@ -459,34 +465,72 @@ export const removeReactionFromQueue = async ({ queueSlug, reactionId, userId })
 };
 
 
-export const getUserPlaylists = async (userId) => {
+export const getUserPlaylists = async (userId, filter = FILTERS.ALL) => {
     let playlists = [];
     if (!userId) {
         return playlists;
     }
     try {
         const playlistsCollection = createCollection(db, COLLECTION_PLAYLISTS, 'getUserPlaylists');
-        const queryRef = query(
-            playlistsCollection,
+        
+        // Build query conditions - note: playlists don't have isPublished field
+        // A playlist is considered published if any reaction in it is published
+        const queryConditions = [
             where("reactorId", "==", userId),
             orderBy('createdAt', 'desc')
-        );
+        ];
+        
+        const queryRef = query(playlistsCollection, ...queryConditions);
         const querySnapshot = await getDocs(queryRef);
 
         // Use Promise.all to handle asynchronous fetching for each playlist
         playlists = await Promise.all(querySnapshot.docs.map(async (docSnapshot) => {
             const playlistData = docSnapshot.data();
             let firstReactionBinomeData = null;
+            let hasPublishedReaction = false;
 
             // Check if reactionBinomeIds exists and has at least one element
             if (playlistData.reactionBinomeIds && playlistData.reactionBinomeIds.length > 0) {
-                const firstReactionBinomeId = playlistData.reactionBinomeIds[0];
-                // Get a reference to the reaction binome document
-                const reactionBinomeRef = doc(db, COLLECTION_REACTION_BINOMES, firstReactionBinomeId);
-                const reactionBinomeSnap = await getDoc(reactionBinomeRef);
-                if (reactionBinomeSnap.exists()) {
-                    firstReactionBinomeData = reactionBinomeSnap.data();
+                // Firestore 'in' queries are limited to 10 items, so we batch if needed
+                const batchSize = 10;
+                const reactionIds = playlistData.reactionBinomeIds;
+                const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'getUserPlaylists_reactions');
+                
+                // Process reactions in batches of 10
+                for (let i = 0; i < reactionIds.length; i += batchSize) {
+                    const batchIds = reactionIds.slice(i, i + batchSize);
+                    const reactionsQuery = query(
+                        reactionsCollection,
+                        where('__name__', 'in', batchIds)
+                    );
+                    const reactionsSnapshot = await getDocs(reactionsQuery);
+                    
+                    reactionsSnapshot.docs.forEach(doc => {
+                        const reactionData = doc.data();
+                        if (!firstReactionBinomeData) {
+                            firstReactionBinomeData = reactionData;
+                        }
+                        if (reactionData.isPublished) {
+                            hasPublishedReaction = true;
+                        }
+                    });
+                    
+                    // Early exit optimization: if we found a published reaction and we're filtering for published,
+                    // and we already have display data, we can stop
+                    if (hasPublishedReaction && filter === FILTERS.PUBLISHED && firstReactionBinomeData) {
+                        break;
+                    }
                 }
+            }
+
+            // Apply filter based on whether playlist has published/unpublished reactions
+            // A playlist is "published" if it has at least one published reaction
+            // A playlist is "unpublished" if it has no published reactions
+            if (filter === FILTERS.PUBLISHED && !hasPublishedReaction) {
+                return null; // Exclude this playlist
+            }
+            if (filter === FILTERS.UNPUBLISHED && hasPublishedReaction) {
+                return null; // Exclude this playlist
             }
 
             // Return a new object that includes the playlist data and the first reaction binome data
@@ -497,7 +541,8 @@ export const getUserPlaylists = async (userId) => {
             };
         }));
 
-        return playlists;
+        // Filter out null entries
+        return playlists.filter(p => p !== null);
     } catch (error) {
         console.error('Error getting documents filtered by user: ', error);
     }

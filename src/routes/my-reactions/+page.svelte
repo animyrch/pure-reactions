@@ -1,25 +1,37 @@
 <script>
 	import { getUserReactions, getUserPlaylists } from '$lib/helpers/firebase';
     import ReactionsList from '$lib/components/ReactionsList.svelte';
+	import ReactionFilters from '$lib/components/Navigation/ReactionFilters.svelte';
 	import { handlePrivateRoute } from '$lib/helpers/routing';
     import { isLoggedIn } from '$lib/stores/user';
-	import { FILTERS } from '$lib/constants/filters';
+	import { FILTERS, TYPE_FILTERS } from '$lib/constants/filters';
+	import { page } from '$app/stores';
 
 	export let data;
     
 	let combinedItems = [];
-	let filter = 'all';
 	let isLoading = false;
+	
+	$: publishedFilter = $page.url.searchParams.get("published") || FILTERS.ALL;
+	$: typeFilter = $page.url.searchParams.get("type") || TYPE_FILTERS.ALL;
 
 	const loadReactions = async () => {
-		if (!isLoggedIn) {
+		if (!$isLoggedIn) {
 			return;
 		}
         isLoading = true;
         combinedItems = [];
         setTimeout(async () => {
-            const reactions = await getUserReactions(data.userId, filter); // Pass the filter to getUserReactions
-            const playlists = await getUserPlaylists(data.userId);
+			// Load data in parallel when both are needed
+			const loadReactionsPromise = (typeFilter === TYPE_FILTERS.ALL || typeFilter === TYPE_FILTERS.REACTIONS_ONLY)
+				? getUserReactions(data.userId, publishedFilter)
+				: Promise.resolve([]);
+			
+			const loadPlaylistsPromise = (typeFilter === TYPE_FILTERS.ALL || typeFilter === TYPE_FILTERS.PLAYLISTS_ONLY)
+				? getUserPlaylists(data.userId, publishedFilter)
+				: Promise.resolve([]);
+			
+			const [reactions, playlists] = await Promise.all([loadReactionsPromise, loadPlaylistsPromise]);
 			
 			// Transform playlists to match reaction structure
 			// Filter out playlists without required data to prevent broken rendering
@@ -44,22 +56,16 @@
         }, 100);
     }
 
-    $: loadReactions(), filter;
+    $: loadReactions(), publishedFilter, typeFilter;
 </script>
 
-{#if isLoading}
-	<span>Loading...</span>
-{:else}
-	{#if $isLoggedIn}
-		<div>
-			<div class="filter-container mb-4">
-				<select bind:value={filter}>
-					<option value={FILTERS.ALL}>All</option>
-					<option value={FILTERS.PUBLISHED}>Published</option>
-					<option value={FILTERS.UNPUBLISHED}>Unpublished</option>
-				</select>
-			</div>
+{#if $isLoggedIn}
+	<div>
+		<ReactionFilters />
+		{#if isLoading}
+			<ReactionsList reactions={[]} loading={true} />
+		{:else}
 			<ReactionsList reactions={combinedItems}/>
-		</div>
-	{:else}{handlePrivateRoute()}{/if}
-{/if}
+		{/if}
+	</div>
+{:else}{handlePrivateRoute()}{/if}
