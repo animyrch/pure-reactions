@@ -2965,6 +2965,27 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     performPostSaveRewind(referenceTime);
   };
 
+  const persistOverlayVisibilityTimelineMap = async (map: Map<string, { t: number; visible: boolean }>, referenceTime: number) => {
+    const normalizedTimeline = Array.from(map.values()).sort((a, b) => a.t - b.t);
+
+    await updateFirebaseDocument({
+      overlayVisibilityTimeline: normalizedTimeline.map((entry) => ({
+        t: Number(entry.t),
+        visible: typeof entry.visible === 'boolean' ? entry.visible : true
+      }))
+    });
+
+    if (typeof window !== 'undefined') {
+      (window as any).overlayVisibilityTimeline = normalizedTimeline;
+    }
+
+    updateState({
+      overlayVisibilityTimeline: normalizedTimeline
+    });
+
+    performPostSaveRewind(referenceTime);
+  };
+
   const createPlayerConfig = async ({ timeInReaction, targetTime, state: rawState }: CreatePlayerConfigParams) => {
     const snapshot = get(state);
     const sanitizedReactionTime = Number.isFinite(timeInReaction) ? Math.max(0, timeInReaction) : 0;
@@ -3050,6 +3071,37 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       await persistPlaybackTimelineMap(timelineMap, roundedReactionTime);
     } catch (error) {
       console.error('Failed to create playback rate config', error);
+      throw error;
+    }
+  };
+
+  const createOverlayVisibilityConfig = async ({ timeInReaction, visible }: { timeInReaction: number; visible: boolean }) => {
+    const snapshot = get(state);
+    const sanitizedReactionTime = Number.isFinite(timeInReaction) ? Math.max(0, timeInReaction) : 0;
+    const roundedReactionTime = roundReactionTime(sanitizedReactionTime);
+    const sanitizedVisible = typeof visible === 'boolean' ? visible : true;
+
+    const existingTimeline = Array.isArray(snapshot.overlayVisibilityTimeline) ? snapshot.overlayVisibilityTimeline : [];
+    const timelineMap = new Map<string, { t: number; visible: boolean }>();
+    
+    existingTimeline.forEach((entry) => {
+      if (entry && Number.isFinite(entry.t)) {
+        timelineMap.set(Number(entry.t).toFixed(3), {
+          t: Number(entry.t),
+          visible: typeof entry.visible === 'boolean' ? entry.visible : true
+        });
+      }
+    });
+
+    timelineMap.set(roundedReactionTime.toFixed(3), {
+      t: roundedReactionTime,
+      visible: sanitizedVisible
+    });
+
+    try {
+      await persistOverlayVisibilityTimelineMap(timelineMap, roundedReactionTime);
+    } catch (error) {
+      console.error('Failed to create overlay visibility config', error);
       throw error;
     }
   };
@@ -3328,6 +3380,89 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       await persistPlaybackTimelineMap(timelineMap, sanitizedReactionTime);
     } catch (error) {
       console.error('Failed to delete playback rate config', error);
+      throw error;
+    }
+  };
+
+  const updateOverlayVisibilityConfig = async ({
+    timeInReaction,
+    visible,
+    previousTimeInReaction
+  }: { timeInReaction: number; visible: boolean; previousTimeInReaction: number }) => {
+    const snapshot = get(state);
+    const existingTimeline = Array.isArray(snapshot.overlayVisibilityTimeline) ? snapshot.overlayVisibilityTimeline : [];
+    const timelineMap = new Map<string, { t: number; visible: boolean }>();
+    
+    existingTimeline.forEach((entry) => {
+      if (entry && Number.isFinite(entry.t)) {
+        timelineMap.set(Number(entry.t).toFixed(3), {
+          t: Number(entry.t),
+          visible: typeof entry.visible === 'boolean' ? entry.visible : true
+        });
+      }
+    });
+
+    const sanitizedReactionTime = Number.isFinite(timeInReaction) ? Math.max(0, timeInReaction) : 0;
+    const roundedReactionTime = roundReactionTime(sanitizedReactionTime);
+    const sanitizedPreviousTime =
+      typeof previousTimeInReaction === 'number' && Number.isFinite(previousTimeInReaction)
+        ? Math.max(0, previousTimeInReaction)
+        : sanitizedReactionTime;
+    const roundedPreviousTime = roundReactionTime(sanitizedPreviousTime);
+    const previousKey = roundedPreviousTime.toFixed(3);
+    const nextKey = roundedReactionTime.toFixed(3);
+
+    const currentEntry = timelineMap.get(previousKey);
+    if (!currentEntry) {
+      return;
+    }
+
+    const resolvedVisible = typeof visible === 'boolean' ? visible : (currentEntry?.visible ?? true);
+
+    if (nextKey !== previousKey) {
+      timelineMap.delete(previousKey);
+    }
+
+    timelineMap.set(nextKey, {
+      t: roundedReactionTime,
+      visible: resolvedVisible
+    });
+
+    try {
+      await persistOverlayVisibilityTimelineMap(timelineMap, roundedReactionTime);
+    } catch (error) {
+      console.error('Failed to update overlay visibility config', error);
+      throw error;
+    }
+  };
+
+  const deleteOverlayVisibilityConfig = async ({ timeInReaction }: { timeInReaction: number }) => {
+    const snapshot = get(state);
+    const existingTimeline = Array.isArray(snapshot.overlayVisibilityTimeline) ? snapshot.overlayVisibilityTimeline : [];
+    const timelineMap = new Map<string, { t: number; visible: boolean }>();
+    
+    existingTimeline.forEach((entry) => {
+      if (entry && Number.isFinite(entry.t)) {
+        timelineMap.set(Number(entry.t).toFixed(3), {
+          t: Number(entry.t),
+          visible: typeof entry.visible === 'boolean' ? entry.visible : true
+        });
+      }
+    });
+
+    const sanitizedReactionTime = Number.isFinite(timeInReaction) ? Math.max(0, timeInReaction) : 0;
+    const key = roundReactionTime(sanitizedReactionTime).toFixed(3);
+
+    if (!timelineMap.has(key)) {
+      return;
+    }
+
+    timelineMap.delete(key);
+
+    try {
+      await persistOverlayVisibilityTimelineMap(timelineMap, sanitizedReactionTime);
+    } catch (error) {
+      console.error('Failed to delete overlay visibility config', error);
       throw error;
     }
   };
@@ -3842,6 +3977,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       createVolumeConfig,
       createReactionVolumeConfig,
       createPlaybackRateConfig,
+      createOverlayVisibilityConfig,
       updatePlayerConfig,
       deletePlayerConfig,
       updateVolumeConfig,
@@ -3850,6 +3986,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       deleteReactionVolumeConfig,
       updatePlaybackRateConfig,
       deletePlaybackRateConfig,
+      updateOverlayVisibilityConfig,
+      deleteOverlayVisibilityConfig,
       setIsPublished,
       setIsUnpublished,
       openWithFullscreen,
