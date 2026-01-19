@@ -6,7 +6,8 @@ const FIXTURES = [
   'tests/fixtures/reactions/twin-basic-sync.json',
   'tests/fixtures/reactions/twin-play-trigger.json',
   'tests/fixtures/reactions/twin-volume-stability.json',
-  'tests/fixtures/reactions/twin-resume-after-config-pause.json'
+  'tests/fixtures/reactions/twin-resume-after-config-pause.json',
+  'tests/fixtures/reactions/twin-overlay-visibility.json'
 ];
 
 function stripFixtureArgs(argv) {

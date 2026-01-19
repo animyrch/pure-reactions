@@ -97,6 +97,18 @@ export const getCurrentPlaybackRateFromConfigs = (currentTime, playbackConfigsOr
         : DEFAULT_PLAYBACK_RATE;
 };
 
+export const getCurrentOverlayVisibilityFromConfigs = (currentTime, overlayVisibilityTimeline, timeOffset = 0) => {
+    const DEFAULT_VISIBILITY = true;
+    const effectiveTime = Number(currentTime) - Number(timeOffset || 0);
+
+    if (!Array.isArray(overlayVisibilityTimeline) || overlayVisibilityTimeline.length === 0) {
+        return DEFAULT_VISIBILITY;
+    }
+
+    const ev = findLastEventAtOrBefore(overlayVisibilityTimeline, effectiveTime);
+    return ev && typeof ev.visible === 'boolean' ? ev.visible : DEFAULT_VISIBILITY;
+};
+
 export const getCompensatedReactionTime = (startTime, playlistBufferTime = 0) => {
     const currentTime = new Date().getTime();
     const reactionSeconds = (currentTime - startTime) / 1000; // Convert to seconds

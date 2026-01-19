@@ -75,3 +75,19 @@ export const playbackTimelineArrayToMap = (timeline: any[] = []) => {
   }
   return map;
 };
+
+export const overlayVisibilityTimelineArrayToMap = (timeline: any[] = []) => {
+  const map = new Map<string, { t: number; visible: boolean }>();
+  for (const entry of timeline) {
+    if (!entry) continue;
+    const rawReactionTime = Number(entry?.t);
+    if (!Number.isFinite(rawReactionTime)) continue;
+    const roundedReactionTime = roundReactionTime(Math.max(0, rawReactionTime));
+    const visible = entry?.visible !== false;
+    map.set(roundedReactionTime.toFixed(3), {
+      t: roundedReactionTime,
+      visible
+    });
+  }
+  return map;
+};

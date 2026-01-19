@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "description": "Twin-player fixture: Overlay Visibility test",
+  "docs": [
+    {
+      "id": "testOverlayVisibility123",
+      "data": {
+        "isPublished": false,
+        "offsetStartTime": 0,
+        "originalVideoAuthor": "@the_animaniace",
+        "originalVideoId": "8-3PahRtgF4",
+        "originalVideoTitle": "Test video for overlay visibility",
+        "playbackTimeline": [
+          {
+            "rate": 1,
+            "t": 0
+          }
+        ],
+        "playlistId": "",
+        "reactionVideoAuthor": "@the_animaniace",
+        "reactionVideoId": "8-3PahRtgF4",
+        "reactionVideoTitle": "Test reaction video",
+        "reactionVolumeTimeline": [],
+        "reactorId": "jOH8zi59HPWyoyywMQVygllqSUz2",
+        "stateTimeline": [
+          {
+            "state": 1,
+            "t": 0,
+            "targetTime": 0
+          }
+        ],
+        "volumeTimeline": [],
+        "overlayVisibilityTimeline": [
+          {
+            "t": 0,
+            "visible": true
+          },
+          {
+            "t": 3,
+            "visible": false
+          },
+          {
+            "t": 6,
+            "visible": true
+          }
+        ],
+        "youtubePlaylistId": "",
+        "updatedAt": "2026-01-18T19:00:00Z"
+      }
+    }
+  ]
+}

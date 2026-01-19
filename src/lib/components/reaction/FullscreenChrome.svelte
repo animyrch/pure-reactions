@@ -6,6 +6,7 @@
   export let fullscreenPrimaryVideo = "original";
   export let fullscreenOverlayWidthPercent = 35;
   export let fullscreenOverlayCorner = "top-right";
+  export let fullscreenOverlayVisible = true;
   export let onExitClick = () => {};
   export let onExitEnter = () => {};
   export let onExitLeave = () => {};
@@ -98,7 +99,7 @@
     data-stage="original"
     data-stage-role={isOriginalOverlay ? "overlay" : "primary"}
     class={isOriginalOverlay
-      ? `pointer-events-auto absolute ${overlayCornerClass} z-50`
+      ? `pointer-events-auto absolute ${overlayCornerClass} z-50 transition-opacity duration-300 ease-cinematic ${fullscreenOverlayVisible ? "opacity-100" : "opacity-0 pointer-events-none"}`
       : "absolute inset-0"}
     style={isOriginalOverlay ? `width: ${normalizedOverlayWidth}%;` : ""}
   >
@@ -125,7 +126,7 @@
       data-stage="reaction"
       data-stage-role={isReactionOverlay ? "overlay" : "primary"}
       class={isReactionOverlay
-        ? `pointer-events-auto absolute ${overlayCornerClass} z-50`
+        ? `pointer-events-auto absolute ${overlayCornerClass} z-50 transition-opacity duration-300 ease-cinematic ${fullscreenOverlayVisible ? "opacity-100" : "opacity-0 pointer-events-none"}`
         : "absolute inset-0"}
       style={isReactionOverlay ? `width: ${normalizedOverlayWidth}%;` : ""}
     >

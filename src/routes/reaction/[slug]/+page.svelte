@@ -210,6 +210,7 @@
     fullscreenPrimaryVideo={$state.fullscreenPrimaryVideo}
     fullscreenOverlayWidthPercent={$state.fullscreenOverlayWidthPercent}
     fullscreenOverlayCorner={$state.fullscreenOverlayCorner}
+    fullscreenOverlayVisible={$state.fullscreenOverlayVisible}
     missingReactionLoading={isSettingReactionVideoId}
     missingReactionError={reactionVideoIdError}
     bind:overlayRef

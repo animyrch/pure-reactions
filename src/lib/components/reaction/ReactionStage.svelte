@@ -24,6 +24,7 @@
     export let fullscreenPrimaryVideo = "original";
     export let fullscreenOverlayWidthPercent = 35;
     export let fullscreenOverlayCorner = "top-right";
+    export let fullscreenOverlayVisible = true;
 
     export let alwaysShowMissingPlaceholder = false;
 
@@ -81,6 +82,11 @@
             : "opacity-0 pointer-events-none"
         : stickyControlsClass;
 
+    // Overlay visibility control applies in both fullscreen and mobile landscape
+    $: effectiveOverlayClass = isOverlayLayout && !fullscreenOverlayVisible
+        ? "opacity-0 pointer-events-none"
+        : "opacity-100 pointer-events-auto";
+
     const handleExitClick = () => dispatch("exitClick");
     const handleExitEnter = () => dispatch("exitEnter");
     const handleExitLeave = () => dispatch("exitLeave");
@@ -136,6 +142,10 @@
     $: isReactionOverlay = isOverlayLayout && !isReactionPrimary;
 
     onMount(() => {
+        console.log('ReactionStage mounted');
+        console.log('Initial isMobileLandscape:', isMobileLandscape);
+        console.log('Initial fullscreenOverlayVisible:', fullscreenOverlayVisible);
+
         // Match CSS: @media (orientation: landscape) and (max-width: 1023px), (orientation: landscape) and (max-height: 600px)
         landscapeMediaQuery = window.matchMedia(
             "(orientation: landscape) and (max-width: 1023px), (orientation: landscape) and (max-height: 600px)",
@@ -158,6 +168,10 @@
         }
         if (controlsTimeout) clearTimeout(controlsTimeout);
     });
+
+    $: console.log('Updated isMobileLandscape:', isMobileLandscape);
+    $: console.log('Updated fullscreenOverlayVisible:', fullscreenOverlayVisible);
+    $: console.log('Updated controlsVisible:', controlsVisible);
 </script>
 
 <div
@@ -245,7 +259,7 @@
                 : "grid"}
             class={isOverlayLayout
                 ? isOriginalOverlay
-                    ? `pointer-events-auto absolute ${overlayCornerClass} z-50`
+                    ? `pointer-events-auto absolute ${overlayCornerClass} z-50 transition-opacity duration-300 ease-cinematic ${effectiveOverlayClass}`
                     : "absolute inset-0"
                 : "relative overflow-hidden bg-black shadow-elevated rounded-none md:rounded-xl"}
             style={isOriginalOverlay ? "width: var(--overlay-width);" : ""}
@@ -291,7 +305,7 @@
                     : "grid"}
                 class={isOverlayLayout
                     ? isReactionOverlay
-                        ? `pointer-events-auto absolute ${overlayCornerClass} z-50`
+                        ? `pointer-events-auto absolute ${overlayCornerClass} z-50 transition-opacity duration-300 ease-cinematic ${effectiveOverlayClass}`
                         : "absolute inset-0"
                     : "relative overflow-hidden bg-black/80 shadow-surface w-[80vw] h-[45vw] mx-auto mt-4 rounded-lg md:w-auto md:h-auto md:mt-0 md:mx-0 md:rounded-xl md:aspect-[16/9]"}
                 style={isReactionOverlay ? "width: var(--overlay-width);" : ""}
