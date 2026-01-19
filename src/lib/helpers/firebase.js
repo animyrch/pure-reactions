@@ -491,23 +491,38 @@ export const getUserPlaylists = async (userId, filter = FILTERS.ALL) => {
 
             // Check if reactionBinomeIds exists and has at least one element
             if (playlistData.reactionBinomeIds && playlistData.reactionBinomeIds.length > 0) {
-                // Fetch all reactions in the playlist to determine published status
-                const reactionPromises = playlistData.reactionBinomeIds.map(async (reactionId) => {
-                    const reactionRef = doc(db, COLLECTION_REACTION_BINOMES, reactionId);
-                    const reactionSnap = await getDoc(reactionRef);
-                    if (reactionSnap.exists()) {
-                        const reactionData = reactionSnap.data();
+                // Firestore 'in' queries are limited to 10 items, so we batch if needed
+                const batchSize = 10;
+                const reactionIds = playlistData.reactionBinomeIds;
+                
+                // Process reactions in batches of 10
+                for (let i = 0; i < reactionIds.length; i += batchSize) {
+                    const batchIds = reactionIds.slice(i, i + batchSize);
+                    const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'getUserPlaylists_reactions');
+                    const reactionsQuery = query(
+                        reactionsCollection,
+                        where('__name__', 'in', batchIds)
+                    );
+                    const reactionsSnapshot = await getDocs(reactionsQuery);
+                    
+                    reactionsSnapshot.docs.forEach(doc => {
+                        const reactionData = doc.data();
+                        if (!firstReactionBinomeData) {
+                            firstReactionBinomeData = reactionData;
+                        }
                         if (reactionData.isPublished) {
                             hasPublishedReaction = true;
                         }
-                        return reactionData;
+                    });
+                    
+                    // Early exit if we've found what we need for filtering
+                    if (hasPublishedReaction && filter === FILTERS.PUBLISHED) {
+                        break;
                     }
-                    return null;
-                });
-                
-                const allReactions = await Promise.all(reactionPromises);
-                // Use first valid reaction for display
-                firstReactionBinomeData = allReactions.find(r => r !== null);
+                    if (!hasPublishedReaction && i + batchSize >= reactionIds.length && filter === FILTERS.UNPUBLISHED) {
+                        break;
+                    }
+                }
             }
 
             // Apply filter based on whether playlist has published/unpublished reactions
