@@ -1626,11 +1626,12 @@
                       >{marker.label} at {marker.timeLabel}</span
                     >
                     {#if marker.icon}
-                      <svelte:component
-                        this={marker.icon}
-                        class="h-4 w-4 hover:h-5 hover:w-5 hover:z-30 transition-transform"
-                        aria-hidden="true"
-                      />
+                      <span class="pointer-events-none" aria-hidden="true">
+                        <svelte:component
+                          this={marker.icon}
+                          class="h-4 w-4 hover:h-5 hover:w-5 hover:z-30 transition-transform"
+                        />
+                      </span>
                     {:else}
                       <span aria-hidden="true">{marker.displayValue}</span>
                     {/if}
