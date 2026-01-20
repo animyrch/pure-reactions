@@ -120,10 +120,6 @@
               Copyright
             </a>
             <span class="text-border-strong" aria-hidden="true">·</span>
-            <a href="/insights/synchronized-content-legality" class="text-text-muted transition-colors hover:text-text-secondary">
-              Fair Use
-            </a>
-            <span class="text-border-strong" aria-hidden="true">·</span>
             <a href="/terms" class="text-text-muted transition-colors hover:text-text-secondary">
               Terms
             </a>
