@@ -5,6 +5,7 @@
 
   let lastScrollY = 0;
   let isHidden = false;
+  let showMenu = false;
 
   const handleScroll = () => {
     const currentY = window.scrollY;
@@ -25,6 +26,10 @@
   const goReact = () => {
     goToRoute('/react');
   };
+
+  const toggleMenu = () => {
+    showMenu = !showMenu;
+  };
 </script>
 
 <header class={`nav-shell fixed inset-x-0 top-0 z-40 transition-transform duration-500 ease-cinematic ${isHidden ? '-translate-y-full' : 'translate-y-0'}`}>
@@ -38,14 +43,77 @@
         <PurePureactionsLogo />
       </div>
     </a>
-    <button
-      type="button"
-      class="react-cta rounded-full border border-border-strong px-md py-xs text-sm font-medium text-text-primary transition duration-subtle ease-cinematic hover:bg-border-strong/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-      on:click={goReact}
-    >
-      React
-    </button>
+    
+    <!-- Desktop Navigation Links -->
+    <div class="hidden items-center gap-6 md:flex">
+      <a 
+        href="/how-it-works" 
+        class="text-sm font-medium text-text-secondary transition-colors hover:text-text-primary"
+      >
+        How It Works
+      </a>
+      <a 
+        href="/insights" 
+        class="text-sm font-medium text-text-secondary transition-colors hover:text-text-primary"
+      >
+        Insights
+      </a>
+      <button
+        type="button"
+        class="react-cta rounded-full border border-border-strong px-md py-xs text-sm font-medium text-text-primary transition duration-subtle ease-cinematic hover:bg-border-strong/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        on:click={goReact}
+      >
+        React
+      </button>
+    </div>
+
+    <!-- Mobile Menu Button and React CTA -->
+    <div class="flex items-center gap-3 md:hidden">
+      <button
+        type="button"
+        class="text-text-secondary hover:text-text-primary transition-colors p-2"
+        on:click={toggleMenu}
+        aria-label="Toggle menu"
+      >
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          {#if showMenu}
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          {:else}
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          {/if}
+        </svg>
+      </button>
+      <button
+        type="button"
+        class="react-cta rounded-full border border-border-strong px-md py-xs text-sm font-medium text-text-primary transition duration-subtle ease-cinematic hover:bg-border-strong/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        on:click={goReact}
+      >
+        React
+      </button>
+    </div>
   </nav>
+
+  <!-- Mobile Menu -->
+  {#if showMenu}
+    <div class="mobile-menu border-t border-border-subtle bg-surface px-4 py-4 md:hidden">
+      <div class="flex flex-col gap-3">
+        <a 
+          href="/how-it-works" 
+          class="rounded-lg px-4 py-2.5 text-sm font-medium text-text-secondary transition-colors hover:bg-elevated hover:text-text-primary"
+          on:click={() => showMenu = false}
+        >
+          How It Works
+        </a>
+        <a 
+          href="/insights" 
+          class="rounded-lg px-4 py-2.5 text-sm font-medium text-text-secondary transition-colors hover:bg-elevated hover:text-text-primary"
+          on:click={() => showMenu = false}
+        >
+          Insights
+        </a>
+      </div>
+    </div>
+  {/if}
 </header>
 
 <style>

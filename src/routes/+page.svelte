@@ -4,6 +4,7 @@
 	import { getReactionsByPage } from "$lib/helpers/firebase";
 	import ReactionsList from "$lib/components/ReactionsList.svelte";
 	import ReactionsSorting from "$lib/components/Navigation/ReactionsSorting.svelte";
+	import SEO from "$lib/components/SEO.svelte";
 	import { page } from "$app/stores";
 	import { SORTINGS } from "$lib/constants/sortings";
 	import { userExtraDataStore } from "$lib/stores/userExtraData";
@@ -82,6 +83,42 @@
 	}
 </script>
 
+<SEO 
+	title="Pure Reactions - Fair-Use-Free Reaction Videos"
+	description="Create and share reaction videos without copyright anxiety. PureReactions structurally separates original content from reactions, making your videos legally unclaimable."
+	canonical="/"
+	keywords="reaction videos, copyright free reactions, fair use free, youtube reactions, create reactions, unclaimable reactions"
+/>
+
+<!-- Value Proposition Banner -->
+{#if $page.route.id === "/"}
+	<div class="value-banner mx-auto max-w-5xl px-4 py-8 md:py-12">
+		<div class="rounded-lg border border-accent-primary/30 bg-gradient-to-r from-accent-primary/5 to-accent-secondary/5 p-6 md:p-8">
+			<h2 class="mb-3 text-2xl font-bold text-text-primary md:text-3xl">
+				React to <span class="text-accent-primary">Anything</span>. No Copyright Claims. Ever.
+			</h2>
+			<p class="mb-4 text-text-secondary md:text-lg">
+				PureReactions records only YOUR reaction—never the original content. Your videos can't be claimed because they don't contain copyrighted material.
+			</p>
+			<div class="flex flex-wrap gap-4">
+				<a 
+					href="/how-it-works" 
+					class="inline-flex items-center gap-2 rounded-lg border border-accent-primary px-5 py-2.5 font-medium text-accent-primary transition-colors hover:bg-accent-primary/10"
+				>
+					How It Works
+					<span aria-hidden="true">→</span>
+				</a>
+				<a 
+					href="/react" 
+					class="inline-flex items-center gap-2 rounded-lg bg-accent-primary px-5 py-2.5 font-medium text-background transition-colors hover:bg-accent-primary/90"
+				>
+					Start Reacting
+				</a>
+			</div>
+		</div>
+	</div>
+{/if}
+
 <div>
 	{#if $page.route.id === "/"}
 		<ReactionsSorting />
@@ -93,3 +130,9 @@
 	{/if}
 	<div class="load-more" bind:this={sentinel} aria-hidden="true"></div>
 </div>
+
+<style>
+	.value-banner {
+		padding-top: calc(72px + 1rem); /* Account for fixed nav */
+	}
+</style>
