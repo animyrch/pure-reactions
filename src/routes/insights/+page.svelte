@@ -3,10 +3,10 @@
 </script>
 
 <SEO 
-  title="Insights - Reaction Video Architecture & Creator Freedom"
-  description="Deep dives into how PureReactions eliminates copyright anxiety, enables safe monetization, and gives creators complete freedom to react to any content."
+  title="Insights - Synchronized Video Architecture & Creative Freedom"
+  description="Deep dives into how synchronized twin-player architecture eliminates copyright anxiety, enables safe monetization, and gives creators complete freedom for any synchronized content."
   canonical="/insights"
-  keywords="reaction video insights, copyright free reactions, creator monetization, fair use reactions, youtube reaction legal"
+  keywords="synchronized video insights, copyright free video sync, creator monetization, twin player architecture"
 />
 
 <div class="container mx-auto max-w-5xl px-4 py-12 md:py-20">
@@ -16,26 +16,26 @@
       Insights
     </h1>
     <p class="mx-auto max-w-2xl text-lg text-text-secondary md:text-xl">
-      Understanding the architecture, legality, and business model behind fair-use-free reaction videos.
+      Understanding the architecture, legality, and business model behind synchronized twin-player content.
     </p>
   </div>
 
   <!-- Insights Grid -->
   <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
     
-    <!-- Insight 1: Why Pure Reactions Can't Be Claimed -->
+    <!-- Insight 1: Why Synced Content Can't Be Claimed -->
     <a 
-      href="/insights/why-pure-reactions-cant-be-claimed"
+      href="/insights/why-synced-content-cant-be-claimed"
       class="group rounded-lg border border-border-strong bg-elevated p-6 transition-all duration-subtle hover:border-accent-primary/50 hover:bg-surface"
     >
       <div class="mb-4 inline-flex rounded-md bg-accent-primary/20 px-3 py-1 text-xs font-medium text-accent-primary">
         Architecture
       </div>
       <h2 class="mb-3 text-xl font-semibold text-text-primary group-hover:text-accent-primary transition-colors">
-        Why Pure Reactions Can't Be Claimed
+        Why Synced Content Can't Be Claimed
       </h2>
       <p class="mb-4 text-text-secondary">
-        The technical and legal explanation of why structurally separated reactions are unclaimable by Content ID and copyright holders.
+        The technical and legal explanation of why structurally separated content is unclaimable by Content ID and copyright holders.
       </p>
       <span class="inline-flex items-center gap-2 text-sm text-accent-primary">
         Read article
@@ -55,7 +55,7 @@
         Monetization Safety Guide
       </h2>
       <p class="mb-4 text-text-secondary">
-        How to safely monetize your reactions without revenue sharing or legal complexity. Your content, your income.
+        How to safely monetize your synchronized content without revenue sharing or legal complexity. Your content, your income.
       </p>
       <span class="inline-flex items-center gap-2 text-sm text-accent-primary">
         Read article
@@ -63,19 +63,19 @@
       </span>
     </a>
 
-    <!-- Insight 3: Reaction Video Legality -->
+    <!-- Insight 3: Synchronized Content Legality -->
     <a 
-      href="/insights/reaction-video-legality"
+      href="/insights/synchronized-content-legality"
       class="group rounded-lg border border-border-strong bg-elevated p-6 transition-all duration-subtle hover:border-accent-primary/50 hover:bg-surface"
     >
       <div class="mb-4 inline-flex rounded-md bg-warning/20 px-3 py-1 text-xs font-medium text-warning">
         Legal
       </div>
       <h2 class="mb-3 text-xl font-semibold text-text-primary group-hover:text-accent-primary transition-colors">
-        Reaction Video Legality
+        Synchronized Content Legality
       </h2>
       <p class="mb-4 text-text-secondary">
-        Understanding the legal framework of reaction videos, fair use doctrine, and why separation eliminates the complexity.
+        Understanding the legal framework of synchronized video content, fair use doctrine, and why separation eliminates the complexity.
       </p>
       <span class="inline-flex items-center gap-2 text-sm text-accent-primary">
         Read article
@@ -91,7 +91,7 @@
       See It in Action
     </h3>
     <p class="mb-6 text-text-secondary">
-      Experience the architecture firsthand and understand why creators love PureReactions.
+      Experience the synchronized twin-player architecture firsthand and understand why creators love PureReactions.
     </p>
     <a 
       href="/how-it-works" 

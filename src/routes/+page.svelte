@@ -84,10 +84,10 @@
 </script>
 
 <SEO 
-	title="Pure Reactions - Fair-Use-Free Reaction Videos"
-	description="Create and share reaction videos without copyright anxiety. PureReactions structurally separates original content from reactions, making your videos legally unclaimable."
+	title="Pure Reactions - Synchronized Twin-Player Viewing"
+	description="Watch synchronized content with perfect timing. Reactions, translations, voiceovers, commentary—all synced with original videos. No copyright claims, pure creative freedom."
 	canonical="/"
-	keywords="reaction videos, copyright free reactions, fair use free, youtube reactions, create reactions, unclaimable reactions"
+	keywords="synchronized video player, twin player, reaction videos, video translations, voiceover sync, copyright free, fair use free"
 />
 
 <!-- Value Proposition Banner -->
@@ -95,10 +95,10 @@
 	<div class="value-banner mx-auto max-w-5xl px-4 py-8 md:py-12">
 		<div class="rounded-lg border border-accent-primary/30 bg-gradient-to-r from-accent-primary/5 to-accent-secondary/5 p-6 md:p-8">
 			<h2 class="mb-3 text-2xl font-bold text-text-primary md:text-3xl">
-				React to <span class="text-accent-primary">Anything</span>. No Copyright Claims. Ever.
+				Watch Synchronized Content. <span class="text-accent-primary">No Limits.</span> No Claims.
 			</h2>
 			<p class="mb-4 text-text-secondary md:text-lg">
-				PureReactions records only YOUR reaction—never the original content. Your videos can't be claimed because they don't contain copyrighted material.
+				Experience reactions, translations, voiceovers, and commentary perfectly synchronized with original videos. Two streams, perfect timing, zero copyright risk.
 			</p>
 			<div class="flex flex-wrap gap-4">
 				<a 
@@ -112,7 +112,7 @@
 					href="/react" 
 					class="inline-flex items-center gap-2 rounded-lg bg-accent-primary px-5 py-2.5 font-medium text-background transition-colors hover:bg-accent-primary/90"
 				>
-					Start Reacting
+					Create Synced Content
 				</a>
 			</div>
 		</div>
