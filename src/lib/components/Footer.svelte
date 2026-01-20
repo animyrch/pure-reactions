@@ -135,7 +135,7 @@
           
           <!-- Copyright Row -->
           <p class="text-center text-sm text-text-muted">
-            &copy; {new Date().getFullYear()} Pure Reactions
+            &copy; 2023 - {new Date().getFullYear()} Pure Reactions
           </p>
         </div>
       </div>
