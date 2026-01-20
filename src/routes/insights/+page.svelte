@@ -91,7 +91,8 @@
       See It in Action
     </h3>
     <p class="mb-6 text-text-secondary">
-      Experience the synchronized twin-player architecture firsthand and understand why creators love PureReactions.
+      Experience the synchronized twin-player architecture firsthand
+       <!-- and understand why creators love PureReactions. -->
     </p>
     <a 
       href="/how-it-works" 

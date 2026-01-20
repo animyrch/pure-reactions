@@ -227,7 +227,8 @@
       Experience It Yourself
     </h3>
     <p class="mb-6 text-text-secondary">
-      Create your first synchronized content and see why thousands trust PureReactions.
+      Create your first synchronized content
+      <!-- and see why thousands trust PureReactions. -->
     </p>
     <CinematicButton 
       variant="primary" 
