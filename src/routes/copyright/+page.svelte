@@ -66,7 +66,7 @@
         <li>Contact information and proof of authorization</li>
       </ul>
       <p class="mt-4">
-        <strong class="text-text-primary">Contact:</strong> <a href="mailto:copyright@purereactions.com" class="text-accent-primary hover:text-accent-primary/80 transition-colors">copyright@purereactions.com</a>
+        <strong class="text-text-primary">Contact:</strong> <a href="mailto:purereactions.app+copyright@gmail.com" class="text-accent-primary hover:text-accent-primary/80 transition-colors">purereactions.app+copyright@gmail.com</a>
       </p>
       <p class="mt-4">
         Requests will be reviewed and handled in accordance with applicable laws and platform policies.

@@ -70,7 +70,7 @@
         The platform is designed to avoid reproducing or hosting third-party content, but Pure Reactions cannot guarantee that all content complies with applicable laws.
       </p>
       <p>
-        If you believe your rights have been infringed, please contact <a href="mailto:copyright@purereactions.com" class="text-accent-primary hover:text-accent-primary/80 transition-colors">copyright@purereactions.com</a>.
+        If you believe your rights have been infringed, please contact <a href="mailto:purereactions.app+copyright@gmail.com" class="text-accent-primary hover:text-accent-primary/80 transition-colors">purereactions.app+copyright@gmail.com</a>.
       </p>
     </section>
 
@@ -143,7 +143,7 @@
       <h2 class="mb-4 text-2xl font-semibold text-text-primary">Contact</h2>
       <p>
         For questions about these Terms or the platform:<br>
-        Email: <a href="mailto:support@purereactions.com" class="text-accent-primary hover:text-accent-primary/80 transition-colors">support@purereactions.com</a>
+        Email: <a href="mailto:purereactions.app+support@gmail.com" class="text-accent-primary hover:text-accent-primary/80 transition-colors">purereactions.app+support@gmail.com</a>
       </p>
     </section>
   </div>

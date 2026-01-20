@@ -97,7 +97,7 @@
         <li>Request export of your personal data in a machine-readable format</li>
       </ul>
       <p class="mt-4">
-        To exercise these rights, contact us at <a href="mailto:privacy@purereactions.com" class="text-accent-primary hover:text-accent-primary/80 transition-colors">privacy@purereactions.com</a>.
+        To exercise these rights, contact us at <a href="mailto:purereactions.app+privacy@gmail.com" class="text-accent-primary hover:text-accent-primary/80 transition-colors">purereactions.app+privacy@gmail.com</a>.
       </p>
     </section>
 
@@ -153,7 +153,7 @@
       <h2 class="mb-4 text-2xl font-semibold text-text-primary">Contact</h2>
       <p>
         For questions or concerns regarding your privacy or this policy:<br>
-        Email: <a href="mailto:privacy@purereactions.com" class="text-accent-primary hover:text-accent-primary/80 transition-colors">privacy@purereactions.com</a>
+        Email: <a href="mailto:purereactions.app+privacy@gmail.com" class="text-accent-primary hover:text-accent-primary/80 transition-colors">purereactions.app+privacy@gmail.com</a>
       </p>
     </section>
   </div>
