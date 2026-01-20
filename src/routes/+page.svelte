@@ -4,6 +4,7 @@
 	import { getReactionsByPage } from "$lib/helpers/firebase";
 	import ReactionsList from "$lib/components/ReactionsList.svelte";
 	import ReactionsSorting from "$lib/components/Navigation/ReactionsSorting.svelte";
+	import SEO from "$lib/components/SEO.svelte";
 	import { page } from "$app/stores";
 	import { SORTINGS } from "$lib/constants/sortings";
 	import { userExtraDataStore } from "$lib/stores/userExtraData";
@@ -82,6 +83,13 @@
 	}
 </script>
 
+<SEO
+	title="Pure Reactions - Synchronized Twin-Player Viewing"
+	description="Watch synchronized content with perfect timing. Reactions, translations, voiceovers, commentary—all synced with original videos. No copyright claims, pure creative freedom."
+	canonical="/"
+	keywords="synchronized video player, twin player, reaction videos, video translations, voiceover sync, copyright free, fair use free"
+/>
+
 <div>
 	{#if $page.route.id === "/"}
 		<ReactionsSorting />
@@ -93,3 +101,6 @@
 	{/if}
 	<div class="load-more" bind:this={sentinel} aria-hidden="true"></div>
 </div>
+
+<style>
+</style>

@@ -8,6 +8,7 @@
   import { fade } from "svelte/transition";
   import TopNavigation from "$lib/components/Navigation/TopNavigation.svelte";
   import SpeedDialNavigation from "$lib/components/Navigation/SpeedDialNavigation.svelte";
+  import Footer from "$lib/components/Footer.svelte";
   import { reactionDial } from "$lib/stores/reactionDial";
   import { prefersReducedMotion } from "$lib/stores/motion";
   import GoogleAnalytics from "$lib/components/Analytics/GoogleAnalytics.svelte";
@@ -108,9 +109,7 @@
   <SpeedDialNavigation />
 {/if}
 
-<footer class="safe-padding-bottom">
-  <p>&copy; 2023 Pure Reactions</p>
-</footer>
+<Footer />
 
 <style>
   @import "../app.pcss";
