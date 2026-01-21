@@ -2,20 +2,22 @@
 
 /**
  * Algolia Indexing Script
- * 
+ *
  * Reindexes reactions from Firestore to Algolia.
  * Supports full reindex, incremental updates, and dry-run mode.
- * 
+ *
  * Usage:
- *   node scripts/algolia-index.mjs                    # Dry run
- *   node scripts/algolia-index.mjs --apply            # Apply changes
- *   node scripts/algolia-index.mjs --apply --clear    # Clear and reindex
- * 
+ *   node scripts/algolia-index.mjs                          # Dry run
+ *   node scripts/algolia-index.mjs --apply                  # Apply changes
+ *   node scripts/algolia-index.mjs --apply --clear          # Clear and reindex
+ *
  * Options:
  *   --apply         Actually push changes to Algolia (default: dry run)
  *   --clear         Clear existing index before reindexing
  *   --target        'emulator' or 'prod' (default: 'prod')
- *   --collection    Override collection name
+ *   --collection    Override Firestore collection name
+ *   --index, --indexName, --index-name
+ *                   Override Algolia index name (CLI takes precedence over PUBLIC_ALGOLIA_REACTIONS_INDEX)
  *   --batchSize     Records per batch (default: 1000)
  */
 
@@ -31,6 +33,7 @@ function parseArgs(argv) {
     clear: false,
     target: 'prod',
     collection: undefined,
+    indexName: undefined,
     batchSize: 1000
   };
 
@@ -56,6 +59,12 @@ function parseArgs(argv) {
 
     if (token === '--collection' && next) {
       args.collection = next;
+      i += 1;
+      continue;
+    }
+
+    if ((token === '--index' || token === '--indexName' || token === '--index-name') && next) {
+      args.indexName = next;
       i += 1;
       continue;
     }
@@ -169,7 +178,7 @@ async function indexReactions() {
   // Algolia config
   const appId = process.env.PUBLIC_ALGOLIA_APP_ID;
   const adminKey = process.env.ALGOLIA_ADMIN_KEY;
-  const indexName = process.env.PUBLIC_ALGOLIA_REACTIONS_INDEX;
+  const indexName = args.indexName || process.env.PUBLIC_ALGOLIA_REACTIONS_INDEX;
 
   if (!appId || !adminKey || !indexName) {
     throw new Error('Missing Algolia config: PUBLIC_ALGOLIA_APP_ID, ALGOLIA_ADMIN_KEY, PUBLIC_ALGOLIA_REACTIONS_INDEX');
