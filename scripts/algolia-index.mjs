@@ -288,7 +288,7 @@ async function indexReactions() {
     customRanking: [
       'desc(createdAt)'
     ],
-    // Typo tolerance
+    // Typo tolerance (Note: Algolia API uses these exact names, not camelCase)
     minWordSizefor1Typo: 4,
     minWordSizefor2Typos: 8,
     // Highlighting
