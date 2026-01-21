@@ -2,6 +2,9 @@
   import { onMount } from 'svelte';
   import { goToRoute } from '$lib/helpers/routing';
   import PurePureactionsLogo from '../PurePureactionsLogo.svelte';
+  import SearchContainer from '../Search/SearchContainer.svelte';
+  import SearchHit from '../Search/SearchHit.svelte';
+  import { ALGOLIA_REACTIONS_INDEX } from '$lib/constants/algolia';
 
   let lastScrollY = 0;
   let isHidden = false;
@@ -46,6 +49,9 @@
     
     <!-- Desktop Navigation Links -->
     <div class="hidden items-center gap-6 md:flex">
+      <SearchContainer 
+        indices={{ [ALGOLIA_REACTIONS_INDEX]: SearchHit }}
+      />
       <a 
         href="/how-it-works" 
         class="text-sm font-medium text-text-secondary transition-colors hover:text-text-primary"
@@ -69,6 +75,9 @@
 
     <!-- Mobile Menu Button and React CTA -->
     <div class="flex items-center gap-3 md:hidden">
+      <SearchContainer 
+        indices={{ [ALGOLIA_REACTIONS_INDEX]: SearchHit }}
+      />
       <button
         type="button"
         class="text-text-secondary hover:text-text-primary transition-colors p-2"
