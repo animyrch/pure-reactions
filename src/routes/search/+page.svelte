@@ -1,15 +1,11 @@
 <script>
-    import Search from '$lib/components/Search/SearchContainer.svelte';
-    import SearchHit from '$lib/components/Search/SearchHit.svelte';
-    import { ALGOLIA_REACTIONS_INDEX } from '$lib/constants/algolia';
+    import { onMount } from 'svelte';
+    import { goto } from '$app/navigation';
+
+    onMount(() => {
+        // Redirect away from the standalone search page — search lives in the header.
+        goto('/', { replaceState: true });
+    });
 </script>
 
-<div>
-    <section class="relative">
-        <Search
-            indices={{ [ALGOLIA_REACTIONS_INDEX]: SearchHit }}
-        />
-    </section>
-    <section class="results-section">
-    </section>
-</div>
+<div />

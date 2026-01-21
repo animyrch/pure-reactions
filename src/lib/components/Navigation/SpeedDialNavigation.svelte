@@ -36,7 +36,7 @@
       icon: ShareNodesSolid,
       onSelect: () => copyCurrentUrl(),
     },
-    { name: "Search", icon: SearchOutline, href: "/search" },
+    { name: "Search", icon: SearchOutline, onSelect: () => jumpToHeaderSearch() },
     { name: "My Account", icon: UserCircleSolid, href: "/account" },
     {
       name: "Reactors I Follow",
@@ -102,6 +102,18 @@
       closeDial(false);
     }
   };
+
+  function jumpToHeaderSearch() {
+    if (typeof window === 'undefined') return;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => {
+      const headerSearch = document.querySelector('header .search-trigger');
+      if (headerSearch) {
+        if (typeof headerSearch.click === 'function') headerSearch.click();
+        if (typeof headerSearch.focus === 'function') headerSearch.focus();
+      }
+    }, 350);
+  }
 
   function buildReactionOptions(state) {
     const itemList = [];

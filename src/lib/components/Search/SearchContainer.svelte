@@ -41,19 +41,23 @@
 
     onDestroy(() => {
         clearTimeout(debounceTimeout);
-        window.removeEventListener('keydown', handleGlobalKeydown);
+        if (typeof window !== 'undefined') {
+            window.removeEventListener('keydown', handleGlobalKeydown);
+        }
     });
 
-    $: if (overlayOpen) {
-        window.addEventListener('keydown', handleGlobalKeydown);
-        tick().then(() => {
-            searchInput?.focus();
-            if (query) {
-                scheduleSearch();
-            }
-        });
-    } else {
-        window.removeEventListener('keydown', handleGlobalKeydown);
+    $: if (typeof window !== 'undefined') {
+        if (overlayOpen) {
+            window.addEventListener('keydown', handleGlobalKeydown);
+            tick().then(() => {
+                searchInput?.focus();
+                if (query) {
+                    scheduleSearch();
+                }
+            });
+        } else {
+            window.removeEventListener('keydown', handleGlobalKeydown);
+        }
     }
 
     $: {
