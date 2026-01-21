@@ -45,7 +45,6 @@ The reactions index contains only essential, searchable fields to minimize cost:
 - `channelId` - Reactor's channel ID
 - `tags` - Array of tags for filtering
 - `slug` - URL-friendly identifier
-- `isPublic` - Visibility status
 - `createdAt` - Creation timestamp
 - `updatedAt` - Last update timestamp
 
@@ -56,6 +55,12 @@ To minimize index size and cost:
 - Playback configs
 - Thumbnails (derived from video IDs)
 - Long descriptions
+
+## Visibility policy
+
+- **Only published reactions are indexed.** The indexing scripts and reindexing workflows query Firestore for documents where `isPublished === true` and will not push draft or private reactions to Algolia. If a different visibility field appears in legacy data, update those documents to set `isPublished` accordingly.
+
+Add a short note in any reindexing run or automation that `isPublished` is the canonical field used to determine whether a reaction should be included in the index.
 
 ## Operations
 

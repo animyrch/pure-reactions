@@ -141,8 +141,7 @@ function reactionToAlgoliaRecord(docId, data) {
     createdAt: data.createdAt?.toMillis?.() || Date.now(),
     updatedAt: data.updatedAt?.toMillis?.() || Date.now(),
     
-    // Status/visibility
-    isPublic: data.isPublic !== false, // Default true
+    // Status/visibility handled by the Firestore query; not stored in Algolia
     
     // Slugs/IDs for linking
     slug: data.slug || docId,
@@ -205,10 +204,10 @@ async function indexReactions() {
   ensureAdminApp({ projectId, target });
   const db = admin.firestore();
 
-  // Fetch all reactions from Firestore
-  console.log('Fetching reactions from Firestore...');
-  const snapshot = await db.collection(collection).get();
-  console.log(`Found ${snapshot.size} reactions\n`);
+  // Fetch published reactions from Firestore (only index published content)
+  console.log('Fetching published reactions from Firestore...');
+  const snapshot = await db.collection(collection).where('isPublished', '==', true).get();
+  console.log(`Found ${snapshot.size} published reactions\n`);
 
   if (snapshot.empty) {
     console.log('⚠️  No reactions to index');
@@ -274,7 +273,6 @@ async function indexReactions() {
       'channelId',
       'tags',
       'slug',
-      'isPublic',
       'createdAt',
       'updatedAt'
     ],
@@ -282,7 +280,7 @@ async function indexReactions() {
     attributesForFaceting: [
       'searchable(channelName)',
       'searchable(tags)',
-      'isPublic'
+      
     ],
     // Custom ranking
     customRanking: [
