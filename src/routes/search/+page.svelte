@@ -15,6 +15,7 @@
     let loading = false;
     let results = [];
     let fallbackReactions = [];
+    let searchPerformed = false; // Track if a search has been submitted
 
     $: urlQuery = $page.url.searchParams.get('q') || '';
 
@@ -67,6 +68,7 @@
         if (!normalized || !isValidQuery(normalized)) {
             results = [];
             loading = false;
+            searchPerformed = false;
             return;
         }
 
@@ -76,6 +78,7 @@
         }
 
         loading = true;
+        searchPerformed = true; // Mark that a search has been performed
         try {
             const searchResult = await searchProvider.search(normalized, {
                 index: ALGOLIA_REACTIONS_INDEX
@@ -102,7 +105,7 @@
     }
 
     $: hasResults = results.length > 0;
-    $: showEmptyState = !loading && query && !hasResults;
+    $: showEmptyState = !loading && searchPerformed && !hasResults;
     $: showFallback = showEmptyState && fallbackReactions.length > 0;
 </script>
 
