@@ -23,6 +23,13 @@
     async function requestAccountDeletion() {
       isDeleting = true;
       try {
+        // Check if user is authenticated
+        if (!auth.currentUser) {
+          showToast('You must be logged in to delete your account', TOASTS.ERROR);
+          isDeleting = false;
+          return;
+        }
+
         const idToken = await auth.currentUser.getIdToken();
         
         const response = await fetch('/api/account/delete/request', {

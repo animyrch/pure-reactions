@@ -46,8 +46,7 @@ async function initializeFirebaseAdmin() {
 }
 
 async function deleteUserData(userId, adminDb) {
-	const { COLLECTION_REACTION_BINOMES, COLLECTION_USER_DATA } = await import('$lib/constants/firebase');
-	const { env } = await import('$env/dynamic/public');
+	const { COLLECTION_REACTION_BINOMES, COLLECTION_USER_DATA, COLLECTION_PLAYLISTS, COLLECTION_QUEUES } = await import('$lib/constants/firebase');
 	if (!adminDb) {
 		throw new Error('Firestore not initialized');
 	}
@@ -93,7 +92,7 @@ async function deleteUserData(userId, adminDb) {
 
 	// Delete playlists created by the user
 	const playlistsSnapshot = await adminDb
-		.collection(env.PUBLIC_FIREBASE_COLLECTION_PLAYLISTS || 'playlists')
+		.collection(COLLECTION_PLAYLISTS)
 		.where('reactorId', '==', userId)
 		.get();
 
@@ -104,7 +103,7 @@ async function deleteUserData(userId, adminDb) {
 
 	// Delete queues created by the user
 	const queuesSnapshot = await adminDb
-		.collection(env.PUBLIC_FIREBASE_COLLECTION_QUEUES || 'queues')
+		.collection(COLLECTION_QUEUES)
 		.where('reactorId', '==', userId)
 		.get();
 
@@ -156,12 +155,6 @@ export const POST = async ({ request }) => {
 
 		const userId = tokenData.userId;
 
-		// Mark token as used (before deletion to prevent re-use)
-		await adminDb.collection('deletionTokens').doc(token).update({
-			used: true,
-			usedAt: Date.now()
-		});
-
 		try {
 			// Delete all user data from Firestore
 			const deletionCount = await deleteUserData(userId, adminDb);
@@ -172,6 +165,12 @@ export const POST = async ({ request }) => {
 
 			// Delete the user's authentication record
 			await adminAuth.deleteUser(userId);
+
+			// Mark token as used (after successful deletion)
+			await adminDb.collection('deletionTokens').doc(token).update({
+				used: true,
+				usedAt: Date.now()
+			});
 
 			// Clean up the deletion token
 			await adminDb.collection('deletionTokens').doc(token).delete();
@@ -184,12 +183,9 @@ export const POST = async ({ request }) => {
 		} catch (deletionError) {
 			console.error('Error during account deletion:', deletionError);
 			
-			// If deletion fails, we should not mark the token as used
-			// But we already did, so log this critical error
-			console.error('CRITICAL: Token marked as used but deletion failed for user:', userId);
-			
+			// Token was not marked as used, so user can retry if needed
 			return json({ 
-				error: 'Failed to complete account deletion. Please contact support.' 
+				error: 'Failed to complete account deletion. Please try again or contact support.' 
 			}, { status: 500 });
 		}
 
