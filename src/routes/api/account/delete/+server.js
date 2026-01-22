@@ -5,6 +5,8 @@ let adminAuth = null;
 let adminDb = null;
 let adminInitialized = false;
 
+const RECENT_AUTH_THRESHOLD_SECONDS = 5 * 60;
+
 async function initializeFirebaseAdmin() {
 	if (adminInitialized) {
 		return { adminAuth, adminDb };
@@ -13,7 +15,7 @@ async function initializeFirebaseAdmin() {
 	try {
 		const { getAuth } = await import('firebase-admin/auth');
 		const { getFirestore } = await import('firebase-admin/firestore');
-		const { initializeApp, getApps, cert } = await import('firebase-admin');
+		const { initializeApp, getApps, cert } = await import('firebase-admin/app');
 		const { FIREBASE_CONFIG } = await import('$lib/constants/firebase');
 
 		let adminApp;
@@ -26,7 +28,7 @@ async function initializeFirebaseAdmin() {
 					projectId: FIREBASE_CONFIG.projectId
 				});
 			} else {
-				// For local development with emulator or GOOGLE_APPLICATION_CREDENTIALS
+				// For local development with emulator or FIREBASE_SERVICE_ACCOUNT
 				adminApp = initializeApp({
 					projectId: FIREBASE_CONFIG.projectId
 				});
@@ -46,7 +48,12 @@ async function initializeFirebaseAdmin() {
 }
 
 async function deleteUserData(userId, adminDb) {
-	const { COLLECTION_REACTION_BINOMES, COLLECTION_USER_DATA, COLLECTION_PLAYLISTS, COLLECTION_QUEUES } = await import('$lib/constants/firebase');
+	const {
+		COLLECTION_REACTION_BINOMES,
+		COLLECTION_USER_DATA,
+		COLLECTION_PLAYLISTS,
+		COLLECTION_QUEUES
+	} = await import('$lib/constants/firebase');
 	if (!adminDb) {
 		throw new Error('Firestore not initialized');
 	}
@@ -123,37 +130,38 @@ export const POST = async ({ request }) => {
 		// Initialize Firebase Admin (lazy)
 		const { adminAuth, adminDb } = await initializeFirebaseAdmin();
 
-		const { token } = await request.json();
-
-		if (!token) {
-			return json({ error: 'Token is required' }, { status: 400 });
+		// Get the Firebase ID token from the Authorization header
+		const authHeader = request.headers.get('Authorization');
+		if (!authHeader || !authHeader.startsWith('Bearer ')) {
+			return json({ error: 'Unauthorized' }, { status: 401 });
 		}
+
+		const idToken = authHeader.split('Bearer ')[1];
 
 		if (!adminAuth || !adminDb) {
 			console.error('Firebase Admin not initialized');
 			return json({ error: 'Server configuration error' }, { status: 500 });
 		}
 
-		// Validate the token
-		const tokenDoc = await adminDb.collection('deletionTokens').doc(token).get();
-
-		if (!tokenDoc.exists) {
-			return json({ error: 'Invalid or expired token' }, { status: 400 });
+		// Verify the token and get user ID from auth context
+		let decodedToken;
+		try {
+			decodedToken = await adminAuth.verifyIdToken(idToken);
+		} catch (error) {
+			console.error('Token verification failed:', error);
+			return json({ error: 'Invalid token' }, { status: 401 });
 		}
 
-		const tokenData = tokenDoc.data();
-
-		// Check if token has been used
-		if (tokenData.used) {
-			return json({ error: 'This confirmation link has already been used' }, { status: 400 });
+		const nowSeconds = Math.floor(Date.now() / 1000);
+		const authTimeSeconds = decodedToken.auth_time || 0;
+		if (nowSeconds - authTimeSeconds > RECENT_AUTH_THRESHOLD_SECONDS) {
+			return json(
+				{ error: 'Recent sign-in required. Please reauthenticate and try again.' },
+				{ status: 401 }
+			);
 		}
 
-		// Check if token has expired
-		if (Date.now() > tokenData.expiresAt) {
-			return json({ error: 'This confirmation link has expired' }, { status: 400 });
-		}
-
-		const userId = tokenData.userId;
+		const userId = decodedToken.uid;
 
 		try {
 			// Delete all user data from Firestore
@@ -166,33 +174,22 @@ export const POST = async ({ request }) => {
 			// Delete the user's authentication record
 			await adminAuth.deleteUser(userId);
 
-			// Mark token as used (after successful deletion)
-			await adminDb.collection('deletionTokens').doc(token).update({
-				used: true,
-				usedAt: Date.now()
-			});
-
-			// Clean up the deletion token
-			await adminDb.collection('deletionTokens').doc(token).delete();
-
-			return json({ 
-				success: true,
-				message: 'Your account has been permanently deleted.'
-			}, { status: 200 });
-
+			return json(
+				{
+					success: true,
+					message: 'Your account has been permanently deleted.'
+				},
+				{ status: 200 }
+			);
 		} catch (deletionError) {
 			console.error('Error during account deletion:', deletionError);
-			
-			// Token was not marked as used, so user can retry if needed
-			return json({ 
-				error: 'Failed to complete account deletion. Please try again or contact support.' 
-			}, { status: 500 });
+			return json(
+				{ error: 'Failed to complete account deletion. Please try again or contact support.' },
+				{ status: 500 }
+			);
 		}
-
 	} catch (error) {
-		console.error('Error confirming account deletion:', error);
-		return json({ 
-			error: 'Failed to process deletion confirmation' 
-		}, { status: 500 });
+		console.error('Error deleting account:', error);
+		return json({ error: 'Failed to process account deletion' }, { status: 500 });
 	}
 };

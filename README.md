@@ -50,7 +50,7 @@ A platform for creating and sharing authentic reaction videos with synchronized 
    - Save the JSON file in the root directory as `pure-reactions-firebase-adminsdk-[key-id].json`
    - Set the path in your environment:
      ```bash
-     export GOOGLE_APPLICATION_CREDENTIALS="./pure-reactions-firebase-adminsdk-[key-id].json"
+     export FIREBASE_SERVICE_ACCOUNT="./pure-reactions-firebase-adminsdk-[key-id].json"
      ```
    - **Never commit this file to git** (it's automatically ignored)
 
@@ -73,7 +73,7 @@ A platform for creating and sharing authentic reaction videos with synchronized 
 
 ### Database Scripts
 
-Before running these scripts, ensure `GOOGLE_APPLICATION_CREDENTIALS` is set:
+Before running these scripts, ensure `FIREBASE_SERVICE_ACCOUNT` is set:
 
 - `npm run seed:firestore` - Seed Firestore with test data
 - `npm run seed:twin-fixtures` - Seed twin player test fixtures
@@ -81,7 +81,7 @@ Before running these scripts, ensure `GOOGLE_APPLICATION_CREDENTIALS` is set:
 
 ### Database Scripts
 
-Before running these scripts, ensure `GOOGLE_APPLICATION_CREDENTIALS` is set:
+Before running these scripts, ensure `FIREBASE_SERVICE_ACCOUNT` is set:
 
 - `npm run seed:firestore` - Seed Firestore with test data
 - `npm run seed:twin-fixtures` - Seed twin player test fixtures

@@ -181,8 +181,8 @@ async function migrate() {
       throw new Error('Refusing to migrate prod: set ALLOW_PROD_MIGRATION=1 or pass --allowProd');
     }
 
-    if (!process.env.GOOGLE_APPLICATION_CREDENTIALS && !process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
-      throw new Error('Missing prod credentials: set GOOGLE_APPLICATION_CREDENTIALS or FIREBASE_SERVICE_ACCOUNT_JSON');
+    if (!process.env.FIREBASE_SERVICE_ACCOUNT && !process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+      throw new Error('Missing prod credentials: set FIREBASE_SERVICE_ACCOUNT or FIREBASE_SERVICE_ACCOUNT_JSON');
     }
 
     if (dryRun) {

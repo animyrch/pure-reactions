@@ -12,13 +12,13 @@
     "lint": "eslint . --ext .js,.svelte",
     "e2e": "playwright test",
     "test:e2e": "playwright test",
-    "seed": "GOOGLE_APPLICATION_CREDENTIALS=./secrets/pure-reactions-cb457c74bbbf.json node scripts/seed-twin-player-fixtures.mjs -- --target prod --allowProd",
-    "seed:firestore": "GOOGLE_APPLICATION_CREDENTIALS=./secrets/pure-reactions-cb457c74bbbf.json node scripts/seed-firestore-fixtures.mjs",
-    "seed:twin-fixtures": "GOOGLE_APPLICATION_CREDENTIALS=./secrets/pure-reactions-cb457c74bbbf.json node scripts/seed-twin-player-fixtures.mjs",
-    "migrate:delete-legacy-timelines": "GOOGLE_APPLICATION_CREDENTIALS=./secrets/pure-reactions-cb457c74bbbf.json node scripts/migrate-delete-legacy-timelines.mjs",
+    "seed": "FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/seed-twin-player-fixtures.mjs -- --target prod --allowProd",
+    "seed:firestore": "FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/seed-firestore-fixtures.mjs",
+    "seed:twin-fixtures": "FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/seed-twin-player-fixtures.mjs",
+    "migrate:delete-legacy-timelines": "FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/migrate-delete-legacy-timelines.mjs",
     "algolia:status": "node scripts/algolia-status.mjs",
-    "algolia:index": "GOOGLE_APPLICATION_CREDENTIALS=./secrets/pure-reactions-cb457c74bbbf.json node scripts/algolia-index.mjs",
-    "algolia:index:apply": "GOOGLE_APPLICATION_CREDENTIALS=./secrets/pure-reactions-cb457c74bbbf.json node scripts/algolia-index.mjs --apply"
+    "algolia:index": "FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/algolia-index.mjs",
+    "algolia:index:apply": "FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/algolia-index.mjs --apply"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",

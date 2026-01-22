@@ -135,7 +135,7 @@ function ensureAdminApp({ projectId, target }) {
   }
 
   // target === 'prod'
-  // If GOOGLE_APPLICATION_CREDENTIALS is set, admin SDK picks it up automatically.
+  // If FIREBASE_SERVICE_ACCOUNT is set, admin SDK picks it up automatically.
   // Allow service account JSON inline for convenience.
   const inlineJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (inlineJson) {
@@ -172,9 +172,9 @@ async function seed() {
       throw new Error('Refusing to seed prod: set ALLOW_PROD_SEED=1 or pass --allowProd');
     }
 
-    // We allow either GOOGLE_APPLICATION_CREDENTIALS or FIREBASE_SERVICE_ACCOUNT_JSON.
-    if (!process.env.GOOGLE_APPLICATION_CREDENTIALS && !process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
-      throw new Error('Missing prod credentials: set GOOGLE_APPLICATION_CREDENTIALS or FIREBASE_SERVICE_ACCOUNT_JSON');
+    // We allow either FIREBASE_SERVICE_ACCOUNT or FIREBASE_SERVICE_ACCOUNT_JSON.
+    if (!process.env.FIREBASE_SERVICE_ACCOUNT && !process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+      throw new Error('Missing prod credentials: set FIREBASE_SERVICE_ACCOUNT or FIREBASE_SERVICE_ACCOUNT_JSON');
     }
   }
 

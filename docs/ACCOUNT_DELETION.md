@@ -2,7 +2,7 @@
 
 ## Overview
 
-This feature allows users to permanently delete their own account through a secure, self-service flow with email confirmation.
+This feature allows users to permanently delete their own account through a secure, self-service flow with in-app reauthentication.
 
 ## Architecture
 
@@ -11,23 +11,15 @@ This feature allows users to permanently delete their own account through a secu
 ```
 User clicks "Delete my account"
     ↓
-Opens confirmation modal
+Intent confirmation modal (step 1)
     ↓
-User confirms → POST /api/account/delete/request
+Identity confirmation (reauth) (step 2)
     ↓
-Backend generates one-time token (expires in 1 hour)
+Client refreshes ID token
     ↓
-Token stored in Firestore deletionTokens collection
+Frontend → POST /api/account/delete (Authorization: Bearer <token>)
     ↓
-[TODO: Send email with confirmation link]
-    ↓
-User clicks link → /account/delete/confirm?token=xxx
-    ↓
-Frontend → POST /api/account/delete/confirm
-    ↓
-Backend validates token (not used, not expired)
-    ↓
-Mark token as used
+Backend verifies token + recent sign-in (auth_time)
     ↓
 Delete user data (atomic batch):
     - User profile document
@@ -39,8 +31,6 @@ Revoke all refresh tokens
     ↓
 Delete Firebase Auth user
     ↓
-Delete token document
-    ↓
 Frontend logs out user
     ↓
 Redirect to homepage
@@ -48,72 +38,41 @@ Redirect to homepage
 
 ## Files
 
-### Backend API Endpoints
+### Backend API Endpoint
 
-- **`/src/routes/api/account/delete/request/+server.js`**
-  - Handles POST requests to initiate account deletion
+- **`/src/routes/api/account/delete/+server.js`**
+  - Handles POST requests to delete account
   - Verifies user authentication via Firebase ID token
-  - Implements rate limiting (3 requests per hour per user)
-  - Generates cryptographically secure one-time token
-  - Stores token in Firestore with expiration timestamp
-  - Returns success message (and URL in development mode)
+  - Enforces recent sign-in (auth_time threshold)
+  - Performs data deletion, refresh token revocation, and Auth user deletion
 
-- **`/src/routes/api/account/delete/confirm/+server.js`**
-  - Handles POST requests to confirm and execute deletion
-  - Validates token (exists, not used, not expired)
-  - Marks token as used immediately
-  - Performs atomic batch deletion of all user data
-  - Revokes refresh tokens to invalidate all sessions
-  - Deletes Firebase Auth user record
-  - Cleans up token document
-
-### Frontend Pages
+### Frontend Page
 
 - **`/src/routes/account/+page.svelte`**
   - Account settings page with "Danger Zone" section
-  - "Delete my account" button
-  - Confirmation modal with warnings
-  - Calls `/api/account/delete/request` endpoint
-
-- **`/src/routes/account/delete/confirm/+page.svelte`**
-  - Handles email link clicks
-  - Extracts token from URL query parameter
-  - Calls `/api/account/delete/confirm` endpoint
-  - Shows loading, success, or error states
-  - Logs out user and redirects to homepage
-
-### Updated Files
-
-- **`/src/lib/constants/toasts.js`**
-  - Added `ERROR` and `INFO` toast types
+  - Two-step modal:
+    - Step 1: Intent confirmation
+    - Step 2: Identity confirmation (password re-entry or provider reauth)
+  - Calls `/api/account/delete` endpoint after reauth
 
 ## Security Features
 
 ### 1. User Identity Verification
 - User ID is derived **only** from Firebase ID token via `verifyIdToken()`
 - Never accepts userId from client requests
-- Any attempt to delete another user's account returns 403 Forbidden
+- Deletion is executed only for the authenticated caller
 
-### 2. Token Security
-- Tokens are cryptographically random (32 bytes, hex-encoded)
-- Stored in Firestore `deletionTokens` collection
-- One-time use only (marked as `used: true` after first use)
-- Time-limited (expires after 1 hour)
-- Deleted after successful account deletion
+### 2. Recent Sign-In Enforcement
+- Backend checks `auth_time` from the ID token
+- Requires reauthentication within a short threshold (recommended: 5 minutes)
 
-### 3. Rate Limiting
-- In-memory rate limiter (sufficient for Netlify functions)
-- Max 3 deletion requests per user per hour
-- Returns 429 Too Many Requests if exceeded
-
-### 4. Authorization
+### 3. Authorization
 - All endpoints require valid Firebase authentication
-- ID token must be provided in Authorization header
 - Expired or invalid tokens rejected with 401 Unauthorized
 
-### 5. Atomic Operations
+### 4. Atomic Operations
 - Firestore batch writes ensure all-or-nothing deletion
-- Critical error logging if token marked used but deletion fails
+- Refresh tokens revoked to invalidate sessions
 
 ## Data Deletion
 
@@ -147,7 +106,7 @@ FIREBASE_SERVICE_ACCOUNT='{"type":"service_account",...}'
 
 #### Local Development
 ```bash
-GOOGLE_APPLICATION_CREDENTIALS=./path-to-service-account.json
+FIREBASE_SERVICE_ACCOUNT=./path-to-service-account.json
 ```
 
 See [ACCOUNT_DELETION_SETUP.md](./ACCOUNT_DELETION_SETUP.md) for detailed setup instructions.
@@ -156,14 +115,12 @@ See [ACCOUNT_DELETION_SETUP.md](./ACCOUNT_DELETION_SETUP.md) for detailed setup 
 
 ### Manual Testing Checklist
 
-- [ ] User can request account deletion
-- [ ] Confirmation modal displays all warnings
-- [ ] Deletion request generates token
-- [ ] Token is stored in Firestore
-- [ ] Token expires after 1 hour
-- [ ] Token can only be used once
-- [ ] Rate limiting works (max 3 requests/hour)
-- [ ] Confirmation page loads successfully
+- [ ] User can start account deletion
+- [ ] Confirmation modal displays all warnings (step 1)
+- [ ] Identity confirmation step appears (step 2)
+- [ ] Reauthentication required for email/password users
+- [ ] Reauthentication required for Google users (when enabled)
+- [ ] Backend rejects deletion when auth is not recent
 - [ ] Account deletion removes all user data
 - [ ] User is logged out after deletion
 - [ ] User is redirected to homepage
@@ -173,52 +130,22 @@ See [ACCOUNT_DELETION_SETUP.md](./ACCOUNT_DELETION_SETUP.md) for detailed setup 
 ### Security Testing
 
 ```bash
-# Test 1: Cannot use another user's token
-# Generate token for User A, try to use as User B → should fail
+# Test 1: Recent sign-in required
+# Log in, wait past threshold, attempt deletion -> should fail with "recent sign-in required"
 
-# Test 2: Cannot reuse token
-# Use token once → try to use again → should fail with "already used"
+# Test 2: Cannot delete other users
+# Log in as User A and attempt deletion -> only User A is removed
 
-# Test 3: Expired token
-# Generate token → wait 1+ hours → use token → should fail with "expired"
-
-# Test 4: Rate limiting
-# Request deletion 4 times quickly → 4th request should fail with 429
+# Test 3: Invalid token
+# Use expired/malformed token -> should fail with 401 Unauthorized
 ```
 
 ## Future Enhancements
 
-### Email Service Integration
-
-Currently, the confirmation URL is only logged to the console in development. To enable email sending:
-
-1. Choose an email service provider
-2. Install the SDK (e.g., `npm install @sendgrid/mail`)
-3. Update `/src/routes/api/account/delete/request/+server.js`:
-
-```javascript
-import sgMail from '@sendgrid/mail';
-
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-
-const msg = {
-  to: user.email,
-  from: 'noreply@purereactions.com',
-  subject: 'Confirm Account Deletion',
-  text: `Click this link to confirm deletion: ${confirmationUrl}`,
-  html: `<p>Click this link to confirm deletion: <a href="${confirmationUrl}">${confirmationUrl}</a></p>`
-};
-
-await sgMail.send(msg);
-```
-
-### Possible Future Features
-
-- [ ] Grace period (e.g., 30 days to cancel deletion)
-- [ ] Data export before deletion
-- [ ] Email notification to confirm deletion completion
-- [ ] Admin dashboard to view deletion requests
-- [ ] Audit log for compliance
+- Grace period (e.g., 30 days to cancel deletion)
+- Data export before deletion (GDPR compliance)
+- Admin dashboard for monitoring deletion requests
+- Audit log for compliance tracking
 
 ## Compliance
 

@@ -106,7 +106,7 @@ PUBLIC_ALGOLIA_REACTIONS_INDEX=your_index_name
 ALGOLIA_ADMIN_KEY=your_admin_key
 
 # Firebase (for indexing)
-GOOGLE_APPLICATION_CREDENTIALS=./path/to/service-account.json
+FIREBASE_SERVICE_ACCOUNT=./path/to/service-account.json
 PUBLIC_FIREBASE_COLLECTION_REACTION_BINOMES=reactions
 ```
 
