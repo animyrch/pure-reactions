@@ -1,15 +1,18 @@
 <script>
-  import { onMount } from 'svelte';
-  import { goto } from '$app/navigation';
-  import { goToRoute } from '$lib/helpers/routing';
-  import PurePureactionsLogo from '../PurePureactionsLogo.svelte';
-  import { SearchOutline as SearchIcon, CloseOutline as CloseIcon } from 'flowbite-svelte-icons';
+  import { onMount } from "svelte";
+  import { goto } from "$app/navigation";
+  import { goToRoute } from "$lib/helpers/routing";
+  import PurePureactionsLogo from "../PurePureactionsLogo.svelte";
+  import {
+    SearchOutline as SearchIcon,
+    CloseOutline as CloseIcon,
+  } from "flowbite-svelte-icons";
 
   let lastScrollY = 0;
   let isHidden = false;
   let showMenu = false;
   let showMobileSearch = false;
-  let mobileSearchQuery = '';
+  let mobileSearchQuery = "";
   let mobileSearchInput;
 
   const handleScroll = () => {
@@ -24,12 +27,12 @@
 
   onMount(() => {
     lastScrollY = window.scrollY;
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   });
 
   const goReact = () => {
-    goToRoute('/react');
+    goToRoute("/react");
   };
 
   const toggleMenu = () => {
@@ -45,7 +48,7 @@
 
   const closeMobileSearch = () => {
     showMobileSearch = false;
-    mobileSearchQuery = '';
+    mobileSearchQuery = "";
   };
 
   const handleMobileSearchSubmit = (event) => {
@@ -58,11 +61,13 @@
   };
 
   const handleDesktopSearchClick = () => {
-    goto('/search');
+    goto("/search");
   };
 </script>
 
-<header class={`nav-shell fixed inset-x-0 top-0 z-40 transition-transform duration-500 ease-cinematic ${isHidden ? '-translate-y-full' : 'translate-y-0'}`}>
+<header
+  class={`nav-shell fixed inset-x-0 top-0 z-40 transition-transform duration-500 ease-cinematic ${isHidden ? "-translate-y-full" : "translate-y-0"}`}
+>
   <nav class="mx-auto flex w-full items-center justify-between px-4 py-3">
     <a
       href="/"
@@ -73,7 +78,7 @@
         <PurePureactionsLogo />
       </div>
     </a>
-    
+
     <!-- Desktop Navigation Links -->
     <div class="hidden items-center gap-6 md:flex">
       <button
@@ -85,14 +90,14 @@
         <SearchIcon class="h-5 w-5" aria-hidden="true" />
         <span>Search</span>
       </button>
-      <a 
-        href="/how-it-works" 
+      <a
+        href="/how-it-works"
         class="text-sm font-medium text-text-secondary transition-colors hover:text-text-primary"
       >
         How It Works
       </a>
-      <a 
-        href="/insights" 
+      <a
+        href="/insights"
         class="text-sm font-medium text-text-secondary transition-colors hover:text-text-primary"
       >
         Insights
@@ -122,11 +127,26 @@
         on:click={toggleMenu}
         aria-label="Toggle menu"
       >
-        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          class="h-5 w-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
           {#if showMenu}
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            />
           {:else}
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 6h16M4 12h16M4 18h16"
+            />
           {/if}
         </svg>
       </button>
@@ -142,19 +162,21 @@
 
   <!-- Mobile Menu -->
   {#if showMenu}
-    <div class="mobile-menu border-t border-border-subtle bg-surface px-4 py-4 md:hidden">
+    <div
+      class="mobile-menu border-t border-border-subtle bg-surface px-4 py-4 md:hidden"
+    >
       <div class="flex flex-col gap-3">
-        <a 
-          href="/how-it-works" 
+        <a
+          href="/how-it-works"
           class="rounded-lg px-4 py-2.5 text-sm font-medium text-text-secondary transition-colors hover:bg-elevated hover:text-text-primary"
-          on:click={() => showMenu = false}
+          on:click={() => (showMenu = false)}
         >
           How It Works
         </a>
-        <a 
-          href="/insights" 
+        <a
+          href="/insights"
           class="rounded-lg px-4 py-2.5 text-sm font-medium text-text-secondary transition-colors hover:bg-elevated hover:text-text-primary"
-          on:click={() => showMenu = false}
+          on:click={() => (showMenu = false)}
         >
           Insights
         </a>
@@ -173,11 +195,19 @@
       tabindex="-1"
       on:click={closeMobileSearch}
     />
-    <div class="relative mx-auto flex h-full w-full flex-col bg-background">
+    <div
+      class="relative mx-auto flex h-full w-full flex-col bg-background"
+      style="padding-top: var(--safe-area-inset-top)"
+    >
       <div class="border-b border-border-subtle/40 px-4 py-4">
-        <form on:submit={handleMobileSearchSubmit} class="flex items-center gap-3">
+        <form
+          on:submit={handleMobileSearchSubmit}
+          class="flex items-center gap-3"
+        >
           <div class="relative flex-1">
-            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+            <div
+              class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4"
+            >
               <SearchIcon class="h-5 w-5 text-text-secondary" />
             </div>
             <input
@@ -203,7 +233,9 @@
       </div>
       <div class="flex-1 px-4 py-8">
         <div class="text-center text-text-secondary">
-          <p class="text-sm">Enter at least 2 characters and press Enter to search</p>
+          <p class="text-sm">
+            Enter at least 2 characters and press Enter to search
+          </p>
         </div>
       </div>
     </div>
