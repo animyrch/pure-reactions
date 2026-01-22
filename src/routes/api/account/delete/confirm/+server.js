@@ -1,38 +1,53 @@
 import { json } from '@sveltejs/kit';
-import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
-import { initializeApp, getApps, cert } from 'firebase-admin';
-import { FIREBASE_CONFIG, COLLECTION_REACTION_BINOMES, COLLECTION_USER_DATA } from '$lib/constants/firebase';
-import { env } from '$env/dynamic/public';
 
-// Initialize Firebase Admin SDK
-let adminApp;
-try {
-	if (!getApps().length) {
-		// In production (Netlify), service account is provided via environment
-		if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-			const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-			adminApp = initializeApp({
-				credential: cert(serviceAccount),
-				projectId: FIREBASE_CONFIG.projectId
-			});
-		} else {
-			// For local development with emulator or GOOGLE_APPLICATION_CREDENTIALS
-			adminApp = initializeApp({
-				projectId: FIREBASE_CONFIG.projectId
-			});
-		}
-	} else {
-		adminApp = getApps()[0];
+// Lazy import Firebase Admin to avoid SSR/build issues
+let adminAuth = null;
+let adminDb = null;
+let adminInitialized = false;
+
+async function initializeFirebaseAdmin() {
+	if (adminInitialized) {
+		return { adminAuth, adminDb };
 	}
-} catch (error) {
-	console.error('Failed to initialize Firebase Admin:', error);
+
+	try {
+		const { getAuth } = await import('firebase-admin/auth');
+		const { getFirestore } = await import('firebase-admin/firestore');
+		const { initializeApp, getApps, cert } = await import('firebase-admin');
+		const { FIREBASE_CONFIG } = await import('$lib/constants/firebase');
+
+		let adminApp;
+		if (!getApps().length) {
+			// In production (Netlify), service account is provided via environment
+			if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+				const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+				adminApp = initializeApp({
+					credential: cert(serviceAccount),
+					projectId: FIREBASE_CONFIG.projectId
+				});
+			} else {
+				// For local development with emulator or GOOGLE_APPLICATION_CREDENTIALS
+				adminApp = initializeApp({
+					projectId: FIREBASE_CONFIG.projectId
+				});
+			}
+		} else {
+			adminApp = getApps()[0];
+		}
+
+		adminAuth = getAuth(adminApp);
+		adminDb = getFirestore(adminApp);
+		adminInitialized = true;
+	} catch (error) {
+		console.error('Failed to initialize Firebase Admin:', error);
+	}
+
+	return { adminAuth, adminDb };
 }
 
-const adminAuth = adminApp ? getAuth(adminApp) : null;
-const adminDb = adminApp ? getFirestore(adminApp) : null;
-
-async function deleteUserData(userId) {
+async function deleteUserData(userId, adminDb) {
+	const { COLLECTION_REACTION_BINOMES, COLLECTION_USER_DATA } = await import('$lib/constants/firebase');
+	const { env } = await import('$env/dynamic/public');
 	if (!adminDb) {
 		throw new Error('Firestore not initialized');
 	}
@@ -106,6 +121,9 @@ async function deleteUserData(userId) {
 
 export const POST = async ({ request }) => {
 	try {
+		// Initialize Firebase Admin (lazy)
+		const { adminAuth, adminDb } = await initializeFirebaseAdmin();
+
 		const { token } = await request.json();
 
 		if (!token) {
@@ -146,7 +164,7 @@ export const POST = async ({ request }) => {
 
 		try {
 			// Delete all user data from Firestore
-			const deletionCount = await deleteUserData(userId);
+			const deletionCount = await deleteUserData(userId, adminDb);
 			console.log(`Deleted ${deletionCount} documents for user ${userId}`);
 
 			// Revoke all refresh tokens (invalidate all sessions)

@@ -1,36 +1,50 @@
 import { json } from '@sveltejs/kit';
-import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
-import { initializeApp, getApps, cert } from 'firebase-admin';
-import { FIREBASE_CONFIG } from '$lib/constants/firebase';
 import crypto from 'crypto';
 
-// Initialize Firebase Admin SDK
-let adminApp;
-try {
-	if (!getApps().length) {
-		// In production (Netlify), service account is provided via environment
-		if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-			const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-			adminApp = initializeApp({
-				credential: cert(serviceAccount),
-				projectId: FIREBASE_CONFIG.projectId
-			});
-		} else {
-			// For local development with emulator or GOOGLE_APPLICATION_CREDENTIALS
-			adminApp = initializeApp({
-				projectId: FIREBASE_CONFIG.projectId
-			});
-		}
-	} else {
-		adminApp = getApps()[0];
-	}
-} catch (error) {
-	console.error('Failed to initialize Firebase Admin:', error);
-}
+// Lazy import Firebase Admin to avoid SSR/build issues
+let adminAuth = null;
+let adminDb = null;
+let adminInitialized = false;
 
-const adminAuth = adminApp ? getAuth(adminApp) : null;
-const adminDb = adminApp ? getFirestore(adminApp) : null;
+async function initializeFirebaseAdmin() {
+	if (adminInitialized) {
+		return { adminAuth, adminDb };
+	}
+
+	try {
+		const { getAuth } = await import('firebase-admin/auth');
+		const { getFirestore } = await import('firebase-admin/firestore');
+		const { initializeApp, getApps, cert } = await import('firebase-admin');
+		const { FIREBASE_CONFIG } = await import('$lib/constants/firebase');
+
+		let adminApp;
+		if (!getApps().length) {
+			// In production (Netlify), service account is provided via environment
+			if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+				const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+				adminApp = initializeApp({
+					credential: cert(serviceAccount),
+					projectId: FIREBASE_CONFIG.projectId
+				});
+			} else {
+				// For local development with emulator or GOOGLE_APPLICATION_CREDENTIALS
+				adminApp = initializeApp({
+					projectId: FIREBASE_CONFIG.projectId
+				});
+			}
+		} else {
+			adminApp = getApps()[0];
+		}
+
+		adminAuth = getAuth(adminApp);
+		adminDb = getFirestore(adminApp);
+		adminInitialized = true;
+	} catch (error) {
+		console.error('Failed to initialize Firebase Admin:', error);
+	}
+
+	return { adminAuth, adminDb };
+}
 
 // In-memory rate limiting (simple implementation)
 const requestAttempts = new Map();
@@ -55,6 +69,9 @@ function checkRateLimit(userId) {
 
 export const POST = async ({ request }) => {
 	try {
+		// Initialize Firebase Admin (lazy)
+		const { adminAuth, adminDb } = await initializeFirebaseAdmin();
+
 		// Get the Firebase ID token from the Authorization header
 		const authHeader = request.headers.get('Authorization');
 		if (!authHeader || !authHeader.startsWith('Bearer ')) {
