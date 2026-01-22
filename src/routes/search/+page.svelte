@@ -122,25 +122,34 @@
                     bind:this={searchInput}
                     bind:value={query}
                     type="search"
-                    class="block w-full rounded-2xl border border-border-strong/50 bg-surface/80 py-4 pl-12 pr-4 text-base text-text-primary placeholder:text-text-muted focus:border-focus focus:outline-none focus:ring-2 focus:ring-focus focus:ring-offset-2 focus:ring-offset-background"
+                    class="block w-full rounded-2xl border border-border-strong/50 bg-surface/80 py-4 pl-12 pr-32 text-base text-text-primary placeholder:text-text-muted focus:border-focus focus:outline-none focus:ring-2 focus:ring-focus focus:ring-offset-2 focus:ring-offset-background"
                     placeholder="Search reactions by title, reactor, or tags..."
                     autocomplete="off"
                     autocapitalize="off"
                     spellcheck="false"
                 />
-                {#if query}
+                <div class="absolute inset-y-0 right-0 flex items-center gap-2 pr-2">
+                    {#if query}
+                        <button
+                            type="button"
+                            class="rounded-lg px-3 py-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
+                            on:click={() => {
+                                query = '';
+                                results = [];
+                                goto('/search', { replaceState: true });
+                            }}
+                        >
+                            Clear
+                        </button>
+                    {/if}
                     <button
-                        type="button"
-                        class="absolute inset-y-0 right-0 flex items-center pr-4 text-sm font-medium text-text-secondary hover:text-text-primary"
-                        on:click={() => {
-                            query = '';
-                            results = [];
-                            goto('/search', { replaceState: true });
-                        }}
+                        type="submit"
+                        class="rounded-lg bg-focus px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-focus/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={!query || query.trim().length < 2}
                     >
-                        Clear
+                        Search
                     </button>
-                {/if}
+                </div>
             </div>
         </form>
     </div>
