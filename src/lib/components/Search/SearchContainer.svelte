@@ -1,18 +1,17 @@
 <script>
-    import algoliasearch from 'algoliasearch/lite';
     import { onDestroy, onMount, tick } from 'svelte';
     import { CloseOutline as CloseIcon, SearchOutline as SearchIcon } from 'flowbite-svelte-icons';
+    import { getSearchProvider, getSearchConfig, isValidQuery, normalizeQuery } from '$lib/services/search';
 
-    export let appId;
     export let ariaLabel = 'Search';
     export let indices;
     export let loadingMsg = 'Searching...';
     export let noResultMsg = (value) => `No results for '${value}'`;
     export let query = '';
     export let resultCounter = (hits) => (hits.length > 0 ? `Results: ${hits.length}` : '');
-    export let searchKey;
 
-    let client;
+    let searchProvider;
+    let searchConfig;
     let overlayOpen = false;
     let loading = false;
     let noResults = false;
@@ -23,35 +22,42 @@
     let searchInput;
     let activeIndex = -1;
     let resultRefs = [];
+    let queryTooShort = false;
 
-    const required = { appId, searchKey, indices };
-    for (const [key, val] of Object.entries(required)) {
-        if (!val) {
-            console.error(`SearchContainer: Invalid ${key}: ${val}`);
-        }
+    if (!indices) {
+        console.error('SearchContainer: indices is required');
     }
 
     $: _indices = Array.isArray(indices) ? Object.fromEntries(indices) : indices;
 
     onMount(() => {
-        client = algoliasearch(appId, searchKey);
+        searchProvider = getSearchProvider();
+        searchConfig = getSearchConfig();
+        
+        if (!searchProvider) {
+            console.error('SearchContainer: Search provider not available. Check configuration.');
+        }
     });
 
     onDestroy(() => {
         clearTimeout(debounceTimeout);
-        window.removeEventListener('keydown', handleGlobalKeydown);
+        if (typeof window !== 'undefined') {
+            window.removeEventListener('keydown', handleGlobalKeydown);
+        }
     });
 
-    $: if (overlayOpen) {
-        window.addEventListener('keydown', handleGlobalKeydown);
-        tick().then(() => {
-            searchInput?.focus();
-            if (query) {
-                scheduleSearch();
-            }
-        });
-    } else {
-        window.removeEventListener('keydown', handleGlobalKeydown);
+    $: if (typeof window !== 'undefined') {
+        if (overlayOpen) {
+            window.addEventListener('keydown', handleGlobalKeydown);
+            tick().then(() => {
+                searchInput?.focus();
+                if (query) {
+                    scheduleSearch();
+                }
+            });
+        } else {
+            window.removeEventListener('keydown', handleGlobalKeydown);
+        }
     }
 
     $: {
@@ -185,10 +191,13 @@
     function scheduleSearch(immediate = false) {
         clearTimeout(debounceTimeout);
 
-        const trimmed = query.trim();
-        if (!trimmed) {
+        const normalized = normalizeQuery(query);
+        
+        // Clear results if query is empty
+        if (!normalized) {
             loading = false;
             noResults = false;
+            queryTooShort = false;
             results = [];
             sections = [];
             flatHits = [];
@@ -196,13 +205,39 @@
             return;
         }
 
+        // Check minimum query length
+        if (!isValidQuery(normalized)) {
+            loading = false;
+            noResults = false;
+            queryTooShort = true;
+            results = [];
+            sections = [];
+            flatHits = [];
+            activeIndex = -1;
+            return;
+        }
+
+        queryTooShort = false;
+
         const run = async () => {
-            if (!client) return;
+            if (!searchProvider || !searchProvider.isReady()) {
+                console.error('SearchContainer: Search provider not ready');
+                return;
+            }
+            
             loading = true;
             try {
-                const searchConfig = Object.keys(_indices).map((indexName) => ({ indexName, query: trimmed }));
-                const { results: aggregated } = await client.search(searchConfig);
-                const processed = aggregated.map(({ hits, index }) => ({ hits: processHits(hits), index }));
+                const queries = Object.keys(_indices).map((indexName) => ({
+                    index: indexName,
+                    query: normalized
+                }));
+                
+                const searchResults = await searchProvider.multiSearch(queries);
+                const processed = searchResults.map((result) => ({
+                    hits: processHits(result.hits),
+                    index: result.index
+                }));
+                
                 results = processed;
                 noResults = !processed.some(({ hits }) => hits.length);
             } catch (error) {
@@ -216,7 +251,8 @@
         if (immediate) {
             run();
         } else {
-            debounceTimeout = setTimeout(run, 300);
+            const delay = searchConfig?.debounceDelay || 300;
+            debounceTimeout = setTimeout(run, delay);
         }
     }
 </script>
@@ -296,6 +332,11 @@
                         <div class="py-16 text-center text-sm text-text-secondary">
                             <p class="text-base font-medium text-text-primary">Start typing to discover new reactions.</p>
                             <p class="mt-2 text-sm text-text-secondary">Search by video title, creator, or playlist to stay in the flow.</p>
+                        </div>
+                    {:else if queryTooShort}
+                        <div class="py-16 text-center text-sm text-text-secondary">
+                            <p class="text-base font-medium text-text-primary">Keep typing...</p>
+                            <p class="mt-2">Enter at least {searchConfig?.minQueryLength || 2} characters to search.</p>
                         </div>
                     {:else if loading}
                         <p class="py-12 text-center text-sm text-text-secondary">{loadingMsg}</p>

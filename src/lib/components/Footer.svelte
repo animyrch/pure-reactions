@@ -6,6 +6,18 @@
   $: isPlaylistRoute = $page.url.pathname?.startsWith('/playlist/');
   $: isSharedRoute = $page.url.pathname?.startsWith('/shared/');
   $: hideFooter = isReactionRoute || isPlaylistRoute || isSharedRoute;
+
+  function discoverClick() {
+    if (typeof window === 'undefined') return;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => {
+      const headerSearch = document.querySelector('header .search-trigger');
+      if (headerSearch) {
+        if (typeof headerSearch.click === 'function') headerSearch.click();
+        if (typeof headerSearch.focus === 'function') headerSearch.focus();
+      }
+    }, 350);
+  }
 </script>
 
 {#if !hideFooter}
@@ -41,9 +53,14 @@
               </a>
             </li>
             <li>
-              <a href="/search" class="text-text-secondary transition-colors hover:text-accent-primary">
+              <button
+                type="button"
+                class="text-text-secondary transition-colors hover:text-accent-primary focus:outline-none"
+                aria-label="Discover — open search"
+                on:click={discoverClick}
+              >
                 Discover
-              </a>
+              </button>
             </li>
           </ul>
         </div>

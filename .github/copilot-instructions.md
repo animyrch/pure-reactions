@@ -79,10 +79,10 @@ The agent should behave like a calm, experienced art director who also understan
 - State shared via writable Svelte stores (`lib/stores`); prefer existing stores (`currentUser`, `userExtraDataStore`, `prefersReducedMotion`, `toasts`) rather than new globals.
 ## Developer Workflow
 - Install deps with `npm install`; daily commands: `npm run dev` (local server), `npm run build` (Netlify parity), `npm run lint` (Svelte + JS via eslint).
-- Env vars live in `.env` with `PUBLIC_FIREBASE_*`, `PUBLIC_ALGOLIA_REACTIONS_INDEX`, and private `YOUTUBE_API_KEY`; see `constants/firebase.js` and `routes/api/youtube/playlist/[id]/+server.js`.
+- Env vars live in `.env` with `PUBLIC_FIREBASE_*`, `PUBLIC_ALGOLIA_*`, and private `YOUTUBE_API_KEY` and `ALGOLIA_ADMIN_KEY`; see `constants/firebase.js` and `lib/services/search/`.
 - Firebase config uses Firestore Lite + Realtime DB; when adding fields ensure they are serialisable by `updateFirebaseDocument` (no functions).
 - Shared session tooling expects Realtime Database rules that allow the paths under `sharedSessions/`; keep server timestamps via helper functions.
-- Search overlay relies on Algolia instantsearch; configure indices through `ALGOLIA_REACTIONS_INDEX` before shipping features using `SearchContainer.svelte`.
+- Search uses provider abstraction at `lib/services/search/`; never import `algoliasearch` directly in components—use `getSearchProvider()` instead for easy migration.
 ## Reaction Pipeline
 - Recording flow (`routes/backend/+page.svelte`) streams YouTube via IFrame API, logs state/volume/playback maps to Firestore using `updateFirebaseDocument`.
 - Timelines accept legacy object maps and new array formats; helpers in `lib/helpers/reaction.js` auto-detect both—preserve compatibility when writing data.
@@ -109,7 +109,7 @@ The agent should behave like a calm, experienced art director who also understan
 ## External Integrations
 - YouTube IFrame API is dynamically injected (see playback and shared session pages); bind handlers via global `YT` events and guard against SSR (`typeof window`).
 - Serverless playlist fetcher at `routes/api/youtube/playlist/[id]/+server.js` proxies playlist items; respect quota limits and bubble HTTP failures to the UI.
-- Algolia search is client-only; ensure new components supply `indices` map shaped like `{ [indexName]: HitComponent }`.
+- Search is provider-agnostic via `lib/services/search/`; currently uses Algolia but can swap to Meilisearch/Typesense by changing factory. Run `npm run algolia:status` to check index health, `npm run algolia:index` to reindex. See `docs/ALGOLIA_OPERATIONS.md`.
 - Netlify deploy picks up `build/` output; keep adapter-specific assumptions (no Node APIs at runtime) when adding backend logic.
 
 ## 12 — Logic placement & small-file strategy

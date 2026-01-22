@@ -11,11 +11,17 @@
     let activeIndex = -1;
     let fetchKey = "";
 
-    let viewAllHref = "/search";
-
-    $: viewAllHref = originalVideoId
-        ? `/search?originalVideoId=${encodeURIComponent(originalVideoId)}`
-        : "/search";
+    function jumpToHeaderSearch() {
+        if (typeof window === 'undefined') return;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setTimeout(() => {
+            const headerSearch = document.querySelector('header .search-trigger');
+            if (headerSearch) {
+                if (typeof headerSearch.click === 'function') headerSearch.click();
+                if (typeof headerSearch.focus === 'function') headerSearch.focus();
+            }
+        }, 350);
+    }
 
     async function loadOtherReactions() {
         if (!originalVideoId || !reactionVideoId) {
@@ -126,13 +132,14 @@
                     Other creators reacting to this video
                 </h2>
             </div>
-            <a
+            <button
                 class="inline-flex items-center gap-1.5 text-xs font-medium text-accent-primary transition hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:gap-2 sm:text-sm"
-                href={viewAllHref}
+                type="button"
+                on:click={jumpToHeaderSearch}
             >
                 View all reactions
                 <span aria-hidden="true">→</span>
-            </a>
+            </button>
         </div>
 
         <div

@@ -87,6 +87,16 @@ Before running these scripts, ensure `GOOGLE_APPLICATION_CREDENTIALS` is set:
 - `npm run seed:twin-fixtures` - Seed twin player test fixtures
 - `npm run migrate:delete-legacy-timelines` - Clean up legacy timeline data
 
+### Algolia Search Scripts
+
+Manage search indices and configuration:
+
+- `npm run algolia:status` - Check Algolia app and index status
+- `npm run algolia:index` - Dry-run index sync from Firestore (safe, no changes)
+- `npm run algolia:index:apply` - Apply index sync to Algolia
+
+See [docs/ALGOLIA_OPERATIONS.md](docs/ALGOLIA_OPERATIONS.md) for detailed search operations guide.
+
 ## Architecture
 
 ### Core Technologies
@@ -103,7 +113,7 @@ Before running these scripts, ensure `GOOGLE_APPLICATION_CREDENTIALS` is set:
 - **Twin Player System**: Synchronized playback of original and reaction videos with timeline-based control
 - **Shared Sessions**: Real-time co-watching using Firebase Realtime Database
 - **Reaction Recording**: Backend flow for creating reaction videos with state tracking
-- **Search**: Algolia-powered search with instant results
+- **Search**: Provider-agnostic search with Algolia backend, optimized for cost and easy migration
 
 ## Code Organization Guidelines
 
