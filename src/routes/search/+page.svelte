@@ -18,9 +18,11 @@
 
     $: urlQuery = $page.url.searchParams.get('q') || '';
 
-    // Sync query with URL on mount and URL changes
+    // Sync query with URL on mount and URL changes (only when URL changes, not when user types)
+    let lastUrlQuery = '';
     $: {
-        if (urlQuery !== query) {
+        if (urlQuery !== lastUrlQuery) {
+            lastUrlQuery = urlQuery;
             query = urlQuery;
             if (query && searchProvider) {
                 performSearch();
@@ -44,7 +46,7 @@
             const reactionsRef = collection(db, COLLECTION_REACTION_BINOMES);
             const q = firestoreQuery(
                 reactionsRef,
-                where('isPublic', '==', true),
+                where('isPublished', '==', true),
                 orderBy('createdAt', 'desc'),
                 limit(6)
             );
