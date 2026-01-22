@@ -1,14 +1,16 @@
 <script>
   import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
   import { goToRoute } from '$lib/helpers/routing';
   import PurePureactionsLogo from '../PurePureactionsLogo.svelte';
-  import SearchContainer from '../Search/SearchContainer.svelte';
-  import SearchHit from '../Search/SearchHit.svelte';
-  import { ALGOLIA_REACTIONS_INDEX } from '$lib/constants/algolia';
+  import { SearchOutline as SearchIcon, CloseOutline as CloseIcon } from 'flowbite-svelte-icons';
 
   let lastScrollY = 0;
   let isHidden = false;
   let showMenu = false;
+  let showMobileSearch = false;
+  let mobileSearchQuery = '';
+  let mobileSearchInput;
 
   const handleScroll = () => {
     const currentY = window.scrollY;
@@ -33,6 +35,31 @@
   const toggleMenu = () => {
     showMenu = !showMenu;
   };
+
+  const openMobileSearch = () => {
+    showMobileSearch = true;
+    setTimeout(() => {
+      mobileSearchInput?.focus();
+    }, 100);
+  };
+
+  const closeMobileSearch = () => {
+    showMobileSearch = false;
+    mobileSearchQuery = '';
+  };
+
+  const handleMobileSearchSubmit = (event) => {
+    event.preventDefault();
+    const query = mobileSearchQuery.trim();
+    if (query.length >= 2) {
+      closeMobileSearch();
+      goto(`/search?q=${encodeURIComponent(query)}`);
+    }
+  };
+
+  const handleDesktopSearchClick = () => {
+    goto('/search');
+  };
 </script>
 
 <header class={`nav-shell fixed inset-x-0 top-0 z-40 transition-transform duration-500 ease-cinematic ${isHidden ? '-translate-y-full' : 'translate-y-0'}`}>
@@ -49,9 +76,15 @@
     
     <!-- Desktop Navigation Links -->
     <div class="hidden items-center gap-6 md:flex">
-      <SearchContainer 
-        indices={{ [ALGOLIA_REACTIONS_INDEX]: SearchHit }}
-      />
+      <button
+        type="button"
+        class="inline-flex items-center gap-2 rounded-full border border-border-strong/60 bg-surface/70 px-4 py-2 text-sm font-medium text-text-primary shadow-surface transition-all duration-300 ease-cinematic hover:bg-surface/90 hover:shadow-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        on:click={handleDesktopSearchClick}
+        aria-label="Search"
+      >
+        <SearchIcon class="h-5 w-5" aria-hidden="true" />
+        <span>Search</span>
+      </button>
       <a 
         href="/how-it-works" 
         class="text-sm font-medium text-text-secondary transition-colors hover:text-text-primary"
@@ -73,11 +106,16 @@
       </button>
     </div>
 
-    <!-- Mobile Menu Button and React CTA -->
+    <!-- Mobile Menu Button and Search -->
     <div class="flex items-center gap-3 md:hidden">
-      <SearchContainer 
-        indices={{ [ALGOLIA_REACTIONS_INDEX]: SearchHit }}
-      />
+      <button
+        type="button"
+        class="inline-flex h-9 w-9 items-center justify-center rounded-full text-text-primary transition-colors hover:bg-surface/50"
+        on:click={openMobileSearch}
+        aria-label="Search"
+      >
+        <SearchIcon class="h-5 w-5" />
+      </button>
       <button
         type="button"
         class="text-text-secondary hover:text-text-primary transition-colors p-2"
@@ -124,6 +162,53 @@
     </div>
   {/if}
 </header>
+
+<!-- Mobile Search Modal -->
+{#if showMobileSearch}
+  <div class="fixed inset-0 z-50 md:hidden">
+    <button
+      class="absolute inset-0 h-full w-full bg-scrim/70 backdrop-blur-sm"
+      type="button"
+      aria-hidden="true"
+      tabindex="-1"
+      on:click={closeMobileSearch}
+    />
+    <div class="relative mx-auto flex h-full w-full flex-col bg-background">
+      <div class="border-b border-border-subtle/40 px-4 py-4">
+        <form on:submit={handleMobileSearchSubmit} class="flex items-center gap-3">
+          <div class="relative flex-1">
+            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+              <SearchIcon class="h-5 w-5 text-text-secondary" />
+            </div>
+            <input
+              bind:this={mobileSearchInput}
+              bind:value={mobileSearchQuery}
+              type="search"
+              class="block w-full rounded-full border border-border-strong/50 bg-surface/80 py-3 pl-12 pr-4 text-base text-text-primary placeholder:text-text-muted focus:border-focus focus:outline-none focus:ring-2 focus:ring-focus"
+              placeholder="Search reactions..."
+              autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
+            />
+          </div>
+          <button
+            type="button"
+            class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border-strong/50 text-text-primary"
+            aria-label="Close search"
+            on:click={closeMobileSearch}
+          >
+            <CloseIcon class="h-5 w-5" />
+          </button>
+        </form>
+      </div>
+      <div class="flex-1 px-4 py-8">
+        <div class="text-center text-text-secondary">
+          <p class="text-sm">Enter at least 2 characters and press Enter to search</p>
+        </div>
+      </div>
+    </div>
+  </div>
+{/if}
 
 <style>
   .nav-shell {
