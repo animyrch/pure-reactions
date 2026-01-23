@@ -1,4 +1,6 @@
 export const TOASTS = {
     SUCCESS: 'success',
-    WARNING: 'warning'
+    WARNING: 'warning',
+    ERROR: 'error',
+    INFO: 'info'
 };
