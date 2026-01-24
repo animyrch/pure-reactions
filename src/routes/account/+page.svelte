@@ -9,7 +9,7 @@
     } from 'firebase/auth';
     import { auth } from '$lib/helpers/firebase';
     import { handlePrivateRoute } from '$lib/helpers/routing';
-    import { Card, Button, Modal } from 'flowbite-svelte';
+    import { Button, Modal } from 'flowbite-svelte';
     import { showToast } from '$lib/stores/toast';
     import { TOASTS } from '$lib/constants/toasts';
 
@@ -169,37 +169,94 @@
   
   <div class="m-auto max-w-5xl px-4">
     <h1 class="text-3xl font-bold mb-8 text-text">Account Settings</h1>
-    
-    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-12">
-      <Card class="m-auto" href="/account/edit">
-        <p>Edit Personal Information</p>
-      </Card>
-      <Card class="m-auto" href="/my-reactions">
-        See Your Pure Reactions
-      </Card>
-      <Card class="m-auto" href="/bookmark">
-        See Your Bookmarks
-      </Card>
-      <Card class="m-auto" href="/" on:click={() => data.handleUserAction('logout')}>
-        Logout
-      </Card>
-    </div>
 
-    <!-- Danger Zone -->
-    <div class="border-2 border-red-600 rounded-lg p-6 bg-surface-dark">
-      <h2 class="text-2xl font-bold text-red-500 mb-4">Danger Zone</h2>
-      <div class="space-y-4">
-        <p class="text-text-muted">
-          Once you delete your account, there is no going back. Please be certain.
+    <div class="divide-y divide-gray-700/40">
+      <section class="py-6">
+        <p class="text-xs font-semibold tracking-[0.2em] uppercase text-text-muted mb-4">
+          Account
         </p>
-        <Button
-          color="red"
-          on:click={openDeleteModal}
-          class="bg-red-600 hover:bg-red-700"
-        >
-          Delete my account
-        </Button>
-      </div>
+        <div class="grid gap-3 md:grid-cols-2">
+          <Button
+            href="/account/edit"
+            color="alternative"
+            class="w-full h-12 rounded-lg justify-start text-left border border-gray-500 bg-surface text-text font-semibold text-sm tracking-wide hover:bg-surface-dark hover:border-gray-300"
+          >
+            <span>Edit Personal Information</span>
+          </Button>
+        </div>
+      </section>
+
+      <section class="py-6">
+        <p class="text-xs font-semibold tracking-[0.2em] uppercase text-text-muted mb-4">
+          Activity
+        </p>
+        <div class="grid gap-3 md:grid-cols-2">
+          <Button
+            href="/my-reactions"
+            color="alternative"
+            class="w-full h-12 rounded-lg justify-start text-left border border-gray-500 bg-surface text-text font-semibold text-sm tracking-wide hover:bg-surface-dark hover:border-gray-300"
+          >
+            <span>See Your Pure Reactions</span>
+          </Button>
+          <Button
+            href="/bookmark"
+            color="alternative"
+            class="w-full h-12 rounded-lg justify-start text-left border border-gray-500 bg-surface text-text font-semibold text-sm tracking-wide hover:bg-surface-dark hover:border-gray-300"
+          >
+            <span>See Your Bookmarks</span>
+          </Button>
+        </div>
+      </section>
+
+      <section class="py-6">
+        <p class="text-xs font-semibold tracking-[0.2em] uppercase text-text-muted mb-4">
+          Security
+        </p>
+        <div class="grid gap-3 md:grid-cols-2">
+          <Button
+            color="alternative"
+            on:click={() => data.handleUserAction('logout')}
+            class="w-full h-12 rounded-lg justify-start text-left border border-gray-600 bg-transparent font-medium text-sm text-text-muted tracking-wide hover:bg-surface-dark hover:border-gray-400"
+          >
+            <span>Logout</span>
+          </Button>
+        </div>
+      </section>
+
+      <section class="py-6">
+        <p class="text-xs font-semibold tracking-[0.2em] uppercase text-text-muted mb-4">
+          Danger Zone
+        </p>
+        <div class="border border-red-600/60 rounded-lg p-5 bg-surface-dark">
+          <h2 class="text-lg font-semibold text-red-400 mb-3 flex items-center gap-2">
+            <span aria-hidden="true">⚠️</span>
+            <span>Delete my account</span>
+          </h2>
+          <div class="space-y-3">
+            <p class="text-sm text-text-muted">
+              Deleting your account will permanently remove:
+            </p>
+            <ul class="list-disc list-inside text-sm text-text-muted space-y-1">
+              <li>Your reactions</li>
+              <li>Your bookmarks</li>
+              <li>Your profile</li>
+            </ul>
+            <p class="text-sm text-text-muted font-medium">
+              This action cannot be undone.
+            </p>
+            <Button
+              color="red"
+              on:click={openDeleteModal}
+              class="w-full h-12 rounded-lg bg-red-600 hover:bg-red-700"
+            >
+              <span class="inline-flex items-center gap-2">
+                <span aria-hidden="true">🗑</span>
+                <span>Delete my account</span>
+              </span>
+            </Button>
+          </div>
+        </div>
+      </section>
     </div>
   </div>
 
@@ -210,17 +267,16 @@
         <svg class="mx-auto mb-4 text-red-500 w-12 h-12" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
           <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 11V6m0 8h.01M19 10a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
         </svg>
-        <h3 class="mb-5 text-lg font-normal text-text">
+        <h3 class="mb-4 text-lg font-normal text-text">
           Delete your account permanently?
         </h3>
         <div class="text-left mb-6 space-y-3 text-text-muted text-sm">
           <p class="font-semibold text-red-400">⚠️ This action cannot be undone</p>
+          <p>Deleting your account will permanently remove:</p>
           <ul class="list-disc list-inside space-y-2">
-            <li>All your reactions will be permanently deleted</li>
-            <li>Your bookmarks and follows will be removed</li>
-            <li>Your account and profile will be deleted</li>
-            <li>You will be immediately logged out</li>
-            <li>Search results may take up to 5 business days to fully disappear</li>
+            <li>Your reactions</li>
+            <li>Your bookmarks</li>
+            <li>Your profile</li>
           </ul>
           <p class="mt-4 font-medium">
             You will confirm your identity in the next step to complete deletion.
