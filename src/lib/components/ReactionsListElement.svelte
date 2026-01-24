@@ -14,6 +14,7 @@
     const originalVideoId = reaction?.data?.originalVideoId;
     const reactionVideoTitle = reaction?.data?.reactionVideoTitle;
     const reactionVideoAuthor = reaction?.data?.reactionVideoAuthor;
+    const reactorDisplayName = reaction?.data?.reactorDisplayName;
     const originalVideoTitle = reaction?.data?.originalVideoTitle;
     const queueTitle = reaction?.data?.title;
     const queueSlug = reaction?.data?.slug;
@@ -27,6 +28,7 @@
         {reactionVideoTitle}
         {originalVideoTitle}
         {reactionVideoAuthor}
+        {reactorDisplayName}
         {playlistId}
         {itemType}
         queueTitle={queueTitle}

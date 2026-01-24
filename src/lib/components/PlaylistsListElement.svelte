@@ -8,6 +8,7 @@
     const originalVideoId = reaction?.originalVideoId;
     const reactionVideoTitle = reaction?.reactionVideoTitle;
     const reactionVideoAuthor = reaction?.reactionVideoAuthor;
+    const reactorDisplayName = reaction?.reactorDisplayName;
     const originalVideoTitle = reaction?.originalVideoTitle;
     const playlistId = playlist.id;
 </script>
@@ -20,6 +21,7 @@
         {reactionVideoTitle}
         {originalVideoTitle}
         {reactionVideoAuthor}
+        {reactorDisplayName}
         {playlistId}
         itemType="playlist"
     />

@@ -8,6 +8,7 @@
     export let reactionVideoTitle;
     export let originalVideoTitle;
     export let reactionVideoAuthor;
+    export let reactorDisplayName;
     export let playlistId;
     export let itemType = "reaction";
     export let queueTitle = "";
@@ -71,9 +72,15 @@
             .join(", ");
     };
 
+    const normalizeAuthor = (value) =>
+        typeof value === "string" ? value.trim() : "";
+
     $: mainVideoId = reactionVideoId || originalVideoId;
     $: mainWebpSrcSet = buildSrcSet(mainVideoId, "webp");
     $: mainJpegSrcSet = buildSrcSet(mainVideoId, "jpg");
+    $: displayReactorName =
+        normalizeAuthor(reactorDisplayName) ||
+        normalizeAuthor(reactionVideoAuthor);
 
     let isThumbnailLoaded = false;
 
@@ -315,9 +322,9 @@
                 <p class="truncate text-sm font-semibold text-text-primary">
                     {displayTitle}
                 </p>
-                {#if !isQueue && reactionVideoAuthor}
+                {#if !isQueue && displayReactorName}
                     <VideoAuthor
-                        videoAuthor={reactionVideoAuthor}
+                        videoAuthor={displayReactorName}
                         showLinks={false}
                         isReactor
                     />
@@ -334,9 +341,9 @@
                 <p class="truncate text-sm font-semibold text-text-primary">
                     {displayTitle}
                 </p>
-                {#if !isQueue && reactionVideoAuthor}
+                {#if !isQueue && displayReactorName}
                     <VideoAuthor
-                        videoAuthor={reactionVideoAuthor}
+                        videoAuthor={displayReactorName}
                         showLinks={false}
                         isReactor
                     />
