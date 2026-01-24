@@ -64,6 +64,7 @@ export const createReactionDocument = async ({
     offsetStartTime
 }) => {
     try {
+        const reactorDisplayName = auth?.currentUser?.displayName?.trim?.() || '';
         const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'createReactionDocument');
         const dataToAdd = {
             originalVideoId,
@@ -72,6 +73,7 @@ export const createReactionDocument = async ({
             reactionConfigs: {},
             playbackRateConfigs: {},
             reactorId: userId,
+            reactorDisplayName,
             offsetStartTime,
             fullscreenPrimaryVideo: "original",
             fullscreenOverlayWidthPercent: 35,

@@ -16,6 +16,7 @@
     $: reactionVideoTitle = reactionData?.reactionVideoTitle;
     $: originalVideoTitle = reactionData?.originalVideoTitle;
     $: reactionVideoAuthor = reactionData?.reactionVideoAuthor;
+    $: reactorDisplayName = reactionData?.reactorDisplayName;
     $: playlistId = isPlaylist ? item?.playlist?.id : reactionData?.playlistId;
 
     $: hasData = Boolean(reactionPageId && reactionData);
@@ -35,6 +36,7 @@
             {reactionVideoTitle}
             {originalVideoTitle}
             {reactionVideoAuthor}
+            {reactorDisplayName}
             {playlistId}
             linkless={linkless}
             showContextMenu={!linkless}
