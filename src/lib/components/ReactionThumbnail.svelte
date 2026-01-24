@@ -92,7 +92,7 @@
 </script>
 
 <div
-    class="thumbnail-card group overflow-hidden rounded-2xl border border-border-strong/30 bg-surface/50 text-text-primary shadow-surface transition-all duration-300 hover:border-border-strong hover:shadow-elevated"
+    class="thumbnail-card group rounded-2xl border border-border-strong/30 bg-surface/50 text-text-primary shadow-surface transition-all duration-300 hover:border-border-strong hover:shadow-elevated"
     data-interactive={interactive ? "true" : undefined}
     class:is-queue={isQueue}
     class:is-playlist={isPlaylist}
@@ -433,6 +433,7 @@
         position: relative;
         aspect-ratio: 16 / 9;
         overflow: hidden;
+        border-radius: 1rem 1rem 0 0;
         background: linear-gradient(
             135deg,
             rgba(15, 17, 21, 0.9),
