@@ -6,6 +6,7 @@
   import SubtleLoader from "$lib/components/design-system/SubtleLoader.svelte";
   import QueueProgressPill from "$lib/components/reaction/QueueProgressPill.svelte";
   import ReactionStage from "$lib/components/reaction/ReactionStage.svelte";
+  import AttributionBlock from "$lib/components/reaction/AttributionBlock.svelte";
   import {
     useTwinPlayers,
     CONTROLS_FADE_CLASS,
@@ -231,6 +232,15 @@
 
   {#if !$state.isFullscreen}
     <div class="mx-auto w-full px-4 pt-6 sm:px-6 lg:px-10">
+      <div class="mb-4">
+        <AttributionBlock
+          isVerifiedCreator={$state.isCreatorVerified}
+          reactionVideoAuthor={$state.reactionVideoAuthor}
+          reactionChannelName={$state.reactionChannelName}
+          reactorDisplayName={$state.reactorDisplayName}
+          reactorId={$state.reactorId}
+        />
+      </div>
       {#if $state.queueSlug}
         <div class="mb-4 flex items-center justify-between gap-3">
           <div class="min-w-0 overflow-hidden">
