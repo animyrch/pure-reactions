@@ -77,6 +77,7 @@ type TwinPlayersState = {
   isPublished: boolean;
   reactionVideoId: string;
   reactionVideoAuthor?: string;
+  reactorDisplayName?: string;
   reactionVideoTitle?: string;
   originalVideoAuthor?: string;
   originalVideoTitle?: string;
@@ -141,6 +142,7 @@ type UseTwinPlayersOptions = {
   data: {
     slug: string;
     userId?: string | null;
+    displayName?: string | null;
   };
   enableAutoPlay?: boolean;
 };
@@ -332,6 +334,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     originalVideoAuthor: undefined,
     originalVideoTitle: undefined,
     reactionVideoAuthor: undefined,
+    reactorDisplayName: undefined,
     reactionVideoTitle: undefined,
     originalVideoId: undefined,
     reactorId: undefined,
@@ -2065,6 +2068,11 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     const reactionChannelName = typeof reactionData?.channelName === 'string' ? reactionData.channelName.trim() : undefined;
     const reactionChannelId = typeof reactionData?.channelId === 'string' ? reactionData.channelId.trim() : undefined;
     const isCreatorVerified = resolveCreatorVerification(reactionData);
+    const rawReactorDisplayName =
+      typeof reactionData?.reactorDisplayName === 'string' ? reactionData.reactorDisplayName.trim() : '';
+    const viewerDisplayName = typeof data?.displayName === 'string' ? data.displayName.trim() : '';
+    const resolvedReactorDisplayName =
+      rawReactorDisplayName || (reactionData?.reactorId === userId ? viewerDisplayName : '');
 
     updateState({
       isPublished: reactionData.isPublished,
@@ -2307,6 +2315,11 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       const reactionChannelName = typeof reactionData?.channelName === 'string' ? reactionData.channelName.trim() : undefined;
       const reactionChannelId = typeof reactionData?.channelId === 'string' ? reactionData.channelId.trim() : undefined;
       const isCreatorVerified = resolveCreatorVerification(reactionData);
+      const rawReactorDisplayName =
+        typeof reactionData?.reactorDisplayName === 'string' ? reactionData.reactorDisplayName.trim() : '';
+      const viewerDisplayName = typeof data?.displayName === 'string' ? data.displayName.trim() : '';
+      const resolvedReactorDisplayName =
+        rawReactorDisplayName || (reactionData?.reactorId === userId ? viewerDisplayName : '');
 
       updateState({
         isPublished: reactionData.isPublished,

@@ -140,8 +140,7 @@ function reactionToAlgoliaRecord(docId, data) {
     originalVideoTitle: data.originalVideoTitle || '',
     
     // Reactor/channel information
-    channelName: data.channelName || '',
-    channelId: data.channelId || '',
+    reactionVideoAuthor: data.reactionVideoAuthor || '',
     
     // Tags for filtering
     tags: Array.isArray(data.tags) ? data.tags : [],
@@ -269,7 +268,7 @@ async function indexReactions() {
     searchableAttributes: [
       'reactionVideoTitle',
       'originalVideoTitle',
-      'channelName',
+      'reactionVideoAuthor',
       'tags'
     ],
     // Attributes to retrieve in search results
@@ -278,8 +277,7 @@ async function indexReactions() {
       'reactionVideoTitle',
       'originalVideoId',
       'originalVideoTitle',
-      'channelName',
-      'channelId',
+      'reactionVideoAuthor',
       'tags',
       'slug',
       'createdAt',
@@ -287,7 +285,7 @@ async function indexReactions() {
     ],
     // Attributes for faceting/filtering
     attributesForFaceting: [
-      'searchable(channelName)',
+      'searchable(reactionVideoAuthor)',
       'searchable(tags)',
       
     ],
@@ -302,7 +300,7 @@ async function indexReactions() {
     attributesToHighlight: [
       'reactionVideoTitle',
       'originalVideoTitle',
-      'channelName'
+      'reactionVideoAuthor'
     ],
     // Snippet
     attributesToSnippet: [

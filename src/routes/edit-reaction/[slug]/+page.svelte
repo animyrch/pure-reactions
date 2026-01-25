@@ -397,6 +397,7 @@
         pageSlug={$state.pageSlug}
         isUsersOwnVideo={$state.isUsersOwnVideo}
         reactorId={$state.reactorId}
+        reactorDisplayName={$state.reactorDisplayName}
       />
 
       {#if $state.originalVideoId && $state.playlistDocumentId}

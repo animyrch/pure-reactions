@@ -18,7 +18,9 @@
     "migrate:delete-legacy-timelines": "FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/migrate-delete-legacy-timelines.mjs",
     "algolia:status": "node scripts/algolia-status.mjs",
     "algolia:index": "FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/algolia-index.mjs",
-    "algolia:index:apply": "FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/algolia-index.mjs --apply"
+    "algolia:index:apply": "FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/algolia-index.mjs --apply",
+    "generate-sitemap": "node scripts/generate-sitemap.js",
+    "enrich-youtube": "node scripts/enrich-youtube.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",

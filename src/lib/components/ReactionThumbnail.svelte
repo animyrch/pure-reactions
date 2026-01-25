@@ -8,6 +8,7 @@
     export let reactionVideoTitle;
     export let originalVideoTitle;
     export let reactionVideoAuthor;
+    export let reactorDisplayName;
     export let playlistId;
     export let itemType = "reaction";
     export let queueTitle = "";
@@ -27,12 +28,16 @@
         : isPlaylist && playlistId
           ? `/playlist/${playlistId}${playlistQuery}`
           : `/reaction/${reactionPageId}${playlistId ? `?playlistId=${playlistId}` : ""}`;
-    const originalAlt = originalVideoTitle
-        ? `Original: ${originalVideoTitle}`
-        : "Original video thumbnail";
-    const reactionAlt = reactionVideoTitle
+
+    const displayTitle = isQueue
+        ? queueTitle
+        : reactionVideoTitle || originalVideoTitle || "Untitled Reaction";
+    const thumbnailAlt = reactionVideoTitle
         ? `Reaction: ${reactionVideoTitle}`
-        : "Reaction video thumbnail";
+        : originalVideoTitle
+          ? `Original: ${originalVideoTitle}`
+          : "Reaction thumbnail";
+
     const linkLabel = isQueue
         ? `Open queue: ${queueTitle}`
         : isPlaylist
@@ -67,171 +72,34 @@
             .join(", ");
     };
 
-    $: originalWebpSrcSet = buildSrcSet(originalVideoId, "webp");
-    $: originalJpegSrcSet = buildSrcSet(originalVideoId, "jpg");
-    $: reactionWebpSrcSet = buildSrcSet(reactionVideoId, "webp");
-    $: reactionJpegSrcSet = buildSrcSet(reactionVideoId, "jpg");
+    const normalizeAuthor = (value) =>
+        typeof value === "string" ? value.trim() : "";
 
-    let isOriginalLoaded = false;
-    let isReactionLoaded = false;
+    $: mainVideoId = reactionVideoId || originalVideoId;
+    $: mainWebpSrcSet = buildSrcSet(mainVideoId, "webp");
+    $: mainJpegSrcSet = buildSrcSet(mainVideoId, "jpg");
+    $: displayReactorName =
+        normalizeAuthor(reactorDisplayName) ||
+        normalizeAuthor(reactionVideoAuthor);
 
-    $: skeletonVisible = isQueue
-        ? false
-        : !(isOriginalLoaded && isReactionLoaded);
+    let isThumbnailLoaded = false;
 
-    const handleOriginalLoad = () => {
-        isOriginalLoaded = true;
-    };
+    $: skeletonVisible = isQueue ? false : !isThumbnailLoaded;
 
-    const handleReactionLoad = () => {
-        isReactionLoaded = true;
+    const handleThumbLoad = () => {
+        isThumbnailLoaded = true;
     };
 </script>
 
 <div
-    class="thumbnail-card group flex flex-col gap-sm rounded-md bg-surface p-sm text-text-primary shadow-surface transition duration-deliberate ease-cinematic hover:shadow-elevated focus-within:ring-2 focus-within:ring-focus focus-within:ring-offset-2 focus-within:ring-offset-background"
+    class="thumbnail-card group rounded-2xl border border-border-strong/30 bg-surface/50 text-text-primary shadow-surface transition-all duration-300 hover:border-border-strong hover:shadow-elevated"
     data-interactive={interactive ? "true" : undefined}
     class:is-queue={isQueue}
     class:is-playlist={isPlaylist}
 >
     {#if linkless}
         <div class="thumbnail-link block" aria-hidden="true">
-            <div class="thumbnail-shell">
-            {#if isQueue}
-                <div class="queue-badge">
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                    >
-                        <path d="M4 7V4h3" />
-                        <path d="M20 4h-3v3" />
-                        <path d="M4 17v3h3" />
-                        <path d="M20 20h-3v-3" />
-                        <rect x="9" y="9" width="6" height="6" />
-                    </svg>
-                    <span>QUEUE</span>
-                </div>
-            {:else if isPlaylist}
-                <div class="playlist-badge">
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                    >
-                        <line x1="8" y1="6" x2="21" y2="6"></line>
-                        <line x1="8" y1="12" x2="21" y2="12"></line>
-                        <line x1="8" y1="18" x2="21" y2="18"></line>
-                        <line x1="3" y1="6" x2="3.01" y2="6"></line>
-                        <line x1="3" y1="12" x2="3.01" y2="12"></line>
-                        <line x1="3" y1="18" x2="3.01" y2="18"></line>
-                    </svg>
-                    <span>PLAYLIST</span>
-                </div>
-            {/if}
             <div class="thumbnail-wrapper">
-                {#if isQueue}
-                    <div class="queue-placeholder">
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="64"
-                            height="64"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="1.5"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                        >
-                            <path d="M4 7V4h3" />
-                            <path d="M20 4h-3v3" />
-                            <path d="M4 17v3h3" />
-                            <path d="M20 20h-3v-3" />
-                            <rect x="9" y="9" width="6" height="6" />
-                        </svg>
-                        <p class="queue-placeholder-text">Reaction Queue</p>
-                    </div>
-                {:else}
-                    <div
-                        class="thumbnail-skeleton"
-                        class:hidden={!skeletonVisible}
-                        aria-hidden="true"
-                    ></div>
-                    <picture
-                        class="thumbnail-image original"
-                        class:loaded={isOriginalLoaded}
-                    >
-                        {#if originalWebpSrcSet}
-                            <source
-                                type="image/webp"
-                                srcset={originalWebpSrcSet}
-                                sizes="(max-width: 640px) 100vw, 640px"
-                            />
-                        {/if}
-                        {#if originalJpegSrcSet}
-                            <source
-                                type="image/jpeg"
-                                srcset={originalJpegSrcSet}
-                                sizes="(max-width: 640px) 100vw, 640px"
-                            />
-                        {/if}
-                        <img
-                            src={buildYouTubeSrc(originalVideoId, "mqdefault")}
-                            alt={originalAlt}
-                            loading="lazy"
-                            decoding="async"
-                            on:load={handleOriginalLoad}
-                        />
-                    </picture>
-                    <picture
-                        class="thumbnail-image reaction"
-                        class:loaded={isReactionLoaded}
-                    >
-                        {#if reactionWebpSrcSet}
-                            <source
-                                type="image/webp"
-                                srcset={reactionWebpSrcSet}
-                                sizes="(max-width: 640px) 40vw, 220px"
-                            />
-                        {/if}
-                        {#if reactionJpegSrcSet}
-                            <source
-                                type="image/jpeg"
-                                srcset={reactionJpegSrcSet}
-                                sizes="(max-width: 640px) 40vw, 220px"
-                            />
-                        {/if}
-                        <img
-                            src={buildYouTubeSrc(reactionVideoId, "mqdefault")}
-                            alt={reactionAlt}
-                            loading="lazy"
-                            decoding="async"
-                            on:load={handleReactionLoad}
-                        />
-                    </picture>
-                {/if}
-            </div>
-            </div>
-        </div>
-    {:else}
-        <a
-            class="thumbnail-link block focus-visible:outline-none"
-            href={reactionRedirectionPath}
-            aria-label={linkLabel}
-        >
-            <div class="thumbnail-shell">
                 {#if isQueue}
                     <div class="queue-badge">
                         <svg
@@ -276,108 +144,187 @@
                         <span>PLAYLIST</span>
                     </div>
                 {/if}
-                <div class="thumbnail-wrapper">
-                    {#if isQueue}
-                        <div class="queue-placeholder">
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="64"
-                                height="64"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="1.5"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                            >
-                                <path d="M4 7V4h3" />
-                                <path d="M20 4h-3v3" />
-                                <path d="M4 17v3h3" />
-                                <path d="M20 20h-3v-3" />
-                                <rect x="9" y="9" width="6" height="6" />
-                            </svg>
-                            <p class="queue-placeholder-text">Reaction Queue</p>
-                        </div>
-                    {:else}
-                        <div
-                            class="thumbnail-skeleton"
-                            class:hidden={!skeletonVisible}
-                            aria-hidden="true"
-                        ></div>
-                        <picture
-                            class="thumbnail-image original"
-                            class:loaded={isOriginalLoaded}
+                {#if isQueue}
+                    <div class="queue-placeholder">
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="64"
+                            height="64"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.5"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
                         >
-                            {#if originalWebpSrcSet}
+                            <path d="M4 7V4h3" />
+                            <path d="M20 4h-3v3" />
+                            <path d="M4 17v3h3" />
+                            <path d="M20 20h-3v-3" />
+                            <rect x="9" y="9" width="6" height="6" />
+                        </svg>
+                        <p class="queue-placeholder-text">Reaction Queue</p>
+                    </div>
+                {:else}
+                    <div
+                        class="thumbnail-skeleton"
+                        class:hidden={!skeletonVisible}
+                        aria-hidden="true"
+                    ></div>
+                    {#if mainVideoId}
+                        <picture
+                            class="thumbnail-image"
+                            class:loaded={isThumbnailLoaded}
+                        >
+                            {#if mainWebpSrcSet}
                                 <source
                                     type="image/webp"
-                                    srcset={originalWebpSrcSet}
+                                    srcset={mainWebpSrcSet}
                                     sizes="(max-width: 640px) 100vw, 640px"
                                 />
                             {/if}
-                            {#if originalJpegSrcSet}
+                            {#if mainJpegSrcSet}
                                 <source
                                     type="image/jpeg"
-                                    srcset={originalJpegSrcSet}
+                                    srcset={mainJpegSrcSet}
                                     sizes="(max-width: 640px) 100vw, 640px"
                                 />
                             {/if}
                             <img
-                                src={buildYouTubeSrc(originalVideoId, "mqdefault")}
-                                alt={originalAlt}
+                                src={buildYouTubeSrc(mainVideoId, "mqdefault")}
+                                alt={thumbnailAlt}
                                 loading="lazy"
                                 decoding="async"
-                                on:load={handleOriginalLoad}
-                            />
-                        </picture>
-                        <picture
-                            class="thumbnail-image reaction"
-                            class:loaded={isReactionLoaded}
-                        >
-                            {#if reactionWebpSrcSet}
-                                <source
-                                    type="image/webp"
-                                    srcset={reactionWebpSrcSet}
-                                    sizes="(max-width: 640px) 40vw, 220px"
-                                />
-                            {/if}
-                            {#if reactionJpegSrcSet}
-                                <source
-                                    type="image/jpeg"
-                                    srcset={reactionJpegSrcSet}
-                                    sizes="(max-width: 640px) 40vw, 220px"
-                                />
-                            {/if}
-                            <img
-                                src={buildYouTubeSrc(reactionVideoId, "mqdefault")}
-                                alt={reactionAlt}
-                                loading="lazy"
-                                decoding="async"
-                                on:load={handleReactionLoad}
+                                on:load={handleThumbLoad}
                             />
                         </picture>
                     {/if}
-                </div>
+                {/if}
+            </div>
+        </div>
+    {:else}
+        <a
+            class="thumbnail-link block focus-visible:outline-none"
+            href={reactionRedirectionPath}
+            aria-label={linkLabel}
+        >
+            <div class="thumbnail-wrapper">
+                {#if isQueue}
+                    <div class="queue-badge">
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <path d="M4 7V4h3" />
+                            <path d="M20 4h-3v3" />
+                            <path d="M4 17v3h3" />
+                            <path d="M20 20h-3v-3" />
+                            <rect x="9" y="9" width="6" height="6" />
+                        </svg>
+                        <span>QUEUE</span>
+                    </div>
+                {:else if isPlaylist}
+                    <div class="playlist-badge">
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <line x1="8" y1="6" x2="21" y2="6"></line>
+                            <line x1="8" y1="12" x2="21" y2="12"></line>
+                            <line x1="8" y1="18" x2="21" y2="18"></line>
+                            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                        </svg>
+                        <span>PLAYLIST</span>
+                    </div>
+                {/if}
+                {#if isQueue}
+                    <div class="queue-placeholder">
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="64"
+                            height="64"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.5"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <path d="M4 7V4h3" />
+                            <path d="M20 4h-3v3" />
+                            <path d="M4 17v3h3" />
+                            <path d="M20 20h-3v-3" />
+                            <rect x="9" y="9" width="6" height="6" />
+                        </svg>
+                        <p class="queue-placeholder-text">Reaction Queue</p>
+                    </div>
+                {:else}
+                    <div
+                        class="thumbnail-skeleton"
+                        class:hidden={!skeletonVisible}
+                        aria-hidden="true"
+                    ></div>
+                    {#if mainVideoId}
+                        <picture
+                            class="thumbnail-image"
+                            class:loaded={isThumbnailLoaded}
+                        >
+                            {#if mainWebpSrcSet}
+                                <source
+                                    type="image/webp"
+                                    srcset={mainWebpSrcSet}
+                                    sizes="(max-width: 640px) 100vw, 640px"
+                                />
+                            {/if}
+                            {#if mainJpegSrcSet}
+                                <source
+                                    type="image/jpeg"
+                                    srcset={mainJpegSrcSet}
+                                    sizes="(max-width: 640px) 100vw, 640px"
+                                />
+                            {/if}
+                            <img
+                                src={buildYouTubeSrc(mainVideoId, "mqdefault")}
+                                alt={thumbnailAlt}
+                                loading="lazy"
+                                decoding="async"
+                                on:load={handleThumbLoad}
+                            />
+                        </picture>
+                    {/if}
+                {/if}
             </div>
         </a>
     {/if}
 
-    <div class="flex items-center gap-md">
+    <div class="thumbnail-content flex items-start gap-md">
         {#if linkless}
             <div
                 class="min-w-0 flex-1 rounded-sm"
-                title={isQueue
-                    ? queueTitle
-                    : reactionVideoTitle || originalVideoTitle}
+                title={displayTitle}
             >
                 <p class="truncate text-sm font-semibold text-text-primary">
-                    {isQueue
-                        ? queueTitle
-                        : reactionVideoTitle || originalVideoTitle}
+                    {displayTitle}
                 </p>
-                {#if !isQueue && reactionVideoAuthor}
+                {#if !isQueue && displayReactorName}
                     <VideoAuthor
-                        videoAuthor={reactionVideoAuthor}
+                        videoAuthor={displayReactorName}
                         showLinks={false}
                         isReactor
                     />
@@ -389,24 +336,20 @@
             <a
                 class="min-w-0 flex-1 rounded-sm focus-visible:outline-none focus-visible:underline"
                 href={reactionRedirectionPath}
-                title={isQueue
-                    ? queueTitle
-                    : reactionVideoTitle || originalVideoTitle}
+                title={displayTitle}
             >
-            <p class="truncate text-sm font-semibold text-text-primary">
-                {isQueue
-                    ? queueTitle
-                    : reactionVideoTitle || originalVideoTitle}
-            </p>
-            {#if !isQueue && reactionVideoAuthor}
-                <VideoAuthor
-                    videoAuthor={reactionVideoAuthor}
-                    showLinks={false}
-                    isReactor
-                />
-            {:else if isQueue}
-                <p class="text-xs text-text-muted">Collection of reactions</p>
-            {/if}
+                <p class="truncate text-sm font-semibold text-text-primary">
+                    {displayTitle}
+                </p>
+                {#if !isQueue && displayReactorName}
+                    <VideoAuthor
+                        videoAuthor={displayReactorName}
+                        showLinks={false}
+                        isReactor
+                    />
+                {:else if isQueue}
+                    <p class="text-xs text-text-muted">Collection of reactions</p>
+                {/if}
             </a>
         {/if}
         {#if !isQueue && showContextMenu}
@@ -421,7 +364,6 @@
     }
     .thumbnail-card {
         position: relative;
-        overflow: visible;
     }
     .thumbnail-card.is-queue {
         border: 2px solid rgba(99, 102, 241, 0.3);
@@ -449,6 +391,7 @@
         font-size: 0.75rem;
         font-weight: 600;
         letter-spacing: 0.05em;
+        border-radius: 999px;
     }
     .thumbnail-card.is-playlist {
         border: 2px solid rgba(244, 114, 182, 0.3);
@@ -476,6 +419,7 @@
         font-size: 0.75rem;
         font-weight: 600;
         letter-spacing: 0.05em;
+        border-radius: 999px;
     }
     .playlist-badge svg {
         width: 14px;
@@ -489,12 +433,12 @@
         position: relative;
         aspect-ratio: 16 / 9;
         overflow: hidden;
+        border-radius: 1rem 1rem 0 0;
         background: linear-gradient(
             135deg,
             rgba(15, 17, 21, 0.9),
             rgba(25, 29, 36, 0.8)
         );
-        border-radius: 0.5rem;
     }
     .queue-placeholder {
         width: 100%;
@@ -519,6 +463,9 @@
         font-weight: 600;
         letter-spacing: 0.025em;
         opacity: 0.9;
+    }
+    .thumbnail-content {
+        padding: 1rem;
     }
     .thumbnail-skeleton {
         position: absolute;
@@ -548,6 +495,7 @@
     .thumbnail-image {
         position: relative;
         display: block;
+        height: 100%;
     }
     .thumbnail-image img {
         width: 100%;
@@ -560,29 +508,8 @@
             transform 320ms cubic-bezier(0.33, 1, 0.68, 1);
         will-change: opacity, transform;
     }
-    .thumbnail-image.original img {
-        transform: scale(1);
-    }
-    .thumbnail-image.reaction {
-        position: absolute;
-        top: 0;
-        right: 0;
-        width: 33%;
-        max-width: 220px;
-        aspect-ratio: 16 / 9;
-        box-shadow: 0 18px 40px rgba(5, 8, 12, 0.35);
-        transform: translate(12%, -12%) scale(0.96);
-        transition: transform 320ms cubic-bezier(0.33, 1, 0.68, 1);
-    }
-    .thumbnail-image.reaction img {
-        width: 100%;
-        height: 100%;
-    }
-    .group:hover .thumbnail-image.original img {
-        transform: scale(1.02);
-    }
-    .group:hover .thumbnail-image.reaction {
-        transform: translate(12%, -12%) scale(1.02);
+    .group:hover .thumbnail-image img {
+        transform: scale(1.03);
     }
     .thumbnail-image.loaded img {
         opacity: 1;
@@ -606,15 +533,8 @@
             transition: none;
             transform: none;
         }
-        .thumbnail-image.reaction {
-            transition: none;
-            transform: translate(12%, -12%) scale(0.96);
-        }
-        .group:hover .thumbnail-image.original img {
+        .group:hover .thumbnail-image img {
             transform: none;
-        }
-        .group:hover .thumbnail-image.reaction {
-            transform: translate(12%, -12%) scale(0.96);
         }
     }
 </style>

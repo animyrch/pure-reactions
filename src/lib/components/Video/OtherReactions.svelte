@@ -219,16 +219,6 @@
             flex-basis: min(12.5rem, 78vw);
             max-width: 78vw;
         }
-
-        .carousel-item :global(.thumbnail-card) {
-            padding: 0.5rem;
-        }
-
-        .carousel-item :global(.thumbnail-image.reaction) {
-            width: 38%;
-            max-width: 140px;
-            transform: translate(6%, -6%) scale(0.95);
-        }
     }
 
     @media (min-width: 640px) {
