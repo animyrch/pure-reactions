@@ -2068,11 +2068,6 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     const reactionChannelName = typeof reactionData?.channelName === 'string' ? reactionData.channelName.trim() : undefined;
     const reactionChannelId = typeof reactionData?.channelId === 'string' ? reactionData.channelId.trim() : undefined;
     const isCreatorVerified = resolveCreatorVerification(reactionData);
-    const rawReactorDisplayName =
-      typeof reactionData?.reactorDisplayName === 'string' ? reactionData.reactorDisplayName.trim() : '';
-    const viewerDisplayName = typeof data?.displayName === 'string' ? data.displayName.trim() : '';
-    const resolvedReactorDisplayName =
-      rawReactorDisplayName || (reactionData?.reactorId === userId ? viewerDisplayName : '');
 
     updateState({
       isPublished: reactionData.isPublished,
@@ -2306,12 +2301,6 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
           : typeof reactionData?.userId === 'string'
             ? reactionData.userId
             : undefined;
-      const rawReactorDisplayName =
-        typeof reactionData?.reactorDisplayName === 'string' ? reactionData.reactorDisplayName.trim() : '';
-      const rawUserName = typeof reactionData?.userName === 'string' ? reactionData.userName.trim() : '';
-      const viewerDisplayName = typeof data?.displayName === 'string' ? data.displayName.trim() : '';
-      const resolvedReactorDisplayName =
-        rawReactorDisplayName || rawUserName || (resolvedReactorId === userId ? viewerDisplayName : '');
       const reactionChannelName = typeof reactionData?.channelName === 'string' ? reactionData.channelName.trim() : undefined;
       const reactionChannelId = typeof reactionData?.channelId === 'string' ? reactionData.channelId.trim() : undefined;
       const isCreatorVerified = resolveCreatorVerification(reactionData);
