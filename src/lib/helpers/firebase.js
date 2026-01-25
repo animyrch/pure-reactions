@@ -74,6 +74,7 @@ export const createReactionDocument = async ({
             playbackRateConfigs: {},
             reactorId: userId,
             reactorDisplayName,
+            isCreatorVerified: false,
             offsetStartTime,
             fullscreenPrimaryVideo: "original",
             fullscreenOverlayWidthPercent: 35,
@@ -595,6 +596,30 @@ export const getReactionsByCreatorName = async (creatorName) => {
         console.error('Error getting creator documents: ', error);
     }
 };
+
+export const getReactionsByUserId = async (userId) => {
+    let reactions = [];
+    if (!userId) {
+        return reactions;
+    }
+    try {
+        const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'getReactionsByUserId');
+        const queryRef = query(reactionsCollection,
+            where("reactorId", "==", userId),
+            where('isPublished', '==', true),
+            orderBy('createdAt', 'desc')
+        );
+        const querySnapshot = await getDocs(queryRef);
+        reactions = querySnapshot.docs.map((doc) => ({
+            id: doc.id,
+            data: doc.data(),
+            type: 'reaction'
+        }));
+        return reactions;
+    } catch (error) {
+        console.error('Error getting user reactions: ', error);
+    }
+};
 export const getReactionsToOriginalVideo = async (originalVideoId, exceptReactionVideoId) => {
     let reactions = [];
     if (!originalVideoId) {
@@ -672,6 +697,14 @@ export const createUserWithEmailAndPasswordWrapper = async (email, password) => 
     let successful = false;
     try {
         const userCreds = await createUserWithEmailAndPassword(auth, email, password)
+        const emailPrefix = typeof email === 'string' ? email.split('@')[0].trim() : '';
+        if (emailPrefix) {
+            try {
+                await updateProfile(userCreds.user, { displayName: emailPrefix });
+            } catch (error) {
+                console.error('Failed to set fallback display name:', error);
+            }
+        }
         sendEmailVerification(userCreds.user, {
             url: window.location.href
         });
