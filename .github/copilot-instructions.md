@@ -111,6 +111,10 @@ The agent should behave like a calm, experienced art director who also understan
 - Serverless playlist fetcher at `routes/api/youtube/playlist/[id]/+server.js` proxies playlist items; respect quota limits and bubble HTTP failures to the UI.
 - Search is provider-agnostic via `lib/services/search/`; currently uses Algolia but can swap to Meilisearch/Typesense by changing factory. Run `npm run algolia:status` to check index health, `npm run algolia:index` to reindex. See `docs/ALGOLIA_OPERATIONS.md`.
 - Netlify deploy picks up `build/` output; keep adapter-specific assumptions (no Node APIs at runtime) when adding backend logic.
+## Schema Discipline
+- Whenever new objects are created in Firebase, Algolia, or any backend service, add their schema to the schema doc.
+- When manipulating or using existing objects from external services, always refer to the schema doc to avoid hallucinating properties.
+- Keep the `## Version History` section in `docs/SCHEMA_REFERENCE.md` updated whenever schemas change.
 
 ## 12 — Logic placement & small-file strategy
 1. **Composables orchestrate** — keep `use*` composables responsible for lifecycle hooks, store wiring, Firebase calls, YT players, and UI helpers. They should stay stateful and thin.

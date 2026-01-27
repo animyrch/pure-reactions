@@ -21,7 +21,7 @@ The main collection for reaction videos.
 | `originalVideoTitle` | string | Yes | Title of the original video |
 | `originalVideoAuthor` | string | No | YouTube channel handle for the original video |
 | `slug` | string | No | URL-friendly identifier (falls back to doc ID) |
-| `isPublished` | boolean | Yes | Visibility status (true = public, false = draft) |
+| `isPublished` | boolean | Yes | Visibility status (true = public, false = draft/unlisted) |
 | `createdAt` | Timestamp | Yes | Document creation timestamp |
 | `updatedAt` | Timestamp | Yes | Last update timestamp |
 
@@ -104,6 +104,38 @@ Temporary playback queues for sequential viewing.
 | `expiresAt` | Timestamp | No | Optional expiration timestamp |
 
 ---
+
+### `youtubeChannelClaims` (COLLECTION_YOUTUBE_CHANNEL_CLAIMS)
+
+Manual verification claims for YouTube channels. Document IDs are deterministic: `{youtubeChannelId}__{userId}`.
+
+#### Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `userId` | string | Yes | Firebase Auth user ID submitting the claim |
+| `youtubeChannelId` | string | Yes | YouTube channel identifier being claimed (channel handle when ID is unavailable in V1) |
+| `youtubeChannelUrl` | string | No | YouTube channel URL for reference |
+| `verificationToken` | string | Yes | Token placed in the claimant's YouTube video description |
+| `verificationVideoUrl` | string | Yes | Link to the verification video |
+| `status` | string | Yes | `pending` \| `approved` \| `rejected` |
+| `createdAt` | Timestamp | Yes | Claim creation timestamp |
+| `expiresAt` | Timestamp | Yes | When the verification token expires |
+| `reviewNotes` | string | No | Admin-only review notes |
+
+---
+
+### `youtubeChannelVerifications` (COLLECTION_YOUTUBE_CHANNEL_VERIFICATIONS)
+
+Public verification state for YouTube channels. Document IDs are the channel identifier (handle in V1).
+
+#### Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `status` | string | Yes | `approved` (future: other states) |
+| `approvedAt` | Timestamp | No | When the claim was approved |
+| `claimId` | string | No | Claim document ID that triggered verification |
 
 ## Algolia Index
 
@@ -223,7 +255,7 @@ Real-time co-watching sessions.
 
 - Use `isPublished` to control visibility
 - `isPublished: true` = public, searchable, indexed
-- `isPublished: false` = draft, private, not indexed
+- `isPublished: false` = draft/unlisted, not indexed (direct-link access allowed)
 - Playlists and queues currently have no visibility flag (considered public if accessible)
 
 ---
