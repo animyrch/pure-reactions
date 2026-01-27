@@ -126,6 +126,7 @@ The agent should behave like a calm, experienced art director who also understan
 2. **Helpers stay stateless** — deterministic logic (rounding, map/array conversions, timeline derivations) belongs under `src/lib/helpers/`. Prefer descriptive names (e.g., `twinPlayersTimeline.ts`) so other modules can reuse them without bringing in composable state.
 3. **Split when needed** — if a file grows past ~300 lines or mixes side effects + pure logic, consider extracting the pure parts into a helper. Document the split briefly so future contributors understand where each responsibility lives.
 4. **Name for intent** — favor folder names that imply behavior (`helpers` vs `composables`). When adding new helpers, update `README.md` or documentation comments with the reasoning so the team remembers the standard.
+5. **Components present, helpers derive** — components should focus on obtaining data and rendering; move formatting, parsing, label building, and state derivation into helpers. Split independent layout compartments into their own components even if single-use.
 
 ## 13 — Browser testing reference (Playwright fixtures)
 * When you run or describe browser tests, use the same reaction slugs and video IDs that the Playwright twin-player suite targets so the experience matches what CI exercises. Those IDs are defined in `tests/fixtures/reactions/*.json` and referenced by `tests/twin-player-basic-sync.spec.js`.
