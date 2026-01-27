@@ -1,6 +1,7 @@
 import { onDestroy, onMount, tick } from 'svelte';
 import { get, writable } from 'svelte/store';
 import { goto } from '$app/navigation';
+import { env } from '$env/dynamic/public';
 import {
   getCurrentPlaybackRateFromConfigs,
   getCurrentStateFromStateConfigs,
@@ -66,6 +67,8 @@ type Nullable<T> = T | null | undefined;
 type FullscreenPrimaryVideo = 'original' | 'reaction';
 type FullscreenOverlayCorner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 
+const DISABLE_YOUTUBE_METADATA_SYNC = env.PUBLIC_DISABLE_YOUTUBE_METADATA_SYNC === 'true';
+
 type TwinPlayersState = {
   isLoading: boolean;
   isReactionMissing: boolean;
@@ -83,9 +86,6 @@ type TwinPlayersState = {
   originalVideoTitle?: string;
   originalVideoId?: string;
   reactorId?: string;
-  reactionChannelName?: string;
-  reactionChannelId?: string;
-  isCreatorVerified: boolean;
   youtubePlaylistId?: string;
   playlistDocumentId?: string | null;
   playlistItems: any[];
@@ -307,15 +307,6 @@ const normalizeFullscreenOverlayWidthPercent = (value: unknown): number => {
   return Math.max(FULLSCREEN_OVERLAY_WIDTH_MIN, Math.min(FULLSCREEN_OVERLAY_WIDTH_MAX, snapped));
 };
 
-const resolveCreatorVerification = (reactionData: any): boolean => {
-  if (!reactionData) return false;
-  if (reactionData.isCreatorVerified === true) return true;
-  if (reactionData.creatorVerified === true) return true;
-  if (reactionData.creatorVerification?.status === 'verified') return true;
-  if (reactionData.verificationStatus === 'verified') return true;
-  return false;
-};
-
 export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOptions) {
   const { slug, userId } = data;
   const initialUrlState = getInitialUrlState();
@@ -338,9 +329,6 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     reactionVideoTitle: undefined,
     originalVideoId: undefined,
     reactorId: undefined,
-    reactionChannelName: undefined,
-    reactionChannelId: undefined,
-    isCreatorVerified: false,
     youtubePlaylistId: undefined,
     playlistDocumentId: initialUrlState.playlistId,
     playlistItems: [],
@@ -2061,13 +2049,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
           : undefined;
     const rawReactorDisplayName =
       typeof reactionData?.reactorDisplayName === 'string' ? reactionData.reactorDisplayName.trim() : '';
-    const rawUserName = typeof reactionData?.userName === 'string' ? reactionData.userName.trim() : '';
     const viewerDisplayName = typeof data?.displayName === 'string' ? data.displayName.trim() : '';
     const resolvedReactorDisplayName =
-      rawReactorDisplayName || rawUserName || (resolvedReactorId === userId ? viewerDisplayName : '');
-    const reactionChannelName = typeof reactionData?.channelName === 'string' ? reactionData.channelName.trim() : undefined;
-    const reactionChannelId = typeof reactionData?.channelId === 'string' ? reactionData.channelId.trim() : undefined;
-    const isCreatorVerified = resolveCreatorVerification(reactionData);
+      rawReactorDisplayName || (reactionData?.reactorId === userId ? viewerDisplayName : '');
 
     updateState({
       isPublished: reactionData.isPublished,
@@ -2089,9 +2073,6 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       originalVideoId,
       reactionVideoAuthor: reactionData?.reactionVideoAuthor,
       reactorDisplayName: resolvedReactorDisplayName || undefined,
-      reactionChannelName,
-      reactionChannelId,
-      isCreatorVerified,
       reactionVideoTitle: reactionData?.reactionVideoTitle,
       originalVideoAuthor: reactionData?.originalVideoAuthor,
       originalVideoTitle: reactionData?.originalVideoTitle,
@@ -2301,9 +2282,6 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
           : typeof reactionData?.userId === 'string'
             ? reactionData.userId
             : undefined;
-      const reactionChannelName = typeof reactionData?.channelName === 'string' ? reactionData.channelName.trim() : undefined;
-      const reactionChannelId = typeof reactionData?.channelId === 'string' ? reactionData.channelId.trim() : undefined;
-      const isCreatorVerified = resolveCreatorVerification(reactionData);
       const rawReactorDisplayName =
         typeof reactionData?.reactorDisplayName === 'string' ? reactionData.reactorDisplayName.trim() : '';
       const viewerDisplayName = typeof data?.displayName === 'string' ? data.displayName.trim() : '';
@@ -2330,9 +2308,6 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         originalVideoId,
         reactionVideoAuthor: reactionData?.reactionVideoAuthor,
         reactorDisplayName: resolvedReactorDisplayName || undefined,
-        reactionChannelName,
-        reactionChannelId,
-        isCreatorVerified,
         reactionVideoTitle: reactionData?.reactionVideoTitle,
         originalVideoAuthor: reactionData?.originalVideoAuthor,
         originalVideoTitle: reactionData?.originalVideoTitle,
@@ -2672,6 +2647,10 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     currentReactionTitle,
     currentReactionAuthor
   }: VerifyAndSyncMetadataParams) => {
+    if (DISABLE_YOUTUBE_METADATA_SYNC) {
+      return;
+    }
+
     const resolvedDocumentId =
       documentId ?? (typeof window !== 'undefined' ? (window as any)?.currentReactionDocumentId : undefined);
 

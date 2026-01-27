@@ -33,6 +33,8 @@ import {
     COLLECTION_USER_DATA,
     COLLECTION_PLAYLISTS,
     COLLECTION_QUEUES,
+    COLLECTION_YOUTUBE_CHANNEL_CLAIMS,
+    COLLECTION_YOUTUBE_CHANNEL_VERIFICATIONS,
     app, db
 } from "$lib/constants/firebase";
 import { showToast } from '$lib/stores/toast';
@@ -74,7 +76,6 @@ export const createReactionDocument = async ({
             playbackRateConfigs: {},
             reactorId: userId,
             reactorDisplayName,
-            isCreatorVerified: false,
             offsetStartTime,
             fullscreenPrimaryVideo: "original",
             fullscreenOverlayWidthPercent: 35,
@@ -97,7 +98,7 @@ export const createPlaylistDocument = async ({ reactionDocumentId, originalVideo
         const dataToAdd = {
             reactionBinomeIds: [reactionDocumentId],
             originalVideoIds: [originalVideoId],
-            reactorId: userId,
+            userId,
             createdAt: serverTimestamp()
         };
 
@@ -144,6 +145,105 @@ export const createQueueDocument = async ({ slug, title, description, items, use
         return sanitizedSlug;
     } catch (error) {
         console.error('Error creating queue document: ', error);
+        throw error;
+    }
+};
+
+export const buildYoutubeChannelClaimDocumentId = (youtubeChannelId, userId) => {
+    const safeChannelId = (youtubeChannelId || '').trim();
+    const safeUserId = (userId || '').trim();
+    if (!safeChannelId || !safeUserId) return '';
+    return `${safeChannelId}__${safeUserId}`;
+};
+
+export const getYoutubeChannelClaim = async ({ youtubeChannelId, userId }) => {
+    const claimId = buildYoutubeChannelClaimDocumentId(youtubeChannelId, userId);
+    if (!claimId) {
+        return null;
+    }
+    if (!COLLECTION_YOUTUBE_CHANNEL_CLAIMS) {
+        console.error('Missing COLLECTION_YOUTUBE_CHANNEL_CLAIMS env var.');
+        return null;
+    }
+    try {
+        const claimsCollection = createCollection(db, COLLECTION_YOUTUBE_CHANNEL_CLAIMS, 'getYoutubeChannelClaim');
+        const claimRef = doc(claimsCollection, claimId);
+        const claimSnapshot = await getDoc(claimRef);
+        if (claimSnapshot.exists()) {
+            return { id: claimSnapshot.id, ...claimSnapshot.data() };
+        }
+        return null;
+    } catch (error) {
+        console.error('Error getting youtube channel claim: ', error);
+        return null;
+    }
+};
+
+export const getYoutubeChannelVerification = async ({ youtubeChannelId }) => {
+    const verificationId = (youtubeChannelId || '').trim();
+    if (!verificationId) {
+        return null;
+    }
+    const resolvedCollection =
+        COLLECTION_YOUTUBE_CHANNEL_VERIFICATIONS ||
+        (COLLECTION_YOUTUBE_CHANNEL_CLAIMS
+            ? COLLECTION_YOUTUBE_CHANNEL_CLAIMS.replace('youtubeChannelClaims', 'youtubeChannelVerifications')
+            : '');
+    if (!resolvedCollection) {
+        console.error('Missing COLLECTION_YOUTUBE_CHANNEL_VERIFICATIONS env var.');
+        return null;
+    }
+    try {
+        const verificationsCollection = createCollection(
+            db,
+            resolvedCollection,
+            'getYoutubeChannelVerification'
+        );
+        const verificationRef = doc(verificationsCollection, verificationId);
+        const verificationSnapshot = await getDoc(verificationRef);
+        if (verificationSnapshot.exists()) {
+            return { id: verificationSnapshot.id, ...verificationSnapshot.data() };
+        }
+        return null;
+    } catch (error) {
+        console.error('Error getting youtube channel verification: ', error);
+        return null;
+    }
+};
+
+export const createYoutubeChannelClaim = async ({
+    youtubeChannelId,
+    userId,
+    youtubeChannelUrl,
+    verificationToken,
+    verificationVideoUrl,
+    expiresAt
+}) => {
+    const claimId = buildYoutubeChannelClaimDocumentId(youtubeChannelId, userId);
+    if (!claimId) {
+        throw new Error('Missing youtubeChannelId or userId for claim creation.');
+    }
+    if (!COLLECTION_YOUTUBE_CHANNEL_CLAIMS) {
+        throw new Error('Missing COLLECTION_YOUTUBE_CHANNEL_CLAIMS env var.');
+    }
+
+    try {
+        const claimsCollection = createCollection(db, COLLECTION_YOUTUBE_CHANNEL_CLAIMS, 'createYoutubeChannelClaim');
+        const claimRef = doc(claimsCollection, claimId);
+        const payload = {
+            userId,
+            youtubeChannelId,
+            youtubeChannelUrl: youtubeChannelUrl || '',
+            verificationToken,
+            verificationVideoUrl,
+            status: 'pending',
+            createdAt: serverTimestamp(),
+            expiresAt: expiresAt || null
+        };
+        await setDoc(claimRef, payload, { merge: false });
+        return { id: claimRef.id, ...payload };
+    } catch (error) {
+        console.error('Error creating youtube channel claim: ', error);
         throw error;
     }
 };
@@ -479,7 +579,7 @@ export const getUserPlaylists = async (userId, filter = FILTERS.ALL) => {
         // Build query conditions - note: playlists don't have isPublished field
         // A playlist is considered published if any reaction in it is published
         const queryConditions = [
-            where("reactorId", "==", userId),
+            where("userId", "==", userId),
             orderBy('createdAt', 'desc')
         ];
         
