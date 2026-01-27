@@ -21,7 +21,10 @@ module.exports = async () => {
 
   const result = spawnSync('node', ['scripts/seed-twin-player-fixtures.mjs'], {
     stdio: 'inherit',
-    env: process.env
+    env: {
+      ...process.env,
+      FIREBASE_SEED_OVERWRITE: 'true'
+    }
   });
 
   if (result.status !== 0) {

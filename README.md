@@ -97,6 +97,18 @@ Manage search indices and configuration:
 
 See [docs/ALGOLIA_OPERATIONS.md](docs/ALGOLIA_OPERATIONS.md) for detailed search operations guide.
 
+### Sitemap Generation
+
+Generate and commit the static sitemap (`static/sitemap.xml`) from Firestore:
+
+```bash
+export FIREBASE_SERVICE_ACCOUNT="./path/to/serviceAccount.json"
+export PUBLIC_BASE_URL="https://yourdomain.com"
+npm run generate-sitemap
+```
+
+The script reads published reactions and uses stored `youtube.meta` fields (no YouTube API calls during generation).
+
 ## Architecture
 
 ### Core Technologies

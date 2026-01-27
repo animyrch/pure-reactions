@@ -16,12 +16,12 @@ The main collection for reaction videos.
 |-------|------|----------|-------------|
 | `reactionVideoId` | string | Yes | YouTube video ID of the reaction |
 | `reactionVideoTitle` | string | Yes | Title of the reaction video |
+| `reactionVideoAuthor` | string | No | YouTube channel handle for the reaction video (e.g., `@channel`) |
 | `originalVideoId` | string | Yes | YouTube video ID of the original content |
 | `originalVideoTitle` | string | Yes | Title of the original video |
-| `channelName` | string | No | Name of the reactor's channel |
-| `channelId` | string | No | YouTube channel ID of the reactor |
+| `originalVideoAuthor` | string | No | YouTube channel handle for the original video |
 | `slug` | string | No | URL-friendly identifier (falls back to doc ID) |
-| `isPublished` | boolean | Yes | Visibility status (true = public, false = draft) |
+| `isPublished` | boolean | Yes | Visibility status (true = public, false = draft/unlisted) |
 | `createdAt` | Timestamp | Yes | Document creation timestamp |
 | `updatedAt` | Timestamp | Yes | Last update timestamp |
 
@@ -46,8 +46,8 @@ The main collection for reaction videos.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `userId` | string | No | Creator's user ID |
-| `userName` | string | No | Creator's display name |
+| `reactorId` | string | No | Reactor's Firebase Auth user ID |
+| `reactorDisplayName` | string | No | Reactor's display name (from Auth profile) |
 
 ---
 
@@ -63,7 +63,7 @@ User-specific data and preferences.
 | `displayName` | string | No | User's display name |
 | `email` | string | No | User's email |
 | `bookmarks` | array[string] | No | Array of reaction IDs bookmarked by user |
-| `following` | array[string] | No | Array of channel IDs user follows |
+| `following` | array[string] | No | Array of reactor user IDs the user follows |
 | `createdAt` | Timestamp | Yes | Account creation timestamp |
 | `updatedAt` | Timestamp | Yes | Last update timestamp |
 
@@ -105,6 +105,38 @@ Temporary playback queues for sequential viewing.
 
 ---
 
+### `youtubeChannelClaims` (COLLECTION_YOUTUBE_CHANNEL_CLAIMS)
+
+Manual verification claims for YouTube channels. Document IDs are deterministic: `{youtubeChannelId}__{userId}`.
+
+#### Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `userId` | string | Yes | Firebase Auth user ID submitting the claim |
+| `youtubeChannelId` | string | Yes | YouTube channel identifier being claimed (channel handle when ID is unavailable in V1) |
+| `youtubeChannelUrl` | string | No | YouTube channel URL for reference |
+| `verificationToken` | string | Yes | Token placed in the claimant's YouTube video description |
+| `verificationVideoUrl` | string | Yes | Link to the verification video |
+| `status` | string | Yes | `pending` \| `approved` \| `rejected` |
+| `createdAt` | Timestamp | Yes | Claim creation timestamp |
+| `expiresAt` | Timestamp | Yes | When the verification token expires |
+| `reviewNotes` | string | No | Admin-only review notes |
+
+---
+
+### `youtubeChannelVerifications` (COLLECTION_YOUTUBE_CHANNEL_VERIFICATIONS)
+
+Public verification state for YouTube channels. Document IDs are the channel identifier (handle in V1).
+
+#### Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `status` | string | Yes | `approved` (future: other states) |
+| `approvedAt` | Timestamp | No | When the claim was approved |
+| `claimId` | string | No | Claim document ID that triggered verification |
+
 ## Algolia Index
 
 ### `reactions` Index (ALGOLIA_REACTIONS_INDEX)
@@ -120,8 +152,7 @@ Minimal, cost-optimized search index for reactions.
 | `reactionVideoTitle` | string | Yes | Yes | Title of reaction video (primary search field) |
 | `originalVideoId` | string | No | Yes | YouTube video ID (original) |
 | `originalVideoTitle` | string | Yes | Yes | Title of original video (secondary search field) |
-| `channelName` | string | Yes | Yes | Reactor's channel name (tertiary search field) |
-| `channelId` | string | No | Yes | Reactor's channel ID |
+| `reactionVideoAuthor` | string | Yes | Yes | Reactor's YouTube channel handle (tertiary search field) |
 | `tags` | array[string] | Yes | Yes | Categorization tags (filterable) |
 | `slug` | string | No | Yes | URL-friendly identifier |
 | `createdAt` | number | No | Yes | Timestamp in milliseconds (for sorting) |
@@ -131,12 +162,12 @@ Minimal, cost-optimized search index for reactions.
 
 1. `reactionVideoTitle` (highest priority)
 2. `originalVideoTitle`
-3. `channelName`
+3. `reactionVideoAuthor`
 4. `tags`
 
 #### Attributes for Faceting
 
-- `channelName` (searchable facet)
+- `reactionVideoAuthor` (searchable facet)
 - `tags` (searchable facet)
 
 #### Custom Ranking
@@ -152,7 +183,7 @@ To minimize cost and payload size:
 - `description` - Long text, not indexed
 - `thumbnailUrl` - Derivable from video IDs
 - `state` - Recording session data, temporary
-- `userId` / `userName` - Privacy, not needed for search
+- `reactorId` / `reactorDisplayName` - Privacy, not needed for search
 - `duration` - Derivable from YouTube API
 
 #### Indexing Rules
@@ -224,7 +255,7 @@ Real-time co-watching sessions.
 
 - Use `isPublished` to control visibility
 - `isPublished: true` = public, searchable, indexed
-- `isPublished: false` = draft, private, not indexed
+- `isPublished: false` = draft/unlisted, not indexed (direct-link access allowed)
 - Playlists and queues currently have no visibility flag (considered public if accessible)
 
 ---
@@ -306,7 +337,7 @@ const docRef = await addDoc(collection(db, 'reactions'), {
   reactionVideoTitle: 'My Reaction',
   originalVideoId: 'xyz789',
   originalVideoTitle: 'Original Video',
-  channelName: 'My Channel',
+  reactionVideoAuthor: '@mychannel',
   isPublished: false, // Start as draft
   createdAt: serverTimestamp(),
   updatedAt: serverTimestamp()

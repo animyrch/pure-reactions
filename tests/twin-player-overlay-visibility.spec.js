@@ -8,8 +8,32 @@
 import { test, expect } from '@playwright/test';
 import { waitForPlayersReady, startPlaybackInteraction } from './utils/twin-player-helpers.js';
 
+async function enterOverlayMode(page, testInfo) {
+  if (testInfo.project.name === 'mobile') {
+    // Mobile: landscape automatically engages the overlay layout.
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.waitForTimeout(500);
+    return;
+  }
+
+  // Desktop: explicitly enter fullscreen via the control dock.
+  const fullscreenButton = page.getByRole('button', { name: /enter fullscreen view/i });
+  if (!(await fullscreenButton.isVisible().catch(() => false))) {
+    // Nudge the stage to reveal controls if needed.
+    await page.locator('[data-stage="container"]').click({ force: true }).catch(() => {});
+  }
+  await fullscreenButton.click({ timeout: 15000 });
+
+  // Wait until the overlay role exists in fullscreen mode.
+  await expect(page.locator('[data-stage-role="overlay"]')).toHaveCount(1, { timeout: 15000 });
+  await page.waitForTimeout(300);
+}
+
 test.describe('Twin-player overlay visibility', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page }, testInfo) => {
+    if (process.env.PUBLIC_FIREBASE_USE_EMULATORS !== 'true') {
+      testInfo.skip(true, 'requires Firestore emulator fixtures');
+    }
     // Navigate to reaction page
     await page.goto('/reaction/testOverlayVisibility123');
 
@@ -21,9 +45,7 @@ test.describe('Twin-player overlay visibility', () => {
   });
 
   test('overlay visibility defaults to visible', async ({ page }) => {
-    // Simulate device rotation to landscape (fullscreen mode on mobile)
-    await page.setViewportSize({ width: 1280, height: 720 });
-    await page.waitForTimeout(500);
+    await enterOverlayMode(page, test.info());
 
     // Check that overlay is visible (opacity-100)
     const overlay = page.locator('[data-stage-role="overlay"]').first();
@@ -32,9 +54,7 @@ test.describe('Twin-player overlay visibility', () => {
   });
 
   test('overlay hides at configured time', async ({ page }) => {
-    // Simulate device rotation to landscape (fullscreen mode on mobile)
-    await page.setViewportSize({ width: 1280, height: 720 });
-    await page.waitForTimeout(500);
+    await enterOverlayMode(page, test.info());
 
     // Get overlay element
     const overlay = page.locator('[data-stage-role="overlay"]').first();
@@ -50,9 +70,7 @@ test.describe('Twin-player overlay visibility', () => {
   });
 
   test('overlay shows again after configured time', async ({ page }) => {
-    // Simulate device rotation to landscape (fullscreen mode on mobile)
-    await page.setViewportSize({ width: 1280, height: 720 });
-    await page.waitForTimeout(500);
+    await enterOverlayMode(page, test.info());
 
     const overlay = page.locator('[data-stage-role="overlay"]').first();
 
@@ -102,7 +120,10 @@ test.describe('Twin-player overlay visibility', () => {
 });
 
 test.describe('Twin-player overlay visibility (debug)', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page }, testInfo) => {
+    if (process.env.PUBLIC_FIREBASE_USE_EMULATORS !== 'true') {
+      testInfo.skip(true, 'requires Firestore emulator fixtures');
+    }
     // Navigate to reaction page
     await page.goto('/reaction/testOverlayVisibility123');
 
@@ -114,10 +135,8 @@ test.describe('Twin-player overlay visibility (debug)', () => {
   });
 
   test('debug overlay visibility timeline', async ({ page }) => {
-    // Simulate device rotation to landscape (fullscreen mode on mobile)
-    await page.setViewportSize({ width: 1280, height: 720 });
-    console.log('Viewport set to 1280x720');
-    await page.waitForTimeout(500);
+    await enterOverlayMode(page, test.info());
+    console.log(`Overlay mode engaged on project: ${test.info().project.name}`);
 
     // Check if overlay exists
     const overlayCount = await page.locator('[data-stage-role="overlay"]').count();

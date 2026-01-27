@@ -1,0 +1,343 @@
+// Default deny; every new collection must be explicitly added here.
+// Test checklist (run after every rules change):
+// - Logged out read (public collections only)
+// - Logged in owner write
+// - Non-owner write denied
+// - Claims get (owner/admin)
+// - Claims list denied
+// - Channel verification get (public)
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+
+    function isReactionOwner() {
+      return isSignedIn() && resource.data.reactorId == request.auth.uid;
+    }
+
+    function isReactionOwnerCreate() {
+      return isSignedIn() && request.resource.data.reactorId == request.auth.uid;
+    }
+
+    function reactionSensitiveKeys() {
+      return [
+        'isShadowBanned',
+        'featured',
+        'adminNotes',
+        'searchBoost',
+        'moderationState',
+        'moderationNotes',
+        'reviewNotes',
+        'verificationStatus',
+        'creatorVerified',
+        'creatorVerification',
+        'isCreatorVerified'
+      ];
+    }
+
+    function playlistSensitiveKeys() {
+      return [
+        'reactorId',
+        'isShadowBanned',
+        'featured',
+        'adminNotes',
+        'searchBoost',
+        'moderationState',
+        'moderationNotes',
+        'reviewNotes',
+        'visibilityOverride'
+      ];
+    }
+
+    function reactionCreateHasNoSensitiveKeys() {
+      return !request.resource.data.keys().hasAny(reactionSensitiveKeys());
+    }
+
+    function reactionUpdateHasNoSensitiveKeys() {
+      return !request.resource.data.diff(resource.data).changedKeys().hasAny(reactionSensitiveKeys());
+    }
+
+    function playlistCreateHasNoSensitiveKeys() {
+      return !request.resource.data.keys().hasAny(playlistSensitiveKeys());
+    }
+
+    function playlistUpdateHasNoSensitiveKeys() {
+      return !request.resource.data.diff(resource.data).changedKeys().hasAny(playlistSensitiveKeys());
+    }
+
+    function isPlaylistOwner() {
+      return isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    function isPlaylistOwnerCreate() {
+      return isSignedIn() && request.resource.data.userId == request.auth.uid;
+    }
+
+    function isQueueOwner() {
+      return isSignedIn() && resource.data.ownerId == request.auth.uid;
+    }
+
+    function isQueueOwnerCreate() {
+      return isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+    }
+
+    function isUserDataOwner(docUserId) {
+      return isSignedIn() && request.auth.uid == docUserId;
+    }
+
+    function isClaimOwner() {
+      return isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    function isClaimOwnerCreate() {
+      return isSignedIn() && request.resource.data.userId == request.auth.uid;
+    }
+
+    function claimIdMatches(claimId, channelId, userId) {
+      return claimId == channelId + '__' + userId;
+    }
+
+    function claimIdMatchesCreate(claimId) {
+      return claimIdMatches(claimId, request.resource.data.youtubeChannelId, request.auth.uid);
+    }
+
+    function claimIdMatchesExisting(claimId) {
+      return claimIdMatches(claimId, resource.data.youtubeChannelId, request.auth.uid);
+    }
+
+    function isPending(data) {
+      return data.status == 'pending';
+    }
+
+    function claimIdBelongsToUser(claimId) {
+      return isSignedIn() && claimId.matches('^.+__' + request.auth.uid + '$');
+    }
+
+    function hasClaimRequiredKeys() {
+      return request.resource.data.keys().hasAll([
+        'userId',
+        'youtubeChannelId',
+        'verificationToken',
+        'verificationVideoUrl',
+        'status',
+        'createdAt'
+      ]);
+    }
+
+    function hasNoReviewNotes() {
+      return !request.resource.data.keys().hasAny(['reviewNotes']);
+    }
+
+    function hasNoUserEmail() {
+      return !request.resource.data.keys().hasAny(['userEmail']);
+    }
+
+    function claimUpdateAllowedKeys() {
+      return request.resource.data.diff(resource.data).changedKeys().hasOnly([
+        'verificationToken',
+        'verificationVideoUrl',
+        'expiresAt',
+        'youtubeChannelUrl'
+      ]);
+    }
+
+    function adminClaimUpdateAllowedKeys() {
+      return request.resource.data.diff(resource.data).changedKeys().hasOnly([
+        'status',
+        'reviewNotes'
+      ]);
+    }
+
+    function adminClaimStatusTransitionAllowed() {
+      return request.resource.data.status == resource.data.status ||
+        (resource.data.status == 'pending' &&
+          (request.resource.data.status == 'approved' || request.resource.data.status == 'rejected'));
+    }
+
+    // Reactions (public if published; draft accessible by direct link)
+    match /reactions/{reactionId} {
+      allow get: if true;
+      allow list: if resource.data.isPublished == true || isReactionOwner();
+      allow create: if isReactionOwnerCreate() && reactionCreateHasNoSensitiveKeys();
+      allow update, delete: if isReactionOwner() &&
+        request.resource.data.reactorId == resource.data.reactorId &&
+        reactionUpdateHasNoSensitiveKeys();
+    }
+    match /reactions-local/{reactionId} {
+      allow get: if true;
+      allow list: if resource.data.isPublished == true || isReactionOwner();
+      allow create: if isReactionOwnerCreate() && reactionCreateHasNoSensitiveKeys();
+      allow update, delete: if isReactionOwner() &&
+        request.resource.data.reactorId == resource.data.reactorId &&
+        reactionUpdateHasNoSensitiveKeys();
+    }
+    match /reactions-prod/{reactionId} {
+      allow get: if true;
+      allow list: if resource.data.isPublished == true || isReactionOwner();
+      allow create: if isReactionOwnerCreate() && reactionCreateHasNoSensitiveKeys();
+      allow update, delete: if isReactionOwner() &&
+        request.resource.data.reactorId == resource.data.reactorId &&
+        reactionUpdateHasNoSensitiveKeys();
+    }
+
+    // User data (private to the user)
+    match /userData/{userId} {
+      allow read, write: if isUserDataOwner(userId);
+    }
+    match /userdata/{userId} {
+      allow read, write: if isUserDataOwner(userId);
+    }
+    match /userData-local/{userId} {
+      allow read, write: if isUserDataOwner(userId);
+    }
+    match /userdata-local/{userId} {
+      allow read, write: if isUserDataOwner(userId);
+    }
+    match /userData-prod/{userId} {
+      allow read, write: if isUserDataOwner(userId);
+    }
+    match /userdata-prod/{userId} {
+      allow read, write: if isUserDataOwner(userId);
+    }
+
+    // Playlists (public read; owner write)
+    match /playlists/{playlistId} {
+      allow read: if true;
+      allow create: if isPlaylistOwnerCreate() && playlistCreateHasNoSensitiveKeys();
+      allow update, delete: if isPlaylistOwner() &&
+        request.resource.data.userId == resource.data.userId &&
+        playlistUpdateHasNoSensitiveKeys();
+    }
+    match /playlists-local/{playlistId} {
+      allow read: if true;
+      allow create: if isPlaylistOwnerCreate() && playlistCreateHasNoSensitiveKeys();
+      allow update, delete: if isPlaylistOwner() &&
+        request.resource.data.userId == resource.data.userId &&
+        playlistUpdateHasNoSensitiveKeys();
+    }
+    match /playlists-prod/{playlistId} {
+      allow read: if true;
+      allow create: if isPlaylistOwnerCreate() && playlistCreateHasNoSensitiveKeys();
+      allow update, delete: if isPlaylistOwner() &&
+        request.resource.data.userId == resource.data.userId &&
+        playlistUpdateHasNoSensitiveKeys();
+    }
+
+    // Queues (private to owner)
+    match /queues/{queueId} {
+      allow read: if isQueueOwner();
+      allow create: if isQueueOwnerCreate();
+      allow update, delete: if isQueueOwner() && request.resource.data.ownerId == resource.data.ownerId;
+    }
+    match /queues-local/{queueId} {
+      allow read: if isQueueOwner();
+      allow create: if isQueueOwnerCreate();
+      allow update, delete: if isQueueOwner() && request.resource.data.ownerId == resource.data.ownerId;
+    }
+    match /queues-prod/{queueId} {
+      allow read: if isQueueOwner();
+      allow create: if isQueueOwnerCreate();
+      allow update, delete: if isQueueOwner() && request.resource.data.ownerId == resource.data.ownerId;
+    }
+
+    // Youtube channel claims (V1)
+    match /youtubeChannelClaims/{claimId} {
+      allow get: if isAdmin() || claimIdBelongsToUser(claimId);
+      allow list: if false;
+      allow update: if isAdmin() &&
+        adminClaimUpdateAllowedKeys() &&
+        adminClaimStatusTransitionAllowed() &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.youtubeChannelId == resource.data.youtubeChannelId;
+      allow create: if isClaimOwnerCreate() &&
+        claimIdMatchesCreate(claimId) &&
+        hasClaimRequiredKeys() &&
+        hasNoReviewNotes() &&
+        hasNoUserEmail() &&
+        request.resource.data.status == 'pending';
+      allow update: if isClaimOwner() &&
+        claimIdMatchesExisting(claimId) &&
+        isPending(resource.data) &&
+        isPending(request.resource.data) &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.youtubeChannelId == resource.data.youtubeChannelId &&
+        claimUpdateAllowedKeys();
+      allow delete: if false;
+    }
+    match /youtubeChannelClaims_local/{claimId} {
+      allow get: if isAdmin() || claimIdBelongsToUser(claimId);
+      allow list: if false;
+      allow update: if isAdmin() &&
+        adminClaimUpdateAllowedKeys() &&
+        adminClaimStatusTransitionAllowed() &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.youtubeChannelId == resource.data.youtubeChannelId;
+      allow create: if isClaimOwnerCreate() &&
+        claimIdMatchesCreate(claimId) &&
+        hasClaimRequiredKeys() &&
+        hasNoReviewNotes() &&
+        hasNoUserEmail() &&
+        request.resource.data.status == 'pending';
+      allow update: if isClaimOwner() &&
+        claimIdMatchesExisting(claimId) &&
+        isPending(resource.data) &&
+        isPending(request.resource.data) &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.youtubeChannelId == resource.data.youtubeChannelId &&
+        claimUpdateAllowedKeys();
+      allow delete: if false;
+    }
+    match /youtubeChannelClaims_prod/{claimId} {
+      allow get: if isAdmin() || claimIdBelongsToUser(claimId);
+      allow list: if false;
+      allow update: if isAdmin() &&
+        adminClaimUpdateAllowedKeys() &&
+        adminClaimStatusTransitionAllowed() &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.youtubeChannelId == resource.data.youtubeChannelId;
+      allow create: if isClaimOwnerCreate() &&
+        claimIdMatchesCreate(claimId) &&
+        hasClaimRequiredKeys() &&
+        hasNoReviewNotes() &&
+        hasNoUserEmail() &&
+        request.resource.data.status == 'pending';
+      allow update: if isClaimOwner() &&
+        claimIdMatchesExisting(claimId) &&
+        isPending(resource.data) &&
+        isPending(request.resource.data) &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.youtubeChannelId == resource.data.youtubeChannelId &&
+        claimUpdateAllowedKeys();
+      allow delete: if false;
+    }
+
+    // Youtube channel verifications (public read, admin write)
+    match /youtubeChannelVerifications/{channelId} {
+      allow get: if true;
+      allow list: if false;
+      allow create, update, delete: if isAdmin();
+    }
+    match /youtubeChannelVerifications_local/{channelId} {
+      allow get: if true;
+      allow list: if false;
+      allow create, update, delete: if isAdmin();
+    }
+    match /youtubeChannelVerifications_prod/{channelId} {
+      allow get: if true;
+      allow list: if false;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

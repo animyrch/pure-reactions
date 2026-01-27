@@ -215,9 +215,9 @@
                                         <h4 class="mb-1 line-clamp-2 text-sm font-semibold text-text-primary">
                                             {reaction.data.reactionVideoTitle || 'Untitled Reaction'}
                                         </h4>
-                                        {#if reaction.data.channelName}
+                                        {#if reaction.data.reactorDisplayName || reaction.data.reactionVideoAuthor}
                                             <p class="text-xs text-text-secondary">
-                                                {reaction.data.channelName}
+                                                {reaction.data.reactorDisplayName || reaction.data.reactionVideoAuthor}
                                             </p>
                                         {/if}
                                     </div>

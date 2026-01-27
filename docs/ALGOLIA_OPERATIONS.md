@@ -41,8 +41,7 @@ The reactions index contains only essential, searchable fields to minimize cost:
 - `reactionVideoTitle` - Title of reaction video
 - `originalVideoId` - Original video YouTube ID
 - `originalVideoTitle` - Title of original video
-- `channelName` - Reactor's channel name
-- `channelId` - Reactor's channel ID
+- `reactionVideoAuthor` - Reactor's YouTube channel handle (e.g., `@channel`)
 - `tags` - Array of tags for filtering
 - `slug` - URL-friendly identifier
 - `createdAt` - Creation timestamp

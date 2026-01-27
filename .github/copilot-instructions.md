@@ -111,6 +111,10 @@ The agent should behave like a calm, experienced art director who also understan
 - Serverless playlist fetcher at `routes/api/youtube/playlist/[id]/+server.js` proxies playlist items; respect quota limits and bubble HTTP failures to the UI.
 - Search is provider-agnostic via `lib/services/search/`; currently uses Algolia but can swap to Meilisearch/Typesense by changing factory. Run `npm run algolia:status` to check index health, `npm run algolia:index` to reindex. See `docs/ALGOLIA_OPERATIONS.md`.
 - Netlify deploy picks up `build/` output; keep adapter-specific assumptions (no Node APIs at runtime) when adding backend logic.
+## Schema Discipline
+- Whenever new objects are created in Firebase, Algolia, or any backend service, add their schema to the schema doc.
+- When manipulating or using existing objects from external services, always refer to the schema doc to avoid hallucinating properties.
+- Keep the `## Version History` section in `docs/SCHEMA_REFERENCE.md` updated whenever schemas change.
 
 ## 12 — Logic placement & small-file strategy
 1. **Composables orchestrate** — keep `use*` composables responsible for lifecycle hooks, store wiring, Firebase calls, YT players, and UI helpers. They should stay stateful and thin.
@@ -118,6 +122,8 @@ The agent should behave like a calm, experienced art director who also understan
   - For twin-player sync: keep “what should happen” in helpers (`twinPlayersSyncTick`, `twinPlayersSyncScheduling`) and keep “do it” (player calls, timers, stores) in the composable.
 3. **Split when needed** — if a file grows past ~300 lines or mixes side effects + pure logic, consider extracting the pure parts into a helper. Document the split briefly so future contributors understand where each responsibility lives.
 4. **Name for intent** — favor folder names that imply behavior (`helpers` vs `composables`). When adding new helpers, update `README.md` or documentation comments with the reasoning so the team remembers the standard.
+
+5. **Components present, helpers derive** — components should focus on obtaining data and rendering; move formatting, parsing, label building, and state derivation into helpers. Split independent layout compartments into their own components even if single-use.
 
 ## 13 — Browser testing reference (Playwright fixtures)
 * When you run or describe browser tests, use the same reaction slugs and video IDs that the Playwright twin-player suite targets so the experience matches what CI exercises. Those IDs are defined in `tests/fixtures/reactions/*.json` and referenced by `tests/twin-player-basic-sync.spec.js`.

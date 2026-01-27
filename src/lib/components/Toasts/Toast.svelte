@@ -26,7 +26,7 @@
   </script>
   
     <div
-        class={`flex items-center w-full max-w-xs p-4 mb-4 rounded-lg shadow fixed top-24 sm:top-28 right-5 z-50 ${currentType.outerIcon}`}
+        class={`flex items-center w-full max-w-xs p-4 mb-4 rounded-lg shadow fixed top-24 sm:top-28 right-5 z-[100] ${currentType.outerIcon}`}
         role="alert"
     >
       <div class={`inline-flex items-center justify-center flex-shrink-0 w-8 h-8 rounded-lg ${currentType.innerIcon}`}>
