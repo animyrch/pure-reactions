@@ -203,7 +203,6 @@
         })
         .filter(Boolean);
     }
-    console.debug('[ConfigEditorV2] normalizeOverlayVisibilityEvents returning empty array');
     return [];
   };
 
