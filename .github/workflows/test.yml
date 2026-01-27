@@ -40,7 +40,7 @@ jobs:
       - name: Run Playwright tests
         # We wrap the test command with firebase emulators:exec to ensure Firestore is available.
         # We use a demo project ID to bypass authentication requirements for emulators.
-        run: npx firebase emulators:exec --project demo-pure-reactions --only firestore "npm run test:e2e"
+        run: npm run test:e2e:ci
 
       - name: Upload Report
         uses: actions/upload-artifact@v4
