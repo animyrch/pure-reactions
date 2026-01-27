@@ -12,7 +12,8 @@
     "lint": "eslint . --ext .js,.svelte",
     "e2e": "playwright test",
     "test:e2e": "playwright test",
-    "test:e2e:ci": "firebase emulators:exec --project demo-pure-reactions --only firestore \"npm run test:e2e\"",
+    "test:e2e:ci": "npx firebase-tools emulators:exec --project demo-pure-reactions --only firestore \"npm run test:e2e\"",
+    "test:rules": "firebase emulators:exec --only firestore \"node --test tests/firestore.rules.spec.mjs\"",
     "seed": "FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/seed-twin-player-fixtures.mjs -- --target prod --allowProd",
     "seed:firestore": "FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/seed-firestore-fixtures.mjs",
     "seed:twin-fixtures": "FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/seed-twin-player-fixtures.mjs",
@@ -23,6 +24,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
+    "firebase-tools": "^13.22.0",
     "@sveltejs/adapter-auto": "^2.0.0",
     "@sveltejs/adapter-netlify": "^1.0.0-next.88",
     "@sveltejs/enhanced-img": "^0.1.7",
