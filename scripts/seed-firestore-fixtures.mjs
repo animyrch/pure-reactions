@@ -1,5 +1,12 @@
 #!/usr/bin/env node
 
+// Usage:
+//   node scripts/seed-firestore-fixtures.mjs --fixture <path> [--collection <name>]
+//     [--target emulator|prod] [--allowProd] [--overwrite]
+//
+// Environment:
+//   FIREBASE_SEED_OVERWRITE=true (overwrite existing docs)
+
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
@@ -17,7 +24,8 @@ function parseArgs(argv) {
     collection: undefined,
     projectId: undefined,
     allowProd: false,
-    required: false
+    required: false,
+    overwrite: false
   };
 
   for (let i = 2; i < argv.length; i += 1) {
@@ -67,6 +75,11 @@ function parseArgs(argv) {
 
     if (token === '--required') {
       args.required = true;
+      continue;
+    }
+
+    if (token === '--overwrite') {
+      args.overwrite = true;
       continue;
     }
   }
@@ -194,14 +207,17 @@ async function seed() {
   ensureAdminApp({ projectId, target });
   const db = admin.firestore();
 
+  const overwrite = args.overwrite || String(process.env.FIREBASE_SEED_OVERWRITE || '').toLowerCase() === 'true';
+
   let created = 0;
+  let updated = 0;
   let skipped = 0;
 
   for (const entry of fixture.docs) {
     const ref = db.collection(collection).doc(entry.id);
     const snap = await ref.get();
 
-    if (snap.exists) {
+    if (snap.exists && !overwrite) {
       skipped += 1;
       continue;
     }
@@ -213,10 +229,14 @@ async function seed() {
     };
 
     await ref.set(payload, { merge: false });
-    created += 1;
+    if (snap.exists) {
+      updated += 1;
+    } else {
+      created += 1;
+    }
   }
 
-  const message = `[seed-firestore-fixtures] target=${target} projectId=${projectId} collection=${collection} fixture=${fixturePath} created=${created} skipped=${skipped}`;
+  const message = `[seed-firestore-fixtures] target=${target} projectId=${projectId} collection=${collection} fixture=${fixturePath} created=${created} updated=${updated} skipped=${skipped}`;
   // eslint-disable-next-line no-console
   console.log(message);
 

@@ -7,6 +7,7 @@
   import OtherReactions from "$lib/components/Video/OtherReactions.svelte";
   import SubtleLoader from "$lib/components/design-system/SubtleLoader.svelte";
   import ReactionStage from "$lib/components/reaction/ReactionStage.svelte";
+  import AttributionBlock from "$lib/components/reaction/AttributionBlock.svelte";
   import {
     useTwinPlayers,
     CONTROLS_FADE_CLASS,
@@ -39,7 +40,7 @@
   let playlistInitError = "";
 
   $: playlistOwnerId = ($state.playlistDocument ?? playlistDocumentLocal)
-    ?.reactorId;
+    ?.userId;
   $: isPlaylistOwner = Boolean(
     data?.userId && playlistOwnerId && playlistOwnerId === data.userId,
   );
@@ -271,6 +272,13 @@
         reactorId={$state.reactorId}
         reactorDisplayName={$state.reactorDisplayName}
       />
+      <div class="mt-2">
+        <AttributionBlock
+          reactionVideoAuthor={$state.reactionVideoAuthor}
+          reactorDisplayName={$state.reactorDisplayName}
+          reactorId={$state.reactorId}
+        />
+      </div>
 
       {#if $state.originalVideoId && playlistSlug}
         <div class="mt-8">

@@ -92,6 +92,7 @@ The agent should behave like a calm, experienced art director who also understan
 - Firebase config uses Firestore Lite + Realtime DB; when adding fields ensure they are serialisable by `updateFirebaseDocument` (no functions).
 - Shared session tooling expects Realtime Database rules that allow the paths under `sharedSessions/`; keep server timestamps via helper functions.
 - Search overlay relies on Algolia instantsearch; configure indices through `ALGOLIA_REACTIONS_INDEX` before shipping features using `SearchContainer.svelte`.
+- When adding or updating scripts in `scripts/`, include a short usage/help comment block at the top.
 ## Reaction Pipeline
 - Recording flow (`routes/backend/+page.svelte`) streams YouTube via IFrame API, logs state/volume/playback maps to Firestore using `updateFirebaseDocument`.
 - Timelines accept legacy object maps and new array formats; helpers in `lib/helpers/reaction.js` auto-detect both—preserve compatibility when writing data.
@@ -115,12 +116,17 @@ The agent should behave like a calm, experienced art director who also understan
 - Serverless playlist fetcher at `routes/api/youtube/playlist/[id]/+server.js` proxies playlist items; respect quota limits and bubble HTTP failures to the UI.
 - Algolia search is client-only; ensure new components supply `indices` map shaped like `{ [indexName]: HitComponent }`.
 - Netlify deploy picks up `build/` output; keep adapter-specific assumptions (no Node APIs at runtime) when adding backend logic.
+## Schema Discipline
+- Whenever new objects are created in Firebase, Algolia, or any backend service, add their schema to the schema doc.
+- When manipulating or using existing objects from external services, always refer to the schema doc to avoid hallucinating properties.
+- Keep the `## Version History` section in `docs/SCHEMA_REFERENCE.md` updated whenever schemas change.
 
 ## 12 — Logic placement & small-file strategy
 1. **Composables orchestrate** — keep `use*` composables responsible for lifecycle hooks, store wiring, Firebase calls, YT players, and UI helpers. They should stay stateful and thin.
 2. **Helpers stay stateless** — deterministic logic (rounding, map/array conversions, timeline derivations) belongs under `src/lib/helpers/`. Prefer descriptive names (e.g., `twinPlayersTimeline.ts`) so other modules can reuse them without bringing in composable state.
 3. **Split when needed** — if a file grows past ~300 lines or mixes side effects + pure logic, consider extracting the pure parts into a helper. Document the split briefly so future contributors understand where each responsibility lives.
 4. **Name for intent** — favor folder names that imply behavior (`helpers` vs `composables`). When adding new helpers, update `README.md` or documentation comments with the reasoning so the team remembers the standard.
+5. **Components present, helpers derive** — components should focus on obtaining data and rendering; move formatting, parsing, label building, and state derivation into helpers. Split independent layout compartments into their own components even if single-use.
 
 ## 13 — Browser testing reference (Playwright fixtures)
 * When you run or describe browser tests, use the same reaction slugs and video IDs that the Playwright twin-player suite targets so the experience matches what CI exercises. Those IDs are defined in `tests/fixtures/reactions/*.json` and referenced by `tests/twin-player-basic-sync.spec.js`.

@@ -1,0 +1,13 @@
+{
+  "name": "pure-reactions-functions",
+  "private": true,
+  "type": "module",
+  "main": "index.js",
+  "engines": {
+    "node": "20"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.2",
+    "firebase-functions": "^4.5.0"
+  }
+}
