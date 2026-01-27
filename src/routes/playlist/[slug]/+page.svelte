@@ -40,7 +40,7 @@
   let playlistInitError = "";
 
   $: playlistOwnerId = ($state.playlistDocument ?? playlistDocumentLocal)
-    ?.reactorId;
+    ?.userId;
   $: isPlaylistOwner = Boolean(
     data?.userId && playlistOwnerId && playlistOwnerId === data.userId,
   );
@@ -260,15 +260,6 @@
 
   {#if !$state.isFullscreen}
     <div class="mx-auto w-full px-4 pt-6 sm:px-6 lg:px-10">
-      <div class="mb-4">
-        <AttributionBlock
-          isVerifiedCreator={$state.isCreatorVerified}
-          reactionVideoAuthor={$state.reactionVideoAuthor}
-          reactionChannelName={$state.reactionChannelName}
-          reactorDisplayName={$state.reactorDisplayName}
-          reactorId={$state.reactorId}
-        />
-      </div>
       <CreatorDetails
         originalVideoAuthor={$state.originalVideoAuthor}
         originalVideoTitle={$state.originalVideoTitle}
@@ -281,6 +272,13 @@
         reactorId={$state.reactorId}
         reactorDisplayName={$state.reactorDisplayName}
       />
+      <div class="mt-2">
+        <AttributionBlock
+          reactionVideoAuthor={$state.reactionVideoAuthor}
+          reactorDisplayName={$state.reactorDisplayName}
+          reactorId={$state.reactorId}
+        />
+      </div>
 
       {#if $state.originalVideoId && playlistSlug}
         <div class="mt-8">

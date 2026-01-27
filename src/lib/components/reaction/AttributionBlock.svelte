@@ -1,133 +1,359 @@
 <script>
   import { goto } from '$app/navigation';
   import { browser } from '$app/environment';
+  import { copyToClipboard } from '$lib/helpers/system';
+  import {
+    createYoutubeChannelClaim,
+    getYoutubeChannelClaim,
+    getYoutubeChannelVerification
+  } from '$lib/helpers/firebase';
+  import { showToast } from '$lib/stores/toast';
+  import { TOASTS } from '$lib/constants/toasts';
+  import { onDestroy } from 'svelte';
+  import AttributionPrimaryInfo from './AttributionPrimaryInfo.svelte';
+  import AttributionClaimControls from './AttributionClaimControls.svelte';
+  import AttributionClaimModal from './AttributionClaimModal.svelte';
+  import AttributionVerifiedBadge from './AttributionVerifiedBadge.svelte';
+  import {
+    CLAIM_TOKEN_EXPIRY_DAYS,
+    buildAttributionDisplay,
+    buildAttributionVerificationState,
+    buildClaimControlsState,
+    generateVerificationToken,
+    getClaimDraftError,
+    getClaimDraftState
+  } from '$lib/helpers/reactionAttribution';
+
   export let isVerifiedCreator = false;
   export let reactionVideoAuthor;
-  export let reactionChannelName;
   export let reactorDisplayName;
   export let reactorId;
+  export let viewerId;
 
-  const normalizeText = (value) => (typeof value === 'string' ? value.trim() : '');
+  let channelHandle = '';
+  let channelDisplayName = '';
+  let showHandleRow = false;
+  let youtubeUrl = '';
+  let hasYoutubeUrl = false;
+  let primaryPrefix = '';
+  let primaryName = '';
+  let primaryHref = '';
+  let primaryLinkLabel = '';
+  let primaryLinkTarget = undefined;
+  let primaryLinkRel = undefined;
 
-  $: channelHandle = normalizeText(reactionVideoAuthor);
-  $: channelName = normalizeText(reactionChannelName) || channelHandle;
-  $: userName = normalizeText(reactorDisplayName);
-  $: displayUserName = userName || 'Pure Reactions user';
+  let claimRecord = null;
+  let claimLookupState = 'idle';
+  let claimLookupError = '';
+  let claimLookupKey = '';
+  let verificationRecord = null;
+  let verificationLookupState = 'idle';
+  let verificationLookupKey = '';
 
-  $: profileUrl = reactorId ? `/user/${reactorId}` : '';
-  $: youtubeUrl = channelHandle ? `https://www.youtube.com/${channelHandle}` : '';
+  let isChannelVerified = false;
+  let shouldHideAttribution = false;
+  let debugClaimId = '';
+  let debugVerificationStatus = '';
+  let debugClaimUserId = '';
+  let debugReactorId = '';
+  let debugShouldHide = 'false';
 
-  $: primaryPrefix = isVerifiedCreator ? 'Reaction by' : 'Sync created by';
-  $: primaryName = isVerifiedCreator ? (channelName || 'Verified creator') : displayUserName;
-  $: primaryHref = isVerifiedCreator ? youtubeUrl : profileUrl;
+  let canShowClaimControls = false;
+  let hasPendingClaim = false;
+  let hasReviewedClaim = false;
+  let showLoginCta = false;
+  let showPendingCta = false;
+  let showReviewedCta = false;
+  let showClaimCta = false;
+  let showLookupCta = false;
+  let reviewedClaimLabel = '';
+  let showInfoTip = false;
 
-  $: primaryLinkLabel = isVerifiedCreator
-    ? `Open ${primaryName} on YouTube`
-    : `Open Pure Reactions profile for ${displayUserName}`;
-  $: profileLinkLabel = `Open Pure Reactions profile for ${displayUserName}`;
+  let isClaimModalOpen = false;
+  let verificationToken = '';
+  let verificationVideoUrl = '';
+  let trimmedVerificationVideoUrl = '';
+  let hasConfirmedControl = false;
+  let claimError = '';
+  let isSubmittingClaim = false;
+  let isClaimSubmissionDisabled = true;
+
+  let isMounted = true;
+  onDestroy(() => {
+    isMounted = false;
+  });
+
+  $: {
+    const displayState = buildAttributionDisplay({
+      reactionVideoAuthor,
+      reactorDisplayName,
+      reactorId,
+      isVerifiedCreator
+    });
+    channelHandle = displayState.channelHandle;
+    channelDisplayName = displayState.channelDisplayName;
+    showHandleRow = displayState.showHandleRow;
+    youtubeUrl = displayState.youtubeUrl;
+    hasYoutubeUrl = displayState.hasYoutubeUrl;
+    primaryPrefix = displayState.primaryPrefix;
+    primaryName = displayState.primaryName;
+    primaryHref = displayState.primaryHref;
+    primaryLinkLabel = displayState.primaryLinkLabel;
+    primaryLinkTarget = displayState.primaryLinkTarget;
+    primaryLinkRel = displayState.primaryLinkRel;
+  }
+
+  $: {
+    const verificationState = buildAttributionVerificationState({
+      verificationRecord,
+      claimRecord,
+      reactorId,
+      channelHandle
+    });
+    isChannelVerified = verificationState.isChannelVerified;
+    shouldHideAttribution = verificationState.shouldHideAttribution;
+    debugClaimId = verificationState.debug.claimId;
+    debugVerificationStatus = verificationState.debug.verificationStatus;
+    debugClaimUserId = verificationState.debug.claimUserId;
+    debugReactorId = verificationState.debug.reactorId;
+    debugShouldHide = verificationState.debug.shouldHide;
+  }
+
+  $: {
+    const claimControlsState = buildClaimControlsState({
+      isVerifiedCreator,
+      channelHandle,
+      isChannelVerified,
+      claimRecord,
+      claimLookupState,
+      viewerId
+    });
+    canShowClaimControls = claimControlsState.canShowClaimControls;
+    hasPendingClaim = claimControlsState.hasPendingClaim;
+    hasReviewedClaim = claimControlsState.hasReviewedClaim;
+    showLoginCta = claimControlsState.showLoginCta;
+    showPendingCta = claimControlsState.showPendingCta;
+    showReviewedCta = claimControlsState.showReviewedCta;
+    showClaimCta = claimControlsState.showClaimCta;
+    showLookupCta = claimControlsState.showLookupCta;
+    reviewedClaimLabel = claimControlsState.reviewedClaimLabel;
+    showInfoTip = claimControlsState.showInfoTip;
+  }
+
+  $: {
+    const claimDraftState = getClaimDraftState({
+      verificationVideoUrl,
+      hasConfirmedControl,
+      isSubmittingClaim
+    });
+    trimmedVerificationVideoUrl = claimDraftState.trimmedVerificationVideoUrl;
+    isClaimSubmissionDisabled = claimDraftState.isClaimSubmissionDisabled;
+  }
+
+  const resetClaimDraft = () => {
+    verificationVideoUrl = '';
+    hasConfirmedControl = false;
+    claimError = '';
+  };
+
+  const ensureVerificationToken = () => {
+    if (!verificationToken) {
+      verificationToken = generateVerificationToken({
+        crypto: browser ? window?.crypto : undefined
+      });
+    }
+  };
+
+  const loadClaimRecord = async (nextKey, nextViewerId, nextChannelId) => {
+    claimLookupState = 'loading';
+    claimLookupError = '';
+    try {
+      const record = await getYoutubeChannelClaim({
+        youtubeChannelId: nextChannelId,
+        userId: nextViewerId
+      });
+      if (!isMounted || claimLookupKey !== nextKey) return;
+      claimRecord = record;
+      claimLookupState = 'success';
+    } catch (error) {
+      if (!isMounted || claimLookupKey !== nextKey) return;
+      claimLookupState = 'error';
+      claimLookupError = 'Unable to load claim status.';
+      console.error('Failed to load channel claim', error);
+    }
+  };
+
+  const loadVerificationRecord = async (nextKey, nextChannelId) => {
+    verificationLookupState = 'loading';
+    try {
+      const record = await getYoutubeChannelVerification({
+        youtubeChannelId: nextChannelId
+      });
+      if (!isMounted || verificationLookupKey !== nextKey) return;
+      verificationRecord = record;
+      verificationLookupState = 'success';
+    } catch (error) {
+      if (!isMounted || verificationLookupKey !== nextKey) return;
+      verificationLookupState = 'error';
+      console.error('Failed to load channel verification', error);
+    }
+  };
+
+  $: if (browser) {
+    const nextKey = viewerId && channelHandle ? `${viewerId}:${channelHandle}` : '';
+    if (nextKey !== claimLookupKey) {
+      claimLookupKey = nextKey;
+      claimRecord = null;
+      claimLookupError = '';
+      claimLookupState = nextKey ? 'loading' : 'idle';
+      verificationToken = '';
+      resetClaimDraft();
+      if (nextKey) {
+        loadClaimRecord(nextKey, viewerId, channelHandle);
+      }
+    }
+  }
+
+  $: if (browser) {
+    const nextVerificationKey = channelHandle || '';
+    if (nextVerificationKey !== verificationLookupKey) {
+      verificationLookupKey = nextVerificationKey;
+      verificationRecord = null;
+      verificationLookupState = nextVerificationKey ? 'loading' : 'idle';
+      if (nextVerificationKey) {
+        loadVerificationRecord(nextVerificationKey, channelHandle);
+      }
+    }
+  }
+
+  const openClaimModal = () => {
+    if (!viewerId || !channelHandle || hasPendingClaim || hasReviewedClaim) return;
+    resetClaimDraft();
+    ensureVerificationToken();
+    isClaimModalOpen = true;
+  };
+
+  const copyToken = () => {
+    if (!verificationToken || !browser) return;
+    copyToClipboard(verificationToken);
+    showToast('Verification token copied.', TOASTS.SUCCESS);
+  };
+
+  const submitClaim = async () => {
+    const validationError = getClaimDraftError({
+      viewerId,
+      channelHandle,
+      trimmedVerificationVideoUrl,
+      hasConfirmedControl
+    });
+
+    if (validationError) {
+      claimError = validationError;
+      return;
+    }
+
+    ensureVerificationToken();
+    isSubmittingClaim = true;
+    claimError = '';
+
+    try {
+      const existing = await getYoutubeChannelClaim({
+        youtubeChannelId: channelHandle,
+        userId: viewerId
+      });
+
+      if (existing?.status === 'pending') {
+        claimRecord = existing;
+        showToast('Claim already submitted.', TOASTS.INFO);
+        isClaimModalOpen = false;
+        return;
+      }
+
+      if (existing && existing.status && existing.status !== 'pending') {
+        claimRecord = existing;
+        claimError = 'Your previous claim has already been reviewed.';
+        return;
+      }
+
+      const expiresAt = new Date(Date.now() + CLAIM_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+      const created = await createYoutubeChannelClaim({
+        youtubeChannelId: channelHandle,
+        userId: viewerId,
+        youtubeChannelUrl: youtubeUrl || '',
+        verificationToken,
+        verificationVideoUrl: trimmedVerificationVideoUrl,
+        expiresAt
+      });
+
+      claimRecord = created ? { ...created, status: 'pending' } : { status: 'pending' };
+      showToast('Claim submitted for review.', TOASTS.SUCCESS);
+      isClaimModalOpen = false;
+    } catch (error) {
+      console.error('Failed to submit channel claim', error);
+      claimError = 'Unable to submit the claim. Please try again.';
+    } finally {
+      isSubmittingClaim = false;
+    }
+  };
 </script>
 
-<section
-  class="rounded-2xl border border-border-strong/30 bg-surface/70 px-4 py-3 shadow-surface backdrop-blur transition hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background cursor-pointer"
-  aria-label="Attribution"
-  role={primaryHref ? 'link' : undefined}
-  tabindex={primaryHref ? 0 : undefined}
-  on:click={(event) => {
-    if (!primaryHref) return;
-    if (event?.target?.closest?.('a')) return;
-    if (!browser) return;
-    if (isVerifiedCreator) {
-      window.open(primaryHref, '_blank', 'noopener');
-    } else {
-      goto(primaryHref);
-    }
-  }}
-  on:keydown={(event) => {
-    if (event.key !== 'Enter' && event.key !== ' ') return;
-    event.preventDefault();
-    if (!primaryHref) return;
-    if (!browser) return;
-    if (isVerifiedCreator) {
-      window.open(primaryHref, '_blank', 'noopener');
-    } else {
-      goto(primaryHref);
-    }
-  }}
->
-  <div class="flex flex-wrap items-center gap-2 text-sm font-semibold text-text-primary">
-    <span class="font-medium text-text-secondary">{primaryPrefix}</span>
-    {#if primaryHref}
-      <a
-        class="max-w-[16rem] truncate text-text-primary transition hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:max-w-[24rem]"
-        href={primaryHref}
-        title={primaryName}
-        aria-label={primaryLinkLabel}
-        target={isVerifiedCreator ? '_blank' : undefined}
-        rel={isVerifiedCreator ? 'noopener noreferrer' : undefined}
-      >
-        {primaryName}
-      </a>
-    {:else}
-      <span class="max-w-[16rem] truncate sm:max-w-[24rem]" title={primaryName}>
-        {primaryName}
-      </span>
-    {/if}
+{#if !shouldHideAttribution}
+  <section
+    class="flex items-center justify-between gap-3 rounded-xl border border-border-strong/20 bg-surface/60 px-3 py-2 text-xs text-text-muted shadow-surface/40 backdrop-blur"
+    aria-label="Attribution"
+    data-testid="attribution-block"
+    data-debug-channel-handle={channelHandle}
+    data-debug-reactor-id={debugReactorId}
+    data-debug-claim-user-id={debugClaimUserId}
+    data-debug-claim-id={debugClaimId}
+    data-debug-verification-status={debugVerificationStatus}
+    data-debug-should-hide={debugShouldHide}
+  >
+    <AttributionPrimaryInfo
+      primaryPrefix={primaryPrefix}
+      primaryName={primaryName}
+      primaryHref={primaryHref}
+      primaryLinkLabel={primaryLinkLabel}
+      primaryLinkTarget={primaryLinkTarget}
+      primaryLinkRel={primaryLinkRel}
+      isVerifiedCreator={isVerifiedCreator}
+      isChannelVerified={isChannelVerified}
+    />
 
-    {#if isVerifiedCreator}
-      <span
-        class="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[0.7rem] font-semibold uppercase tracking-wide text-emerald-200"
-        aria-label="Verified creator"
-      >
-        <svg
-          class="h-3.5 w-3.5"
-          viewBox="0 0 16 16"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          aria-hidden="true"
-        >
-          <path
-            d="M6.5 11.2L3.8 8.5L2.8 9.5L6.5 13.2L13.2 6.5L12.2 5.5L6.5 11.2Z"
-            fill="currentColor"
-          />
-        </svg>
-        Verified creator
-      </span>
-    {:else}
-      <span
-        class="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[0.7rem] font-semibold uppercase tracking-wide text-text-muted"
-        aria-label="Third-party sync"
-      >
-        Third-party sync
-      </span>
+    {#if canShowClaimControls}
+      <AttributionClaimControls
+        showLoginCta={showLoginCta}
+        showLookupCta={showLookupCta}
+        showPendingCta={showPendingCta}
+        showReviewedCta={showReviewedCta}
+        showClaimCta={showClaimCta}
+        reviewedClaimLabel={reviewedClaimLabel}
+        showInfoTip={showInfoTip}
+        onLogin={() => goto('/login')}
+        onClaim={openClaimModal}
+      />
     {/if}
-  </div>
+    {#if claimLookupState === 'error' && claimLookupError}
+      <p class="mt-1 text-[0.7rem] text-red-400">{claimLookupError}</p>
+    {/if}
+  </section>
+{:else if isChannelVerified}
+  <AttributionVerifiedBadge />
+{/if}
 
-  <div class="mt-1 flex flex-wrap items-center gap-2 text-xs text-text-muted">
-    {#if profileUrl}
-      <a
-        class="transition hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-        href={profileUrl}
-        aria-label={profileLinkLabel}
-        title={profileLinkLabel}
-      >
-        View profile
-      </a>
-    {:else}
-      <span>Profile unavailable</span>
-    {/if}
-
-    {#if isVerifiedCreator && youtubeUrl}
-      <span aria-hidden="true">|</span>
-      <a
-        class="transition hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-        href={youtubeUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={`Open ${primaryName} on YouTube`}
-        title="Open verified YouTube channel"
-      >
-        YouTube channel
-      </a>
-    {/if}
-  </div>
-</section>
+<AttributionClaimModal
+  bind:open={isClaimModalOpen}
+  channelDisplayName={channelDisplayName}
+  channelHandle={channelHandle}
+  showHandleRow={showHandleRow}
+  youtubeUrl={youtubeUrl}
+  hasYoutubeUrl={hasYoutubeUrl}
+  verificationToken={verificationToken}
+  bind:verificationVideoUrl
+  bind:hasConfirmedControl
+  claimError={claimError}
+  isSubmittingClaim={isSubmittingClaim}
+  isSubmitDisabled={isClaimSubmissionDisabled}
+  onCopyToken={copyToken}
+  onSubmit={submitClaim}
+/>

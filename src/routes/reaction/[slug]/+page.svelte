@@ -229,18 +229,8 @@
     on:enterFullscreen={actions.openWithFullscreen}
     on:seek={(e) => actions.seekTo(e.detail)}
   />
-
   {#if !$state.isFullscreen}
-    <div class="mx-auto w-full px-4 pt-6 sm:px-6 lg:px-10">
-      <div class="mb-4">
-        <AttributionBlock
-          isVerifiedCreator={$state.isCreatorVerified}
-          reactionVideoAuthor={$state.reactionVideoAuthor}
-          reactionChannelName={$state.reactionChannelName}
-          reactorDisplayName={$state.reactorDisplayName}
-          reactorId={$state.reactorId}
-        />
-      </div>
+    <div class="mx-auto w-full px-4 pt-6 sm:px-6 lg:px-10" data-testid="reaction-content">
       {#if $state.queueSlug}
         <div class="mb-4 flex items-center justify-between gap-3">
           <div class="min-w-0 overflow-hidden">
@@ -265,18 +255,28 @@
         </div>
       {/if}
 
-      <CreatorDetails
-        originalVideoAuthor={$state.originalVideoAuthor}
-        originalVideoTitle={$state.originalVideoTitle}
-        originalVideoId={$state.originalVideoId}
-        reactionVideoAuthor={$state.reactionVideoAuthor}
-        reactionVideoTitle={$state.reactionVideoTitle}
-        reactionVideoId={$state.reactionVideoId}
-        pageSlug={$state.pageSlug}
-        isUsersOwnVideo={$state.isUsersOwnVideo}
-        reactorId={$state.reactorId}
-        reactorDisplayName={$state.reactorDisplayName}
-      />
+      <div data-testid="reaction-metadata">
+        <CreatorDetails
+          originalVideoAuthor={$state.originalVideoAuthor}
+          originalVideoTitle={$state.originalVideoTitle}
+          originalVideoId={$state.originalVideoId}
+          reactionVideoAuthor={$state.reactionVideoAuthor}
+          reactionVideoTitle={$state.reactionVideoTitle}
+          reactionVideoId={$state.reactionVideoId}
+          pageSlug={$state.pageSlug}
+          isUsersOwnVideo={$state.isUsersOwnVideo}
+          reactorId={$state.reactorId}
+          reactorDisplayName={$state.reactorDisplayName}
+        />
+        <div class="mt-2">
+          <AttributionBlock
+            reactionVideoAuthor={$state.reactionVideoAuthor}
+            reactorDisplayName={$state.reactorDisplayName}
+            reactorId={$state.reactorId}
+            viewerId={data?.userId}
+          />
+        </div>
+      </div>
 
       {#if $state.originalVideoId && $state.playlistDocumentId}
         <div class="mt-8">
