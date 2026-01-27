@@ -1,6 +1,7 @@
 import { onDestroy, onMount, tick } from 'svelte';
 import { get, writable } from 'svelte/store';
 import { goto } from '$app/navigation';
+import { env } from '$env/dynamic/public';
 import {
   getCurrentPlaybackRateFromConfigs,
   getCurrentStateFromStateConfigs,
@@ -65,6 +66,8 @@ type Nullable<T> = T | null | undefined;
 
 type FullscreenPrimaryVideo = 'original' | 'reaction';
 type FullscreenOverlayCorner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+
+const DISABLE_YOUTUBE_METADATA_SYNC = env.PUBLIC_DISABLE_YOUTUBE_METADATA_SYNC === 'true';
 
 type TwinPlayersState = {
   isLoading: boolean;
@@ -2038,6 +2041,12 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       return;
     }
 
+    const resolvedReactorId =
+      typeof reactionData?.reactorId === 'string'
+        ? reactionData.reactorId
+        : typeof reactionData?.userId === 'string'
+          ? reactionData.userId
+          : undefined;
     const rawReactorDisplayName =
       typeof reactionData?.reactorDisplayName === 'string' ? reactionData.reactorDisplayName.trim() : '';
     const viewerDisplayName = typeof data?.displayName === 'string' ? data.displayName.trim() : '';
@@ -2047,9 +2056,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     updateState({
       isPublished: reactionData.isPublished,
       isReactionMissing: !reactionVideoId,
-      reactorId: reactionData['reactorId'],
-      isUsersOwnVideo: reactionData['reactorId'] === userId,
-      canShowEditModeButton: reactionData['reactorId'] === userId,
+      reactorId: resolvedReactorId,
+      isUsersOwnVideo: resolvedReactorId === userId,
+      canShowEditModeButton: resolvedReactorId === userId,
       playerConfigs,
       volumeConfigs,
       reactionVolumeConfigs,
@@ -2267,6 +2276,12 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         }
       }
 
+      const resolvedReactorId =
+        typeof reactionData?.reactorId === 'string'
+          ? reactionData.reactorId
+          : typeof reactionData?.userId === 'string'
+            ? reactionData.userId
+            : undefined;
       const rawReactorDisplayName =
         typeof reactionData?.reactorDisplayName === 'string' ? reactionData.reactorDisplayName.trim() : '';
       const viewerDisplayName = typeof data?.displayName === 'string' ? data.displayName.trim() : '';
@@ -2276,9 +2291,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       updateState({
         isPublished: reactionData.isPublished,
         isReactionMissing: !reactionVideoId,
-        reactorId: reactionData['reactorId'],
-        isUsersOwnVideo: reactionData['reactorId'] === userId,
-        canShowEditModeButton: reactionData['reactorId'] === userId,
+        reactorId: resolvedReactorId,
+        isUsersOwnVideo: resolvedReactorId === userId,
+        canShowEditModeButton: resolvedReactorId === userId,
         playerConfigs,
         volumeConfigs,
         reactionVolumeConfigs,
@@ -2632,6 +2647,10 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     currentReactionTitle,
     currentReactionAuthor
   }: VerifyAndSyncMetadataParams) => {
+    if (DISABLE_YOUTUBE_METADATA_SYNC) {
+      return;
+    }
+
     const resolvedDocumentId =
       documentId ?? (typeof window !== 'undefined' ? (window as any)?.currentReactionDocumentId : undefined);
 

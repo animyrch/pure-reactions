@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "description": "Channel verification fixtures for reaction layout visual tests.",
+  "docs": [
+    {
+      "id": "@verifiedowner",
+      "data": {
+        "status": "approved",
+        "claimId": "@verifiedowner__user-verified-owner",
+        "userId": "user-verified-owner",
+        "approvedAt": "2024-01-01T00:00:00.000Z"
+      }
+    },
+    {
+      "id": "@verifiedchannel",
+      "data": {
+        "status": "approved",
+        "claimId": "@verifiedchannel__user-verified-claimer",
+        "userId": "user-verified-claimer",
+        "approvedAt": "2024-01-02T00:00:00.000Z"
+      }
+    }
+  ]
+}

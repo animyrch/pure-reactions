@@ -1,5 +1,12 @@
 const { defineConfig, devices } = require('@playwright/test');
 
+if (process.env.PUBLIC_FIREBASE_USE_EMULATORS === undefined) {
+    process.env.PUBLIC_FIREBASE_USE_EMULATORS = 'true';
+}
+if (process.env.PUBLIC_DISABLE_YOUTUBE_METADATA_SYNC === undefined) {
+    process.env.PUBLIC_DISABLE_YOUTUBE_METADATA_SYNC = 'true';
+}
+
 module.exports = defineConfig({
     testDir: './tests',
     timeout: 30000,
@@ -21,6 +28,12 @@ module.exports = defineConfig({
     webServer: {
         command: 'npm run dev',
         port: 5173,
-        reuseExistingServer: !process.env.CI,
+        // Default to false so Playwright boots a server with emulator envs.
+        reuseExistingServer: process.env.PW_REUSE_SERVER === 'true',
+        env: {
+            ...process.env,
+            PUBLIC_FIREBASE_USE_EMULATORS: process.env.PUBLIC_FIREBASE_USE_EMULATORS,
+            PUBLIC_DISABLE_YOUTUBE_METADATA_SYNC: process.env.PUBLIC_DISABLE_YOUTUBE_METADATA_SYNC,
+        },
     },
 });

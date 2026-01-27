@@ -1,0 +1,210 @@
+{
+  "version": 1,
+  "description": "Reaction layout fixtures for attribution UI visual tests.",
+  "docs": [
+    {
+      "id": "layout-unverified",
+      "data": {
+        "isPublished": true,
+        "offsetStartTime": 0,
+        "originalVideoAuthor": "@the_animaniace",
+        "originalVideoId": "8-3PahRtgF4",
+        "originalVideoTitle": "The original Dragon Ball was UNHINGED | Mercenary Tao HUNTS down the Goku #dbd #dragonballz #goku",
+        "playbackRateConfigs": null,
+        "playbackTimeline": [
+          {
+            "rate": 1,
+            "t": 0
+          }
+        ],
+        "playlistId": "",
+        "reactionConfigs": {
+          "0.0": {
+            "state": 1,
+            "time": "0.00"
+          },
+          "5.0": {
+            "state": 2,
+            "time": "5.29"
+          }
+        },
+        "reactionVideoAuthor": "@unverifiedchannel",
+        "reactionVideoId": "8-3PahRtgF4",
+        "reactionVideoTitle": "The original Dragon Ball was UNHINGED | Mercenary Tao HUNTS down the Goku #dbd #dragonballz #goku",
+        "reactionVolumeConfigs": {
+          "2.0": {
+            "volume": 10
+          }
+        },
+        "reactionVolumeTimeline": [
+          {
+            "t": 2,
+            "volume": 10
+          }
+        ],
+        "reactorId": "user-unverified",
+        "reactorDisplayName": "Unverified User",
+        "stateTimeline": [
+          {
+            "state": 1,
+            "t": 0,
+            "targetTime": 0
+          },
+          {
+            "state": 2,
+            "t": 5,
+            "targetTime": 5.29
+          }
+        ],
+        "volumeConfigs": {
+          "2.0": {
+            "volume": 20
+          }
+        },
+        "volumeTimeline": [
+          {
+            "t": 2,
+            "volume": 20
+          }
+        ],
+        "youtubePlaylistId": ""
+      }
+    },
+    {
+      "id": "layout-verified-owner",
+      "data": {
+        "isPublished": true,
+        "offsetStartTime": 0,
+        "originalVideoAuthor": "@the_animaniace",
+        "originalVideoId": "8-3PahRtgF4",
+        "originalVideoTitle": "The original Dragon Ball was UNHINGED | Mercenary Tao HUNTS down the Goku #dbd #dragonballz #goku",
+        "playbackRateConfigs": null,
+        "playbackTimeline": [
+          {
+            "rate": 1,
+            "t": 0
+          }
+        ],
+        "playlistId": "",
+        "reactionConfigs": {
+          "0.0": {
+            "state": 1,
+            "time": "0.00"
+          },
+          "5.0": {
+            "state": 2,
+            "time": "5.29"
+          }
+        },
+        "reactionVideoAuthor": "@verifiedowner",
+        "reactionVideoId": "8-3PahRtgF4",
+        "reactionVideoTitle": "The original Dragon Ball was UNHINGED | Mercenary Tao HUNTS down the Goku #dbd #dragonballz #goku",
+        "reactionVolumeConfigs": {
+          "2.0": {
+            "volume": 10
+          }
+        },
+        "reactionVolumeTimeline": [
+          {
+            "t": 2,
+            "volume": 10
+          }
+        ],
+        "reactorId": "user-verified-owner",
+        "reactorDisplayName": "Verified Owner",
+        "stateTimeline": [
+          {
+            "state": 1,
+            "t": 0,
+            "targetTime": 0
+          },
+          {
+            "state": 2,
+            "t": 5,
+            "targetTime": 5.29
+          }
+        ],
+        "volumeConfigs": {
+          "2.0": {
+            "volume": 20
+          }
+        },
+        "volumeTimeline": [
+          {
+            "t": 2,
+            "volume": 20
+          }
+        ],
+        "youtubePlaylistId": ""
+      }
+    },
+    {
+      "id": "layout-verified-thirdparty",
+      "data": {
+        "isPublished": true,
+        "offsetStartTime": 0,
+        "originalVideoAuthor": "@the_animaniace",
+        "originalVideoId": "8-3PahRtgF4",
+        "originalVideoTitle": "The original Dragon Ball was UNHINGED | Mercenary Tao HUNTS down the Goku #dbd #dragonballz #goku",
+        "playbackRateConfigs": null,
+        "playbackTimeline": [
+          {
+            "rate": 1,
+            "t": 0
+          }
+        ],
+        "playlistId": "",
+        "reactionConfigs": {
+          "0.0": {
+            "state": 1,
+            "time": "0.00"
+          },
+          "5.0": {
+            "state": 2,
+            "time": "5.29"
+          }
+        },
+        "reactionVideoAuthor": "@verifiedchannel",
+        "reactionVideoId": "8-3PahRtgF4",
+        "reactionVideoTitle": "The original Dragon Ball was UNHINGED | Mercenary Tao HUNTS down the Goku #dbd #dragonballz #goku",
+        "reactionVolumeConfigs": {
+          "2.0": {
+            "volume": 10
+          }
+        },
+        "reactionVolumeTimeline": [
+          {
+            "t": 2,
+            "volume": 10
+          }
+        ],
+        "reactorId": "user-thirdparty",
+        "reactorDisplayName": "Third Party User",
+        "stateTimeline": [
+          {
+            "state": 1,
+            "t": 0,
+            "targetTime": 0
+          },
+          {
+            "state": 2,
+            "t": 5,
+            "targetTime": 5.29
+          }
+        ],
+        "volumeConfigs": {
+          "2.0": {
+            "volume": 20
+          }
+        },
+        "volumeTimeline": [
+          {
+            "t": 2,
+            "volume": 20
+          }
+        ],
+        "youtubePlaylistId": ""
+      }
+    }
+  ]
+}
