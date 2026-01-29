@@ -51,6 +51,7 @@ export async function load({ depends }) {
             }
         }
         if (action === 'logout') {
+            showToast('You have been logged out successfully', TOASTS.SUCCESS, 5000);
             await signOutWrapper();
             currentUser.set({});
             await invalidate('app:auth');
