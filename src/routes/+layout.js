@@ -51,10 +51,10 @@ export async function load({ depends }) {
             }
         }
         if (action === 'logout') {
+            goToRoute('/');
             await signOutWrapper();
             currentUser.set({});
             await invalidate('app:auth');
-            await goToRoute('/');
         }
     };
     return {
