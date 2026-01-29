@@ -3,6 +3,7 @@
     import {
         auth,
         updateDisplayNameHelper,
+        updateReactorDisplayNameForUser,
         updateEmailHelper,
         updatePasswordHelper,
         reauthenticateUserHelper
@@ -31,6 +32,7 @@
   
     const updateDisplayName = async () => {
       await updateDisplayNameHelper(user, newName);
+      await updateReactorDisplayNameForUser({ userId: user?.uid, displayName: newName });
       showToast('Profile updated successfully', TOASTS.SUCCESS);
     //   location.reload();
     };

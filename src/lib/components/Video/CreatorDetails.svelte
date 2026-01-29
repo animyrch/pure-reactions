@@ -13,6 +13,8 @@
     export let isUsersOwnVideo;
     export let reactionVideoId;
     export let originalVideoId;
+    export let originalVideoDescription;
+    export let reactionVideoDescription;
 
     const createAvatarPlaceholder = (_name) => '/by-icon.svg';
 
@@ -24,10 +26,29 @@
         let viewerData;
         $: viewerData = $userExtraDataStore?.userExtraData;
     $: canUseActions = Boolean(viewerData) && !isUsersOwnVideo;
+
+    let isOriginalDescriptionExpanded = false;
+    let isReactionDescriptionExpanded = false;
+
+    $: showOriginalDescriptionToggle =
+        typeof originalVideoDescription === 'string' && originalVideoDescription.trim().length > 200;
+    $: showReactionDescriptionToggle =
+        typeof reactionVideoDescription === 'string' && reactionVideoDescription.trim().length > 200;
+
+    $: showOriginalActions = Boolean(originalVideoId);
+    $: showReactionActions = Boolean(reactionVideoId) || Boolean(canUseActions);
 </script>
 
 <section class="details-grid" aria-label="Creator details">
-    <article class="column" aria-labelledby="original-heading">
+    <article class="column original" aria-labelledby="original-heading">
+        {#if showOriginalActions}
+            <div class="header-actions">
+                {#if originalVideoId}
+                    <RateVideo videoId={originalVideoId} />
+                {/if}
+            </div>
+        {/if}
+
         <header class="column-header">
             <h2 id="original-heading" class="video-heading">
                 {#if originalVideoTitle}
@@ -63,14 +84,48 @@
             </div>
         </div>
 
-        <div class="header-actions">
-            {#if originalVideoId}
-                <RateVideo videoId={originalVideoId} />
-            {/if}
-        </div>
+        {#if originalVideoDescription}
+            <div class="video-description">
+                <p
+                    id="original-description"
+                    class={`description-text ${isOriginalDescriptionExpanded || !showOriginalDescriptionToggle ? 'expanded' : 'clamped'}`}
+                >
+                    {originalVideoDescription}
+                </p>
+                {#if showOriginalDescriptionToggle}
+                    <button
+                        type="button"
+                        class="description-toggle"
+                        aria-expanded={isOriginalDescriptionExpanded}
+                        aria-controls="original-description"
+                        on:click={() => (isOriginalDescriptionExpanded = !isOriginalDescriptionExpanded)}
+                    >
+                        {isOriginalDescriptionExpanded ? 'Show less' : 'Show more'}
+                    </button>
+                {/if}
+            </div>
+        {/if}
     </article>
 
-    <article class="column" aria-labelledby="reaction-heading">
+    <article class="column reaction" aria-labelledby="reaction-heading">
+        {#if showReactionActions}
+            <div class="header-actions">
+                {#if reactionVideoId}
+                    <RateVideo videoId={reactionVideoId} />
+                {/if}
+                {#if canUseActions}
+                    <BookmarkManagement slug={pageSlug} />
+                {/if}
+                {#if canUseActions && reactionVideoAuthor}
+                    <FollowManagement
+                        reactionCreator={reactionVideoAuthor}
+                        {reactorId}
+                        follows={viewerData?.follows}
+                    />
+                {/if}
+            </div>
+        {/if}
+
         <header class="column-header">
             <h2 id="reaction-heading" class="video-heading">
                 {#if reactionVideoTitle}
@@ -106,21 +161,27 @@
             </div>
         </div>
 
-        <div class="header-actions">
-            {#if reactionVideoId}
-                <RateVideo videoId={reactionVideoId} />
-            {/if}
-            {#if canUseActions}
-                <BookmarkManagement slug={pageSlug} />
-            {/if}
-            {#if canUseActions && reactionVideoAuthor}
-                <FollowManagement
-                    reactionCreator={reactionVideoAuthor}
-                    {reactorId}
-                    follows={viewerData?.follows}
-                />
-            {/if}
-        </div>
+        {#if reactionVideoDescription}
+            <div class="video-description">
+                <p
+                    id="reaction-description"
+                    class={`description-text ${isReactionDescriptionExpanded || !showReactionDescriptionToggle ? 'expanded' : 'clamped'}`}
+                >
+                    {reactionVideoDescription}
+                </p>
+                {#if showReactionDescriptionToggle}
+                    <button
+                        type="button"
+                        class="description-toggle"
+                        aria-expanded={isReactionDescriptionExpanded}
+                        aria-controls="reaction-description"
+                        on:click={() => (isReactionDescriptionExpanded = !isReactionDescriptionExpanded)}
+                    >
+                        {isReactionDescriptionExpanded ? 'Show less' : 'Show more'}
+                    </button>
+                {/if}
+            </div>
+        {/if}
     </article>
 </section>
 
@@ -128,8 +189,9 @@
     .details-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 1.75rem;
-        padding: 1.5rem;
+        align-items: start;
+        gap: 1.25rem;
+        padding: 1.25rem;
         border-radius: 1rem;
         background: rgba(12, 15, 21, 0.72);
         border: 1px solid rgba(255, 255, 255, 0.05);
@@ -137,23 +199,18 @@
     }
 
     .column {
-        display: grid;
-        grid-template-columns: 1fr auto;
-        grid-template-areas:
-            'heading actions'
-            'identity identity';
+        display: flex;
+        flex-direction: column;
         gap: 1.25rem;
     }
 
     .column-header {
-        grid-area: heading;
         min-width: 0;
     }
 
     .header-actions {
-        grid-area: actions;
-        justify-self: end;
-        align-self: start;
+        align-self: flex-start;
+        justify-content: flex-start;
     }
 
     .video-heading {
@@ -166,10 +223,49 @@
     }
 
     .identity {
-        grid-area: identity;
         display: flex;
         align-items: flex-start;
         gap: 1rem;
+    }
+
+    .video-description {
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .description-text {
+        margin: 0;
+        font-size: 0.85rem;
+        line-height: 1.5;
+        color: rgba(199, 203, 215, 0.85);
+        word-break: break-word;
+        white-space: pre-line;
+    }
+
+    .description-text.clamped {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 5;
+        overflow: hidden;
+    }
+
+    .description-toggle {
+        align-self: flex-start;
+        border: none;
+        background: transparent;
+        padding: 0;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: rgba(92, 178, 255, 0.9);
+        cursor: pointer;
+    }
+
+    .description-toggle:hover,
+    .description-toggle:focus-visible {
+        color: rgba(130, 197, 255, 0.95);
+        outline: none;
     }
 
     .identity img {
@@ -211,7 +307,7 @@
     .header-actions {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.4rem;
         flex-wrap: wrap;
     }
 
@@ -241,26 +337,62 @@
         height: 1.1rem;
     }
 
-    @media (max-width: 768px) {
+    @media (min-width: 769px) {
         .details-grid {
-            padding: 1.25rem;
-            gap: 1.25rem;
+            padding: 1.5rem;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-rows: auto auto auto auto;
+            column-gap: 1.75rem;
+            row-gap: 1.25rem;
         }
 
         .column {
-            grid-template-columns: 1fr;
-            grid-template-areas:
-                'heading'
-                'identity'
-                'actions';
+            display: contents;
+        }
+
+        .column.original .header-actions {
+            grid-column: 1;
+            grid-row: 1;
+        }
+
+        .column.original .column-header {
+            grid-column: 1;
+            grid-row: 2;
+        }
+
+        .column.original .identity {
+            grid-column: 1;
+            grid-row: 3;
+        }
+
+        .column.original .video-description {
+            grid-column: 1;
+            grid-row: 4;
+        }
+
+        .column.reaction .header-actions {
+            grid-column: 2;
+            grid-row: 1;
+        }
+
+        .column.reaction .column-header {
+            grid-column: 2;
+            grid-row: 2;
+        }
+
+        .column.reaction .identity {
+            grid-column: 2;
+            grid-row: 3;
+        }
+
+        .column.reaction .video-description {
+            grid-column: 2;
+            grid-row: 4;
         }
 
         .header-actions {
             justify-self: start;
-        }
-
-        .header-actions {
-            gap: 0.4rem;
+            gap: 0.5rem;
         }
     }
 </style>

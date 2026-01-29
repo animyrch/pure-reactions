@@ -299,7 +299,7 @@
 
 {#if !shouldHideAttribution}
   <section
-    class="flex items-center justify-between gap-3 rounded-xl border border-border-strong/20 bg-surface/60 px-3 py-2 text-xs text-text-muted shadow-surface/40 backdrop-blur"
+    class="flex flex-col gap-3 rounded-xl border border-border-strong/20 bg-surface/60 px-3 py-2 text-xs text-text-muted shadow-surface/40 backdrop-blur sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
     aria-label="Attribution"
     data-testid="attribution-block"
     data-debug-channel-handle={channelHandle}
@@ -321,24 +321,28 @@
     />
 
     {#if canShowClaimControls}
-      <AttributionClaimControls
-        showLoginCta={showLoginCta}
-        showLookupCta={showLookupCta}
-        showPendingCta={showPendingCta}
-        showReviewedCta={showReviewedCta}
-        showClaimCta={showClaimCta}
-        reviewedClaimLabel={reviewedClaimLabel}
-        showInfoTip={showInfoTip}
-        onLogin={() => goto('/login')}
-        onClaim={openClaimModal}
-      />
+      <div class="flex w-full items-center sm:w-auto sm:justify-end">
+        <AttributionClaimControls
+          showLoginCta={showLoginCta}
+          showLookupCta={showLookupCta}
+          showPendingCta={showPendingCta}
+          showReviewedCta={showReviewedCta}
+          showClaimCta={showClaimCta}
+          reviewedClaimLabel={reviewedClaimLabel}
+          showInfoTip={showInfoTip}
+          onLogin={() => goto('/login')}
+          onClaim={openClaimModal}
+        />
+      </div>
     {/if}
     {#if claimLookupState === 'error' && claimLookupError}
-      <p class="mt-1 text-[0.7rem] text-red-400">{claimLookupError}</p>
+      <p class="mt-1 text-[0.7rem] text-red-400 sm:w-full">{claimLookupError}</p>
     {/if}
   </section>
 {:else if isChannelVerified}
-  <AttributionVerifiedBadge />
+  <div class="flex justify-center">
+    <AttributionVerifiedBadge />
+  </div>
 {/if}
 
 <AttributionClaimModal
