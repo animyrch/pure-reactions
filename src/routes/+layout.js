@@ -51,11 +51,11 @@ export async function load({ depends }) {
             }
         }
         if (action === 'logout') {
-            showToast('You have been logged out successfully', TOASTS.SUCCESS, 5000);
+            goToRoute('/');
             await signOutWrapper();
             currentUser.set({});
             await invalidate('app:auth');
-            await goToRoute('/');
+            showToast('You have been logged out successfully', TOASTS.SUCCESS, 5000);
         }
     };
     return {
