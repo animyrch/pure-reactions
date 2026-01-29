@@ -9,15 +9,15 @@
 	import { SORTINGS } from "$lib/constants/sortings";
 	import { userExtraDataStore } from "$lib/stores/userExtraData";
 	import { onMount, onDestroy, tick } from "svelte";
-	import { handlePrivateRoute } from "$lib/helpers/routing";
 	import { isLoggedIn } from "$lib/stores/user";
+	import { goto } from "$app/navigation";
 
 	// Initialize Firebase
 	$: if (
 		$page.url.searchParams.get("sortBy") === SORTINGS.FOLLOWING &&
 		!$isLoggedIn
 	) {
-		handlePrivateRoute();
+		goto(`/?sortBy=${SORTINGS.NEW}`);
 	}
 	let reactions = [];
 	let isLoading = false;
