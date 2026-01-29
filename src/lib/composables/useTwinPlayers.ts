@@ -82,8 +82,10 @@ type TwinPlayersState = {
   reactionVideoAuthor?: string;
   reactorDisplayName?: string;
   reactionVideoTitle?: string;
+  reactionVideoDescription?: string;
   originalVideoAuthor?: string;
   originalVideoTitle?: string;
+  originalVideoDescription?: string;
   originalVideoId?: string;
   reactorId?: string;
   youtubePlaylistId?: string;
@@ -327,6 +329,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     reactionVideoAuthor: undefined,
     reactorDisplayName: undefined,
     reactionVideoTitle: undefined,
+    reactionVideoDescription: undefined,
+    originalVideoDescription: undefined,
     originalVideoId: undefined,
     reactorId: undefined,
     youtubePlaylistId: undefined,
@@ -2052,6 +2056,22 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     const viewerDisplayName = typeof data?.displayName === 'string' ? data.displayName.trim() : '';
     const resolvedReactorDisplayName =
       rawReactorDisplayName || (reactionData?.reactorId === userId ? viewerDisplayName : '');
+    const reactionVideoDescription =
+      (typeof reactionData?.reactionVideoDescription === 'string'
+        ? reactionData.reactionVideoDescription.trim()
+        : '') ||
+      (typeof reactionData?.youtube?.meta?.description === 'string'
+        ? reactionData.youtube.meta.description.trim()
+        : '') ||
+      undefined;
+    const originalVideoDescription =
+      (typeof reactionData?.originalVideoDescription === 'string'
+        ? reactionData.originalVideoDescription.trim()
+        : '') ||
+      (typeof reactionData?.originalYoutube?.meta?.description === 'string'
+        ? reactionData.originalYoutube.meta.description.trim()
+        : '') ||
+      undefined;
 
     updateState({
       isPublished: reactionData.isPublished,
@@ -2074,8 +2094,10 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       reactionVideoAuthor: reactionData?.reactionVideoAuthor,
       reactorDisplayName: resolvedReactorDisplayName || undefined,
       reactionVideoTitle: reactionData?.reactionVideoTitle,
+      reactionVideoDescription,
       originalVideoAuthor: reactionData?.originalVideoAuthor,
       originalVideoTitle: reactionData?.originalVideoTitle,
+      originalVideoDescription,
       youtubePlaylistId,
       offsetStartTime,
       reactionFinishTime,

@@ -75,6 +75,16 @@ function getYoutubeId(data) {
   return null;
 }
 
+function getOriginalYoutubeId(data) {
+  const candidates = [data?.originalVideoId, data?.originalYoutube?.id, data?.originalYoutube?.meta?.videoId];
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.trim()) {
+      return candidate.trim();
+    }
+  }
+  return null;
+}
+
 function toDate(value) {
   if (!value) return null;
   if (value instanceof Date) return value;
@@ -180,31 +190,13 @@ function compactMeta(meta) {
   return cleaned;
 }
 
-async function enrichDoc(doc) {
-  const data = doc.data();
-  const youtubeId = getYoutubeId(data);
-  if (!youtubeId) return { updated: false, reason: 'missing-youtube-id' };
-
-  const meta = data?.youtube?.meta;
-  if (isMetaComplete(meta, youtubeId)) {
-    return { updated: false, reason: 'meta-complete' };
-  }
-
-  if (!isStale(data?.lastEnrichedAt) && meta) {
-    return { updated: false, reason: 'meta-fresh' };
-  }
-
-  const response = await fetchYoutubeMeta(youtubeId);
-  if (!response) {
-    return { updated: false, reason: 'youtube-fetch-failed' };
-  }
-
-  const snippet = response.snippet || {};
-  const contentDetails = response.contentDetails || {};
+function buildMetaFromResponse(response, youtubeId) {
+  const snippet = response?.snippet || {};
+  const contentDetails = response?.contentDetails || {};
   const durationSeconds = parseIsoDurationToSeconds(contentDetails.duration);
   const thumbnail = pickLargestThumbnail(snippet.thumbnails);
 
-  const newMeta = compactMeta({
+  return compactMeta({
     videoId: youtubeId,
     title: snippet.title,
     description: snippet.description,
@@ -212,14 +204,69 @@ async function enrichDoc(doc) {
     publishedAt: snippet.publishedAt,
     durationSeconds
   });
+}
 
-  await doc.ref.set(
-    {
-      youtube: { meta: newMeta },
-      lastEnrichedAt: admin.firestore.FieldValue.serverTimestamp()
-    },
-    { merge: true }
-  );
+async function enrichDoc(doc) {
+  const data = doc.data();
+  const youtubeId = getYoutubeId(data);
+  const originalYoutubeId = getOriginalYoutubeId(data);
+
+  if (!youtubeId && !originalYoutubeId) {
+    return { updated: false, reason: 'missing-youtube-id' };
+  }
+
+  const meta = data?.youtube?.meta;
+  const originalMeta = data?.originalYoutube?.meta;
+  const reactionNeedsUpdate =
+    Boolean(youtubeId) && (!isMetaComplete(meta, youtubeId) && (isStale(data?.lastEnrichedAt) || !meta));
+  const originalNeedsUpdate =
+    Boolean(originalYoutubeId) &&
+    (!isMetaComplete(originalMeta, originalYoutubeId) &&
+      (isStale(data?.originalYoutube?.lastEnrichedAt) || !originalMeta));
+
+  if (!reactionNeedsUpdate && !originalNeedsUpdate) {
+    return { updated: false, reason: 'meta-fresh' };
+  }
+
+  let reactionResponse = null;
+  let originalResponse = null;
+
+  if (reactionNeedsUpdate) {
+    reactionResponse = await fetchYoutubeMeta(youtubeId);
+  }
+
+  if (originalNeedsUpdate) {
+    if (originalYoutubeId === youtubeId && reactionResponse) {
+      originalResponse = reactionResponse;
+    } else {
+      originalResponse = await fetchYoutubeMeta(originalYoutubeId);
+    }
+  }
+
+  const updates = {};
+  if (reactionResponse) {
+    const newMeta = buildMetaFromResponse(reactionResponse, youtubeId);
+    if (Object.keys(newMeta).length > 0) {
+      updates.youtube = { meta: newMeta };
+      updates.lastEnrichedAt = admin.firestore.FieldValue.serverTimestamp();
+    }
+  }
+
+  if (originalResponse) {
+    const newMeta = buildMetaFromResponse(originalResponse, originalYoutubeId);
+    if (Object.keys(newMeta).length > 0) {
+      updates.originalYoutube = {
+        meta: newMeta,
+        lastEnrichedAt: admin.firestore.FieldValue.serverTimestamp()
+      };
+    }
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return { updated: false, reason: 'youtube-fetch-failed' };
+  }
+
+  await doc.ref.set(updates, { merge: true });
 
   return { updated: true, reason: 'updated' };
 }
