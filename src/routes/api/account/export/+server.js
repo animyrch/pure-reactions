@@ -143,14 +143,14 @@ async function fetchYoutubeChannelVerifications(adminDbInstance, claims) {
 
 async function fetchAlgoliaRecords(reactionIds) {
 	const appId = process.env.PUBLIC_ALGOLIA_APP_ID;
-	const adminKey = process.env.ALGOLIA_ADMIN_KEY;
+	const searchKey = process.env.PUBLIC_ALGOLIA_SEARCH_API_KEY;
 	const indexName = process.env.PUBLIC_ALGOLIA_REACTIONS_INDEX;
 
 	if (!reactionIds.length) {
 		return { indexName, records: [], missingObjectIDs: [] };
 	}
 
-	if (!appId || !adminKey || !indexName) {
+	if (!appId || !searchKey || !indexName) {
 		return {
 			indexName,
 			records: [],
@@ -159,30 +159,39 @@ async function fetchAlgoliaRecords(reactionIds) {
 		};
 	}
 
-	const { default: algoliasearch } = await import('algoliasearch');
-	const client = algoliasearch(appId, adminKey);
-	const index = client.initIndex(indexName);
+	try {
+		const { default: algoliasearch } = await import('algoliasearch');
+		const client = algoliasearch(appId, searchKey);
+		const index = client.initIndex(indexName);
 
-	const records = [];
-	const missingObjectIDs = [];
-	const chunks = chunkArray(reactionIds, ALGOLIA_BATCH_LIMIT);
+		const records = [];
+		const missingObjectIDs = [];
+		const chunks = chunkArray(reactionIds, ALGOLIA_BATCH_LIMIT);
 
-	for (const chunk of chunks) {
-		const response = await index.getObjects(chunk);
-		response.results.forEach((result, indexOffset) => {
-			if (result) {
-				records.push(result);
-			} else {
-				missingObjectIDs.push(chunk[indexOffset]);
-			}
-		});
+		for (const chunk of chunks) {
+			const response = await index.getObjects(chunk);
+			response.results.forEach((result, indexOffset) => {
+				if (result) {
+					records.push(result);
+				} else {
+					missingObjectIDs.push(chunk[indexOffset]);
+				}
+			});
+		}
+
+		return {
+			indexName,
+			records: records.sort(sortByObjectId),
+			missingObjectIDs: missingObjectIDs.sort()
+		};
+	} catch (error) {
+		return {
+			indexName,
+			records: [],
+			missingObjectIDs: [...reactionIds],
+			error: `Algolia request failed: ${error?.message || 'Unknown error'}`
+		};
 	}
-
-	return {
-		indexName,
-		records: records.sort(sortByObjectId),
-		missingObjectIDs: missingObjectIDs.sort()
-	};
 }
 
 export const POST = async ({ request }) => {
