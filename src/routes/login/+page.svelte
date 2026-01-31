@@ -35,7 +35,7 @@
     },
     {
       id: 'non-alphanumeric',
-      label: 'Password must contain a non-alphanumeric character',
+      label: 'Password must contain a symbol',
       test: (value) => /[^a-zA-Z0-9]/.test(value)
     }
   ];
@@ -43,6 +43,13 @@
   const resetBackendPasswordFeedback = () => {
     backendMissingRequirements = [];
     backendFallbackMessage = '';
+  };
+
+  const mapRequirementLabel = (requirement) => {
+    const mapping = {
+      'Password must contain a non-alphanumeric character': 'Password must contain a symbol'
+    };
+    return mapping[requirement] || requirement;
   };
 
   const parsePasswordRequirements = (message) => {
@@ -56,7 +63,8 @@
     return match[1]
       .split(',')
       .map((item) => item.trim())
-      .filter(Boolean);
+      .filter(Boolean)
+      .map(mapRequirementLabel);
   };
 
   const extractErrorMessage = (errorDetails) => {
