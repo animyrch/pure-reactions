@@ -795,6 +795,7 @@ export const getReactionsByIds = async (reactionIds) => {
 
 export const createUserWithEmailAndPasswordWrapper = async (email, password) => {
     let successful = false;
+    let errorDetails = null;
     try {
         const userCreds = await createUserWithEmailAndPassword(auth, email, password)
         const emailPrefix = typeof email === 'string' ? email.split('@')[0].trim() : '';
@@ -810,12 +811,17 @@ export const createUserWithEmailAndPasswordWrapper = async (email, password) => 
         });
         successful = true;
     } catch (error) {
-        const errorCode = error.code;
-        const errorMessage = error.message;
+        const errorCode = error?.code || 'auth/error';
+        const errorMessage = error?.message || '';
         showToast(errorCode);
         console.log('errorMessage', errorMessage);
+        errorDetails = {
+            code: error?.code,
+            message: errorMessage,
+            raw: error
+        };
     }
-    return successful;
+    return { successful, error: errorDetails };
 };
 
 export const signInWithEmailAndPasswordWrapper = async (email, password) => {
