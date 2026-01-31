@@ -143,7 +143,7 @@ See [ACCOUNT_DELETION_SETUP.md](./ACCOUNT_DELETION_SETUP.md) for detailed setup 
 ## Future Enhancements
 
 - Grace period (e.g., 30 days to cancel deletion)
-- Data export before deletion (GDPR compliance)
+- Optional pre-delete export reminder in the deletion flow
 - Admin dashboard for monitoring deletion requests
 - Audit log for compliance tracking
 

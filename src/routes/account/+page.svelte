@@ -1,5 +1,5 @@
 <script>
-    import { onMount } from 'svelte';
+    import { onDestroy, onMount } from 'svelte';
     import { goto } from '$app/navigation';
     import {
       EmailAuthProvider,
@@ -21,6 +21,13 @@
     let deleteStep = 'confirm';
     let deletePassword = '';
     let deleteError = '';
+    let exportStatus = 'idle';
+    let exportError = '';
+    let exportPayload = null;
+    let exportFileName = '';
+    let exportGeneratedAt = '';
+    let exportRetryAt = '';
+    let exportBlobUrl = '';
 
     const providerLabels = {
       password: 'Email and password',
@@ -89,6 +96,58 @@
       }
 
       return error?.message || 'Failed to reauthenticate. Please try again.';
+    };
+
+    const requestExport = async () => {
+      exportError = '';
+      exportRetryAt = '';
+      exportStatus = 'loading';
+      exportPayload = null;
+
+      if (exportBlobUrl) {
+        URL.revokeObjectURL(exportBlobUrl);
+        exportBlobUrl = '';
+      }
+
+      try {
+        if (!auth.currentUser) {
+          showToast('You must be logged in to export your data.', TOASTS.ERROR);
+          exportStatus = 'error';
+          return;
+        }
+
+        const idToken = await auth.currentUser.getIdToken(true);
+        const response = await fetch('/api/account/export', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${idToken}`
+          }
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          exportError = result.error || 'Failed to generate export.';
+          exportRetryAt = result.nextAllowedAt || '';
+          exportStatus = 'error';
+          return;
+        }
+
+        exportPayload = result.export;
+        exportFileName = result.fileName || 'pure-reactions-export.json';
+        exportGeneratedAt = result.generatedAt || exportPayload?.meta?.generatedAt || '';
+
+        const jsonText = JSON.stringify(exportPayload, null, 2);
+        exportBlobUrl = URL.createObjectURL(
+          new Blob([jsonText], { type: 'application/json' })
+        );
+        exportStatus = 'ready';
+        showToast('Your data export is ready to download.', TOASTS.SUCCESS);
+      } catch (error) {
+        console.error('Error generating export:', error);
+        exportError = 'An unexpected error occurred. Please try again.';
+        exportStatus = 'error';
+      }
     };
 
     const deleteAccount = async () => {
@@ -164,6 +223,12 @@
         handlePrivateRoute();
       }
     });
+
+    onDestroy(() => {
+      if (exportBlobUrl) {
+        URL.revokeObjectURL(exportBlobUrl);
+      }
+    });
   
   </script>
   
@@ -220,6 +285,76 @@
           >
             <span>Logout</span>
           </Button>
+        </div>
+      </section>
+
+      <section class="py-6">
+        <p class="text-xs font-semibold tracking-[0.2em] uppercase text-text-muted mb-4">
+          Privacy
+        </p>
+        <div class="border border-gray-600/50 rounded-lg p-5 bg-surface-dark">
+          <h2 class="text-lg font-semibold text-text mb-2">Download your data</h2>
+          <p class="text-sm text-text-muted mb-4">
+            Request a machine-readable export of the personal data tied to your account. The export is a JSON file you
+            can download and keep for your records.
+          </p>
+          <p class="text-xs text-text-muted mb-4">Exports are limited to one request every 24 hours.</p>
+          <div class="space-y-3 text-sm text-text-muted">
+            <div>
+              <p class="font-medium text-text">Included</p>
+              <ul class="list-disc list-inside space-y-1">
+                <li>Account profile details (email, display name, providers)</li>
+                <li>Your reactions and playback timelines</li>
+                <li>Playlists, queues, and bookmarks/follows</li>
+                <li>YouTube channel claim data (if submitted)</li>
+                <li>Search index entries for your published reactions</li>
+              </ul>
+            </div>
+            <div>
+              <p class="font-medium text-text">Not included</p>
+              <ul class="list-disc list-inside space-y-1">
+                <li>Infrastructure or transient logs (server logs, analytics)</li>
+                <li>Real-time co-watch session state</li>
+                <li>Deleted data that no longer exists in our systems</li>
+              </ul>
+            </div>
+          </div>
+          <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Button
+              color="alternative"
+              on:click={requestExport}
+              disabled={exportStatus === 'loading'}
+              class="h-12 rounded-lg border border-gray-500 bg-surface text-text font-semibold text-sm tracking-wide hover:bg-surface-dark hover:border-gray-300"
+            >
+              {#if exportStatus === 'loading'}
+                Preparing export...
+              {:else}
+                Request data export
+              {/if}
+            </Button>
+            {#if exportStatus === 'ready' && exportBlobUrl}
+              <a
+                class="inline-flex items-center justify-center h-12 rounded-lg bg-accent-primary text-text-primary font-semibold text-sm tracking-wide hover:bg-accent-primary/90"
+                href={exportBlobUrl}
+                download={exportFileName}
+              >
+                Download export
+              </a>
+            {/if}
+          </div>
+          {#if exportGeneratedAt}
+            <p class="mt-3 text-xs text-text-muted" aria-live="polite">
+              Export generated at {new Date(exportGeneratedAt).toLocaleString()}.
+            </p>
+          {/if}
+          {#if exportRetryAt}
+            <p class="mt-2 text-xs text-text-muted" aria-live="polite">
+              Next export available after {new Date(exportRetryAt).toLocaleString()}.
+            </p>
+          {/if}
+          {#if exportError}
+            <p class="mt-3 text-sm text-red-400" aria-live="polite">{exportError}</p>
+          {/if}
         </div>
       </section>
 
