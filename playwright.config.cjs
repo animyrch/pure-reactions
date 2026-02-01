@@ -10,10 +10,18 @@ if (process.env.PUBLIC_DISABLE_YOUTUBE_METADATA_SYNC === undefined) {
 module.exports = defineConfig({
     testDir: './tests',
     timeout: 30000,
-    retries: 0,
+    // Retry flaky tests in CI, but not locally for faster feedback
+    retries: process.env.CI ? 2 : 0,
     globalSetup: require.resolve('./tests/global-setup.cjs'),
     use: {
         headless: true,
+        // Enable video autoplay in tests
+        launchOptions: {
+            args: [
+                '--autoplay-policy=no-user-gesture-required',
+                '--disable-blink-features=AutomationControlled'
+            ]
+        }
     },
     projects: [
         {
