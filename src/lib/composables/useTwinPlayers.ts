@@ -527,7 +527,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       }
 
       if (typeof window !== 'undefined') {
-        window.__players = {
+        (window as any).__players = {
           original: nextValue.playerOriginal,
           reaction: nextValue.playerReaction
         };
@@ -2244,6 +2244,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       const originalVideoId = reactionData['originalVideoId'];
       const youtubePlaylistId = reactionData['youtubePlaylistId'];
 
+      const isSameReactionVideo = reactionVideoId === previousReactionVideoId;
+
       const rawOffsetStartTime = Number(reactionData['offsetStartTime'] ?? 0);
       const offsetStartTime = Number.isFinite(rawOffsetStartTime) && rawOffsetStartTime >= 0
         ? Math.round(rawOffsetStartTime * 10) / 10
@@ -2261,8 +2263,10 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       const canReuseReactionPlayer =
         Boolean(snapshotBefore.playerReaction) &&
         Boolean(reactionVideoId) &&
-        reactionVideoId === previousReactionVideoId &&
+        isSameReactionVideo &&
         Boolean(document.getElementById('player-reaction'));
+
+      const effectivePreviousReactionTime = isSameReactionVideo ? previousReactionTime : undefined;
 
       if (!canReuseReactionPlayer && snapshotBefore.playerReaction?.destroy) {
         snapshotBefore.playerReaction.destroy();
@@ -2353,7 +2357,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         fullscreenOverlayVisible: true,
         currentVolumeReactionVideo: 100,
         bothVideosStarted: preserveReactionTime ? snapshotBefore.bothVideosStarted : Boolean(options.autoPlay),
-        reactionCurrentTime: typeof previousReactionTime === 'number' ? previousReactionTime : offsetStartTime || 0,
+        reactionCurrentTime: typeof effectivePreviousReactionTime === 'number' ? effectivePreviousReactionTime : offsetStartTime || 0,
         reactionDuration:
           typeof nextPlayerReaction?.getDuration === 'function' ? Number(nextPlayerReaction.getDuration()) || 0 : snapshotBefore.reactionDuration,
         seekMin: offsetStartTime || 0,
@@ -2380,9 +2384,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         }
       }
 
-      if (typeof previousReactionTime === 'number' && typeof nextPlayerReaction?.seekTo === 'function' && !canReuseReactionPlayer) {
+      if (typeof effectivePreviousReactionTime === 'number' && typeof nextPlayerReaction?.seekTo === 'function' && !canReuseReactionPlayer) {
         try {
-          nextPlayerReaction.seekTo(previousReactionTime, true);
+          nextPlayerReaction.seekTo(effectivePreviousReactionTime, true);
         } catch {
           // ignore
         }
@@ -4057,6 +4061,12 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       registerOverlayRef
     }
   };
+
+  if (typeof window !== 'undefined') {
+    (window as any).__actions = result.actions;
+  }
+
+  return result;
 }
 
 function getInitialUrlState() {

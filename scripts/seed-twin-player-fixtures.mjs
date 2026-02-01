@@ -15,7 +15,8 @@ const FIXTURES = [
   'tests/fixtures/reactions/twin-volume-stability.json',
   'tests/fixtures/reactions/twin-resume-after-config-pause.json',
   'tests/fixtures/reactions/twin-overlay-visibility.json',
-  'tests/fixtures/reactions/reaction-layout.json'
+  'tests/fixtures/reactions/reaction-layout.json',
+  'tests/fixtures/reactions/playlist-transitions.json'
 ];
 
 const VERIFICATION_FIXTURES = [
