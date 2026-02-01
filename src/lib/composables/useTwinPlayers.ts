@@ -2316,6 +2316,16 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
             if (typeof snapshotBefore.playerOriginal.cueVideoById === 'function') {
               snapshotBefore.playerOriginal.cueVideoById(originalVideoId);
               console.debug('[TwinPlayers] Cued original video (different reaction video)', { originalVideoId });
+              // Explicitly stop/pause the original video to prevent auto-play
+              // Use a small delay to let the cue operation complete
+              await tick();
+              if (typeof snapshotBefore.playerOriginal.stopVideo === 'function') {
+                snapshotBefore.playerOriginal.stopVideo();
+                console.debug('[TwinPlayers] Stopped original video after cue');
+              } else if (typeof snapshotBefore.playerOriginal.pauseVideo === 'function') {
+                snapshotBefore.playerOriginal.pauseVideo();
+                console.debug('[TwinPlayers] Paused original video after cue');
+              }
             } else {
               snapshotBefore.playerOriginal.loadVideoById(originalVideoId);
             }
