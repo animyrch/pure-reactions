@@ -1086,6 +1086,18 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         handleStateChangeInReactionVideo(reactionPlayerState, newReactionState);
         reactionPlayerState = newReactionState;
       }
+      
+      // If the reaction video is UNSTARTED or CUED (e.g., after autoplay transition),
+      // pause the original video and wait for user interaction to start both videos
+      if (newReactionState === YT?.PlayerState?.UNSTARTED || newReactionState === YT?.PlayerState?.CUED) {
+        const originalState = getPlayerStateSafely(playerOriginal);
+        if (originalState === YT.PlayerState.PLAYING || originalState === YT.PlayerState.BUFFERING) {
+          pausePlayerWithTrace('original', playerOriginal, 'reaction UNSTARTED/CUED during sync loop');
+        }
+        scheduleNextSync(250, runSyncCycle);
+        return;
+      }
+      
       const previousReactionTime = snapshot.reactionCurrentTime;
       const reactionCurrentTime = parseFloat(playerReaction.getCurrentTime().toFixed(1));
       const rawDuration = typeof playerReaction.getDuration === 'function' ? Number(playerReaction.getDuration()) : Number.NaN;
