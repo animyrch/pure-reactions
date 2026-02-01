@@ -264,15 +264,17 @@
         originalVideoAuthor={$state.originalVideoAuthor}
         originalVideoTitle={$state.originalVideoTitle}
         originalVideoId={$state.originalVideoId}
+        originalVideoDescription={$state.originalVideoDescription}
         reactionVideoAuthor={$state.reactionVideoAuthor}
         reactionVideoTitle={$state.reactionVideoTitle}
         reactionVideoId={$state.reactionVideoId}
+        reactionVideoDescription={$state.reactionVideoDescription}
         pageSlug={$state.pageSlug}
         isUsersOwnVideo={$state.isUsersOwnVideo}
         reactorId={$state.reactorId}
         reactorDisplayName={$state.reactorDisplayName}
       />
-      <div class="mt-2">
+      <div class="mt-3 sm:mt-4">
         <AttributionBlock
           reactionVideoAuthor={$state.reactionVideoAuthor}
           reactorDisplayName={$state.reactorDisplayName}
