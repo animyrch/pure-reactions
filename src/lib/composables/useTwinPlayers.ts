@@ -2268,6 +2268,20 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
       const effectivePreviousReactionTime = isSameReactionVideo ? previousReactionTime : undefined;
 
+      // Compute initial volumes from the configurations at offsetStartTime
+      const initialOriginalVolume = getCurrentVolumeFromVolumeConfigs(
+        offsetStartTime || 0,
+        volumeConfigs,
+        globalGain,
+        timeOffset
+      );
+      const initialReactionVolume = getCurrentVolumeFromVolumeConfigs(
+        offsetStartTime || 0,
+        reactionVolumeConfigs,
+        1.0,
+        timeOffset
+      );
+
       if (!canReuseReactionPlayer && snapshotBefore.playerReaction?.destroy) {
         snapshotBefore.playerReaction.destroy();
       }
@@ -2353,10 +2367,10 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         playerOriginal: snapshotBefore.playerOriginal,
         playerReaction: nextPlayerReaction,
         currentStateOriginalVideo: -1,
-        currentVolumeOriginalVideo: 100,
+        currentVolumeOriginalVideo: initialOriginalVolume,
         fullscreenOverlayVisible: true,
-        currentVolumeReactionVideo: 100,
-        bothVideosStarted: preserveReactionTime ? snapshotBefore.bothVideosStarted : Boolean(options.autoPlay),
+        currentVolumeReactionVideo: initialReactionVolume,
+        bothVideosStarted: isSameReactionVideo && preserveReactionTime ? snapshotBefore.bothVideosStarted : Boolean(options.autoPlay),
         reactionCurrentTime: typeof effectivePreviousReactionTime === 'number' ? effectivePreviousReactionTime : offsetStartTime || 0,
         reactionDuration:
           typeof nextPlayerReaction?.getDuration === 'function' ? Number(nextPlayerReaction.getDuration()) || 0 : snapshotBefore.reactionDuration,
@@ -2371,6 +2385,16 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
           const finishCap = Number.isFinite(rawFinish) && rawFinish > 0 ? rawFinish : Number.POSITIVE_INFINITY;
           return Math.max(seekMin, Math.min(durationCap, finishCap));
         })()
+      });
+
+      console.debug('[TwinPlayers] state updated in updateReactionVideo', {
+        isSameReactionVideo,
+        preserveReactionTime,
+        bothVideosStarted: isSameReactionVideo && preserveReactionTime ? snapshotBefore.bothVideosStarted : Boolean(options.autoPlay),
+        initialOriginalVolume,
+        initialReactionVolume,
+        reactionVideoId,
+        previousReactionVideoId
       });
 
       enforceReactionMuteMode();
