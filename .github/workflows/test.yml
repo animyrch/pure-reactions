@@ -19,6 +19,13 @@ jobs:
       PUBLIC_FIREBASE_COLLECTION_QUEUES: "queues-test"
       PUBLIC_FIREBASE_COLLECTION_YOUTUBE_CHANNEL_CLAIMS: "claims-test"
       PUBLIC_FIREBASE_COLLECTION_YOUTUBE_CHANNEL_VERIFICATIONS: "verifications-test"
+      PUBLIC_DISABLE_YOUTUBE_METADATA_SYNC: "true"
+      # Private config (dummy values for testing)
+      YOUTUBE_API_KEY: "dummy_key_for_tests"
+      # Algolia config (dummy values for testing)
+      PUBLIC_ALGOLIA_APP_ID: "dummy"
+      PUBLIC_ALGOLIA_SEARCH_API_KEY: "dummy"
+      PUBLIC_ALGOLIA_REACTIONS_INDEX: "dummy"
       CI: "true"
 
     steps:
