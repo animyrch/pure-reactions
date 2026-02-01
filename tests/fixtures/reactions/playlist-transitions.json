@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "Twin-player fixture: Playlist Transition timing preservation",
+  "description": "Twin-player fixture: Playlist Transition timing preservation and volume state",
   "docs": [
     {
       "id": "playlist-trans-A",
@@ -11,7 +11,9 @@
         "originalVideoTitle": "Original Video A",
         "reactionVideoId": "8-3PahRtgF4",
         "reactionVideoTitle": "Reaction Video Same",
-        "stateTimeline": [{ "state": 1, "t": 0, "targetTime": 0 }]
+        "stateTimeline": [{ "state": 1, "t": 0, "targetTime": 0 }],
+        "volumeTimeline": [{ "t": 0, "volume": 0 }],
+        "reactionVolumeTimeline": [{ "t": 0, "volume": 100 }]
       }
     },
     {
@@ -23,7 +25,9 @@
         "originalVideoTitle": "Original Video B",
         "reactionVideoId": "8-3PahRtgF4",
         "reactionVideoTitle": "Reaction Video Same",
-        "stateTimeline": [{ "state": 1, "t": 0, "targetTime": 0 }]
+        "stateTimeline": [{ "state": 1, "t": 0, "targetTime": 0 }],
+        "volumeTimeline": [{ "t": 0, "volume": 0 }],
+        "reactionVolumeTimeline": [{ "t": 0, "volume": 100 }]
       }
     },
     {
@@ -35,7 +39,9 @@
         "originalVideoTitle": "Original Video C",
         "reactionVideoId": "qg6b4b0FAB4",
         "reactionVideoTitle": "Reaction Video Different",
-        "stateTimeline": [{ "state": 1, "t": 0, "targetTime": 0 }]
+        "stateTimeline": [{ "state": 1, "t": 0, "targetTime": 0 }],
+        "volumeTimeline": [{ "t": 0, "volume": 100 }],
+        "reactionVolumeTimeline": [{ "t": 0, "volume": 0 }]
       }
     }
   ]

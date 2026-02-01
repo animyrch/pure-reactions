@@ -1086,6 +1086,18 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         handleStateChangeInReactionVideo(reactionPlayerState, newReactionState);
         reactionPlayerState = newReactionState;
       }
+      
+      // If the reaction video is UNSTARTED or CUED (e.g., after autoplay transition),
+      // pause the original video and wait for user interaction to start both videos
+      if (newReactionState === YT?.PlayerState?.UNSTARTED || newReactionState === YT?.PlayerState?.CUED) {
+        const originalState = getPlayerStateSafely(playerOriginal);
+        if (originalState === YT.PlayerState.PLAYING || originalState === YT.PlayerState.BUFFERING) {
+          pausePlayerWithTrace('original', playerOriginal, 'reaction UNSTARTED/CUED during sync loop');
+        }
+        scheduleNextSync(250, runSyncCycle);
+        return;
+      }
+      
       const previousReactionTime = snapshot.reactionCurrentTime;
       const reactionCurrentTime = parseFloat(playerReaction.getCurrentTime().toFixed(1));
       const rawDuration = typeof playerReaction.getDuration === 'function' ? Number(playerReaction.getDuration()) : Number.NaN;
@@ -2268,6 +2280,20 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
       const effectivePreviousReactionTime = isSameReactionVideo ? previousReactionTime : undefined;
 
+      // Compute initial volumes from the configurations at offsetStartTime
+      const initialOriginalVolume = getCurrentVolumeFromVolumeConfigs(
+        offsetStartTime || 0,
+        volumeConfigs,
+        globalGain,
+        timeOffset
+      );
+      const initialReactionVolume = getCurrentVolumeFromVolumeConfigs(
+        offsetStartTime || 0,
+        reactionVolumeConfigs,
+        1.0,
+        timeOffset
+      );
+
       if (!canReuseReactionPlayer && snapshotBefore.playerReaction?.destroy) {
         snapshotBefore.playerReaction.destroy();
       }
@@ -2296,7 +2322,18 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
       if (originalVideoId && typeof snapshotBefore.playerOriginal?.loadVideoById === 'function') {
         try {
-          snapshotBefore.playerOriginal.loadVideoById(originalVideoId);
+          // When switching to a different reaction video, cue (don't play) the original video
+          // so it waits for the reaction video to be started by the user
+          if (!isSameReactionVideo) {
+            if (typeof snapshotBefore.playerOriginal.cueVideoById === 'function') {
+              snapshotBefore.playerOriginal.cueVideoById(originalVideoId);
+              console.debug('[TwinPlayers] Cued original video (different reaction video)', { originalVideoId });
+            } else {
+              snapshotBefore.playerOriginal.loadVideoById(originalVideoId);
+            }
+          } else {
+            snapshotBefore.playerOriginal.loadVideoById(originalVideoId);
+          }
         } catch (error) {
           console.error('Failed to load original video by id', error);
         }
@@ -2353,10 +2390,10 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         playerOriginal: snapshotBefore.playerOriginal,
         playerReaction: nextPlayerReaction,
         currentStateOriginalVideo: -1,
-        currentVolumeOriginalVideo: 100,
+        currentVolumeOriginalVideo: initialOriginalVolume,
         fullscreenOverlayVisible: true,
-        currentVolumeReactionVideo: 100,
-        bothVideosStarted: preserveReactionTime ? snapshotBefore.bothVideosStarted : Boolean(options.autoPlay),
+        currentVolumeReactionVideo: initialReactionVolume,
+        bothVideosStarted: isSameReactionVideo && preserveReactionTime ? snapshotBefore.bothVideosStarted : Boolean(options.autoPlay),
         reactionCurrentTime: typeof effectivePreviousReactionTime === 'number' ? effectivePreviousReactionTime : offsetStartTime || 0,
         reactionDuration:
           typeof nextPlayerReaction?.getDuration === 'function' ? Number(nextPlayerReaction.getDuration()) || 0 : snapshotBefore.reactionDuration,
@@ -2373,8 +2410,48 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         })()
       });
 
+      console.debug('[TwinPlayers] state updated in updateReactionVideo', {
+        isSameReactionVideo,
+        preserveReactionTime,
+        bothVideosStarted: isSameReactionVideo && preserveReactionTime ? snapshotBefore.bothVideosStarted : Boolean(options.autoPlay),
+        initialOriginalVolume,
+        initialReactionVolume,
+        reactionVideoId,
+        previousReactionVideoId
+      });
+
       enforceReactionMuteMode();
       await setPlaylistData(get(state).playlistDocumentId, youtubePlaylistId);
+
+      // Explicitly apply the computed volumes to the players
+      if (typeof snapshotBefore.playerOriginal?.setVolume === 'function') {
+        try {
+          snapshotBefore.playerOriginal.setVolume(initialOriginalVolume);
+          console.debug('[TwinPlayers] Applied original volume after transition', { initialOriginalVolume });
+        } catch (error) {
+          console.error('[TwinPlayers] Failed to set original volume', error);
+        }
+      }
+      if (typeof nextPlayerReaction?.setVolume === 'function') {
+        try {
+          nextPlayerReaction.setVolume(initialReactionVolume);
+          console.debug('[TwinPlayers] Applied reaction volume after transition', { initialReactionVolume });
+        } catch (error) {
+          console.error('[TwinPlayers] Failed to set reaction volume', error);
+        }
+      }
+
+      // When switching to a different reaction video, explicitly stop the original video
+      // AFTER all volume and state operations to prevent it from auto-playing
+      if (!isSameReactionVideo && typeof snapshotBefore.playerOriginal?.stopVideo === 'function') {
+        try {
+          await tick(); // Let all previous operations complete
+          snapshotBefore.playerOriginal.stopVideo();
+          console.debug('[TwinPlayers] Stopped original video after volume application (different reaction)');
+        } catch (error) {
+          console.error('[TwinPlayers] Failed to stop original video', error);
+        }
+      }
 
       if (!preserveReactionTime && canReuseReactionPlayer && typeof nextPlayerReaction?.seekTo === 'function') {
         try {
@@ -2394,10 +2471,16 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
       try {
         await tick();
+        // When preserving time with the same reaction video and both videos were already started,
+        // resume playback immediately
         if (preserveReactionTime && get(state).bothVideosStarted) {
           handleStateChangeInReactionVideo(YT.PlayerState.BUFFERING, YT.PlayerState.PLAYING);
           pollVideoCurrentTime();
-        } else {
+        } else if (isSameReactionVideo || Boolean(options.autoPlay)) {
+          // Only sync/start videos if:
+          // 1. Same reaction video (reusing player), OR
+          // 2. AutoPlay is explicitly enabled
+          // Otherwise, wait for user to start the new reaction video
           syncVideos();
           if (get(state).bothVideosStarted) {
             pollVideoCurrentTime();
