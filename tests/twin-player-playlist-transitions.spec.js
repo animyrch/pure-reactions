@@ -88,7 +88,7 @@ test.describe('Playlist Transitions Timing', () => {
 
         // 2. Transition to DIFFERENT reaction video (Playlist Trans C: original NOT muted, reaction muted)
         await page.evaluate(async () => {
-             await window.__actions.loadReactionInPlace('playlist-trans-C', { preserveReactionTime: true, autoPlay: true });
+            await window.__actions.loadReactionInPlace('playlist-trans-C', { preserveReactionTime: true, autoPlay: true });
         });
 
         // Wait for transition to complete
@@ -127,7 +127,7 @@ test.describe('Playlist Transitions Timing', () => {
 
         // 2. Transition to DIFFERENT reaction video (Playlist Trans C)
         await page.evaluate(async () => {
-             await window.__actions.loadReactionInPlace('playlist-trans-C', { preserveReactionTime: true, autoPlay: true });
+            await window.__actions.loadReactionInPlace('playlist-trans-C', { preserveReactionTime: true, autoPlay: true });
         });
 
         // Wait briefly for the transition to begin
