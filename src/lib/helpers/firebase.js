@@ -13,7 +13,8 @@ import {
     orderBy,
     or,
     limit,
-    startAfter
+    startAfter,
+    writeBatch
 } from "firebase/firestore/lite";
 import {
     getAuth,
@@ -795,6 +796,7 @@ export const getReactionsByIds = async (reactionIds) => {
 
 export const createUserWithEmailAndPasswordWrapper = async (email, password) => {
     let successful = false;
+    let errorDetails = null;
     try {
         const userCreds = await createUserWithEmailAndPassword(auth, email, password)
         const emailPrefix = typeof email === 'string' ? email.split('@')[0].trim() : '';
@@ -810,12 +812,17 @@ export const createUserWithEmailAndPasswordWrapper = async (email, password) => 
         });
         successful = true;
     } catch (error) {
-        const errorCode = error.code;
-        const errorMessage = error.message;
+        const errorCode = error?.code || 'auth/error';
+        const errorMessage = error?.message || '';
         showToast(errorCode);
         console.log('errorMessage', errorMessage);
+        errorDetails = {
+            code: error?.code,
+            message: errorMessage,
+            raw: error
+        };
     }
-    return successful;
+    return { successful, error: errorDetails };
 };
 
 export const signInWithEmailAndPasswordWrapper = async (email, password) => {
@@ -870,6 +877,45 @@ export async function updateDisplayNameHelper(user, displayName) {
         throw error;
     }
 }
+
+export const updateReactorDisplayNameForUser = async ({ userId, displayName }) => {
+    const trimmedName = typeof displayName === 'string' ? displayName.trim() : '';
+    if (!userId || !trimmedName) {
+        return { updated: 0, skipped: true };
+    }
+    try {
+        const reactionsCollection = createCollection(
+            db,
+            COLLECTION_REACTION_BINOMES,
+            'updateReactorDisplayNameForUser'
+        );
+        const queryRef = query(reactionsCollection, where('reactorId', '==', userId));
+        const snapshot = await getDocs(queryRef);
+        if (snapshot.empty) {
+            return { updated: 0 };
+        }
+
+        const docs = snapshot.docs;
+        const batchSize = 500;
+        let updated = 0;
+
+        for (let i = 0; i < docs.length; i += batchSize) {
+            const batch = writeBatch(db);
+            const chunk = docs.slice(i, i + batchSize);
+            chunk.forEach((docSnap) => {
+                const docRef = doc(reactionsCollection, docSnap.id);
+                batch.update(docRef, { reactorDisplayName: trimmedName });
+            });
+            await batch.commit();
+            updated += chunk.length;
+        }
+
+        return { updated };
+    } catch (error) {
+        console.error('Error updating reactor display name in reactions:', error);
+        return { updated: 0, error: true };
+    }
+};
 export async function updatePhotoHelper(user, photoURL) {
     try {
         await updateProfile(user, { photoURL });

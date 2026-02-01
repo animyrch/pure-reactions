@@ -55,17 +55,21 @@ The main collection for reaction videos.
 
 User-specific data and preferences.
 
+**Document ID:** Firebase Auth UID (`userId`)
+
 #### Fields
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `userId` | string | Yes | Firebase Auth user ID |
-| `displayName` | string | No | User's display name |
-| `email` | string | No | User's email |
 | `bookmarks` | array[string] | No | Array of reaction IDs bookmarked by user |
-| `following` | array[string] | No | Array of reactor user IDs the user follows |
-| `createdAt` | Timestamp | Yes | Account creation timestamp |
-| `updatedAt` | Timestamp | Yes | Last update timestamp |
+| `follows` | array[string] | No | Array of reactor user IDs the user follows |
+| `displayName` | string | No | Optional display name (if stored in Firestore) |
+| `email` | string | No | Optional email (if stored in Firestore) |
+| `lastExportAt` | Timestamp | No | Last self-service export timestamp |
+| `createdAt` | Timestamp | No | Optional creation timestamp |
+| `updatedAt` | Timestamp | No | Optional last update timestamp |
+
+**Note**: Core account profile data (email, display name) primarily lives in Firebase Authentication.
 
 ---
 
@@ -77,15 +81,17 @@ User-created playlists of reactions.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `title` | string | Yes | Playlist title |
-| `description` | string | No | Playlist description |
+| `reactionBinomeIds` | array[string] | Yes | Array of reaction document IDs in playlist |
+| `originalVideoIds` | array[string] | Yes | Array of original YouTube IDs aligned with `reactionBinomeIds` |
 | `userId` | string | Yes | Creator's user ID |
-| `reactions` | array[string] | Yes | Array of reaction IDs in playlist |
+| `title` | string | No | Optional playlist title (legacy) |
+| `description` | string | No | Optional playlist description (legacy) |
 | `slug` | string | No | URL-friendly identifier |
 | `createdAt` | Timestamp | Yes | Creation timestamp |
-| `updatedAt` | Timestamp | Yes | Last update timestamp |
+| `updatedAt` | Timestamp | No | Last update timestamp |
 
 **Note**: Playlists do NOT have an `isPublished` field.
+**Legacy**: Older playlists may store `reactions` instead of `reactionBinomeIds`.
 
 ---
 
@@ -97,11 +103,17 @@ Temporary playback queues for sequential viewing.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `reactions` | array[string] | Yes | Array of reaction IDs in queue |
-| `currentIndex` | number | No | Index of currently playing reaction |
-| `autoplay` | boolean | No | Auto-advance to next reaction |
+| `slug` | string | Yes | Queue identifier (also used as document ID) |
+| `title` | string | Yes | Queue title |
+| `description` | string | No | Queue description |
+| `items` | array[object] | Yes | Ordered queue items ({ type: 'reaction' | 'playlist', id: string }) |
+| `ownerId` | string | Yes | Owner's user ID |
+| `ownerName` | string | No | Owner display name |
 | `createdAt` | Timestamp | Yes | Creation timestamp |
-| `expiresAt` | Timestamp | No | Optional expiration timestamp |
+| `updatedAt` | Timestamp | Yes | Last update timestamp |
+| `expiresAt` | Timestamp | No | Optional expiration timestamp (if used) |
+
+**Legacy**: Older queues may store `reactions`, `currentIndex`, or `autoplay`.
 
 ---
 
@@ -366,6 +378,7 @@ const docRef = await addDoc(collection(db, 'reactions'), {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.1 | 2026-01-30 | Updated user data, playlist, and queue fields; documented export timestamp |
 | 1.0 | 2026-01-22 | Initial schema documentation |
 
 ---

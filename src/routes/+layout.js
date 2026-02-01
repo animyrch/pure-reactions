@@ -38,9 +38,10 @@ export async function load({ depends }) {
                 await invalidate('app:auth');
                 await goToRoute('/');
             }
+            return { successful };
         }
         if (action === 'signup' && email && password) {
-            const successful = await createUserWithEmailAndPasswordWrapper(email, password);
+            const { successful, error } = await createUserWithEmailAndPasswordWrapper(email, password);
             if (successful) {
                 showToast('Success! Check your email to confirm your account.', TOASTS.SUCCESS, 10000);
                 const user = await checkUserSignInStatusWrapper();
@@ -49,13 +50,17 @@ export async function load({ depends }) {
                 await invalidate('app:auth');
                 await goToRoute('/');
             }
+            return { successful, error };
         }
         if (action === 'logout') {
+            goToRoute('/');
             await signOutWrapper();
             currentUser.set({});
             await invalidate('app:auth');
-            await goToRoute('/');
+            showToast('You have been logged out successfully', TOASTS.SUCCESS, 5000);
+            return { successful: true };
         }
+        return { successful: false };
     };
     return {
         handleUserAction,
