@@ -18,8 +18,6 @@ module.exports = defineConfig({
         // Enable video autoplay in tests
         launchOptions: {
             args: [
-                '--autoplay-policy=no-user-gesture-required',
-                '--disable-blink-features=AutomationControlled'
             ]
         }
     },
