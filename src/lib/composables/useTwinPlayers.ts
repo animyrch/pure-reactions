@@ -2310,7 +2310,18 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
       if (originalVideoId && typeof snapshotBefore.playerOriginal?.loadVideoById === 'function') {
         try {
-          snapshotBefore.playerOriginal.loadVideoById(originalVideoId);
+          // When switching to a different reaction video, cue (don't play) the original video
+          // so it waits for the reaction video to be started by the user
+          if (!isSameReactionVideo) {
+            if (typeof snapshotBefore.playerOriginal.cueVideoById === 'function') {
+              snapshotBefore.playerOriginal.cueVideoById(originalVideoId);
+              console.debug('[TwinPlayers] Cued original video (different reaction video)', { originalVideoId });
+            } else {
+              snapshotBefore.playerOriginal.loadVideoById(originalVideoId);
+            }
+          } else {
+            snapshotBefore.playerOriginal.loadVideoById(originalVideoId);
+          }
         } catch (error) {
           console.error('Failed to load original video by id', error);
         }
@@ -2436,10 +2447,16 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
       try {
         await tick();
+        // When preserving time with the same reaction video and both videos were already started,
+        // resume playback immediately
         if (preserveReactionTime && get(state).bothVideosStarted) {
           handleStateChangeInReactionVideo(YT.PlayerState.BUFFERING, YT.PlayerState.PLAYING);
           pollVideoCurrentTime();
-        } else {
+        } else if (isSameReactionVideo || Boolean(options.autoPlay)) {
+          // Only sync/start videos if:
+          // 1. Same reaction video (reusing player), OR
+          // 2. AutoPlay is explicitly enabled
+          // Otherwise, wait for user to start the new reaction video
           syncVideos();
           if (get(state).bothVideosStarted) {
             pollVideoCurrentTime();
