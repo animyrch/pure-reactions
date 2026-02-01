@@ -101,23 +101,47 @@ export const waitForPlayersReady = async (page, timeout = process.env.CI ? 60000
         }
     });
 
-    await page.waitForFunction(() => {
-        const players = window.__players;
-        if (!players || !players.original || !players.reaction) return false;
+    try {
+        await page.waitForFunction(() => {
+            const players = window.__players;
+            if (!players || !players.original || !players.reaction) return false;
 
-        const isReady = (p) => {
-            // If HTMLVideoElement
-            if (typeof p.readyState === 'number') return p.readyState >= 3;
-            // If YouTube Player
-            if (typeof p.getPlayerState === 'function') {
-                const state = p.getPlayerState();
-                return typeof state === 'number'; // Ready if state is accessible
-            }
-            return false;
-        };
+            const isReady = (p) => {
+                // If HTMLVideoElement
+                if (typeof p.readyState === 'number') return p.readyState >= 3;
+                // If YouTube Player
+                if (typeof p.getPlayerState === 'function') {
+                    const state = p.getPlayerState();
+                    return typeof state === 'number'; // Ready if state is accessible
+                }
+                return false;
+            };
 
-        return isReady(players.original) && isReady(players.reaction);
-    }, null, { timeout });
+            return isReady(players.original) && isReady(players.reaction);
+        }, null, { timeout });
+    } catch (error) {
+        // Add detailed error information on timeout
+        const diagnostics = await page.evaluate(() => {
+            const players = window.__players;
+            return {
+                playersExists: !!players,
+                originalExists: !!players?.original,
+                reactionExists: !!players?.reaction,
+                originalType: players?.original ? typeof players.original : 'undefined',
+                reactionType: players?.reaction ? typeof players.reaction : 'undefined',
+                originalReadyState: players?.original?.readyState,
+                reactionReadyState: players?.reaction?.readyState,
+                originalHasGetPlayerState: typeof players?.original?.getPlayerState === 'function',
+                reactionHasGetPlayerState: typeof players?.reaction?.getPlayerState === 'function'
+            };
+        });
+        
+        throw new Error(
+            `waitForPlayersReady timed out after ${timeout}ms. ` +
+            `Diagnostics: ${JSON.stringify(diagnostics, null, 2)}\n` +
+            `Original error: ${error.message}`
+        );
+    }
 };
 
 /**
