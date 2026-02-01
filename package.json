@@ -13,6 +13,7 @@
     "e2e": "playwright test",
     "test:e2e": "playwright test",
     "test:e2e:ci": "npx firebase-tools emulators:exec --project demo-pure-reactions --only firestore \"npm run test:e2e\"",
+    "test:e2e:ci:only": "npx firebase-tools emulators:exec --project demo-pure-reactions --only firestore \"npm run test:e2e -- ${PW_ARGS:-}\"",
     "test:rules": "firebase emulators:exec --only firestore \"node --test tests/firestore.rules.spec.mjs\"",
     "seed": "FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/seed-twin-player-fixtures.mjs -- --target prod --allowProd",
     "seed:firestore": "FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/seed-firestore-fixtures.mjs",

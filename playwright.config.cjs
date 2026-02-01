@@ -10,6 +10,8 @@ if (process.env.PUBLIC_DISABLE_YOUTUBE_METADATA_SYNC === undefined) {
 module.exports = defineConfig({
     testDir: './tests',
     timeout: 30000,
+    // Use HTML reporter on CI for easier debugging and artifact inspection
+    reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'html',
     // Retry flaky tests in CI, but not locally for faster feedback
     retries: process.env.CI ? 2 : 0,
     globalSetup: require.resolve('./tests/global-setup.cjs'),
