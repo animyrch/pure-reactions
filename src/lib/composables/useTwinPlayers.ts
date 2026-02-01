@@ -2400,6 +2400,24 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       enforceReactionMuteMode();
       await setPlaylistData(get(state).playlistDocumentId, youtubePlaylistId);
 
+      // Explicitly apply the computed volumes to the players
+      if (typeof snapshotBefore.playerOriginal?.setVolume === 'function') {
+        try {
+          snapshotBefore.playerOriginal.setVolume(initialOriginalVolume);
+          console.debug('[TwinPlayers] Applied original volume after transition', { initialOriginalVolume });
+        } catch (error) {
+          console.error('[TwinPlayers] Failed to set original volume', error);
+        }
+      }
+      if (typeof nextPlayerReaction?.setVolume === 'function') {
+        try {
+          nextPlayerReaction.setVolume(initialReactionVolume);
+          console.debug('[TwinPlayers] Applied reaction volume after transition', { initialReactionVolume });
+        } catch (error) {
+          console.error('[TwinPlayers] Failed to set reaction volume', error);
+        }
+      }
+
       if (!preserveReactionTime && canReuseReactionPlayer && typeof nextPlayerReaction?.seekTo === 'function') {
         try {
           nextPlayerReaction.seekTo(Number(offsetStartTime) || 0, true);
