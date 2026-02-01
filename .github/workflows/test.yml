@@ -40,6 +40,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install sharp (required for enhanced-img)
+        run: npm install --include=optional sharp
+
+      - name: Cache Firebase Emulators
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ runner.os }}
+
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
