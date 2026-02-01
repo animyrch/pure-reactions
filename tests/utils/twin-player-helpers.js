@@ -86,7 +86,10 @@ export const readTwinPlayersSnapshot = async (page) => {
  * @param {import('@playwright/test').Page} page
  * @param {number} timeout - Optional timeout override. Defaults to 60s in CI, 30s locally.
  */
-export const waitForPlayersReady = async (page, timeout = process.env.CI ? 60000 : 30000) => {
+export const waitForPlayersReady = async (page, timeout) => {
+    // Use CI-aware default timeout if not explicitly provided
+    const effectiveTimeout = timeout ?? (process.env.CI ? 60000 : 30000);
+
     // Add diagnostic logging to help debug missing players
     await page.evaluate(() => {
         const players = window.__players;
@@ -118,7 +121,7 @@ export const waitForPlayersReady = async (page, timeout = process.env.CI ? 60000
             };
 
             return isReady(players.original) && isReady(players.reaction);
-        }, null, { timeout });
+        }, null, { timeout: effectiveTimeout });
     } catch (error) {
         // Add detailed error information on timeout
         const diagnostics = await page.evaluate(() => {
@@ -137,7 +140,7 @@ export const waitForPlayersReady = async (page, timeout = process.env.CI ? 60000
         });
         
         throw new Error(
-            `waitForPlayersReady timed out after ${timeout}ms. ` +
+            `waitForPlayersReady timed out after ${effectiveTimeout}ms. ` +
             `Diagnostics: ${JSON.stringify(diagnostics, null, 2)}\n` +
             `Original error: ${error.message}`
         );
