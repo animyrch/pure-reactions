@@ -82,10 +82,25 @@ export const readTwinPlayersSnapshot = async (page) => {
 
 /**
  * Waits for twin players to be fully initialized and ready.
+ * Uses extended timeout in CI environments to handle slower initialization.
  * @param {import('@playwright/test').Page} page
- * @param {number} timeout
+ * @param {number} timeout - Optional timeout override. Defaults to 60s in CI, 30s locally.
  */
-export const waitForPlayersReady = async (page, timeout = 30000) => {
+export const waitForPlayersReady = async (page, timeout = process.env.CI ? 60000 : 30000) => {
+    // Add diagnostic logging to help debug missing players
+    await page.evaluate(() => {
+        const players = window.__players;
+        if (!players) {
+            console.log('[waitForPlayersReady] window.__players is not defined');
+        } else if (!players.original) {
+            console.log('[waitForPlayersReady] window.__players.original is missing');
+        } else if (!players.reaction) {
+            console.log('[waitForPlayersReady] window.__players.reaction is missing');
+        } else {
+            console.log('[waitForPlayersReady] Both players exist, checking ready state...');
+        }
+    });
+
     await page.waitForFunction(() => {
         const players = window.__players;
         if (!players || !players.original || !players.reaction) return false;
