@@ -14,7 +14,7 @@
     <h1 class="mb-6 text-4xl font-bold leading-tight text-text-primary md:text-5xl">
       Privacy Policy
     </h1>
-    <p class="text-sm text-text-muted">Effective Date: January 20, 2026</p>
+    <p class="text-sm text-text-muted">Effective Date: January 30, 2026</p>
   </header>
 
   <div class="prose-custom space-y-8 text-text-secondary">
@@ -30,15 +30,15 @@
           <h3 class="mb-2 text-lg font-medium text-text-primary">a. Account Information</h3>
           <p class="mb-2">When you create an account, we may collect:</p>
           <ul class="ml-6 list-disc space-y-1">
-            <li>Name, email address, and username</li>
-            <li>Profile information you provide</li>
+            <li>Name, email address, and sign-in provider identifiers</li>
+            <li>Profile information you provide (display name, photo)</li>
             <li>Account settings and preferences</li>
           </ul>
         </div>
 
         <div>
           <h3 class="mb-2 text-lg font-medium text-text-primary">b. User-Generated Content</h3>
-          <p>We process content you upload, link, or synchronize with the platform (e.g., reaction videos, commentary, translations).</p>
+          <p>We process content you upload, link, or synchronize with the platform (e.g., reaction videos, playlists, queues, bookmarks, follows, and channel claims).</p>
         </div>
 
         <div>
@@ -49,6 +49,7 @@
             <li>Device and browser information</li>
             <li>Analytics data for platform improvement</li>
           </ul>
+          <p class="mt-3">Some operational data (such as infrastructure logs) is transient and not stored as part of your account data export.</p>
         </div>
 
         <div>
@@ -59,6 +60,11 @@
             <li>Platform analytics</li>
             <li>Functional preferences</li>
           </ul>
+        </div>
+
+        <div>
+          <h3 class="mb-2 text-lg font-medium text-text-primary">e. Search Index</h3>
+          <p>We maintain a search index of published reactions (titles, tags, and channel handles) to power search.</p>
         </div>
       </div>
     </section>
@@ -97,7 +103,12 @@
         <li>Request export of your personal data in a machine-readable format</li>
       </ul>
       <p class="mt-4">
-        To exercise these rights, contact us at <a href="mailto:purereactions.app+privacy@gmail.com" class="text-accent-primary hover:text-accent-primary/80 transition-colors">purereactions.app+privacy@gmail.com</a>.
+        You can download a data export directly from Account Settings. The export includes account profile data, your reactions,
+        playlists/queues, bookmarks/follows, channel claims, and search index entries for published reactions. It does not include
+        transient infrastructure logs, real-time co-watch session state, or deleted data.
+      </p>
+      <p class="mt-4">
+        For other requests, contact us at <a href="mailto:purereactions.app+privacy@gmail.com" class="text-accent-primary hover:text-accent-primary/80 transition-colors">purereactions.app+privacy@gmail.com</a>.
       </p>
     </section>
 

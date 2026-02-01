@@ -53,10 +53,11 @@ export async function load({ depends }) {
             return { successful, error };
         }
         if (action === 'logout') {
+            goToRoute('/');
             await signOutWrapper();
             currentUser.set({});
             await invalidate('app:auth');
-            await goToRoute('/');
+            showToast('You have been logged out successfully', TOASTS.SUCCESS, 5000);
             return { successful: true };
         }
         return { successful: false };
