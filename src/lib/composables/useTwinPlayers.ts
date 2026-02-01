@@ -2316,16 +2316,6 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
             if (typeof snapshotBefore.playerOriginal.cueVideoById === 'function') {
               snapshotBefore.playerOriginal.cueVideoById(originalVideoId);
               console.debug('[TwinPlayers] Cued original video (different reaction video)', { originalVideoId });
-              // Explicitly stop/pause the original video to prevent auto-play
-              // Use a small delay to let the cue operation complete
-              await tick();
-              if (typeof snapshotBefore.playerOriginal.stopVideo === 'function') {
-                snapshotBefore.playerOriginal.stopVideo();
-                console.debug('[TwinPlayers] Stopped original video after cue');
-              } else if (typeof snapshotBefore.playerOriginal.pauseVideo === 'function') {
-                snapshotBefore.playerOriginal.pauseVideo();
-                console.debug('[TwinPlayers] Paused original video after cue');
-              }
             } else {
               snapshotBefore.playerOriginal.loadVideoById(originalVideoId);
             }
@@ -2436,6 +2426,18 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
           console.debug('[TwinPlayers] Applied reaction volume after transition', { initialReactionVolume });
         } catch (error) {
           console.error('[TwinPlayers] Failed to set reaction volume', error);
+        }
+      }
+
+      // When switching to a different reaction video, explicitly stop the original video
+      // AFTER all volume and state operations to prevent it from auto-playing
+      if (!isSameReactionVideo && typeof snapshotBefore.playerOriginal?.stopVideo === 'function') {
+        try {
+          await tick(); // Let all previous operations complete
+          snapshotBefore.playerOriginal.stopVideo();
+          console.debug('[TwinPlayers] Stopped original video after volume application (different reaction)');
+        } catch (error) {
+          console.error('[TwinPlayers] Failed to stop original video', error);
         }
       }
 
