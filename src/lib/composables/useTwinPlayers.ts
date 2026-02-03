@@ -49,11 +49,8 @@ import {
   computeNextSyncDelayMs,
   getNextTimelineEventReactionTime
 } from '$lib/helpers/twinPlayersSyncScheduling';
-import {
-  executeAdaptiveSync,
-  YouTubePlayerAdapter
-} from '$lib/sync';
-import { detectDeviceProfile } from '$lib/helpers/deviceProfile';
+import { runAdaptiveSync } from '$lib/helpers/adaptiveSync';
+import { applySyncActionsAndStateUpdates } from '$lib/helpers/syncApplier';
 
 declare const YT: any;
 
@@ -1048,7 +1045,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     stopSyncScheduler();
     let reactionPlayerState = YT?.PlayerState?.UNSTARTED ?? -1;
 
-    const runSyncCycle = () => {
+    const runSyncCycle = async () => {
       const snapshot = get(state);
       if (isSwitchingReactionInPlace) {
         scheduleNextSync(250, runSyncCycle);
@@ -1203,20 +1200,12 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
           try {
             console.log('[AdaptiveSync] Large drift detected:', driftMs.toFixed(0), 'ms - using adaptive sync');
             
-            const playerAdapter = new YouTubePlayerAdapter(snapshot.playerOriginal);
-            const deviceProfile = detectDeviceProfile();
-            
-            const outcome = await executeAdaptiveSync({
-              originalPlayer: playerAdapter,
-              reactionCurrentTime: snapshot.playerReaction.getCurrentTime(),
-              reactionConfig: {
-                timeOffset: snapshot.timeOffset || 0,
-                seekMin: snapshot.seekMin || 0,
-                seekMax: snapshot.seekMax || 999999
-              },
-              deviceProfile
+            const outcome = await runAdaptiveSync(snapshot.playerOriginal, snapshot.playerReaction.getCurrentTime(), {
+              timeOffset: snapshot.timeOffset || 0,
+              seekMin: snapshot.seekMin || 0,
+              seekMax: snapshot.seekMax || 999999
             });
-            
+
             console.log('[AdaptiveSync] Periodic sync completed:', {
               initialDrift: outcome.initialDrift.drift.toFixed(3),
               finalDrift: outcome.finalDrift.drift.toFixed(3),
@@ -1224,20 +1213,13 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
             });
 
             // Still apply non-seek actions (volume, rate, overlay) via legacy path
-            const nonSeekActions = result.actions.filter(
-              (a) => a.type !== 'originalSeek' && a.type !== 'originalState'
-            );
-            
-            const { nextGuards, nextWorkingState } = applyTwinPlayersSyncActions(nonSeekActions, {
+            const nonSeekActions = result.actions.filter((a: any) => a.type !== 'originalSeek' && a.type !== 'originalState');
+
+            const { nextGuards, nextWorkingState } = applySyncActionsAndStateUpdates(
+              { ...result, actions: nonSeekActions },
               snapshot,
-              guards: {
-                changingVolume,
-                changingReactionVolume,
-                changingSpeed
-              },
-              workingState: snapshot.currentStateOriginalVideo,
-              ytEndedState: ytStates.ENDED,
-              deps: {
+              { changingVolume, changingReactionVolume, changingSpeed },
+              {
                 setVolumeForOriginalVideo,
                 setVolumeForReactionVideo,
                 setPlaybackRateForOriginalVideo,
@@ -1245,29 +1227,15 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
                 handleStateChangeInOriginalVideo,
                 muteReactionAudio,
                 unmuteReactionAudio,
-                updateState
-              }
-            });
+                updateState,
+                enforceReactionMuteMode
+              },
+              { ytEndedState: ytStates.ENDED, isMobileAudio }
+            );
 
             changingVolume = nextGuards.changingVolume;
             changingReactionVolume = nextGuards.changingReactionVolume;
             changingSpeed = nextGuards.changingSpeed;
-
-            if (typeof result.stateUpdates.currentStateOriginalVideo === 'number') {
-              if (snapshot.currentStateOriginalVideo !== result.stateUpdates.currentStateOriginalVideo) {
-                updateState({ currentStateOriginalVideo: result.stateUpdates.currentStateOriginalVideo });
-              }
-            } else if (nextWorkingState !== snapshot.currentStateOriginalVideo) {
-              updateState({ currentStateOriginalVideo: nextWorkingState });
-            }
-
-            if (!isMobileAudio && typeof result.enforceMuteModeWithOriginalState === 'number') {
-              enforceReactionMuteMode(result.enforceMuteModeWithOriginalState);
-            }
-
-            if (typeof result.stateUpdates.fullscreenOverlayVisible === 'boolean') {
-              updateState({ fullscreenOverlayVisible: result.stateUpdates.fullscreenOverlayVisible });
-            }
 
             // Schedule next cycle and exit early
             const nextBoundaries = [
@@ -1326,16 +1294,11 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       }
 
       // Small drift or production: use fast legacy path
-      const { nextGuards, nextWorkingState } = applyTwinPlayersSyncActions(result.actions, {
+      const { nextGuards, nextWorkingState } = applySyncActionsAndStateUpdates(
+        result,
         snapshot,
-        guards: {
-          changingVolume,
-          changingReactionVolume,
-          changingSpeed
-        },
-        workingState: snapshot.currentStateOriginalVideo,
-        ytEndedState: ytStates.ENDED,
-        deps: {
+        { changingVolume, changingReactionVolume, changingSpeed },
+        {
           setVolumeForOriginalVideo,
           setVolumeForReactionVideo,
           setPlaybackRateForOriginalVideo,
@@ -1343,9 +1306,11 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
           handleStateChangeInOriginalVideo,
           muteReactionAudio,
           unmuteReactionAudio,
-          updateState
-        }
-      });
+          updateState,
+          enforceReactionMuteMode
+        },
+        { ytEndedState: ytStates.ENDED, isMobileAudio }
+      );
 
       changingVolume = nextGuards.changingVolume;
       changingReactionVolume = nextGuards.changingReactionVolume;
@@ -1655,16 +1620,11 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
     Object.assign(syncTracking, initialTick.nextTracking);
 
-    const initialApplied = applyTwinPlayersSyncActions(initialTick.actions, {
+    const { nextGuards: initialNextGuards, nextWorkingState: initialNextWorkingState } = applySyncActionsAndStateUpdates(
+      initialTick,
       snapshot,
-      guards: {
-        changingVolume,
-        changingReactionVolume,
-        changingSpeed
-      },
-      workingState: initialState,
-      ytEndedState: ytStates.ENDED,
-      deps: {
+      { changingVolume, changingReactionVolume, changingSpeed },
+      {
         setVolumeForOriginalVideo,
         setVolumeForReactionVideo,
         setPlaybackRateForOriginalVideo,
@@ -1674,15 +1634,13 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         unmuteReactionAudio,
         updateState
       },
-      options: {
-        allowStateActions: false,
-        allowPlaybackRate: false
-      }
-    });
+      { ytEndedState: ytStates.ENDED, isMobileAudio },
+      { options: { allowStateActions: false, allowPlaybackRate: false } }
+    );
 
-    changingVolume = initialApplied.nextGuards.changingVolume;
-    changingReactionVolume = initialApplied.nextGuards.changingReactionVolume;
-    changingSpeed = initialApplied.nextGuards.changingSpeed;
+    changingVolume = initialNextGuards.changingVolume;
+    changingReactionVolume = initialNextGuards.changingReactionVolume;
+    changingSpeed = initialNextGuards.changingSpeed;
 
     // Set the original video to the correct starting position and state
     if (Number.isFinite(initialTargetTime)) {
@@ -3798,27 +3756,19 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       try {
         console.log('[AdaptiveSync] Starting adaptive sync...');
         
-        const playerAdapter = new YouTubePlayerAdapter(snapshot.playerOriginal);
-        const deviceProfile = detectDeviceProfile();
-        
-        const outcome = await executeAdaptiveSync({
-          originalPlayer: playerAdapter,
-          reactionCurrentTime: snapshot.playerReaction.getCurrentTime(),
-          reactionConfig: {
-            timeOffset: snapshot.timeOffset || 0,
-            seekMin: snapshot.seekMin || 0,
-            seekMax: snapshot.seekMax || 999999
-          },
-          deviceProfile
+        const outcome = await runAdaptiveSync(snapshot.playerOriginal, snapshot.playerReaction.getCurrentTime(), {
+          timeOffset: snapshot.timeOffset || 0,
+          seekMin: snapshot.seekMin || 0,
+          seekMax: snapshot.seekMax || 999999
         });
-        
+
         console.log('[AdaptiveSync] Sync completed:', {
           initialDrift: outcome.initialDrift.drift.toFixed(3),
           finalDrift: outcome.finalDrift.drift.toFixed(3),
           improved: outcome.improved,
           worsenedSignificantly: outcome.worsenedSignificantly
         });
-        
+
         return;
       } catch (error) {
         console.error('[AdaptiveSync] Failed to execute adaptive sync, falling back to legacy:', error);
