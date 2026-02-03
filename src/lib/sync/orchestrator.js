@@ -94,15 +94,21 @@ export async function executeAdaptiveSync(
   
   // Step 3: Load compensation
   const compensationData = loadCompensation(deviceProfile);
-  const compensationOffset = compensationData.offset;
+  
+  // Only apply compensation if we have confidence in it (at least 2 samples)
+  // This prevents wild initial seeks with untrustworthy compensation
+  const hasConfidentCompensation = compensationData.sampleCount >= 2;
+  const compensationOffset = hasConfidentCompensation ? compensationData.offset : 0;
   
   console.log('[AdaptiveSync] Compensation offset:', {
-    offset: compensationOffset.toFixed(3),
-    sampleCount: compensationData.sampleCount
+    offset: compensationData.offset.toFixed(3),
+    appliedOffset: compensationOffset.toFixed(3),
+    sampleCount: compensationData.sampleCount,
+    confident: hasConfidentCompensation
   });
   
   // Step 4: Apply correction with compensation
-  // Target = expected + compensation
+  // Target = expected + compensation (only if confident)
   const targetTime = expectedOriginalTime + compensationOffset;
   
   // Respect seek bounds
@@ -113,7 +119,8 @@ export async function executeAdaptiveSync(
   
   console.log('[AdaptiveSync] Seeking to:', {
     target: targetTime.toFixed(3),
-    clamped: clampedTarget.toFixed(3)
+    clamped: clampedTarget.toFixed(3),
+    usingCompensation: hasConfidentCompensation
   });
   
   originalPlayer.seek(clampedTarget);
@@ -192,6 +199,7 @@ export async function executeAdaptiveSync(
     finalDrift,
     improved,
     worsenedSignificantly,
-    compensationApplied: compensationOffset
+    compensationApplied: compensationOffset,
+    hadConfidentCompensation: hasConfidentCompensation
   };
 }
