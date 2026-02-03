@@ -72,6 +72,7 @@
  * Sync orchestrator options
  * @property {PlayerAdapter} originalPlayer
  * @property {number} reactionCurrentTime
+ * @property {number} expectedOriginalTime - Pre-calculated expected time using timeline logic
  * @property {ReactionConfig} reactionConfig
  * @property {DeviceProfile} deviceProfile
  * @property {number} [settleMs]

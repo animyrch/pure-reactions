@@ -1202,7 +1202,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
             const outcome = await runAdaptiveSync(snapshot.playerOriginal, snapshot.playerReaction.getCurrentTime(), {
               timeOffset: snapshot.timeOffset || 0,
               seekMin: snapshot.seekMin || 0,
-              seekMax: snapshot.seekMax || 999999
+              seekMax: snapshot.seekMax || 999999,
+              playerConfigs: snapshot.playerConfigs,
+              isPlaying: snapshot.reactionPlayerState === ytStates.PLAYING
             });
 
             console.log('[AdaptiveSync] Periodic sync completed:', {
@@ -3758,7 +3760,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         const outcome = await runAdaptiveSync(snapshot.playerOriginal, snapshot.playerReaction.getCurrentTime(), {
           timeOffset: snapshot.timeOffset || 0,
           seekMin: snapshot.seekMin || 0,
-          seekMax: snapshot.seekMax || 999999
+          seekMax: snapshot.seekMax || 999999,
+          playerConfigs: snapshot.playerConfigs,
+          isPlaying: snapshot.reactionPlayerState === YT.PlayerState.PLAYING
         });
 
         console.log('[AdaptiveSync] Sync completed:', {

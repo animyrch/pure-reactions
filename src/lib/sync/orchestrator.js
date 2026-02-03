@@ -7,7 +7,6 @@
  */
 
 import {
-  computeExpectedOriginalTime,
   createDriftMeasurement
 } from './drift.js';
 import {
@@ -48,19 +47,16 @@ export async function executeAdaptiveSync(
   const {
     originalPlayer,
     reactionCurrentTime,
+    expectedOriginalTime,
     reactionConfig,
     deviceProfile,
     settleMs = DEFAULT_SETTLE_MS
   } = options;
   
-  const { timeOffset, seekMin, seekMax } = reactionConfig;
+  const { seekMin, seekMax } = reactionConfig;
   
-  // Step 1: Measure initial drift
-  const expectedOriginalTime = computeExpectedOriginalTime(
-    reactionCurrentTime,
-    timeOffset
-  );
-  
+  // Step 1: Measure initial drift using the provided expected time
+  // (which should be calculated using proper timeline logic)
   const actualOriginalTime = originalPlayer.getCurrentTime();
   
   const initialDrift = createDriftMeasurement(
