@@ -1,5 +1,6 @@
 <script>
     import { createEventDispatcher, onDestroy } from "svelte";
+    import { dev } from "$app/environment";
     import {
         PauseSolid,
         PlaySolid,
@@ -376,17 +377,20 @@
 
             <!-- Other Buttons -->
             <div class="flex items-center gap-2 shrink-0 order-3 sm:order-none">
-                <div class="group relative">
-                    <button
-                        type="button"
-                        class={iconButtonBase}
-                        on:click={syncVideos}
-                        aria-label="Re-sync playback"
-                    >
-                        <ClockOutline class="h-4 w-4" />
-                        <span class="sr-only">Sync videos</span>
-                    </button>
-                </div>
+                {#if dev}
+                    <div class="group relative">
+                        <button
+                            type="button"
+                            class={`${iconButtonBase} bg-accent-primary/20 text-accent-primary ring-1 ring-accent-primary/30`}
+                            on:click={syncVideos}
+                            aria-label="Adaptive sync (dev only)"
+                            title="Adaptive Sync (Dev Mode)"
+                        >
+                            <ClockOutline class="h-4 w-4" />
+                            <span class="sr-only">Adaptive sync videos</span>
+                        </button>
+                    </div>
+                {/if}
 
                 {#if isPlaylist && showAutoPlayButton}
                     <div class="group relative">

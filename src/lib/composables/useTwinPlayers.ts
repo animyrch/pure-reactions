@@ -1,6 +1,7 @@
 import { onDestroy, onMount, tick } from 'svelte';
 import { get, writable } from 'svelte/store';
 import { goto } from '$app/navigation';
+import { dev } from '$app/environment';
 import { env } from '$env/dynamic/public';
 import {
   getCurrentPlaybackRateFromConfigs,
@@ -48,6 +49,10 @@ import {
   computeNextSyncDelayMs,
   getNextTimelineEventReactionTime
 } from '$lib/helpers/twinPlayersSyncScheduling';
+import {
+  executeAdaptiveSync,
+  YouTubePlayerAdapter
+} from '$lib/sync';
 
 declare const YT: any;
 
@@ -3625,7 +3630,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     pauseReactionVideo();
   };
 
-  const syncVideos = () => {
+  const syncVideos = async () => {
     debugClickGate('[TwinPlayers] syncVideos called', {}, true);
     if (get(state).isUserPaused) {
       updateState({ isUserPaused: false });
@@ -3645,6 +3650,61 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         playbackRate: snapshot.currentPlaybackRate
       });
     }
+
+    // Use adaptive sync in dev mode, fallback to legacy sync in production
+    if (dev && playerOriginal && playerReaction) {
+      try {
+        console.log('[AdaptiveSync] Starting adaptive sync...');
+        
+        // Wrap the YouTube player
+        const playerAdapter = new YouTubePlayerAdapter(playerOriginal);
+        
+        // Detect device class
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          typeof navigator !== 'undefined' ? navigator.userAgent : ''
+        );
+        const deviceClass = isMobile ? 'mobile' : 'desktop';
+        
+        // Detect browser
+        let browser = undefined;
+        if (typeof navigator !== 'undefined') {
+          const ua = navigator.userAgent;
+          if (ua.includes('Chrome')) browser = 'chrome';
+          else if (ua.includes('Safari')) browser = 'safari';
+          else if (ua.includes('Firefox')) browser = 'firefox';
+          else if (ua.includes('Edge')) browser = 'edge';
+        }
+        
+        // Execute adaptive sync
+        const outcome = await executeAdaptiveSync({
+          originalPlayer: playerAdapter,
+          reactionCurrentTime: playerReaction.getCurrentTime(),
+          reactionConfig: {
+            timeOffset: snapshot.timeOffset || 0,
+            seekMin: snapshot.seekMin || 0,
+            seekMax: snapshot.seekMax || 999999
+          },
+          deviceProfile: {
+            playerType: 'youtube',
+            deviceClass,
+            browser
+          }
+        });
+        
+        console.log('[AdaptiveSync] Sync completed:', {
+          initialDrift: outcome.initialDrift.drift.toFixed(3),
+          finalDrift: outcome.finalDrift.drift.toFixed(3),
+          improved: outcome.improved,
+          worsenedSignificantly: outcome.worsenedSignificantly
+        });
+        
+        return;
+      } catch (error) {
+        console.error('[AdaptiveSync] Failed to execute adaptive sync, falling back to legacy:', error);
+      }
+    }
+    
+    // Legacy sync (production or fallback)
     pauseOriginalVideo();
     pauseReactionVideo();
 
