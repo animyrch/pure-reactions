@@ -53,6 +53,7 @@ import {
   executeAdaptiveSync,
   YouTubePlayerAdapter
 } from '$lib/sync';
+import { detectDeviceProfile } from '$lib/helpers/deviceProfile';
 
 declare const YT: any;
 
@@ -1041,6 +1042,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     // lastOriginalTargetTime is updated in goToSecondsInOriginalVideo() and via actual player time sampling.
   };
 
+  
+
   const pollVideoCurrentTime = () => {
     stopSyncScheduler();
     let reactionPlayerState = YT?.PlayerState?.UNSTARTED ?? -1;
@@ -1184,6 +1187,145 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
       Object.assign(syncTracking, result.nextTracking);
 
+      // Hybrid approach: use adaptive sync for large drifts, legacy for small corrections
+      const hasSeekOrStateAction = result.actions.some(
+        (a) => a.type === 'originalSeek' || a.type === 'originalState'
+      );
+
+      if (dev && hasSeekOrStateAction && snapshot.playerOriginal && snapshot.playerReaction) {
+        // Calculate drift magnitude
+        const driftMs = Math.abs(
+          (originalCurrentTime ?? 0) - (syncTracking.lastOriginalTargetTime ?? 0)
+        ) * 1000;
+
+        // Use adaptive sync for large drifts (>500ms)
+        if (driftMs > 500) {
+          try {
+            console.log('[AdaptiveSync] Large drift detected:', driftMs.toFixed(0), 'ms - using adaptive sync');
+            
+            const playerAdapter = new YouTubePlayerAdapter(snapshot.playerOriginal);
+            const deviceProfile = detectDeviceProfile();
+            
+            const outcome = await executeAdaptiveSync({
+              originalPlayer: playerAdapter,
+              reactionCurrentTime: snapshot.playerReaction.getCurrentTime(),
+              reactionConfig: {
+                timeOffset: snapshot.timeOffset || 0,
+                seekMin: snapshot.seekMin || 0,
+                seekMax: snapshot.seekMax || 999999
+              },
+              deviceProfile
+            });
+            
+            console.log('[AdaptiveSync] Periodic sync completed:', {
+              initialDrift: outcome.initialDrift.drift.toFixed(3),
+              finalDrift: outcome.finalDrift.drift.toFixed(3),
+              improved: outcome.improved
+            });
+
+            // Still apply non-seek actions (volume, rate, overlay) via legacy path
+            const nonSeekActions = result.actions.filter(
+              (a) => a.type !== 'originalSeek' && a.type !== 'originalState'
+            );
+            
+            const { nextGuards, nextWorkingState } = applyTwinPlayersSyncActions(nonSeekActions, {
+              snapshot,
+              guards: {
+                changingVolume,
+                changingReactionVolume,
+                changingSpeed
+              },
+              workingState: snapshot.currentStateOriginalVideo,
+              ytEndedState: ytStates.ENDED,
+              deps: {
+                setVolumeForOriginalVideo,
+                setVolumeForReactionVideo,
+                setPlaybackRateForOriginalVideo,
+                pauseOriginalVideo,
+                handleStateChangeInOriginalVideo,
+                muteReactionAudio,
+                unmuteReactionAudio,
+                updateState
+              }
+            });
+
+            changingVolume = nextGuards.changingVolume;
+            changingReactionVolume = nextGuards.changingReactionVolume;
+            changingSpeed = nextGuards.changingSpeed;
+
+            if (typeof result.stateUpdates.currentStateOriginalVideo === 'number') {
+              if (snapshot.currentStateOriginalVideo !== result.stateUpdates.currentStateOriginalVideo) {
+                updateState({ currentStateOriginalVideo: result.stateUpdates.currentStateOriginalVideo });
+              }
+            } else if (nextWorkingState !== snapshot.currentStateOriginalVideo) {
+              updateState({ currentStateOriginalVideo: nextWorkingState });
+            }
+
+            if (!isMobileAudio && typeof result.enforceMuteModeWithOriginalState === 'number') {
+              enforceReactionMuteMode(result.enforceMuteModeWithOriginalState);
+            }
+
+            if (typeof result.stateUpdates.fullscreenOverlayVisible === 'boolean') {
+              updateState({ fullscreenOverlayVisible: result.stateUpdates.fullscreenOverlayVisible });
+            }
+
+            // Schedule next cycle and exit early
+            const nextBoundaries = [
+              result.nextBoundaryReactionTime ?? null,
+              getNextTimelineEventReactionTime(snapshot.volumeTimeline, {
+                reactionCurrentTime,
+                timeOffset: snapshot.timeOffset,
+                seekMin: snapshot.seekMin,
+                seekMax: snapshot.seekMax
+              }),
+              getNextTimelineEventReactionTime(snapshot.reactionVolumeTimeline, {
+                reactionCurrentTime,
+                timeOffset: snapshot.timeOffset,
+                seekMin: snapshot.seekMin,
+                seekMax: snapshot.seekMax
+              }),
+              getNextTimelineEventReactionTime(snapshot.playbackRateTimeline, {
+                reactionCurrentTime,
+                timeOffset: snapshot.timeOffset,
+                seekMin: snapshot.seekMin,
+                seekMax: snapshot.seekMax
+              }),
+              getNextTimelineEventReactionTime(snapshot.overlayVisibilityTimeline, {
+                reactionCurrentTime,
+                timeOffset: snapshot.timeOffset,
+                seekMin: snapshot.seekMin,
+                seekMax: snapshot.seekMax
+              }),
+              getNextTimelineEventReactionTime(snapshot.stateTimeline, {
+                reactionCurrentTime,
+                timeOffset: snapshot.timeOffset,
+                seekMin: snapshot.seekMin,
+                seekMax: snapshot.seekMax
+              })
+            ].filter((t): t is number => typeof t === 'number');
+
+            const nextBoundaryReactionTime = nextBoundaries.length
+              ? Math.min(...nextBoundaries)
+              : null;
+
+            const delayMs = computeNextSyncDelayMs({
+              reactionCurrentTime,
+              reactionPlayerState,
+              ytPlayingState: YT.PlayerState.PLAYING,
+              ytBufferingState: YT.PlayerState.BUFFERING,
+              nextBoundaryReactionTime
+            });
+
+            scheduleNextSync(delayMs, runSyncCycle);
+            return;
+          } catch (error) {
+            console.warn('[AdaptiveSync] Periodic sync failed, falling back to legacy:', error);
+            // Fall through to legacy sync below
+          }
+        }
+      }
+
+      // Small drift or production: use fast legacy path
       const { nextGuards, nextWorkingState } = applyTwinPlayersSyncActions(result.actions, {
         snapshot,
         guards: {
@@ -3652,43 +3794,22 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     }
 
     // Use adaptive sync in dev mode, fallback to legacy sync in production
-    if (dev && playerOriginal && playerReaction) {
+    if (dev && snapshot.playerOriginal && snapshot.playerReaction) {
       try {
         console.log('[AdaptiveSync] Starting adaptive sync...');
         
-        // Wrap the YouTube player
-        const playerAdapter = new YouTubePlayerAdapter(playerOriginal);
+        const playerAdapter = new YouTubePlayerAdapter(snapshot.playerOriginal);
+        const deviceProfile = detectDeviceProfile();
         
-        // Detect device class
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-          typeof navigator !== 'undefined' ? navigator.userAgent : ''
-        );
-        const deviceClass = isMobile ? 'mobile' : 'desktop';
-        
-        // Detect browser
-        let browser = undefined;
-        if (typeof navigator !== 'undefined') {
-          const ua = navigator.userAgent;
-          if (ua.includes('Chrome')) browser = 'chrome';
-          else if (ua.includes('Safari')) browser = 'safari';
-          else if (ua.includes('Firefox')) browser = 'firefox';
-          else if (ua.includes('Edge')) browser = 'edge';
-        }
-        
-        // Execute adaptive sync
         const outcome = await executeAdaptiveSync({
           originalPlayer: playerAdapter,
-          reactionCurrentTime: playerReaction.getCurrentTime(),
+          reactionCurrentTime: snapshot.playerReaction.getCurrentTime(),
           reactionConfig: {
             timeOffset: snapshot.timeOffset || 0,
             seekMin: snapshot.seekMin || 0,
             seekMax: snapshot.seekMax || 999999
           },
-          deviceProfile: {
-            playerType: 'youtube',
-            deviceClass,
-            browser
-          }
+          deviceProfile
         });
         
         console.log('[AdaptiveSync] Sync completed:', {
