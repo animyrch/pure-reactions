@@ -20,18 +20,21 @@ function calculateExpectedOriginalTime(
   playerConfigs: any,
   isPlaying: boolean
 ): number {
+  // Calculate effective reaction time (matches currentEffective in twinPlayersSyncTick)
+  const effectiveReactionTime = reactionCurrentTime - timeOffset;
+  
   // Get the config for the current reaction time
   const config = getCurrentStateFromStateConfigs(reactionCurrentTime, playerConfigs, timeOffset);
   
   // Parse the base target time and anchor time
   const baseTargetTime = Number(config.time ?? 0);
-  const anchorTime = Number(config.closestSmallerTimeCode ?? 0);
+  // CRITICAL: Fallback to effectiveReactionTime, not 0 (matches line 367 in twinPlayersSyncTick)
+  const anchorTime = Number(config.closestSmallerTimeCode ?? effectiveReactionTime);
   
   let expectedTime = baseTargetTime;
   
   // If playing, add the delta since the anchor time
   if (isPlaying && Number.isFinite(expectedTime) && Number.isFinite(anchorTime)) {
-    const effectiveReactionTime = reactionCurrentTime - timeOffset;
     const deltaSinceAnchor = effectiveReactionTime - anchorTime;
     if (Number.isFinite(deltaSinceAnchor)) {
       expectedTime += Math.max(deltaSinceAnchor, 0);
