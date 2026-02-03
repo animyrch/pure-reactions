@@ -10,6 +10,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext .js,.svelte",
+    "test": "node --test tests/*.unit.spec.mjs",
+    "test:unit": "node --test tests/*.unit.spec.mjs",
     "e2e": "playwright test",
     "test:e2e": "playwright test",
     "test:rules": "firebase emulators:exec --only firestore \"node --test tests/firestore.rules.spec.mjs\"",
