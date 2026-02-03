@@ -10,3 +10,4 @@ vite.config.js.timestamp-*
 test-results
 /.netlify
 /secrets
+**/*-darwin.png

@@ -18,11 +18,15 @@ async function enterOverlayMode(page, testInfo) {
 
   // Desktop: explicitly enter fullscreen via the control dock.
   const fullscreenButton = page.getByRole('button', { name: /enter fullscreen view/i });
+  
+  // Hover over control surface to ensure they are visible on desktop
+  await page.locator('[aria-label="Playback control surface"]').first().hover().catch(() => {});
+  
   if (!(await fullscreenButton.isVisible().catch(() => false))) {
     // Nudge the stage to reveal controls if needed.
     await page.locator('[data-stage="container"]').click({ force: true }).catch(() => {});
   }
-  await fullscreenButton.click({ timeout: 15000 });
+  await fullscreenButton.click({ timeout: 15000, force: true });
 
   // Wait until the overlay role exists in fullscreen mode.
   await expect(page.locator('[data-stage-role="overlay"]')).toHaveCount(1, { timeout: 15000 });
