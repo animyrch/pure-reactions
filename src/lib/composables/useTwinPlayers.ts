@@ -1216,8 +1216,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       changingReactionVolume = nextGuards.changingReactionVolume;
       changingSpeed = nextGuards.changingSpeed;
 
-      // Handle soft-sync actions separately
-      const softSyncAction = result.actions.find((a: any) => a.type === 'applySoftSync');
+      // Apply soft-sync action if present
       if (softSyncAction && 'rate' in softSyncAction && 'durationMs' in softSyncAction) {
         // Clear any existing soft-sync timeout
         if (typeof syncTracking.softSyncResetTimeoutId === 'number') {
