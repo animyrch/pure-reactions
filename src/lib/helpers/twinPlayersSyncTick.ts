@@ -4,6 +4,13 @@ import {
   getCurrentVolumeFromVolumeConfigs,
   getCurrentOverlayVisibilityFromConfigs
 } from '$lib/helpers/reaction';
+import {
+  decideSyncMode,
+  isSoftSyncAllowed,
+  computePlaybackRate,
+  computeSoftSyncDuration,
+  DEFAULT_SOFT_SYNC_CONFIG
+} from '$lib/sync/softSync/logic.js';
 
 export type TwinPlayersSyncTracking = {
   lastOriginalTargetTime?: number;
@@ -11,6 +18,9 @@ export type TwinPlayersSyncTracking = {
   lastOriginalSeekTarget?: number;
   mobileAudioWinner: 'original' | 'reaction' | null;
   stateTimelineIndex?: number;
+  lastSoftSyncAt: number;
+  softSyncIsActive: boolean;
+  softSyncResetTimeoutId?: number;
 };
 
 export type TwinPlayersPlayerState = {
@@ -69,6 +79,7 @@ export type TwinPlayersSyncAction =
   | { type: 'setOriginalVolume'; volume: number }
   | { type: 'setReactionVolume'; volume: number }
   | { type: 'setOriginalPlaybackRate'; rate: number }
+  | { type: 'applySoftSync'; rate: number; durationMs: number; drift: number }
   | { type: 'muteOriginal' }
   | { type: 'unmuteOriginal' }
   | { type: 'muteReaction' }
@@ -139,7 +150,10 @@ export function computeTwinPlayersSyncTick(
     ...tracking,
     lastOriginalSeekAt: Number.isFinite(tracking.lastOriginalSeekAt) ? tracking.lastOriginalSeekAt : 0,
     mobileAudioWinner: tracking.mobileAudioWinner ?? null,
-    stateTimelineIndex: Number.isFinite(tracking.stateTimelineIndex) ? tracking.stateTimelineIndex : 0
+    stateTimelineIndex: Number.isFinite(tracking.stateTimelineIndex) ? tracking.stateTimelineIndex : 0,
+    lastSoftSyncAt: Number.isFinite(tracking.lastSoftSyncAt) ? tracking.lastSoftSyncAt : 0,
+    softSyncIsActive: Boolean(tracking.softSyncIsActive),
+    softSyncResetTimeoutId: tracking.softSyncResetTimeoutId
   };
 
   const reactionCurrentTime = Number(input.reactionCurrentTime);
@@ -414,10 +428,12 @@ export function computeTwinPlayersSyncTick(
 
   let targetMismatch = false;
   let driftAbs = Number.NaN;
+  let drift = 0;
 
   if (Number.isFinite(computedTargetTime)) {
     if (Number.isFinite(actualOriginalTime)) {
-      driftAbs = Math.abs(actualOriginalTime - computedTargetTime);
+      drift = actualOriginalTime - computedTargetTime;
+      driftAbs = Math.abs(drift);
       if (effectiveConfigState === yt.PLAYING) {
         const quantize = (value: number, step: number) => Math.round(value / step) * step;
         targetMismatch =
@@ -426,7 +442,8 @@ export function computeTwinPlayersSyncTick(
         targetMismatch = driftAbs > tolerance;
       }
     } else if (typeof nextTracking.lastOriginalTargetTime === 'number') {
-      driftAbs = Math.abs(nextTracking.lastOriginalTargetTime - computedTargetTime);
+      drift = nextTracking.lastOriginalTargetTime - computedTargetTime;
+      driftAbs = Math.abs(drift);
       targetMismatch = driftAbs > tolerance;
     } else {
       targetMismatch = true;
@@ -445,31 +462,65 @@ export function computeTwinPlayersSyncTick(
   const now = input.now;
   const shouldApplyState = workingState !== effectiveConfigState;
 
-  const shouldApplySeek = targetMismatch && (
-    isMobileLazySyncEnabled
-      ? (Number.isFinite(driftAbs)
-          && driftAbs > 2.0
-          && now - nextTracking.lastOriginalSeekAt > 3500)
-      : (Number.isFinite(driftAbs) && (driftAbs > 2.5 || now - nextTracking.lastOriginalSeekAt > 3500))
-  );
+  // Soft-sync logic: use playback rate adjustment for small drift when playing
+  const isPlaying = effectiveConfigState === yt.PLAYING && input.originalPlayerState === yt.PLAYING;
+  const isBuffering = input.originalPlayerState === yt.BUFFERING;
+  const canUseSoftSync = isPlaying && !isBuffering && !shouldApplyState && Number.isFinite(driftAbs);
+  
+  // Decide sync mode
+  const syncMode = canUseSoftSync ? decideSyncMode(drift, DEFAULT_SOFT_SYNC_CONFIG) : 'hard-sync';
+  const isSoftSyncCooledDown = isSoftSyncAllowed(nextTracking.lastSoftSyncAt, now, DEFAULT_SOFT_SYNC_CONFIG);
+  
+  // Apply soft-sync for small drift if cooled down
+  if (canUseSoftSync && syncMode === 'soft-sync' && targetMismatch && isSoftSyncCooledDown) {
+    const rate = computePlaybackRate(drift, DEFAULT_SOFT_SYNC_CONFIG);
+    const durationMs = computeSoftSyncDuration(drift, DEFAULT_SOFT_SYNC_CONFIG);
+    
+    actions.push({
+      type: 'applySoftSync',
+      rate,
+      durationMs,
+      drift
+    });
+    
+    nextTracking = {
+      ...nextTracking,
+      lastSoftSyncAt: now,
+      softSyncIsActive: true
+    };
+    
+    workingState = effectiveConfigState;
+  } else if (syncMode === 'no-op' && nextTracking.softSyncIsActive) {
+    // If we're now in sync and soft-sync is active, we'll let the orchestrator reset it
+    // No action needed here
+  } else {
+    // Hard-sync: use existing seek logic for large drift or when soft-sync not applicable
+    const shouldApplySeek = targetMismatch && (
+      isMobileLazySyncEnabled
+        ? (Number.isFinite(driftAbs)
+            && driftAbs > 2.0
+            && now - nextTracking.lastOriginalSeekAt > 3500)
+        : (Number.isFinite(driftAbs) && (driftAbs > 2.5 || now - nextTracking.lastOriginalSeekAt > 3500))
+    );
 
-  if (shouldApplySync && configIsInRange && (shouldApplyState || shouldApplySeek)) {
-    if (
-      reactionCurrentTime >= input.seekMin
-      && (!Number.isFinite(input.seekMax) || reactionCurrentTime <= input.seekMax)
-    ) {
-      actions.push({
-        type: 'applyOriginalStateChange',
-        nextState: effectiveConfigState,
-        targetTime: computedTargetTime,
-        options: {
-          throttleMs: 3500,
-          allowSeekAhead: !(Number.isFinite(driftAbs) && driftAbs < 1.25),
-          forceSeek: shouldApplyState
-        }
-      });
+    if (shouldApplySync && configIsInRange && (shouldApplyState || shouldApplySeek)) {
+      if (
+        reactionCurrentTime >= input.seekMin
+        && (!Number.isFinite(input.seekMax) || reactionCurrentTime <= input.seekMax)
+      ) {
+        actions.push({
+          type: 'applyOriginalStateChange',
+          nextState: effectiveConfigState,
+          targetTime: computedTargetTime,
+          options: {
+            throttleMs: 3500,
+            allowSeekAhead: !(Number.isFinite(driftAbs) && driftAbs < 1.25),
+            forceSeek: shouldApplyState
+          }
+        });
 
-      workingState = effectiveConfigState;
+        workingState = effectiveConfigState;
+      }
     }
   }
 
