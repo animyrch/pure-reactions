@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document summarizes the implementation of the **Adaptive Sync Mechanism Module** for Pure Reactions, as specified in issue #[issue-number].
+This document summarizes the implementation of the **Adaptive Sync Mechanism Module** for Pure Reactions, as specified in issue #148.
 
 ## What Was Built
 
