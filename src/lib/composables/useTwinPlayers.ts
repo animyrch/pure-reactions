@@ -1,7 +1,6 @@
 import { onDestroy, onMount, tick } from 'svelte';
 import { get, writable } from 'svelte/store';
 import { goto } from '$app/navigation';
-import { dev } from '$app/environment';
 import { env } from '$env/dynamic/public';
 import {
   getCurrentPlaybackRateFromConfigs,
@@ -1189,7 +1188,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         (a) => a.type === 'originalSeek' || a.type === 'originalState'
       );
 
-      if (dev && hasSeekOrStateAction && snapshot.playerOriginal && snapshot.playerReaction) {
+      if (hasSeekOrStateAction && snapshot.playerOriginal && snapshot.playerReaction) {
         // Calculate drift magnitude
         const driftMs = Math.abs(
           (originalCurrentTime ?? 0) - (syncTracking.lastOriginalTargetTime ?? 0)
@@ -3751,8 +3750,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       });
     }
 
-    // Use adaptive sync in dev mode, fallback to legacy sync in production
-    if (dev && snapshot.playerOriginal && snapshot.playerReaction) {
+    // Use adaptive sync
+    if (snapshot.playerOriginal && snapshot.playerReaction) {
       try {
         console.log('[AdaptiveSync] Starting adaptive sync...');
         
@@ -3771,17 +3770,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
         return;
       } catch (error) {
-        console.error('[AdaptiveSync] Failed to execute adaptive sync, falling back to legacy:', error);
+        console.error('[AdaptiveSync] Failed to execute adaptive sync:', error);
       }
     }
-    
-    // Legacy sync (production or fallback)
-    pauseOriginalVideo();
-    pauseReactionVideo();
-
-    // Re-sync should resume both promptly; the reaction timeline will correct drift.
-    startOriginalVideo();
-    startReactionVideo();
   };
 
   const showControls = () => {
