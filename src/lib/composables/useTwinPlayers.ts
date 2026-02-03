@@ -485,7 +485,10 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     lastOriginalTargetTime: undefined,
     lastOriginalSeekAt: 0,
     lastOriginalSeekTarget: undefined,
-    mobileAudioWinner: null
+    mobileAudioWinner: null,
+    lastSoftSyncAt: 0,
+    softSyncIsActive: false,
+    softSyncResetTimeoutId: undefined
   };
 
   const isMobileAudioEnvironment = () => {
@@ -1203,6 +1206,62 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       changingVolume = nextGuards.changingVolume;
       changingReactionVolume = nextGuards.changingReactionVolume;
       changingSpeed = nextGuards.changingSpeed;
+
+      // Handle soft-sync actions separately
+      const softSyncAction = result.actions.find((a: any) => a.type === 'applySoftSync');
+      if (softSyncAction && 'rate' in softSyncAction && 'durationMs' in softSyncAction) {
+        // Clear any existing soft-sync timeout
+        if (typeof syncTracking.softSyncResetTimeoutId === 'number') {
+          clearTimeout(syncTracking.softSyncResetTimeoutId);
+          syncTracking.softSyncResetTimeoutId = undefined;
+        }
+
+        // Apply the playback rate for soft-sync
+        if (!changingSpeed && playerOriginal) {
+          changingSpeed = true;
+          setPlaybackRateForOriginalVideo(softSyncAction.rate);
+          changingSpeed = false;
+          
+          // Schedule reset to desired playback rate from configs
+          const desiredRate = getCurrentPlaybackRateFromConfigs(
+            reactionCurrentTime,
+            snapshot.playbackRateConfigs,
+            snapshot.timeOffset
+          );
+          
+          syncTracking.softSyncResetTimeoutId = setTimeout(() => {
+            if (!changingSpeed && playerOriginal) {
+              changingSpeed = true;
+              setPlaybackRateForOriginalVideo(desiredRate);
+              updateState({ currentPlaybackRate: desiredRate });
+              changingSpeed = false;
+            }
+            syncTracking.softSyncIsActive = false;
+            syncTracking.softSyncResetTimeoutId = undefined;
+          }, softSyncAction.durationMs) as any;
+        }
+      } else if (syncTracking.softSyncIsActive && !softSyncAction) {
+        // Soft-sync was active but no longer needed - reset immediately
+        if (typeof syncTracking.softSyncResetTimeoutId === 'number') {
+          clearTimeout(syncTracking.softSyncResetTimeoutId);
+          syncTracking.softSyncResetTimeoutId = undefined;
+        }
+        
+        const desiredRate = getCurrentPlaybackRateFromConfigs(
+          reactionCurrentTime,
+          snapshot.playbackRateConfigs,
+          snapshot.timeOffset
+        );
+        
+        if (!changingSpeed && playerOriginal && Math.abs(snapshot.currentPlaybackRate - desiredRate) > 0.001) {
+          changingSpeed = true;
+          setPlaybackRateForOriginalVideo(desiredRate);
+          updateState({ currentPlaybackRate: desiredRate });
+          changingSpeed = false;
+        }
+        
+        syncTracking.softSyncIsActive = false;
+      }
 
       if (typeof result.stateUpdates.currentStateOriginalVideo === 'number') {
         if (snapshot.currentStateOriginalVideo !== result.stateUpdates.currentStateOriginalVideo) {
@@ -3991,6 +4050,10 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     clearTimeout(overlayPointerRestoreTimeout ?? undefined);
     clearTimeout(exitButtonCollapseTimeout);
     clearTimeout(playerReadyTimeout);
+    if (typeof syncTracking.softSyncResetTimeoutId === 'number') {
+      clearTimeout(syncTracking.softSyncResetTimeoutId);
+      syncTracking.softSyncResetTimeoutId = undefined;
+    }
     stopSyncScheduler();
     clearInterval(gateWatchdogInterval);
     gateWatchdogInterval = undefined;
