@@ -1182,7 +1182,16 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
       Object.assign(syncTracking, result.nextTracking);
 
-      const { nextGuards, nextWorkingState } = applyTwinPlayersSyncActions(result.actions, {
+      // Handle soft-sync actions separately
+      const softSyncAction = result.actions.find((a: any) => a.type === 'applySoftSync');
+      
+      // Filter out playback rate actions if soft-sync is active or being applied
+      // to prevent conflicts
+      const filteredActions = softSyncAction || syncTracking.softSyncIsActive
+        ? result.actions.filter((a: any) => a.type !== 'setOriginalPlaybackRate')
+        : result.actions;
+
+      const { nextGuards, nextWorkingState } = applyTwinPlayersSyncActions(filteredActions, {
         snapshot,
         guards: {
           changingVolume,
