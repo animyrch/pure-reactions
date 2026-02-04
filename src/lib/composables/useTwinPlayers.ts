@@ -1105,7 +1105,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       if (reactionCurrentTime > reactionFinishTime) {
         pauseOriginalVideo();
 
-        if (!isPlaylistAutoPlay) {
+        if (!isPlaylistAutoPlay && !isQueueAutoPlay) {
           pauseReactionVideo();
         }
 

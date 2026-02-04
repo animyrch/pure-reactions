@@ -544,7 +544,6 @@
             </div>
           </form>
 
-          {#if isPlaylist}
             <form
               class="flex flex-col gap-4"
               on:submit|preventDefault={handleReactionFinishTimeSubmit}
@@ -554,8 +553,7 @@
                   Reaction finish time
                 </h3>
                 <p class="mt-1 text-sm text-text-muted">
-                  Stop the reaction video once it reaches this timestamp
-                  (playlist reactions only).
+                  Stop the reaction video once it reaches this timestamp.
                 </p>
               </div>
 
@@ -592,7 +590,6 @@
                 </CinematicButton>
               </div>
             </form>
-          {/if}
         </div>
 
         <form
