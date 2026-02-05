@@ -1097,7 +1097,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         handleStateChangeInReactionVideo(reactionPlayerState, newReactionState);
         reactionPlayerState = newReactionState;
       }
-      
+
       // If the reaction video is UNSTARTED or CUED (e.g., after autoplay transition),
       // pause the original video and wait for user interaction to start both videos
       if (newReactionState === YT?.PlayerState?.UNSTARTED || newReactionState === YT?.PlayerState?.CUED) {
@@ -1108,7 +1108,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         scheduleNextSync(250, runSyncCycle);
         return;
       }
-      
+
       const previousReactionTime = snapshot.reactionCurrentTime;
       const reactionCurrentTime = parseFloat(playerReaction.getCurrentTime().toFixed(1));
       const rawDuration = typeof playerReaction.getDuration === 'function' ? Number(playerReaction.getDuration()) : Number.NaN;
@@ -1204,7 +1204,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
       // Handle soft-sync actions separately
       const softSyncAction = result.actions.find((a: any) => a.type === 'applySoftSync');
-      
+
       // Filter out playback rate actions if soft-sync is active or being applied
       // to prevent conflicts
       const filteredActions = softSyncAction || syncTracking.softSyncIsActive
@@ -1249,14 +1249,14 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
           changingSpeed = true;
           setPlaybackRateForOriginalVideo(softSyncAction.rate);
           changingSpeed = false;
-          
+
           // Schedule reset to desired playback rate from configs
           const desiredRate = getCurrentPlaybackRateFromConfigs(
             reactionCurrentTime,
             snapshot.playbackRateConfigs,
             snapshot.timeOffset
           );
-          
+
           syncTracking.softSyncResetTimeoutId = setTimeout(() => {
             if (!changingSpeed && playerOriginal) {
               changingSpeed = true;
@@ -1274,20 +1274,20 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
           clearTimeout(syncTracking.softSyncResetTimeoutId);
           syncTracking.softSyncResetTimeoutId = undefined;
         }
-        
+
         const desiredRate = getCurrentPlaybackRateFromConfigs(
           reactionCurrentTime,
           snapshot.playbackRateConfigs,
           snapshot.timeOffset
         );
-        
+
         if (!changingSpeed && playerOriginal && Math.abs(snapshot.currentPlaybackRate - desiredRate) > 0.001) {
           changingSpeed = true;
           setPlaybackRateForOriginalVideo(desiredRate);
           updateState({ currentPlaybackRate: desiredRate });
           changingSpeed = false;
         }
-        
+
         syncTracking.softSyncIsActive = false;
       }
 
@@ -2373,7 +2373,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       const offsetStartTime = Number.isFinite(rawOffsetStartTime) && rawOffsetStartTime >= 0
         ? Math.round(rawOffsetStartTime * 10) / 10
         : 0;
-      
+
       const reactionFinishTime = parseFloat(reactionData['reactionFinishTime']) || 100000;
       const timeOffset = reactionData['timeOffset'] || 0;
 
@@ -3394,7 +3394,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
     const existingTimeline = Array.isArray(snapshot.overlayVisibilityTimeline) ? snapshot.overlayVisibilityTimeline : [];
     const timelineMap = new Map<string, { t: number; visible: boolean }>();
-    
+
     existingTimeline.forEach((entry) => {
       if (entry && Number.isFinite(entry.t)) {
         timelineMap.set(Number(entry.t).toFixed(3), {
@@ -3703,7 +3703,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     const snapshot = get(state);
     const existingTimeline = Array.isArray(snapshot.overlayVisibilityTimeline) ? snapshot.overlayVisibilityTimeline : [];
     const timelineMap = new Map<string, { t: number; visible: boolean }>();
-    
+
     existingTimeline.forEach((entry) => {
       if (entry && Number.isFinite(entry.t)) {
         timelineMap.set(Number(entry.t).toFixed(3), {
@@ -3751,7 +3751,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     const snapshot = get(state);
     const existingTimeline = Array.isArray(snapshot.overlayVisibilityTimeline) ? snapshot.overlayVisibilityTimeline : [];
     const timelineMap = new Map<string, { t: number; visible: boolean }>();
-    
+
     existingTimeline.forEach((entry) => {
       if (entry && Number.isFinite(entry.t)) {
         timelineMap.set(Number(entry.t).toFixed(3), {
@@ -4012,7 +4012,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
   const handleExitFullscreenClick = () => {
     openWithHalfscreen();
-    updateState({ 
+    updateState({
       isControlSurfaceVisible: false,
       fullscreenOverlayVisible: true
     });
@@ -4146,7 +4146,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         }
 
         // Wait for DOM elements with retry mechanism
-        const elementsReady = await waitForPlayerElements(15, 100);
+        const elementsReady = await waitForPlayerElements(150, 100);
         if (!elementsReady) {
           console.warn('Player elements not found after waiting');
           debugClickGate('[TwinPlayers] init: player elements not ready', { seq, retryCount: initRetryCount });
