@@ -76,6 +76,7 @@ export const readTwinPlayersSnapshot = async (page) => {
             reactionVolume: reaction.volume,
             originalMuted: original.isMuted,
             reactionMuted: reaction.isMuted,
+            bothVideosStarted: players.bothVideosStarted,
         };
     });
 };
@@ -261,3 +262,32 @@ export const startPlaybackInteraction = async (page) => {
         play(players.reaction);
     });
 };
+
+/**
+ * Waits for the player actions to be available on the window object.
+ * @param {import('@playwright/test').Page} page
+ * @param {number} timeout
+ */
+export const waitForActionsReady = async (page, timeout) => {
+    const effectiveTimeout = timeout ?? (process.env.CI ? 60000 : 30000);
+    try {
+        await page.waitForFunction(() => !!window.__actions, null, { timeout: effectiveTimeout });
+    } catch (e) {
+        // Provide more context on failure to help debug missing actions object
+        const debugInfo = await page.evaluate(() => {
+            return {
+                hasPlayers: !!window.__players,
+                hasActions: !!window.__actions,
+                instanceCount: window.__twinPlayersInstanceCounter,
+                url: window.location.href
+            };
+        }).catch(() => ({ error: 'Failed to retrieve debug info' }));
+        
+        throw new Error(
+            `waitForActionsReady timed out after ${effectiveTimeout}ms.\n` +
+            `Debug Info: ${JSON.stringify(debugInfo, null, 2)}\n` +
+            `Original error: ${e.message}`
+        );
+    }
+};
+

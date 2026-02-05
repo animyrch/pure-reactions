@@ -2,7 +2,8 @@ import { test, expect } from '@playwright/test';
 import {
     readTwinPlayersSnapshot,
     waitForPlayersReady,
-    startPlaybackInteraction
+    startPlaybackInteraction,
+    waitForActionsReady
 } from './utils/twin-player-helpers.js';
 
 test.describe('Playlist Transitions Timing', () => {
@@ -35,6 +36,7 @@ test.describe('Playlist Transitions Timing', () => {
 
         // 3. Transition to same reaction video (Playlist Trans B)
         // This transition happens between different reaction documents but points to the same underlying YouTube video.
+        await waitForActionsReady(page);
         await page.evaluate(async () => {
              await window.__actions.loadReactionInPlace('playlist-trans-B', { preserveReactionTime: true, autoPlay: true });
         });
@@ -50,6 +52,7 @@ test.describe('Playlist Transitions Timing', () => {
         expect(sAfterSame.reactionCurrentTime).toBeGreaterThanOrEqual(seekTime);
 
         // 4. Transition to DIFFERENT reaction video (Playlist Trans C)
+        await waitForActionsReady(page);
         await page.evaluate(async () => {
              await window.__actions.loadReactionInPlace('playlist-trans-C', { preserveReactionTime: true, autoPlay: true });
         });
@@ -80,13 +83,14 @@ test.describe('Playlist Transitions Timing', () => {
         }, { timeout: 30000 }).toBe(true);
 
         const sInitial = await readTwinPlayersSnapshot(page);
-        console.log(`[Test] Initial state A - Original volume: ${sInitial.currentVolumeOriginalVideo}, Reaction volume: ${sInitial.currentVolumeReactionVideo}`);
+        console.log(`[Test] Initial state A - Original volume: ${sInitial.originalVolume}, Reaction volume: ${sInitial.reactionVolume}`);
         
         // Playlist trans A has original muted (0) and reaction at 100
-        expect(sInitial.currentVolumeOriginalVideo).toBe(0);
-        expect(sInitial.currentVolumeReactionVideo).toBe(100);
+        expect(sInitial.originalVolume).toBe(0);
+        expect(sInitial.reactionVolume).toBe(100);
 
         // 2. Transition to DIFFERENT reaction video (Playlist Trans C: original NOT muted, reaction muted)
+        await waitForActionsReady(page);
         await page.evaluate(async () => {
             await window.__actions.loadReactionInPlace('playlist-trans-C', { preserveReactionTime: true, autoPlay: true });
         });
@@ -101,12 +105,12 @@ test.describe('Playlist Transitions Timing', () => {
         }, { timeout: 15000 }).toBe(true);
 
         const sAfterTransition = await readTwinPlayersSnapshot(page);
-        console.log(`[Test] After transition to C - Original volume: ${sAfterTransition.currentVolumeOriginalVideo}, Reaction volume: ${sAfterTransition.currentVolumeReactionVideo}`);
+        console.log(`[Test] After transition to C - Original volume: ${sAfterTransition.originalVolume}, Reaction volume: ${sAfterTransition.reactionVolume}`);
 
         // Playlist trans C has original at 100 and reaction muted (0)
         // These values should be derived from the new reaction's volume configurations
-        expect(sAfterTransition.currentVolumeOriginalVideo).toBe(100);
-        expect(sAfterTransition.currentVolumeReactionVideo).toBe(0);
+        expect(sAfterTransition.originalVolume).toBe(100);
+        expect(sAfterTransition.reactionVolume).toBe(0);
     });
 
     test('should reset bothVideosStarted when switching to different reaction video', async ({ page }) => {
@@ -126,6 +130,7 @@ test.describe('Playlist Transitions Timing', () => {
         expect(sInitial.bothVideosStarted).toBe(true);
 
         // 2. Transition to DIFFERENT reaction video (Playlist Trans C)
+        await waitForActionsReady(page);
         await page.evaluate(async () => {
             await window.__actions.loadReactionInPlace('playlist-trans-C', { preserveReactionTime: true, autoPlay: true });
         });
