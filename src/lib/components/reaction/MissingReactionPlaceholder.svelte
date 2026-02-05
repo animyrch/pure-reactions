@@ -31,7 +31,7 @@
   };
 </script>
 
-<div class="flex aspect-[16/9] flex-col items-center justify-center rounded-xl border border-dashed border-text-muted/40 bg-surface/40 p-6 text-center text-sm text-text-muted shadow-surface sm:aspect-[3/2]">
+<div class="flex w-full aspect-[16/9] flex-col items-center justify-center rounded-none md:rounded-xl border border-dashed border-text-muted/40 bg-surface/40 p-6 text-center text-sm text-text-muted shadow-surface">
   <div class="w-full max-w-sm space-y-4 text-left">
     <p class="text-center text-sm text-text-muted">
       Add a reaction video ID to preview the edited cut here.
