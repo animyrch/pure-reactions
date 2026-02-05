@@ -1948,6 +1948,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   };
 
   const setUpVideos = async (reactionData: Record<string, any>) => {
+    log('setUpVideos called', { reactionDataExists: !!reactionData });
     // CRITICAL: Abort if this instance has been superseded
     if (globalActiveInstanceId !== instanceId) {
       debugClickGate('[TwinPlayers] setUpVideos aborted (instance superseded)', {
