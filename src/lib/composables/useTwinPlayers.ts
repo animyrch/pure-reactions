@@ -316,7 +316,14 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     // Proactively initialize __actions so that E2E tests waiting for it 
     // don't timeout even if the main body takes a few ticks to complete.
     (window as any).__actions = (window as any).__actions || {};
+    (window as any).__twinPlayersLog = (window as any).__twinPlayersLog || [];
   }
+
+  const log = (msg: string, data?: any) => {
+    if (typeof window !== 'undefined') {
+      (window as any).__twinPlayersLog.push({ ts: Date.now(), msg, data });
+    }
+  };
 
   const initialUrlState = getInitialUrlState();
   const lazySyncRequested = Boolean(initialUrlState.mobileLazySync);
@@ -1947,6 +1954,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         globalActiveInstanceId,
         reactionVideoId: reactionData?.reactionVideoId
       });
+      log('setUpVideos aborted: instance superseded', { globalActiveInstanceId, instanceId });
       return;
     }
 
@@ -4039,6 +4047,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   };
 
   onMount(() => {
+    log('onMount started', { enableAutoPlay, instanceId });
     debugClickGate('[TwinPlayers] instance mounted', { enableAutoPlay }, true);
 
     if (ENABLE_WATCHDOG) {
@@ -4111,6 +4120,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
     const init = async () => {
       const seq = (initSeq += 1);
+      log('init start', { seq, retryCount: initRetryCount, instanceId });
       debugClickGate('[TwinPlayers] init start', { seq, retryCount: initRetryCount }, true);
       try {
         // Check if we're still the active instance before doing expensive work
@@ -4134,7 +4144,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         }
 
         injectYoutubeIframeApiScript();
+        log('waiting for YT API');
         await waitForYoutubeIframeApiReady();
+        log('YT API ready');
 
         // Re-check after API ready
         if (globalActiveInstanceId !== instanceId) {
@@ -4146,7 +4158,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         }
 
         // Wait for DOM elements with retry mechanism
+        log('waiting for DOM elements');
         const elementsReady = await waitForPlayerElements(150, 100);
+        log('DOM elements ready result', { elementsReady });
         if (!elementsReady) {
           console.warn('Player elements not found after waiting');
           debugClickGate('[TwinPlayers] init: player elements not ready', { seq, retryCount: initRetryCount });
@@ -4184,7 +4198,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         }
 
         await buildInterface(initialSlug);
+        log('buildInterface called from init', { initialSlug });
       } catch (error) {
+        log('init failed', { error: String(error) });
         console.error('Failed to initialize reaction player:', error);
 
         // Auto-retry on error if we haven't exceeded max retries

@@ -139,10 +139,11 @@ export const waitForPlayersReady = async (page, timeout) => {
                 reactionHasGetPlayerState: typeof players?.reaction?.getPlayerState === 'function'
             };
         });
-        
+
         throw new Error(
             `waitForPlayersReady timed out after ${effectiveTimeout}ms. ` +
             `Diagnostics: ${JSON.stringify(diagnostics, null, 2)}\n` +
+            `Logs: ${JSON.stringify(await page.evaluate(() => window.__twinPlayersLog), null, 2)}\n` +
             `Original error: ${error.message}`
         );
     }
@@ -282,7 +283,7 @@ export const waitForActionsReady = async (page, timeout) => {
                 url: window.location.href
             };
         }).catch(() => ({ error: 'Failed to retrieve debug info' }));
-        
+
         throw new Error(
             `waitForActionsReady timed out after ${effectiveTimeout}ms.\n` +
             `Debug Info: ${JSON.stringify(debugInfo, null, 2)}\n` +
