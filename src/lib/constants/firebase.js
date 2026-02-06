@@ -13,16 +13,7 @@ const DEFAULT_YOUTUBE_CHANNEL_VERIFICATIONS = COLLECTION_YOUTUBE_CHANNEL_CLAIMS
     : undefined;
 export const COLLECTION_YOUTUBE_CHANNEL_VERIFICATIONS =
     env.PUBLIC_FIREBASE_COLLECTION_YOUTUBE_CHANNEL_VERIFICATIONS || DEFAULT_YOUTUBE_CHANNEL_VERIFICATIONS;
-export const FIREBASE_CONFIG = {
-    apiKey: "AIzaSyBqsnKIBnbRJqkpyOynZGLySf28AuqmOiE",
-    authDomain: "pure-reactions.firebaseapp.com",
-    projectId: "pure-reactions",
-    storageBucket: "pure-reactions.appspot.com",
-    messagingSenderId: "722795539356",
-    appId: "1:722795539356:web:0ec764c6b5834567603659",
-    measurementId: "G-T7TWND1C6C",
-    databaseURL: "https://pure-reactions-default-rtdb.europe-west1.firebasedatabase.app/"
-};
+export const FIREBASE_CONFIG = env.PUBLIC_FIREBASE_CONFIG ? JSON.parse(env.PUBLIC_FIREBASE_CONFIG) : {};
 
 // Initialize Firebase Realtime Database
 export const app = !getApps().length ? initializeApp(FIREBASE_CONFIG) : getApp();
