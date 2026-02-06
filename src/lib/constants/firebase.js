@@ -13,7 +13,15 @@ const DEFAULT_YOUTUBE_CHANNEL_VERIFICATIONS = COLLECTION_YOUTUBE_CHANNEL_CLAIMS
     : undefined;
 export const COLLECTION_YOUTUBE_CHANNEL_VERIFICATIONS =
     env.PUBLIC_FIREBASE_COLLECTION_YOUTUBE_CHANNEL_VERIFICATIONS || DEFAULT_YOUTUBE_CHANNEL_VERIFICATIONS;
-export const FIREBASE_CONFIG = env.PUBLIC_FIREBASE_CONFIG ? JSON.parse(env.PUBLIC_FIREBASE_CONFIG) : {};
+let parsedConfig = {};
+try {
+    parsedConfig = env.PUBLIC_FIREBASE_CONFIG ? JSON.parse(env.PUBLIC_FIREBASE_CONFIG) : {};
+} catch (e) {
+    console.error('[firebase] Failed to parse PUBLIC_FIREBASE_CONFIG. Raw value:', env.PUBLIC_FIREBASE_CONFIG);
+    console.error('[firebase] Parse error:', e);
+}
+
+export const FIREBASE_CONFIG = parsedConfig;
 
 // Initialize Firebase Realtime Database
 export const app = !getApps().length ? initializeApp(FIREBASE_CONFIG) : getApp();
