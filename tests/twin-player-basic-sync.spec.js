@@ -16,7 +16,13 @@ test.describe('Twin Video Playback (Smoke)', () => {
 
     test.describe.configure({ timeout: 90000 });
 
-    test('Should load both players and reach playing state', async ({ page }) => {
+    // Real YouTube playback is unreliable in headless CI (no guaranteed media delivery).
+    // This smoke test is meant for local validation; skip it in CI to avoid flakes.
+    // See AGENTS.md §6: "Media playback is nondeterministic in CI".
+    test('Should load both players and reach playing state', async ({ page }, testInfo) => {
+        if (process.env.CI) {
+            testInfo.skip(true, 'Skipped in CI — real YT playback is nondeterministic in headless environments');
+        }
         await page.goto(REACTION_PAGE_URLS.basicSync);
 
         // 1) Wait for readiness

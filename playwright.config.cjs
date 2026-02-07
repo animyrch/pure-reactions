@@ -18,6 +18,8 @@ module.exports = defineConfig({
     // Retry flaky tests in CI, but not locally for faster feedback
     retries: process.env.CI ? 2 : 0,
     globalSetup: require.resolve('./tests/global-setup.cjs'),
+    // Use an OS-agnostic snapshot path so the same baseline PNGs work on macOS (local) and Linux (CI).
+    snapshotPathTemplate: '{snapshotDir}/{testFileDir}/{testFileName}-snapshots/{arg}{-projectName}{ext}',
     use: {
         headless: true,
         // Enable video autoplay in tests

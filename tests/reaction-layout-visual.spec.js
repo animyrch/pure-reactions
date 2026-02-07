@@ -93,6 +93,7 @@ test.describe('Reaction page layout visual', () => {
 
       await expect(metadata).toHaveScreenshot(`reaction-layout-${testCase.name}.png`, {
         animations: 'disabled',
+        maxDiffPixelRatio: 0.05,
         timeout: 30000,
       });
     });
