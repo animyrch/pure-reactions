@@ -1102,7 +1102,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
         updateState({ reactionCurrentTime, reactionDuration, seekMin, seekMax });
       }
-      if (reactionCurrentTime > reactionFinishTime) {
+      if (reactionFinishTime > 0 && reactionCurrentTime > reactionFinishTime) {
         pauseOriginalVideo();
 
         if (!isPlaylistAutoPlay && !isQueueAutoPlay) {
@@ -1924,7 +1924,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     const offsetStartTime = Number.isFinite(rawOffsetStartTime) && rawOffsetStartTime >= 0
       ? Math.round(rawOffsetStartTime * 10) / 10
       : 0;
-    const reactionFinishTime = parseFloat(reactionData['reactionFinishTime']) || 100000;
+    const reactionFinishTime = parseFloat(reactionData['reactionFinishTime']) || 0;
     const timeOffset = reactionData['timeOffset'] || 0;
     const globalGainValue = reactionData['globalGain'];
     const globalGain = typeof globalGainValue === 'number' && !Number.isNaN(globalGainValue) ? globalGainValue : 1.0;
@@ -2837,9 +2837,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       return;
     }
     const snapshot = get(state);
-    if (!snapshot.youtubePlaylistId) {
-      return;
-    }
+
 
     let finalValue = parsed;
     if (Number.isFinite(snapshot.reactionDuration) && snapshot.reactionDuration > 0) {
@@ -3141,7 +3139,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
     const existingTimeline = Array.isArray(snapshot.overlayVisibilityTimeline) ? snapshot.overlayVisibilityTimeline : [];
     const timelineMap = new Map<string, { t: number; visible: boolean }>();
-    
+
     existingTimeline.forEach((entry) => {
       if (entry && Number.isFinite(entry.t)) {
         timelineMap.set(Number(entry.t).toFixed(3), {
@@ -3450,7 +3448,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     const snapshot = get(state);
     const existingTimeline = Array.isArray(snapshot.overlayVisibilityTimeline) ? snapshot.overlayVisibilityTimeline : [];
     const timelineMap = new Map<string, { t: number; visible: boolean }>();
-    
+
     existingTimeline.forEach((entry) => {
       if (entry && Number.isFinite(entry.t)) {
         timelineMap.set(Number(entry.t).toFixed(3), {
@@ -3498,7 +3496,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     const snapshot = get(state);
     const existingTimeline = Array.isArray(snapshot.overlayVisibilityTimeline) ? snapshot.overlayVisibilityTimeline : [];
     const timelineMap = new Map<string, { t: number; visible: boolean }>();
-    
+
     existingTimeline.forEach((entry) => {
       if (entry && Number.isFinite(entry.t)) {
         timelineMap.set(Number(entry.t).toFixed(3), {
@@ -3759,7 +3757,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
   const handleExitFullscreenClick = () => {
     openWithHalfscreen();
-    updateState({ 
+    updateState({
       isControlSurfaceVisible: false,
       fullscreenOverlayVisible: true
     });

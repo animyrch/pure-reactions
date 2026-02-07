@@ -83,9 +83,10 @@
         : stickyControlsClass;
 
     // Overlay visibility control applies in both fullscreen and mobile landscape
-    $: effectiveOverlayClass = isOverlayLayout && !fullscreenOverlayVisible
-        ? "opacity-0 pointer-events-none"
-        : "opacity-100 pointer-events-auto";
+    $: effectiveOverlayClass =
+        isOverlayLayout && !fullscreenOverlayVisible
+            ? "opacity-0 pointer-events-none"
+            : "opacity-100 pointer-events-auto";
 
     const handleExitClick = () => dispatch("exitClick");
     const handleExitEnter = () => dispatch("exitEnter");
@@ -118,7 +119,10 @@
         if (!Number.isFinite(parsed)) return DEFAULT_OVERLAY_WIDTH;
         const snapped =
             Math.round(parsed / OVERLAY_WIDTH_STEP) * OVERLAY_WIDTH_STEP;
-        return Math.max(OVERLAY_WIDTH_MIN, Math.min(OVERLAY_WIDTH_MAX, snapped));
+        return Math.max(
+            OVERLAY_WIDTH_MIN,
+            Math.min(OVERLAY_WIDTH_MAX, snapped),
+        );
     };
 
     const overlayCornerClasses = {
@@ -142,10 +146,6 @@
     $: isReactionOverlay = isOverlayLayout && !isReactionPrimary;
 
     onMount(() => {
-        console.log('ReactionStage mounted');
-        console.log('Initial isMobileLandscape:', isMobileLandscape);
-        console.log('Initial fullscreenOverlayVisible:', fullscreenOverlayVisible);
-
         // Match CSS: @media (orientation: landscape) and (max-width: 1023px), (orientation: landscape) and (max-height: 600px)
         landscapeMediaQuery = window.matchMedia(
             "(orientation: landscape) and (max-width: 1023px), (orientation: landscape) and (max-height: 600px)",
@@ -169,9 +169,7 @@
         if (controlsTimeout) clearTimeout(controlsTimeout);
     });
 
-    $: console.log('Updated isMobileLandscape:', isMobileLandscape);
-    $: console.log('Updated fullscreenOverlayVisible:', fullscreenOverlayVisible);
-    $: console.log('Updated controlsVisible:', controlsVisible);
+
 </script>
 
 <div
@@ -360,7 +358,9 @@
             currentTime={reactionCurrentTime}
             duration={reactionDuration}
             seekMin={offsetStartTime || 0}
-            seekMax={Math.min(reactionFinishTime || 0, reactionDuration || 0)}
+            seekMax={reactionFinishTime > 0
+                ? Math.min(reactionFinishTime, reactionDuration || 0)
+                : reactionDuration || 0}
             onSeek={handleSeek}
         />
         <!-- Debug Helper -->
@@ -423,12 +423,16 @@
             z-index: 10;
         }
 
-        .theater-wrapper [data-stage-role="primary"] [data-stage="original-frame"] {
+        .theater-wrapper
+            [data-stage-role="primary"]
+            [data-stage="original-frame"] {
             width: 100%;
             height: 100%;
         }
 
-        .theater-wrapper [data-stage-role="primary"] [data-stage="original-frame-inner"] {
+        .theater-wrapper
+            [data-stage-role="primary"]
+            [data-stage="original-frame-inner"] {
             width: 100%;
             height: 100%;
             max-height: none;
