@@ -52,7 +52,7 @@
     function showControls() {
         if (!isMobileLandscape && !isFullscreen) return; // Only apply auto-hide in mobile landscape or fullscreen (if desired, currently targeting mobile landscape per request)
 
-        // Actually, request says: "The control dock should be visible as a bottom overlay when the user goes into landscape mode... disappears after 5 seconds"
+        // Actually, request says: "The control dock should be visible as a bottom overlay when the user goes into landscape mode... disappears after 3 seconds"
         // So we strictly enforce this logic when isMobileLandscape is true.
 
         controlsVisible = true;
@@ -61,7 +61,15 @@
             if (isMobileLandscape) {
                 controlsVisible = false;
             }
-        }, 5000);
+        }, 3000);
+    }
+
+    let prevBothVideosStarted = bothVideosStarted;
+    $: if (bothVideosStarted && !prevBothVideosStarted) {
+        showControls();
+        prevBothVideosStarted = bothVideosStarted;
+    } else if (!bothVideosStarted) {
+        prevBothVideosStarted = false;
     }
 
     function handleInteraction() {
@@ -88,6 +96,8 @@
             ? "opacity-0 pointer-events-none"
             : "opacity-100 pointer-events-auto";
 
+    let wrapperRef;
+
     const handleExitClick = () => dispatch("exitClick");
     const handleExitEnter = () => dispatch("exitEnter");
     const handleExitLeave = () => dispatch("exitLeave");
@@ -106,7 +116,32 @@
     const handleSyncVideos = () => dispatch("syncVideos");
     const handleToggleAutoPlaylist = () => dispatch("toggleAutoPlaylist");
     const handleToggleCinematicBars = () => dispatch("toggleCinematicBars");
-    const handleEnterFullscreen = () => dispatch("enterFullscreen");
+    const handleEnterFullscreen = async () => {
+        // Try to request browser fullscreen on the main wrapper if possible,
+        // then notify parent so app state can update.
+        try {
+            const el = typeof window !== "undefined" && wrapperRef ? wrapperRef : document.documentElement;
+            if (el && typeof el.requestFullscreen === "function") {
+                await el.requestFullscreen();
+            } else if (el && typeof el.webkitRequestFullscreen === "function") {
+                // Safari
+                el.webkitRequestFullscreen();
+            }
+        } catch (err) {
+            console.warn("Fullscreen request failed:", err);
+        }
+
+        dispatch("enterFullscreen");
+    };
+
+    function handleFullscreenChange() {
+        if (typeof document === "undefined") return;
+        const el = document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+        if (!el) {
+            // Browser left fullscreen (e.g., via Escape). Notify parent to update app state.
+            dispatch("exitClick");
+        }
+    }
     const handleSeek = (time) => dispatch("seek", time);
 
     const OVERLAY_WIDTH_MIN = 5;
@@ -157,6 +192,12 @@
         if (isMobileLandscape) {
             showControls();
         }
+        if (typeof document !== "undefined") {
+            // Listen for browser-level fullscreen changes (Escape key, browser UI).
+            document.addEventListener("fullscreenchange", handleFullscreenChange);
+            document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+            document.addEventListener("msfullscreenchange", handleFullscreenChange);
+        }
     });
 
     onDestroy(() => {
@@ -167,12 +208,35 @@
             );
         }
         if (controlsTimeout) clearTimeout(controlsTimeout);
+        
+        
+        if (typeof document !== "undefined") {
+            document.removeEventListener("fullscreenchange", handleFullscreenChange);
+            document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
+            document.removeEventListener("msfullscreenchange", handleFullscreenChange);
+        }
     });
 
-
+    // When the app's `isFullscreen` state is cleared, also exit browser fullscreen
+    // if the document is currently fullscreen. This keeps browser-level fullscreen
+    // in sync with the app state (e.g., when the user clicks the Exit button).
+    $: if (typeof document !== "undefined") {
+        if (!isFullscreen && document.fullscreenElement) {
+            // Best-effort exit; ignore errors.
+            document.exitFullscreen?.().catch(() => {});
+            if (typeof document.webkitExitFullscreen === "function") {
+                try {
+                    document.webkitExitFullscreen();
+                } catch (e) {
+                    /* ignore */
+                }
+            }
+        }
+    }
 </script>
 
 <div
+    bind:this={wrapperRef}
     class={`theater-wrapper ${
         isFullscreen
             ? "theater-wrapper--fullscreen fixed inset-0 z-50 m-0 h-screen w-screen overflow-hidden rounded-none bg-black px-0 py-0 text-text-primary shadow-none"
@@ -191,46 +255,8 @@
         handleInteraction(); // Any key shows controls? maybe just Enter/Space.
     }}
 >
-    <!-- Fullscreen overlay & exit button (only shown when fullscreen) -->
+    <!-- Fullscreen overlay (overlayRef still used for pointer events) -->
     {#if isFullscreen}
-        <div
-            class={`absolute left-6 top-6 z-50 transition-opacity duration-200 ease-cinematic ${isControlSurfaceVisible ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"}`}
-        >
-            <button
-                type="button"
-                class={`group flex items-center overflow-hidden rounded-full bg-surface/40 ${isExitButtonExpanded ? "pl-3 pr-4" : "px-3"} py-2 text-sm font-semibold text-text-primary shadow-elevated backdrop-blur transition-all duration-200 ease-cinematic hover:-translate-y-0.5 hover:bg-surface/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent`}
-                on:click={handleExitClick}
-                on:mouseenter={handleExitEnter}
-                on:mouseleave={handleExitLeave}
-                on:focus={handleExitEnter}
-                on:blur={handleExitLeave}
-                on:touchstart={handleExitEnter}
-                on:touchend={handleExitLeave}
-                aria-label="Exit fullscreen"
-                title="Exit fullscreen"
-            >
-                <span
-                    class={`flex items-center justify-center overflow-hidden transition-all duration-200 ease-cinematic ${isExitButtonExpanded ? "w-0 opacity-0" : "w-4 opacity-80"}`}
-                >
-                    <svg
-                        class="h-4 w-4 text-text-primary/80"
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                        aria-hidden="true"
-                    >
-                        <path
-                            d="M5 9V5h4V3H3v6h2zm14-6h-6v2h4v4h2V3zm-6 18h6v-6h-2v4h-4v2zM5 15H3v6h6v-2H5v-4z"
-                        />
-                    </svg>
-                </span>
-                <span
-                    class={`inline-flex items-center whitespace-nowrap transition-all duration-200 ease-cinematic ${isExitButtonExpanded ? "ml-2 max-w-xs opacity-100" : "ml-0 max-w-0 opacity-0"}`}
-                >
-                    Exit fullscreen
-                </span>
-            </button>
-        </div>
         <div
             class="absolute inset-0 z-40 cursor-default bg-transparent"
             bind:this={overlayRef}
@@ -245,7 +271,7 @@
         data-stage="container"
         class={isFullscreen
             ? "relative h-full w-full"
-            : "flex flex-col gap-0 md:grid md:gap-6 md:grid-cols-2 xl:gap-8"}
+            : "flex flex-col-reverse gap-0 md:grid md:gap-6 md:grid-cols-2 xl:gap-8"}
     >
         <!-- Original video player container -->
         <div
@@ -305,7 +331,7 @@
                     ? isReactionOverlay
                         ? `pointer-events-auto absolute ${overlayCornerClass} z-50 transition-opacity duration-300 ease-cinematic ${effectiveOverlayClass}`
                         : "absolute inset-0"
-                    : "relative overflow-hidden bg-black/80 shadow-surface w-[80vw] h-[45vw] mx-auto mt-4 rounded-lg md:w-auto md:h-auto md:mt-0 md:mx-0 md:rounded-xl md:aspect-[16/9]"}
+                    : "relative overflow-hidden bg-black/80 shadow-surface w-full h-[56.25vw] mx-auto mt-0 rounded-none md:w-auto md:h-auto md:mt-0 md:mx-0 md:rounded-xl md:aspect-[16/9]"}
                 style={isReactionOverlay ? "width: var(--overlay-width);" : ""}
             >
                 <div
@@ -355,6 +381,7 @@
             onToggleAutoPlaylist={handleToggleAutoPlaylist}
             onToggleBars={handleToggleCinematicBars}
             onEnterFullscreen={handleEnterFullscreen}
+            onExitClick={handleExitClick}
             currentTime={reactionCurrentTime}
             duration={reactionDuration}
             seekMin={offsetStartTime || 0}

@@ -1,5 +1,6 @@
 <script>
   import { onMount } from "svelte";
+  import { fly } from "svelte/transition";
   import {
     ShareNodesSolid,
     BookmarkSolid,
@@ -21,9 +22,29 @@
   import { reactionDial } from "$lib/stores/reactionDial";
 
   let isOpen = false;
+  let isVisible = true;
+  let hideTimeout;
   let dialRef;
   let triggerRef;
   const menuId = "speed-dial-menu";
+
+  const scheduleHide = () => {
+    if (typeof window === "undefined") return;
+    if (hideTimeout) clearTimeout(hideTimeout);
+    // Never hide if the menu is open
+    if (isOpen) return;
+
+    hideTimeout = setTimeout(() => {
+      isVisible = false;
+    }, 3000);
+  };
+
+  const handleScroll = () => {
+    if (!isVisible) {
+      isVisible = true;
+    }
+    scheduleHide();
+  };
 
   const copyCurrentUrl = () => {
     copyToClipboard($page.url.href);
@@ -56,10 +77,17 @@
     if (refocus) {
       triggerRef?.focus();
     }
+    scheduleHide();
   };
 
   const toggleDial = () => {
     isOpen = !isOpen;
+    if (isOpen) {
+      isVisible = true;
+      if (hideTimeout) clearTimeout(hideTimeout);
+    } else {
+      scheduleHide();
+    }
   };
 
   const handleWindowKeydown = (event) => {
@@ -79,9 +107,16 @@
     window.addEventListener("pointerdown", handlePointerDown, {
       passive: true,
     });
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    // Initial hide timer
+    scheduleHide();
+
     return () => {
       window.removeEventListener("keydown", handleWindowKeydown);
       window.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("scroll", handleScroll);
+      if (hideTimeout) clearTimeout(hideTimeout);
     };
   });
 
@@ -180,63 +215,66 @@
   }
 </script>
 
-<div
-  bind:this={dialRef}
-  class="speed-dial fixed z-[95] flex flex-col items-start gap-2"
-  style="bottom: calc(var(--fab-offset-bottom) + var(--safe-area-inset-bottom)); left: calc(var(--fab-offset-left) + var(--safe-area-inset-left));"
-  data-open={isOpen}
->
-  <ul
-    id={menuId}
-    class={`dial-menu mb-2 flex flex-col items-start gap-2 transition duration-slow ease-cinematic ${isOpen ? "pointer-events-auto" : "pointer-events-none"}`}
-    aria-hidden={!isOpen}
+{#if isVisible}
+  <div
+    bind:this={dialRef}
+    transition:fly={{ y: 20, duration: 450, easing: (t) => t * (2 - t) }}
+    class="speed-dial fixed z-[95] flex flex-col items-start gap-2"
+    style="bottom: calc(var(--fab-offset-bottom) + var(--safe-area-inset-bottom)); left: calc(var(--fab-offset-left) + var(--safe-area-inset-left));"
+    data-open={isOpen}
   >
-    {#each options as option, index}
-      {#if option.type === "action"}
-        <li class="dial-item" style={`--item-delay: ${index * 50}ms`}>
-          <button
-            type="button"
-            class="dial-button"
-            tabindex={isOpen ? 0 : -1}
-            on:click={() => handleAction(option)}
-            aria-label={option.name}
-          >
-            <svelte:component this={option.icon} class="h-5 w-5" />
-            <span class="dial-label" aria-hidden="true">{option.name}</span>
-            <span class="sr-only">{option.name}</span>
-          </button>
-        </li>
-      {:else}
-        <li class="dial-item" style={`--item-delay: ${index * 50}ms`}>
-          <a
-            href={option.href}
-            class="dial-button"
-            tabindex={isOpen ? 0 : -1}
-            on:click={() => handleAction(option)}
-            aria-label={option.name}
-          >
-            <svelte:component this={option.icon} class="h-5 w-5" />
-            <span class="dial-label" aria-hidden="true">{option.name}</span>
-            <span class="sr-only">{option.name}</span>
-          </a>
-        </li>
-      {/if}
-    {/each}
-  </ul>
+    <ul
+      id={menuId}
+      class={`dial-menu mb-2 flex flex-col items-start gap-2 transition duration-slow ease-cinematic ${isOpen ? "pointer-events-auto" : "pointer-events-none"}`}
+      aria-hidden={!isOpen}
+    >
+      {#each options as option, index}
+        {#if option.type === "action"}
+          <li class="dial-item" style={`--item-delay: ${index * 50}ms`}>
+            <button
+              type="button"
+              class="dial-button"
+              tabindex={isOpen ? 0 : -1}
+              on:click={() => handleAction(option)}
+              aria-label={option.name}
+            >
+              <svelte:component this={option.icon} class="h-5 w-5" />
+              <span class="dial-label" aria-hidden="true">{option.name}</span>
+              <span class="sr-only">{option.name}</span>
+            </button>
+          </li>
+        {:else}
+          <li class="dial-item" style={`--item-delay: ${index * 50}ms`}>
+            <a
+              href={option.href}
+              class="dial-button"
+              tabindex={isOpen ? 0 : -1}
+              on:click={() => handleAction(option)}
+              aria-label={option.name}
+            >
+              <svelte:component this={option.icon} class="h-5 w-5" />
+              <span class="dial-label" aria-hidden="true">{option.name}</span>
+              <span class="sr-only">{option.name}</span>
+            </a>
+          </li>
+        {/if}
+      {/each}
+    </ul>
 
-  <button
-    bind:this={triggerRef}
-    type="button"
-    class={`fab-button ${isOpen ? "rotate-45 bg-accent-primary text-background" : "bg-surface text-text-primary"}`}
-    aria-haspopup="true"
-    aria-expanded={isOpen}
-    aria-controls={menuId}
-    on:click={toggleDial}
-  >
-    <span class="sr-only">Toggle quick navigation</span>
-    <BarsSolid class="h-5 w-5" />
-  </button>
-</div>
+    <button
+      bind:this={triggerRef}
+      type="button"
+      class={`fab-button ${isOpen ? "rotate-45 bg-accent-primary text-background" : "bg-surface text-text-primary"}`}
+      aria-haspopup="true"
+      aria-expanded={isOpen}
+      aria-controls={menuId}
+      on:click={toggleDial}
+    >
+      <span class="sr-only">Toggle quick navigation</span>
+      <BarsSolid class="h-5 w-5" />
+    </button>
+  </div>
+{/if}
 
 <style>
   .sr-only {

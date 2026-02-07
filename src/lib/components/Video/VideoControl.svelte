@@ -81,13 +81,21 @@
             if (!isKeyboardFocus && !isDragging && !isHoveringControls) {
                 isInteracting = false;
             }
-        }, 1800);
+        }, 3000);
     };
 
     const revealControls = () => {
         isInteracting = true;
         scheduleHide();
     };
+
+    let prevBothVideosStarted = bothVideosStarted;
+    $: if (bothVideosStarted && !prevBothVideosStarted) {
+        revealControls();
+        prevBothVideosStarted = bothVideosStarted;
+    } else if (!bothVideosStarted) {
+        prevBothVideosStarted = false;
+    }
 
     function handlePointerMove() {
         if (!bothVideosStarted) return;
@@ -423,7 +431,7 @@
                 </div>
 
                 {#if !isFullscreen}
-                    <div class="group relative hidden md:block">
+                    <div class="group relative">
                         <button
                             type="button"
                             class={iconButtonBase}
@@ -432,6 +440,20 @@
                         >
                             <ExpandSolid class="h-4 w-4" />
                             <span class="sr-only">Enter fullscreen</span>
+                        </button>
+                    </div>
+                {:else}
+                    <div class="group relative">
+                        <button
+                            type="button"
+                            class={iconButtonBase}
+                            on:click={() => dispatch('exitClick')}
+                            aria-label="Exit fullscreen"
+                        >
+                            <svg class="h-4 w-4 text-text-primary/80" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path d="M5 9V5h4V3H3v6h2zm14-6h-6v2h4v4h2V3zm-6 18h6v-6h-2v4h-4v2zM5 15H3v6h6v-2H5v-4z" />
+                            </svg>
+                            <span class="sr-only">Exit fullscreen</span>
                         </button>
                     </div>
                 {/if}
