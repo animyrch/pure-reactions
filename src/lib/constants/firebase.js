@@ -47,44 +47,29 @@ export const database = getDatabase(app);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 
-// Optional Firestore emulator support (primarily for e2e + local dev).
-// Enable by setting PUBLIC_FIREBASE_USE_EMULATORS=true and optionally host/port.
-// Helper to log to the same array used by useTwinPlayers
-const log = (msg, data) => {
-    if (typeof window !== 'undefined') {
-        window.__twinPlayersLog = window.__twinPlayersLog || [];
-        window.__twinPlayersLog.push({ ts: Date.now(), msg: `[constants] ${msg}`, data });
-    }
-};
-
 if (env.PUBLIC_FIREBASE_USE_EMULATORS === 'true') {
-    const host = env.PUBLIC_FIRESTORE_EMULATOR_HOST || '127.0.0.1';
-    const port = Number(env.PUBLIC_FIRESTORE_EMULATOR_PORT || 8080);
-
-    const rtdbHost = env.PUBLIC_DATABASE_EMULATOR_HOST || host;
-    const rtdbPort = Number(env.PUBLIC_DATABASE_EMULATOR_PORT || 9000);
-
-    const authHost = env.PUBLIC_AUTH_EMULATOR_HOST || host;
-    const authPort = Number(env.PUBLIC_AUTH_EMULATOR_PORT || 9099);
-
     try {
+        // Firestore
+        const host = env.PUBLIC_FIRESTORE_EMULATOR_HOST || '127.0.0.1';
+        const port = Number(env.PUBLIC_FIRESTORE_EMULATOR_PORT || 8086);
         connectFirestoreEmulator(db, host, port);
-        log(`Firestore emulator connect called`, { host, port });
         // eslint-disable-next-line no-console
         console.log(`[firebase] Firestore emulator enabled at ${host}:${port}`);
 
+        // Realtime Database
+        const rtdbHost = env.PUBLIC_DATABASE_EMULATOR_HOST || '127.0.0.1';
+        const rtdbPort = Number(env.PUBLIC_DATABASE_EMULATOR_PORT || 9000);
         connectDatabaseEmulator(database, rtdbHost, rtdbPort);
         // eslint-disable-next-line no-console
         console.log(`[firebase] Realtime Database emulator enabled at ${rtdbHost}:${rtdbPort}`);
 
+        // Auth
+        const authHost = env.PUBLIC_AUTH_EMULATOR_HOST || '127.0.0.1';
+        const authPort = Number(env.PUBLIC_AUTH_EMULATOR_PORT || 9099);
         connectAuthEmulator(auth, `http://${authHost}:${authPort}`);
         // eslint-disable-next-line no-console
         console.log(`[firebase] Auth emulator enabled at ${authHost}:${authPort}`);
     } catch (error) {
-        log(`Emulator connect failed`, { error: String(error) });
         // If called twice, Firebase throws; ignore.
-    }
-}
-        console.warn('[firebase] Failed to connect Firestore emulator', error);
     }
 }
