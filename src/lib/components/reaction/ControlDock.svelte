@@ -14,6 +14,7 @@
   export let onToggleAutoPlaylist = () => {};
   export let onToggleBars = () => {};
   export let onEnterFullscreen = () => {};
+  export let onExitClick = () => {};
 
   export let currentTime = 0;
   export let duration = 0;
@@ -44,6 +45,7 @@
       on:toggleAutoPlaylist={onToggleAutoPlaylist}
       on:toggleBars={onToggleBars}
       on:enterFullscreen={onEnterFullscreen}
+      on:exitClick={onExitClick}
       on:seek={(e) => onSeek(e.detail.time)}
     />
   </div>
@@ -60,7 +62,6 @@
       left: 0;
       right: 0;
       top: auto;
-      bottom: 0;
       margin-top: 0;
       padding-left: 12px;
       padding-right: 12px;

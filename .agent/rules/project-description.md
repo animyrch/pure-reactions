@@ -135,3 +135,118 @@ The agent should behave like a calm, experienced art director who also understan
   - Play Trigger → `/reaction/8O1sPJr6atB0K2CvyItV`, video ID `qg6b4b0FAB4`, fixture `tests/fixtures/reactions/twin-play-trigger.json`.
   - Volume Stability → `/reaction/Dw3UZ6PqZH37E5pbKmhZ`, video ID `dHh_gt4sBbw`, fixture `tests/fixtures/reactions/twin-volume-stability.json`.
   - Resume After Config Pause → `/reaction/BUOR5TM6yAHSClCCRvIp`, video ID `GQ_SlNONhx4`, fixture `tests/fixtures/reactions/twin-resume-after-config-pause.json`.
+
+While writing end-to-end (E2E) tests, your top priority is CI reliability and deterministic behavior. Prefer fewer, stronger tests over many fragile ones.
+
+## 0) Definition of done
+A test is acceptable only if:
+- It is deterministic across runs (local + CI).
+- It does not rely on wall-clock timing for correctness.
+- It can fail for one clear reason.
+- Failure output is actionable (what broke, where, expected vs actual).
+
+## 1) What E2E tests MUST cover
+Write E2E tests only for:
+- Critical user journeys (login/signup, core content discovery, core playback/start/stop, create/delete flows).
+- Cross-system integration that cannot be validated in unit/integration tests.
+- Smoke-level confidence that the app boots and essential paths work.
+
+If a behavior can be validated via unit or integration tests, do NOT add an E2E test.
+
+## 2) What E2E tests MUST NOT do
+Never:
+- Assert exact milliseconds (e.g., “starts within 2500ms”, “hides at 30s”).
+- Use `waitForTimeout` except for tiny debug-only waits (must be removed before merge).
+- Assert internal implementation details (function calls, component structure, internal state names).
+- Depend on non-deterministic ordering from backends (e.g., Firestore order with ties).
+- Require real external networks/APIs (YouTube, third-party services, real Algolia, etc.).
+
+## 3) Determinism rules (mandatory)
+### Data determinism
+- Always seed test data explicitly.
+- If sorting is tested, ensure unique sortable keys (e.g., unique timestamps).
+- If backend ordering could tie, enforce a stable tie-breaker (e.g., orderBy(createdAt desc) + orderBy(__name__ desc)).
+- Never depend on “natural insertion order”.
+
+### Environment determinism
+- Disable or neutralize sources of flake where possible:
+  - animations / transitions
+  - service workers (or ensure they are disabled in test mode)
+  - variable network (mock/stub)
+- Use a consistent viewport/device profile per suite unless the test is explicitly responsive.
+
+### Time determinism
+- Prefer asserting state transitions and eventual consistency:
+  - `expect(locator).toBeVisible()` / `toHaveText()` with Playwright’s built-in waiting
+  - polling assertions that verify “eventually reaches expected state”
+- If time is inherently part of the UX, assert ranges or states rather than exact times.
+
+## 4) Assertion style
+Write assertions that describe user-visible outcomes:
+- Use locators based on accessibility (`getByRole`, `getByLabel`, `getByText`), then stable test IDs if necessary.
+- Avoid brittle CSS selectors, DOM traversal, or text that is likely to change.
+- For lists: assert order by comparing extracted values, not by assuming DOM order without stable sorting.
+
+## 5) One behavior per test
+- Each test must validate one user behavior and one core expectation.
+- If multiple behaviors are required, split into separate tests or use helper steps with clear boundaries.
+- Keep tests short and readable.
+
+## 6) Handling “real-time” features (media, sync, playback)
+Media playback is nondeterministic in CI:
+- Do NOT assert “video starts within X ms”.
+- Do NOT assert exact drift at exact times.
+Instead:
+- Assert that playback state becomes “playing”.
+- If sync is required, measure drift via repeated sampling and assert:
+  - drift converges to <= threshold within a bounded retry window, and/or
+  - drift stays below threshold for N consecutive samples.
+- Prefer stubbing/mocking the player clock when possible.
+
+## 7) Waiting strategy (mandatory)
+- Use Playwright auto-wait and expect polling.
+- Prefer:
+  - `await expect(locator).toBeVisible()`
+  - `await expect(locator).toHaveText(...)`
+  - `await page.waitForResponse(...)` (only for deterministic internal endpoints)
+- Avoid:
+  - `waitForTimeout`
+  - arbitrary sleeps
+If you must poll, implement bounded retries with clear failure messages.
+
+## 8) Diagnostics requirements
+On failure, tests must provide:
+- The relevant page URL.
+- The key UI state (e.g., visible headings, error banners).
+- Optional: screenshot or trace (if CI is configured).
+Add targeted logs for tricky flows (not noisy logging everywhere).
+
+## 9) Structure and reuse
+- Extract stable helper utilities:
+  - seed data
+  - login helper
+  - navigation helper
+  - common assertions
+- Helpers must be small and do one thing. Avoid “god helpers”.
+- Keep fixtures minimal and scenario-specific.
+
+## 10) CI considerations
+- Assume slower machines.
+- Avoid heavy parallelism that causes contention unless explicitly configured.
+- Ensure emulators are used consistently when configured (Firestore emulator etc.).
+- Never require authentication tokens or local-only resources.
+
+## 11) If a test is flaky
+When a test flakes:
+1) Identify the nondeterministic input (timing, ordering, async dependencies).
+2) Remove wall-clock assumptions.
+3) Add determinism (tie-breakers, seeded unique data, stable wait conditions).
+4) If the behavior is fundamentally nondeterministic in E2E, move it to integration tests.
+
+## 12) Output format requirements
+When you add/modify tests, you must also:
+- Update/extend fixtures (if needed) to ensure determinism.
+- Ensure tests are named as user behaviors (not file/function names).
+- Provide a short note in PR description explaining why the test is stable in CI.
+
+Follow these rules strictly. If asked to write an E2E test that violates these constraints, propose an alternative (integration/unit) or redesign the assertions to be deterministic.

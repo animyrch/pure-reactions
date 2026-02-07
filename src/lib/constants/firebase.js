@@ -31,14 +31,24 @@ export const db = getFirestore(app);
 
 // Optional Firestore emulator support (primarily for e2e + local dev).
 // Enable by setting PUBLIC_FIREBASE_USE_EMULATORS=true and optionally host/port.
+// Helper to log to the same array used by useTwinPlayers
+const log = (msg, data) => {
+    if (typeof window !== 'undefined') {
+        window.__twinPlayersLog = window.__twinPlayersLog || [];
+        window.__twinPlayersLog.push({ ts: Date.now(), msg: `[constants] ${msg}`, data });
+    }
+};
+
 if (env.PUBLIC_FIREBASE_USE_EMULATORS === 'true') {
     const host = env.PUBLIC_FIRESTORE_EMULATOR_HOST || '127.0.0.1';
     const port = Number(env.PUBLIC_FIRESTORE_EMULATOR_PORT || 8080);
     try {
         connectFirestoreEmulator(db, host, port);
+        log(`Firestore emulator connect called`, { host, port });
         // eslint-disable-next-line no-console
         console.log(`[firebase] Firestore emulator enabled at ${host}:${port}`);
     } catch (error) {
+        log(`Firestore emulator connect failed`, { error: String(error) });
         // If called twice, Firebase throws; ignore.
         // eslint-disable-next-line no-console
         console.warn('[firebase] Failed to connect Firestore emulator', error);

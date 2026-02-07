@@ -186,7 +186,6 @@
   };
 
   const normalizeOverlayVisibilityEvents = (timeline) => {
-    console.debug('[ConfigEditorV2] normalizeOverlayVisibilityEvents called', { timeline });
     if (Array.isArray(timeline) && timeline.length) {
       return timeline
         .map((event, index) => {
@@ -203,7 +202,6 @@
         })
         .filter(Boolean);
     }
-    console.debug('[ConfigEditorV2] normalizeOverlayVisibilityEvents returning empty array');
     return [];
   };
 

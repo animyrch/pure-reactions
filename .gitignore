@@ -10,3 +10,5 @@ vite.config.js.timestamp-*
 test-results
 /.netlify
 /secrets
+playwright-report/index.html
+**/firestore-debug.log

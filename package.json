@@ -10,9 +10,13 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext .js,.svelte",
+    "test:integration": "vitest run --config vitest.config.integration.js",
+    "test:integration:watch": "vitest --config vitest.config.integration.js",
     "e2e": "playwright test",
     "test:e2e": "playwright test",
-    "test:rules": "firebase emulators:exec --only firestore \"node --test tests/firestore.rules.spec.mjs\"",
+    "test:e2e:ci": "if [ -x /usr/libexec/java_home ]; then export JAVA_HOME=$(/usr/libexec/java_home -v 21); export PATH=\"$JAVA_HOME/bin:$PATH\"; fi; npx firebase-tools emulators:exec --project demo-pure-reactions --only firestore \"npm run test:e2e\"",
+    "test:e2e:ci:only": "if [ -x /usr/libexec/java_home ]; then export JAVA_HOME=$(/usr/libexec/java_home -v 21); export PATH=\"$JAVA_HOME/bin:$PATH\"; fi; npx firebase-tools emulators:exec --project demo-pure-reactions --only firestore \"npm run test:e2e -- ${PW_ARGS:-}\"",
+    "test:rules": "if [ -x /usr/libexec/java_home ]; then export JAVA_HOME=$(/usr/libexec/java_home -v 21); export PATH=\"$JAVA_HOME/bin:$PATH\"; fi; firebase emulators:exec --only firestore \"node --test tests/firestore.rules.spec.mjs\"",
     "seed": "FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/seed-twin-player-fixtures.mjs -- --target prod --allowProd",
     "seed:firestore": "FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/seed-firestore-fixtures.mjs",
     "seed:twin-fixtures": "FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/seed-twin-player-fixtures.mjs",
@@ -25,8 +29,8 @@
     "enrich-youtube": "node scripts/enrich-youtube.js"
   },
   "devDependencies": {
-    "@playwright/test": "^1.57.0",
     "@firebase/rules-unit-testing": "^3.0.1",
+    "@playwright/test": "^1.57.0",
     "@sveltejs/adapter-auto": "^2.0.0",
     "@sveltejs/adapter-netlify": "^1.0.0-next.88",
     "@sveltejs/enhanced-img": "^0.1.7",
@@ -36,14 +40,15 @@
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-svelte": "^2.39.0",
-    "firebase-tools": "^13.22.0",
     "firebase-admin": "^13.0.2",
+    "firebase-tools": "^15.4.0",
     "flowbite-svelte-icons": "^1.0.2",
     "postcss": "^8.4.32",
     "postcss-load-config": "^5.0.2",
     "svelte": "^4.0.5",
     "tailwindcss": "^3.3.6",
     "vite": "^4.4.2",
+    "vitest": "^1.5.0",
     "workbox-window": "^7.4.0"
   },
   "type": "module",
@@ -56,6 +61,7 @@
     "flowbite-svelte": "^0.44.21",
     "instantsearch.js": "^4.64.2",
     "netlify-identity-widget": "^1.9.2",
+    "sharp": "^0.34.5",
     "tailwind-merge": "^2.2.0"
   }
 }
