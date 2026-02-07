@@ -1,7 +1,8 @@
 import { env } from '$env/dynamic/public';
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getDatabase } from "firebase/database";
+import { getDatabase, connectDatabaseEmulator } from "firebase/database";
 import { getFirestore, connectFirestoreEmulator } from "firebase/firestore/lite";
+import { getAuth, connectAuthEmulator } from "firebase/auth";
 
 export const COLLECTION_REACTION_BINOMES = env.PUBLIC_FIREBASE_COLLECTION_REACTION_BINOMES;
 export const COLLECTION_USER_DATA = env.PUBLIC_FIREBASE_COLLECTION_USER_DATA;
@@ -24,11 +25,17 @@ try {
 }
 
 // Fallback for emulators (e.g. CI) where config might be missing.
-if (env.PUBLIC_FIREBASE_USE_EMULATORS === 'true' && !parsedConfig.projectId) {
-    parsedConfig.projectId = 'demo-pure-reactions';
+if (env.PUBLIC_FIREBASE_USE_EMULATORS === 'true') {
+    if (!parsedConfig.projectId) {
+        parsedConfig.projectId = 'demo-pure-reactions';
+    }
     // Provide a dummy databaseURL if missing to satisfy getDatabase requirements
     if (!parsedConfig.databaseURL) {
         parsedConfig.databaseURL = `https://${parsedConfig.projectId}-default-rtdb.firebaseio.com`;
+    }
+    // Auth requires an API key even for emulators
+    if (!parsedConfig.apiKey) {
+        parsedConfig.apiKey = 'fake-api-key-for-emu';
     }
 }
 
@@ -38,6 +45,7 @@ export const FIREBASE_CONFIG = parsedConfig;
 export const app = !getApps().length ? initializeApp(FIREBASE_CONFIG) : getApp();
 export const database = getDatabase(app);
 export const db = getFirestore(app);
+export const auth = getAuth(app);
 
 // Optional Firestore emulator support (primarily for e2e + local dev).
 // Enable by setting PUBLIC_FIREBASE_USE_EMULATORS=true and optionally host/port.
@@ -52,15 +60,31 @@ const log = (msg, data) => {
 if (env.PUBLIC_FIREBASE_USE_EMULATORS === 'true') {
     const host = env.PUBLIC_FIRESTORE_EMULATOR_HOST || '127.0.0.1';
     const port = Number(env.PUBLIC_FIRESTORE_EMULATOR_PORT || 8080);
+
+    const rtdbHost = env.PUBLIC_DATABASE_EMULATOR_HOST || host;
+    const rtdbPort = Number(env.PUBLIC_DATABASE_EMULATOR_PORT || 9000);
+
+    const authHost = env.PUBLIC_AUTH_EMULATOR_HOST || host;
+    const authPort = Number(env.PUBLIC_AUTH_EMULATOR_PORT || 9099);
+
     try {
         connectFirestoreEmulator(db, host, port);
         log(`Firestore emulator connect called`, { host, port });
         // eslint-disable-next-line no-console
         console.log(`[firebase] Firestore emulator enabled at ${host}:${port}`);
-    } catch (error) {
-        log(`Firestore emulator connect failed`, { error: String(error) });
-        // If called twice, Firebase throws; ignore.
+
+        connectDatabaseEmulator(database, rtdbHost, rtdbPort);
         // eslint-disable-next-line no-console
+        console.log(`[firebase] Realtime Database emulator enabled at ${rtdbHost}:${rtdbPort}`);
+
+        connectAuthEmulator(auth, `http://${authHost}:${authPort}`);
+        // eslint-disable-next-line no-console
+        console.log(`[firebase] Auth emulator enabled at ${authHost}:${authPort}`);
+    } catch (error) {
+        log(`Emulator connect failed`, { error: String(error) });
+        // If called twice, Firebase throws; ignore.
+    }
+}
         console.warn('[firebase] Failed to connect Firestore emulator', error);
     }
 }

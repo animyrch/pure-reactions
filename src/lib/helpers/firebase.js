@@ -36,13 +36,11 @@ import {
     COLLECTION_QUEUES,
     COLLECTION_YOUTUBE_CHANNEL_CLAIMS,
     COLLECTION_YOUTUBE_CHANNEL_VERIFICATIONS,
-    app, db
+    app, db, auth
 } from "$lib/constants/firebase";
 import { showToast } from '$lib/stores/toast';
 import { SORTINGS } from '$lib/constants/sortings';
 import { FILTERS } from '$lib/constants/filters';
-
-export const auth = getAuth(app);
 
 const createCollection = (db, params, caller) => {
     return collection(db, params);
