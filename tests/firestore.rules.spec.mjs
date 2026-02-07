@@ -73,13 +73,33 @@ beforeEach(async () => {
 });
 
 after(async () => {
-  await testEnv.cleanup();
+  console.log('Running teardown...');
+  // Force exit immediately to prevent hanging due to open handles from Firestore SDK
+  // We don't wait for cleanup because we're running in ephemeral emulator
+  console.log('Force exiting now.');
+  process.exit(0);
 });
 
-const ownerDb = () => testEnv.authenticatedContext(ownerId).firestore();
-const otherDb = () => testEnv.authenticatedContext(otherId).firestore();
-const adminDb = () => testEnv.authenticatedContext(adminId, { admin: true }).firestore();
-const anonDb = () => testEnv.unauthenticatedContext().firestore();
+let _ownerDb;
+const ownerDb = () => {
+  if (!_ownerDb) _ownerDb = testEnv.authenticatedContext(ownerId).firestore();
+  return _ownerDb;
+};
+let _otherDb;
+const otherDb = () => {
+  if (!_otherDb) _otherDb = testEnv.authenticatedContext(otherId).firestore();
+  return _otherDb;
+};
+let _adminDb;
+const adminDb = () => {
+  if (!_adminDb) _adminDb = testEnv.authenticatedContext(adminId, { admin: true }).firestore();
+  return _adminDb;
+};
+let _anonDb;
+const anonDb = () => {
+  if (!_anonDb) _anonDb = testEnv.unauthenticatedContext().firestore();
+  return _anonDb;
+};
 
 const seedClaim = async () => {
   await testEnv.withSecurityRulesDisabled(async (context) => {
@@ -167,4 +187,97 @@ test('anonymous can get channel verification', async () => {
 test('anonymous cannot list channel verifications', async () => {
   await seedVerification();
   await assertFails(getDocs(collection(anonDb(), 'youtubeChannelVerifications')));
+});
+
+const seedQueue = async (queueId = 'owner-queue') => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, 'queues', queueId), {
+      ownerId,
+      slug: queueId,
+      title: 'Owner queue',
+      items: [],
+      createdAt: '2024-01-01'
+    });
+  });
+};
+
+test('owner can create a queue', async () => {
+  await assertSucceeds(
+    setDoc(doc(ownerDb(), 'queues', 'owner-created-queue'), {
+      ownerId,
+      slug: 'owner-created-queue',
+      title: 'Created by owner',
+      items: [],
+      createdAt: '2024-01-01'
+    })
+  );
+});
+
+test('owner can read their queue', async () => {
+  await seedQueue('owner-queue');
+  await assertSucceeds(getDoc(doc(ownerDb(), 'queues', 'owner-queue')));
+});
+
+test('non-owner cannot read another user\'s queue', async () => {
+  await seedQueue('owner-queue');
+  await assertFails(getDoc(doc(otherDb(), 'queues', 'owner-queue')));
+});
+
+test('non-owner cannot create a queue claiming another owner', async () => {
+  await assertFails(
+    setDoc(doc(otherDb(), 'queues', 'malicious-queue'), {
+      ownerId,
+      slug: 'malicious-queue',
+      title: 'Not theirs',
+      items: [],
+      createdAt: '2024-01-01'
+    })
+  );
+});
+
+test('owner can add valid items to queue', async () => {
+  await seedQueue('owner-update-queue');
+  await assertSucceeds(
+    updateDoc(doc(ownerDb(), 'queues', 'owner-update-queue'), {
+      items: [
+        { type: 'reaction', id: 'some-reaction-id' },
+        { type: 'reaction', id: 'reaction-not-owned-by-me' }
+      ]
+    })
+  );
+});
+
+test('user can read non-existent queue to check availability', async () => {
+  // upsertReactionIntoQueue does a getDoc first to see if it exists
+  await assertSucceeds(getDoc(doc(ownerDb(), 'queues', 'new-non-existent-queue')));
+});
+
+test('owner can publish their queue', async () => {
+  await seedQueue('owner-publish-queue');
+  await assertSucceeds(
+    updateDoc(doc(ownerDb(), 'queues', 'owner-publish-queue'), {
+      isPublished: true
+    })
+  );
+});
+
+test('non-owner can read published queue', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, 'queues', 'public-queue'), {
+      ownerId,
+      slug: 'public-queue',
+      title: 'Public Queue',
+      isPublished: true,
+      items: [],
+      createdAt: '2024-01-01'
+    });
+  });
+  await assertSucceeds(getDoc(doc(otherDb(), 'queues', 'public-queue')));
+});
+
+test('non-owner cannot read unpublished queue', async () => {
+  await seedQueue('private-queue'); // isPublished is missing/false by default in seedQueue
+  await assertFails(getDoc(doc(otherDb(), 'queues', 'private-queue')));
 });

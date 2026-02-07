@@ -232,17 +232,19 @@ service cloud.firestore {
 
     // Queues (private to owner)
     match /queues/{queueId} {
-      allow read: if isQueueOwner();
+      // Allow read if owner OR if document doesn't exist (resource == null)
+      // OR if the queue is published
+      allow read: if resource == null || isQueueOwner() || resource.data.isPublished == true;
       allow create: if isQueueOwnerCreate();
       allow update, delete: if isQueueOwner() && request.resource.data.ownerId == resource.data.ownerId;
     }
     match /queues-local/{queueId} {
-      allow read: if isQueueOwner();
+      allow read: if resource == null || isQueueOwner() || resource.data.isPublished == true;
       allow create: if isQueueOwnerCreate();
       allow update, delete: if isQueueOwner() && request.resource.data.ownerId == resource.data.ownerId;
     }
     match /queues-prod/{queueId} {
-      allow read: if isQueueOwner();
+      allow read: if resource == null || isQueueOwner() || resource.data.isPublished == true;
       allow create: if isQueueOwnerCreate();
       allow update, delete: if isQueueOwner() && request.resource.data.ownerId == resource.data.ownerId;
     }

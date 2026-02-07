@@ -3,7 +3,7 @@
     import { page } from '$app/stores';
     import { goto } from '$app/navigation';
     import QueueBinomeCard from '$lib/components/QueueBinomeCard.svelte';
-    import { getReactionsByIds, getPlaylist, getQueueBySlug } from '$lib/helpers/firebase';
+    import { getReactionsByIds, getPlaylist, getQueueBySlug, updateQueueDocument } from '$lib/helpers/firebase';
     import { handlePrivateRoute } from '$lib/helpers/routing';
     import { readQueueProgress } from '$lib/helpers/queueProgress';
 
@@ -17,6 +17,8 @@
     let ownerId = '';
     let ownerName = '';
     let isOwner = false;
+    let isPublished = false;
+    let updatingPublishState = false;
 
     let queueEntries = [];
     let queueIsLoading = false;
@@ -60,6 +62,29 @@
         await goto(buildQueueWatchUrl(target.reactionId, idx, { autoplay: true, fullscreen: false }));
     };
 
+    const handleTogglePublish = async () => {
+        if (!queueDefinition?.id || updatingPublishState) return;
+        updatingPublishState = true;
+        const newState = !isPublished;
+        const userId = $page.data?.userId;
+        
+        try {
+            await updateQueueDocument({
+                slug: queueDefinition.id,
+                isPublished: newState,
+                userId
+            });
+            isPublished = newState;
+            if (queueDefinition?.data) queueDefinition.data.isPublished = newState;
+        } catch (error) {
+            console.error('Failed to update public status', error);
+            // Revert is not needed because we only update local state on success 
+            // but we bind strictly via a change handler in UI for safety
+        } finally {
+            updatingPublishState = false;
+        }
+    };
+
     const hydrateQueueItems = async () => {
         const authedUserId = $page?.data?.userId;
         if (!authedUserId) {
@@ -79,6 +104,7 @@
 
         ownerId = queueDefinition?.data?.ownerId || '';
         isOwner = Boolean(ownerId && ownerId === authedUserId);
+        isPublished = queueDefinition?.data?.isPublished ?? false;
         ownerName = (isOwner ? ($page.data?.displayName || '') : (queueDefinition?.data?.ownerName || '')).trim();
 
         const reactionIds = queueDefinition.data?.items
@@ -241,6 +267,19 @@
                     <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 backdrop-blur">
                         {queueEntries.length} reaction{queueEntries.length === 1 ? '' : 's'} in queue
                     </span>
+                    {#if isOwner}
+                         <button 
+                            type="button"
+                            role="switch"
+                            aria-checked={isPublished}
+                            on:click={handleTogglePublish}
+                            disabled={updatingPublishState}
+                            class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 backdrop-blur transition-colors hover:bg-white/10 disabled:opacity-50"
+                        >
+                            <span class={`h-2 w-2 rounded-full ${isPublished ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-white/20'}`}></span>
+                            <span>{isPublished ? 'Public' : 'Private'}</span>
+                        </button>
+                    {/if}
                     {#if ownerId}
                         <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 backdrop-blur">
                             {#if isOwner}

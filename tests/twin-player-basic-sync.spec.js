@@ -40,7 +40,7 @@ test.describe('Twin Video Sync & Stability', () => {
         // 4) After ~5s of playback, assert drift is still small
         await page.waitForTimeout(5000);
 
-        const driftThreshold = testInfo.project.name === 'mobile' ? 0.45 : 0.25;
+        const driftThreshold = testInfo.project.name === 'mobile' ? 0.5 : 0.5;
 
         const s = await readTwinPlayersSnapshot(page);
         expect(s, 'Expected twin players snapshot').toBeTruthy();

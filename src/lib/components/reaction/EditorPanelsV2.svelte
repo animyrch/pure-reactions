@@ -98,7 +98,10 @@
   syncOffsetStartInputs(offsetStartTime);
 
   const syncReactionFinishInputs = (value) => {
-    const totalSeconds = Math.max(0, Number(value) || 0);
+    // If value is 0 (or falsy) use reactionDuration, otherwise use the value.
+    const effectiveValue =
+      Number(value) > 0 ? Number(value) : reactionDuration || 0;
+    const totalSeconds = Math.max(0, effectiveValue);
     const minutesPart = Math.floor(totalSeconds / 60);
     const secondsPartRaw = totalSeconds - minutesPart * 60;
     const secondsPart = Math.round(secondsPartRaw * 10) / 10; // 1 decimal
@@ -125,11 +128,15 @@
     syncReactionFinishInputs(reactionFinishTime);
   }
 
+  // Also sync if duration changes AND we are currently showing default (finish time is 0)
+  $: if (reactionDuration && reactionFinishTime <= 0) {
+    syncReactionFinishInputs(reactionFinishTime);
+  }
+
   $: if (soundLevel !== lastSoundLevelProp) {
     lastSoundLevelProp = soundLevel;
     soundLevelValue = Number.isFinite(soundLevel) ? soundLevel : 100;
   }
-
 
   $: trimmedReactionVideoIdValue = (reactionVideoIdValue ?? "").trim();
   $: currentReactionVideoId = (reactionVideoId ?? "").trim();
@@ -182,7 +189,6 @@
   $: isSoundLevelDirty =
     Number.isFinite(soundLevelValue) && soundLevelValue !== soundLevel;
 
-
   const handleReactionVideoSubmit = () => {
     if (!trimmedReactionVideoIdValue) return;
     onSetReactionVideoId(trimmedReactionVideoIdValue);
@@ -219,7 +225,6 @@
     soundLevelValue = Number.isNaN(value) ? SOUND_LEVEL_MIN : value;
   };
 
-
   const handleToggleFineTuneMode = () => {
     onToggleFineTuneMode();
   };
@@ -227,7 +232,6 @@
   const handleToggleReactionMuteMode = () => {
     onSetReactionMuteMode(!isReactionMuteModeEnabled);
   };
-
 
   const handleCreatePlayerConfig = async (event) => {
     const detail = event?.detail;
@@ -288,7 +292,10 @@
       showToast("Overlay visibility cue added.", TOASTS.SUCCESS);
     } catch (error) {
       console.error("Failed to add overlay visibility config", error);
-      showToast("Unable to add that visibility cue. Try again.", TOASTS.WARNING);
+      showToast(
+        "Unable to add that visibility cue. Try again.",
+        TOASTS.WARNING,
+      );
     }
   };
 
@@ -402,7 +409,10 @@
       showToast("Overlay visibility cue updated.", TOASTS.SUCCESS);
     } catch (error) {
       console.error("Failed to update overlay visibility config", error);
-      showToast("Unable to update that visibility cue. Try again.", TOASTS.WARNING);
+      showToast(
+        "Unable to update that visibility cue. Try again.",
+        TOASTS.WARNING,
+      );
     }
   };
 
@@ -414,7 +424,10 @@
       showToast("Overlay visibility cue removed.", TOASTS.SUCCESS);
     } catch (error) {
       console.error("Failed to delete overlay visibility config", error);
-      showToast("Unable to remove that visibility cue. Try again.", TOASTS.WARNING);
+      showToast(
+        "Unable to remove that visibility cue. Try again.",
+        TOASTS.WARNING,
+      );
     }
   };
 
@@ -544,55 +557,52 @@
             </div>
           </form>
 
-          {#if isPlaylist}
-            <form
-              class="flex flex-col gap-4"
-              on:submit|preventDefault={handleReactionFinishTimeSubmit}
-            >
-              <div>
-                <h3 class="text-sm font-medium text-text-secondary">
-                  Reaction finish time
-                </h3>
-                <p class="mt-1 text-sm text-text-muted">
-                  Stop the reaction video once it reaches this timestamp
-                  (playlist reactions only).
-                </p>
-              </div>
+          <form
+            class="flex flex-col gap-4"
+            on:submit|preventDefault={handleReactionFinishTimeSubmit}
+          >
+            <div>
+              <h3 class="text-sm font-medium text-text-secondary">
+                Reaction finish time
+              </h3>
+              <p class="mt-1 text-sm text-text-muted">
+                Stop the reaction video once it reaches this timestamp.
+              </p>
+            </div>
 
-              <div class="grid gap-4 sm:grid-cols-2">
-                <AccessibleInput
-                  id="reaction-finish-minutes"
-                  label="Minutes"
-                  type="number"
-                  min="0"
-                  step="1"
-                  bind:value={reactionFinishMinutesValue}
-                  required
-                />
-                <AccessibleInput
-                  id="reaction-finish-seconds"
-                  label="Seconds"
-                  type="number"
-                  min="0"
-                  max="59.9"
-                  step="0.1"
-                  bind:value={reactionFinishSecondsValue}
-                  required
-                />
-              </div>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <AccessibleInput
+                id="reaction-finish-minutes"
+                label="Minutes"
+                type="number"
+                min="0"
+                step="1"
+                bind:value={reactionFinishMinutesValue}
+                required
+              />
+              <AccessibleInput
+                id="reaction-finish-seconds"
+                label="Seconds"
+                type="number"
+                min="0"
+                max="59.9"
+                step="0.1"
+                bind:value={reactionFinishSecondsValue}
+                required
+              />
+            </div>
 
-              <div class="flex justify-end">
-                <CinematicButton
-                  type="submit"
-                  size="sm"
-                  variant="secondary"
-                  disabled={!isReactionFinishTimeDirty}
-                >
-                  <span>Save finish time</span>
-                </CinematicButton>
-              </div>
-            </form>
-          {/if}
+            <div class="flex justify-end">
+              <CinematicButton
+                type="submit"
+                size="sm"
+                variant="secondary"
+                disabled={!isReactionFinishTimeDirty}
+              >
+                <span>Save finish time</span>
+              </CinematicButton>
+            </div>
+          </form>
         </div>
 
         <form

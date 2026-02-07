@@ -112,7 +112,7 @@ export const createPlaylistDocument = async ({ reactionDocumentId, originalVideo
     }
 };
 
-export const createQueueDocument = async ({ slug, title, description, items, userId }) => {
+export const createQueueDocument = async ({ slug, title, description, items, isPublished, userId }) => {
     const sanitizedSlug = slugifyQueueName(slug);
     if (!userId) {
         throw new Error('User must be logged in to create a queue.');
@@ -137,7 +137,9 @@ export const createQueueDocument = async ({ slug, title, description, items, use
             title: title?.trim?.() || '',
             description: description?.trim?.() || '',
             items: Array.isArray(items) ? items : [],
+            isPublished: !!isPublished,
             ownerId: userId,
+            ownerName: (auth?.currentUser?.displayName || '').trim(),
             createdAt: existingSnap.exists() ? existingSnap.data()?.createdAt ?? serverTimestamp() : serverTimestamp(),
             updatedAt: serverTimestamp()
         };
@@ -146,6 +148,44 @@ export const createQueueDocument = async ({ slug, title, description, items, use
         return sanitizedSlug;
     } catch (error) {
         console.error('Error creating queue document: ', error);
+        throw error;
+    }
+};
+
+export const updateQueueDocument = async ({ slug, title, description, isPublished, userId }) => {
+    if (!userId) {
+        throw new Error('User must be logged in to update a queue.');
+    }
+    if (!slug) {
+        throw new Error('Queue slug is required.');
+    }
+
+    const queuesCollection = createCollection(db, COLLECTION_QUEUES, 'updateQueueDocument');
+    const queueRef = doc(queuesCollection, slug);
+
+    try {
+        const snap = await getDoc(queueRef);
+        if (!snap.exists()) {
+            throw new Error('Queue not found.');
+        }
+
+        const data = snap.data();
+        if (data.ownerId !== userId) {
+            throw new Error('You can only update your own queues.');
+        }
+
+        const updates = {
+            updatedAt: serverTimestamp()
+        };
+        
+        if (title !== undefined) updates.title = title.trim();
+        if (description !== undefined) updates.description = description.trim();
+        if (isPublished !== undefined) updates.isPublished = Boolean(isPublished);
+
+        await updateDoc(queueRef, updates);
+        return slug;
+    } catch (error) {
+        console.error('Error updating queue document: ', error);
         throw error;
     }
 };
