@@ -17,8 +17,19 @@ let parsedConfig = {};
 try {
     parsedConfig = env.PUBLIC_FIREBASE_CONFIG ? JSON.parse(env.PUBLIC_FIREBASE_CONFIG) : {};
 } catch (e) {
+    // eslint-disable-next-line no-console
     console.error('[firebase] Failed to parse PUBLIC_FIREBASE_CONFIG. Raw value:', env.PUBLIC_FIREBASE_CONFIG);
+    // eslint-disable-next-line no-console
     console.error('[firebase] Parse error:', e);
+}
+
+// Fallback for emulators (e.g. CI) where config might be missing.
+if (env.PUBLIC_FIREBASE_USE_EMULATORS === 'true' && !parsedConfig.projectId) {
+    parsedConfig.projectId = 'demo-pure-reactions';
+    // Provide a dummy databaseURL if missing to satisfy getDatabase requirements
+    if (!parsedConfig.databaseURL) {
+        parsedConfig.databaseURL = `https://${parsedConfig.projectId}-default-rtdb.firebaseio.com`;
+    }
 }
 
 export const FIREBASE_CONFIG = parsedConfig;
