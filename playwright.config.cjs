@@ -47,6 +47,9 @@ module.exports = defineConfig({
             ...process.env,
             PUBLIC_FIREBASE_USE_EMULATORS: process.env.PUBLIC_FIREBASE_USE_EMULATORS,
             PUBLIC_DISABLE_YOUTUBE_METADATA_SYNC: process.env.PUBLIC_DISABLE_YOUTUBE_METADATA_SYNC,
+            // Automatically propagate emulator host/port from firebase-tools to the web app
+            PUBLIC_FIRESTORE_EMULATOR_HOST: process.env.FIRESTORE_EMULATOR_HOST?.split(':')[0],
+            PUBLIC_FIRESTORE_EMULATOR_PORT: process.env.FIRESTORE_EMULATOR_HOST?.split(':')[1],
         },
     },
 });

@@ -13,12 +13,12 @@ jobs:
     env:
       # Public config
       PUBLIC_FIREBASE_USE_EMULATORS: "true"
-      PUBLIC_FIREBASE_COLLECTION_REACTION_BINOMES: "reactions-test"
-      PUBLIC_FIREBASE_COLLECTION_USER_DATA: "users-test"
-      PUBLIC_FIREBASE_COLLECTION_PLAYLISTS: "playlists-test"
-      PUBLIC_FIREBASE_COLLECTION_QUEUES: "queues-test"
-      PUBLIC_FIREBASE_COLLECTION_YOUTUBE_CHANNEL_CLAIMS: "claims-test"
-      PUBLIC_FIREBASE_COLLECTION_YOUTUBE_CHANNEL_VERIFICATIONS: "verifications-test"
+      PUBLIC_FIREBASE_COLLECTION_REACTION_BINOMES: "reactions-local"
+      PUBLIC_FIREBASE_COLLECTION_USER_DATA: "userdata-local"
+      PUBLIC_FIREBASE_COLLECTION_PLAYLISTS: "playlists-local"
+      PUBLIC_FIREBASE_COLLECTION_QUEUES: "queues-local"
+      PUBLIC_FIREBASE_COLLECTION_YOUTUBE_CHANNEL_CLAIMS: "youtubeChannelClaims_local"
+      PUBLIC_FIREBASE_COLLECTION_YOUTUBE_CHANNEL_VERIFICATIONS: "youtubeChannelVerifications_local"
       PUBLIC_DISABLE_YOUTUBE_METADATA_SYNC: "true"
       # Private config (dummy values for testing)
       YOUTUBE_API_KEY: "dummy_key_for_tests"
