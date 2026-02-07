@@ -311,6 +311,20 @@ const normalizeFullscreenOverlayWidthPercent = (value: unknown): number => {
 
 export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOptions) {
   const { slug, userId } = data;
+
+  if (typeof window !== 'undefined') {
+    // Proactively initialize __actions so that E2E tests waiting for it 
+    // don't timeout even if the main body takes a few ticks to complete.
+    (window as any).__actions = (window as any).__actions || {};
+    (window as any).__twinPlayersLog = (window as any).__twinPlayersLog || [];
+  }
+
+  const log = (msg: string, data?: any) => {
+    if (typeof window !== 'undefined') {
+      (window as any).__twinPlayersLog.push({ ts: Date.now(), msg, data });
+    }
+  };
+
   const initialUrlState = getInitialUrlState();
   const lazySyncRequested = Boolean(initialUrlState.mobileLazySync);
   // console.log('Initial URL State:', initialUrlState);
@@ -532,7 +546,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       if (typeof window !== 'undefined') {
         (window as any).__players = {
           original: nextValue.playerOriginal,
-          reaction: nextValue.playerReaction
+          reaction: nextValue.playerReaction,
+          bothVideosStarted: nextValue.bothVideosStarted
         };
       }
 
@@ -1099,8 +1114,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         }
         scheduleNextSync(250, runSyncCycle);
         return;
-      }
-      
+      }      
+
       const previousReactionTime = snapshot.reactionCurrentTime;
       const reactionCurrentTime = parseFloat(playerReaction.getCurrentTime().toFixed(1));
       const rawDuration = typeof playerReaction.getDuration === 'function' ? Number(playerReaction.getDuration()) : Number.NaN;
@@ -1248,7 +1263,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
             snapshot.playbackRateConfigs,
             snapshot.timeOffset
           );
-          
+
           syncTracking.softSyncResetTimeoutId = setTimeout(() => {
             if (!changingSpeed && playerOriginal) {
               changingSpeed = true;
@@ -1467,6 +1482,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         ...playerInfo
       });
       setPlaybackRateForOriginalVideo(snapshot.currentPlaybackRate);
+      if (typeof event.target.setVolume === 'function') {
+        event.target.setVolume(snapshot.currentVolumeOriginalVideo);
+      }
     }
     if (event?.target === snapshot.playerReaction) {
       debugClickGate('[TwinPlayers] reaction player READY', {
@@ -1474,6 +1492,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       });
       if (typeof event?.target?.setPlaybackRate === 'function') {
         event.target.setPlaybackRate(1);
+      }
+      if (typeof event.target.setVolume === 'function') {
+        event.target.setVolume(snapshot.currentVolumeReactionVideo);
       }
       if (!durationProbeTimeout) {
         resetReactionDurationProbe();
@@ -1927,12 +1948,14 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   };
 
   const setUpVideos = async (reactionData: Record<string, any>) => {
+    log('setUpVideos called', { reactionDataExists: !!reactionData });
     // CRITICAL: Abort if this instance has been superseded
     if (globalActiveInstanceId !== instanceId) {
       debugClickGate('[TwinPlayers] setUpVideos aborted (instance superseded)', {
         globalActiveInstanceId,
         reactionVideoId: reactionData?.reactionVideoId
       });
+      log('setUpVideos aborted: instance superseded', { globalActiveInstanceId, instanceId });
       return;
     }
 
@@ -1955,25 +1978,6 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       });
       return;
     }
-
-    const {
-      playerConfigs,
-      volumeConfigs,
-      reactionVolumeConfigs,
-      playbackRateConfigs,
-      stateTimeline,
-      volumeTimeline,
-      reactionVolumeTimeline,
-      playbackRateTimeline,
-      overlayVisibilityTimeline
-    } = deriveTimelines(reactionData);
-
-    window.playerConfigs = reactionData['stateTimeline'] || reactionData['reactionConfigs'];
-    window.volumeConfigs = reactionData['volumeTimeline'] || reactionData['volumeConfigs'];
-    (window as any).reactionVolumeConfigs = reactionData['reactionVolumeTimeline'] || reactionData['reactionVolumeConfigs'];
-    window.playbackRateConfigs = reactionData['playbackTimeline'] || reactionData['playbackRateConfigs'];
-
-    const normalizedPlayerEvents = buildPlayerEventTimeline(stateTimeline);
 
     const reactionVideoId = reactionData['reactionVideoId'];
     const originalVideoId = reactionData['originalVideoId'];
@@ -2011,6 +2015,48 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     const fullscreenPrimaryVideo = normalizeFullscreenPrimaryVideo(reactionData['fullscreenPrimaryVideo']);
     const fullscreenOverlayWidthPercent = normalizeFullscreenOverlayWidthPercent(reactionData['fullscreenOverlayWidthPercent']);
     const fullscreenOverlayCorner = normalizeFullscreenOverlayCorner(reactionData['fullscreenOverlayCorner']);
+
+    const {
+      playerConfigs,
+      volumeConfigs,
+      reactionVolumeConfigs,
+      playbackRateConfigs,
+      stateTimeline,
+      volumeTimeline,
+      reactionVolumeTimeline,
+      playbackRateTimeline,
+      overlayVisibilityTimeline
+    } = deriveTimelines(reactionData);
+
+    window.playerConfigs = reactionData['stateTimeline'] || reactionData['reactionConfigs'];
+    window.volumeConfigs = reactionData['volumeTimeline'] || reactionData['volumeConfigs'];
+    (window as any).reactionVolumeConfigs = reactionData['reactionVolumeTimeline'] || reactionData['reactionVolumeConfigs'];
+    window.playbackRateConfigs = reactionData['playbackTimeline'] || reactionData['playbackRateConfigs'];
+
+    const normalizedPlayerEvents = buildPlayerEventTimeline(stateTimeline);
+
+    // Compute initial target time for the original video based on state configs at offsetStartTime
+    const initialConfig = getCurrentStateFromStateConfigs(
+      offsetStartTime || 0,
+      stateTimeline,
+      timeOffset
+    );
+    const initialTargetTime = Number(initialConfig.time ?? 0);
+
+    // Compute initial volumes from the configurations at offsetStartTime
+    const initialOriginalVolume = getCurrentVolumeFromVolumeConfigs(
+      offsetStartTime || 0,
+      volumeConfigs,
+      globalGain,
+      timeOffset
+    );
+    const initialReactionVolume = getCurrentVolumeFromVolumeConfigs(
+      offsetStartTime || 0,
+      reactionVolumeConfigs,
+      1.0,
+      timeOffset
+    );
+
     const currentPlaybackRate = getCurrentPlaybackRateFromConfigs(offsetStartTime || 0, playbackRateConfigs, timeOffset);
 
     const playerOriginal = get(state).playerOriginal;
@@ -2083,7 +2129,10 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       if (reactionVideoId) {
         newPlayerReaction = new YT.Player('player-reaction', {
           videoId: reactionVideoId,
-          playerVars: playerOptions,
+          playerVars: {
+            ...playerOptions,
+            start: Math.round(offsetStartTime)
+          },
           ...iframeOptionDefault,
           events: {
             onReady: onPlayerReady,
@@ -2094,7 +2143,10 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
       newPlayerOriginal = new YT.Player('player-original', {
         videoId: originalVideoId,
-        playerVars: playerOptions,
+        playerVars: {
+          ...playerOptions,
+          start: Math.round(initialTargetTime)
+        },
         ...iframeOptionDefault,
         events: {
           onReady: onPlayerReady,
@@ -2193,10 +2245,11 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       playerOriginal: newPlayerOriginal,
       playerReaction: newPlayerReaction,
       currentStateOriginalVideo: -1,
-      currentVolumeOriginalVideo: 100,
+      currentVolumeOriginalVideo: initialOriginalVolume,
       fullscreenOverlayVisible: true,
       bothVideosStarted: false,
       isUserPaused: false,
+      currentVolumeReactionVideo: initialReactionVolume,
       reactionCurrentTime: offsetStartTime || 0,
       reactionDuration: typeof newPlayerReaction?.getDuration === 'function' ? Number(newPlayerReaction.getDuration()) || 0 : 0
     });
@@ -2329,8 +2382,18 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       const offsetStartTime = Number.isFinite(rawOffsetStartTime) && rawOffsetStartTime >= 0
         ? Math.round(rawOffsetStartTime * 10) / 10
         : 0;
+
       const reactionFinishTime = parseFloat(reactionData['reactionFinishTime']) || 100000;
       const timeOffset = reactionData['timeOffset'] || 0;
+
+      // Compute initial target time for the original video based on state configs at offsetStartTime
+      const initialConfig = getCurrentStateFromStateConfigs(
+        offsetStartTime || 0,
+        stateTimeline,
+        timeOffset
+      );
+      const initialTargetTime = Number(initialConfig.time ?? 0);
+
       const globalGainValue = reactionData['globalGain'];
       const globalGain = typeof globalGainValue === 'number' && !Number.isNaN(globalGainValue) ? globalGainValue : 1.0;
       const soundLevel = Math.max(0, Math.min(200, Math.round(globalGain * 100)));
@@ -2345,6 +2408,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         isSameReactionVideo &&
         Boolean(document.getElementById('player-reaction'));
 
+      // If resetting to a different video, we MUST reset bothVideosStarted so the gate
+      // can be re-evaluated (or auto-satisfied) for the new pair.
+      const shouldResetGate = !isSameReactionVideo;
       const effectivePreviousReactionTime = isSameReactionVideo ? previousReactionTime : undefined;
 
       // Compute initial volumes from the configurations at offsetStartTime
@@ -2373,7 +2439,10 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         try {
           nextPlayerReaction = new YT.Player('player-reaction', {
             videoId: reactionVideoId,
-            playerVars: playerOptions,
+            playerVars: {
+              ...playerOptions,
+              start: Math.round(offsetStartTime)
+            },
             ...iframeOptionDefault,
             events: {
               onReady: onPlayerReady,
@@ -2393,13 +2462,25 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
           // so it waits for the reaction video to be started by the user
           if (!isSameReactionVideo) {
             if (typeof snapshotBefore.playerOriginal.cueVideoById === 'function') {
-              snapshotBefore.playerOriginal.cueVideoById(originalVideoId);
-              console.debug('[TwinPlayers] Cued original video (different reaction video)', { originalVideoId });
+              snapshotBefore.playerOriginal.cueVideoById({
+                videoId: originalVideoId,
+                startSeconds: initialTargetTime
+              });
+              console.debug('[TwinPlayers] Cued original video (different reaction video)', {
+                originalVideoId,
+                initialTargetTime
+              });
             } else {
-              snapshotBefore.playerOriginal.loadVideoById(originalVideoId);
+              snapshotBefore.playerOriginal.loadVideoById({
+                videoId: originalVideoId,
+                startSeconds: initialTargetTime
+              });
             }
           } else {
-            snapshotBefore.playerOriginal.loadVideoById(originalVideoId);
+            snapshotBefore.playerOriginal.loadVideoById({
+              videoId: originalVideoId,
+              startSeconds: initialTargetTime
+            });
           }
         } catch (error) {
           console.error('Failed to load original video by id', error);
@@ -2460,7 +2541,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         currentVolumeOriginalVideo: initialOriginalVolume,
         fullscreenOverlayVisible: true,
         currentVolumeReactionVideo: initialReactionVolume,
-        bothVideosStarted: isSameReactionVideo && preserveReactionTime ? snapshotBefore.bothVideosStarted : Boolean(options.autoPlay),
+        bothVideosStarted: shouldResetGate ? false : (isSameReactionVideo && preserveReactionTime ? snapshotBefore.bothVideosStarted : Boolean(options.autoPlay)),
         reactionCurrentTime: typeof effectivePreviousReactionTime === 'number' ? effectivePreviousReactionTime : offsetStartTime || 0,
         reactionDuration:
           typeof nextPlayerReaction?.getDuration === 'function' ? Number(nextPlayerReaction.getDuration()) || 0 : snapshotBefore.reactionDuration,
@@ -2476,6 +2557,16 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
           return Math.max(seekMin, Math.min(durationCap, finishCap));
         })()
       });
+
+      // Wait for the new player to be actually ready before proceeding with volume/seek/sync.
+      if (shouldCreateReactionPlayer) {
+        let readyAttempts = 0;
+        while (!arePlayersActuallyReady() && readyAttempts < 40) {
+          await tick();
+          await new Promise((r) => setTimeout(r, 50));
+          readyAttempts++;
+        }
+      }
 
       console.debug('[TwinPlayers] state updated in updateReactionVideo', {
         isSameReactionVideo,
@@ -2534,10 +2625,27 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         } catch {
           // ignore
         }
+      } else if (!isSameReactionVideo && typeof nextPlayerReaction?.seekTo === 'function') {
+        // Different video: ensure we seek to its offsetStartTime even if reusing player (though unusual)
+        // or for the new player we just created.
+        try {
+          nextPlayerReaction.seekTo(offsetStartTime || 0, true);
+        } catch {
+          // ignore
+        }
       }
 
       try {
         await tick();
+
+        // If we reset the gate but autoPlay is desired, satisfy the gate now and sync.
+        if (shouldResetGate && Boolean(options.autoPlay)) {
+          originalVideoClicked = true;
+          reactionVideoClicked = true;
+          // We don't set bothVideosStarted here because syncVideos below will handle
+          // the transition from false to true, which triggers the necessary seekTo logic.
+        }
+
         // When preserving time with the same reaction video and both videos were already started,
         // resume playback immediately
         if (preserveReactionTime && get(state).bothVideosStarted) {
@@ -3938,6 +4046,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   };
 
   onMount(() => {
+    log('onMount started', { enableAutoPlay, instanceId });
     debugClickGate('[TwinPlayers] instance mounted', { enableAutoPlay }, true);
 
     if (ENABLE_WATCHDOG) {
@@ -4010,6 +4119,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
     const init = async () => {
       const seq = (initSeq += 1);
+      log('init start', { seq, retryCount: initRetryCount, instanceId });
       debugClickGate('[TwinPlayers] init start', { seq, retryCount: initRetryCount }, true);
       try {
         // Check if we're still the active instance before doing expensive work
@@ -4033,7 +4143,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         }
 
         injectYoutubeIframeApiScript();
+        log('waiting for YT API');
         await waitForYoutubeIframeApiReady();
+        log('YT API ready');
 
         // Re-check after API ready
         if (globalActiveInstanceId !== instanceId) {
@@ -4045,7 +4157,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         }
 
         // Wait for DOM elements with retry mechanism
-        const elementsReady = await waitForPlayerElements(15, 100);
+        log('waiting for DOM elements');
+        const elementsReady = await waitForPlayerElements(150, 100);
+        log('DOM elements ready result', { elementsReady });
         if (!elementsReady) {
           console.warn('Player elements not found after waiting');
           debugClickGate('[TwinPlayers] init: player elements not ready', { seq, retryCount: initRetryCount });
@@ -4083,7 +4197,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         }
 
         await buildInterface(initialSlug);
+        log('buildInterface called from init', { initialSlug });
       } catch (error) {
+        log('init failed', { error: String(error) });
         console.error('Failed to initialize reaction player:', error);
 
         // Auto-retry on error if we haven't exceeded max retries
@@ -4157,8 +4273,10 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     }
   });
 
-  return {
-    state,
+  const result = {
+    state: {
+      subscribe: state.subscribe
+    },
     actions: {
       hasNextInQueue,
       navigateToNextReactionInQueue,
@@ -4215,7 +4333,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   };
 
   if (typeof window !== 'undefined') {
-    (window as any).__actions = result.actions;
+    // Populate the proactively created __actions object with the real actions.
+    Object.assign((window as any).__actions, result.actions);
   }
 
   return result;

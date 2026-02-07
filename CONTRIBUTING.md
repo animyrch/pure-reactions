@@ -1,6 +1,32 @@
 # Contributing to Pure Reactions
 
-Thank you for your interest in contributing to Pure Reactions! This document provides guidelines for contributing to the project.
+
+Thank you for your interest in contributing to Pure Reactions! This document provides guidelines for contributing to the open-source parts of the project.
+
+
+## Scope of Contributions
+
+
+Pure Reactions is an open-source project with a publicly hosted platform.
+
+
+- The open-source repository contains the core application code, shared logic, and public-facing features.
+- The hosted Pure Reactions service includes platform-specific concerns such as infrastructure, operations, moderation workflows, and business-related logic.
+
+
+Some issues and tasks are intentionally not open to external contribution.
+
+
+### Issue Labels
+
+
+- **maintainer-only**
+Issues labeled maintainer-only are handled exclusively by project maintainers.
+These typically relate to the hosted Pure Reactions platform and are outside the scope of community contributions.
+
+
+Please do not open pull requests for issues labeled maintainer-only, unless explicitly invited by a maintainer.
+
 
 ## Code of Conduct
 
@@ -97,6 +123,7 @@ npm run build
 - Ensure all tests pass
 - Keep changes focused and atomic
 - Update documentation if needed
+- Do not submit pull requests for issues labeled maintainer-only unless explicitly requested by a project maintainer
 
 ## Reporting Issues
 
@@ -119,3 +146,5 @@ Feel free to open an issue for questions or discussions about the project.
 ## License
 
 By contributing to Pure Reactions, you agree that your contributions will be licensed under the Apache License 2.0.
+
+This license permits use, modification, and distribution of contributions in both open-source and commercial contexts, including use as part of the hosted Pure Reactions service.

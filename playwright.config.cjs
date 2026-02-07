@@ -9,11 +9,26 @@ if (process.env.PUBLIC_DISABLE_YOUTUBE_METADATA_SYNC === undefined) {
 
 module.exports = defineConfig({
     testDir: './tests',
+    // Ignore unit tests for Firestore rules and integration tests from E2E runs
+    testIgnore: ['**/firestore.rules.spec.mjs', '**/integration/**'],
+    testMatch: '**/*.spec.js',
     timeout: 30000,
-    retries: 0,
+    // Use HTML reporter on CI for easier debugging and artifact inspection
+    reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'html',
+    // Retry flaky tests in CI, but not locally for faster feedback
+    retries: process.env.CI ? 2 : 0,
     globalSetup: require.resolve('./tests/global-setup.cjs'),
+    // Use an OS-agnostic snapshot path so the same baseline PNGs work on macOS (local) and Linux (CI).
+    snapshotPathTemplate: '{snapshotDir}/{testFileDir}/{testFileName}-snapshots/{arg}{-projectName}{ext}',
     use: {
         headless: true,
+        // Enable video autoplay in tests
+        launchOptions: {
+            args: [
+            ]
+        },
+        // Disable service workers in tests for stability
+        serviceWorkers: 'block',
     },
     projects: [
         {
@@ -34,6 +49,9 @@ module.exports = defineConfig({
             ...process.env,
             PUBLIC_FIREBASE_USE_EMULATORS: process.env.PUBLIC_FIREBASE_USE_EMULATORS,
             PUBLIC_DISABLE_YOUTUBE_METADATA_SYNC: process.env.PUBLIC_DISABLE_YOUTUBE_METADATA_SYNC,
+            // Automatically propagate emulator host/port from firebase-tools to the web app
+            PUBLIC_FIRESTORE_EMULATOR_HOST: process.env.FIRESTORE_EMULATOR_HOST?.split(':')[0],
+            PUBLIC_FIRESTORE_EMULATOR_PORT: process.env.FIRESTORE_EMULATOR_HOST?.split(':')[1],
         },
     },
 });

@@ -21,12 +21,14 @@ test.describe('Account Deletion UI', () => {
 
     test('should redirect unauthenticated users to login', async ({ page }) => {
         // Unauthenticated users should be redirected away from /account
-        // Wait for navigation to complete
-        await page.waitForLoadState('networkidle');
+        // We use a regex to match the login page URL, allowing for query parameters
+        // On mobile/slower environments, we give it more time to settle
+        await expect(page).toHaveURL(/.*login.*/, { timeout: 20000 });
         
-        // Should not be on /account page anymore
-        const url = page.url();
-        expect(url).not.toContain('/account');
+        // Verify we landed on the login page by checking for the stable Login button
+        // We use .first() because there might be multiple "Login" text elements (e.g. toggle links)
+        const loginButton = page.getByRole('button', { name: 'Login', exact: true }).first();
+        await expect(loginButton).toBeVisible({ timeout: 10000 });
     });
 
     test('account settings page should exist', async ({ page }) => {

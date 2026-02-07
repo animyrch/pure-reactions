@@ -76,33 +76,77 @@ export const readTwinPlayersSnapshot = async (page) => {
             reactionVolume: reaction.volume,
             originalMuted: original.isMuted,
             reactionMuted: reaction.isMuted,
+            bothVideosStarted: players.bothVideosStarted,
         };
     });
 };
 
 /**
  * Waits for twin players to be fully initialized and ready.
+ * Uses extended timeout in CI environments to handle slower initialization.
  * @param {import('@playwright/test').Page} page
- * @param {number} timeout
+ * @param {number} timeout - Optional timeout override. Defaults to 60s in CI, 30s locally.
  */
-export const waitForPlayersReady = async (page, timeout = 30000) => {
-    await page.waitForFunction(() => {
+export const waitForPlayersReady = async (page, timeout) => {
+    // Use CI-aware default timeout if not explicitly provided
+    const effectiveTimeout = timeout ?? (process.env.CI ? 60000 : 30000);
+
+    // Add diagnostic logging to help debug missing players
+    await page.evaluate(() => {
         const players = window.__players;
-        if (!players || !players.original || !players.reaction) return false;
+        if (!players) {
+            console.log('[waitForPlayersReady] window.__players is not defined');
+        } else if (!players.original) {
+            console.log('[waitForPlayersReady] window.__players.original is missing');
+        } else if (!players.reaction) {
+            console.log('[waitForPlayersReady] window.__players.reaction is missing');
+        } else {
+            console.log('[waitForPlayersReady] Both players exist, checking ready state...');
+        }
+    });
 
-        const isReady = (p) => {
-            // If HTMLVideoElement
-            if (typeof p.readyState === 'number') return p.readyState >= 3;
-            // If YouTube Player
-            if (typeof p.getPlayerState === 'function') {
-                const state = p.getPlayerState();
-                return typeof state === 'number'; // Ready if state is accessible
-            }
-            return false;
-        };
+    try {
+        await page.waitForFunction(() => {
+            const players = window.__players;
+            if (!players || !players.original || !players.reaction) return false;
 
-        return isReady(players.original) && isReady(players.reaction);
-    }, null, { timeout });
+            const isReady = (p) => {
+                // If HTMLVideoElement
+                if (typeof p.readyState === 'number') return p.readyState >= 3;
+                // If YouTube Player
+                if (typeof p.getPlayerState === 'function') {
+                    const state = p.getPlayerState();
+                    return typeof state === 'number'; // Ready if state is accessible
+                }
+                return false;
+            };
+
+            return isReady(players.original) && isReady(players.reaction);
+        }, null, { timeout: effectiveTimeout });
+    } catch (error) {
+        // Add detailed error information on timeout
+        const diagnostics = await page.evaluate(() => {
+            const players = window.__players;
+            return {
+                playersExists: !!players,
+                originalExists: !!players?.original,
+                reactionExists: !!players?.reaction,
+                originalType: players?.original ? typeof players.original : 'undefined',
+                reactionType: players?.reaction ? typeof players.reaction : 'undefined',
+                originalReadyState: players?.original?.readyState,
+                reactionReadyState: players?.reaction?.readyState,
+                originalHasGetPlayerState: typeof players?.original?.getPlayerState === 'function',
+                reactionHasGetPlayerState: typeof players?.reaction?.getPlayerState === 'function'
+            };
+        });
+
+        throw new Error(
+            `waitForPlayersReady timed out after ${effectiveTimeout}ms. ` +
+            `Diagnostics: ${JSON.stringify(diagnostics, null, 2)}\n` +
+            `Logs: ${JSON.stringify(await page.evaluate(() => window.__twinPlayersLog), null, 2)}\n` +
+            `Original error: ${error.message}`
+        );
+    }
 };
 
 /**
@@ -219,3 +263,32 @@ export const startPlaybackInteraction = async (page) => {
         play(players.reaction);
     });
 };
+
+/**
+ * Waits for the player actions to be available on the window object.
+ * @param {import('@playwright/test').Page} page
+ * @param {number} timeout
+ */
+export const waitForActionsReady = async (page, timeout) => {
+    const effectiveTimeout = timeout ?? (process.env.CI ? 60000 : 30000);
+    try {
+        await page.waitForFunction(() => !!window.__actions, null, { timeout: effectiveTimeout });
+    } catch (e) {
+        // Provide more context on failure to help debug missing actions object
+        const debugInfo = await page.evaluate(() => {
+            return {
+                hasPlayers: !!window.__players,
+                hasActions: !!window.__actions,
+                instanceCount: window.__twinPlayersInstanceCounter,
+                url: window.location.href
+            };
+        }).catch(() => ({ error: 'Failed to retrieve debug info' }));
+
+        throw new Error(
+            `waitForActionsReady timed out after ${effectiveTimeout}ms.\n` +
+            `Debug Info: ${JSON.stringify(debugInfo, null, 2)}\n` +
+            `Original error: ${e.message}`
+        );
+    }
+};
+

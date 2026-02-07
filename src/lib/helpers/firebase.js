@@ -306,8 +306,8 @@ export const addToPlaylistDocument = async ({ reactionDocumentId, originalVideoI
         // doc is updated by adding the new reactionDocumentId to the existing array
         const updatedReactions = [...new Set([...existingReactions, reactionDocumentId])]; // Prevent duplicates
         const updatedOriginalVideos = [...new Set([...existingOriginalVideos, originalVideoId])]; // Prevent duplicates
-        await setDoc(playlistDocumentRef, { 
-            ...playlistData, 
+        await setDoc(playlistDocumentRef, {
+            ...playlistData,
             reactionBinomeIds: updatedReactions,
             originalVideoIds: updatedOriginalVideos
         });
@@ -372,7 +372,7 @@ export const getReactionsByPage = async (lastDoc, limitBy, sortBy, follows) => {
         }
         baseQuery = query(baseQuery, limit(limitBy));
         const querySnapshot = await getDocs(baseQuery);
-        lastVisible = querySnapshot.docs[querySnapshot.docs.length-1];
+        lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1];
         reactions = querySnapshot.docs.map((doc) => ({
             id: doc.id,
             data: doc.data(),
@@ -404,7 +404,7 @@ export const getQueuesByPage = async (lastDoc, limitBy, userId) => {
         }
         baseQuery = query(baseQuery, limit(limitBy));
         const querySnapshot = await getDocs(baseQuery);
-        lastVisible = querySnapshot.docs[querySnapshot.docs.length-1];
+        lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1];
         queues = querySnapshot.docs.map((doc) => ({
             id: doc.id,
             data: doc.data(),
@@ -426,7 +426,7 @@ export const getUserReactions = async (userId, filter = FILTERS.ALL) => {
     }
     try {
         const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'getUserReactions');
-        
+
         // Build query conditions
         const queryConditions = [
             where("reactorId", "==", userId),
@@ -434,14 +434,14 @@ export const getUserReactions = async (userId, filter = FILTERS.ALL) => {
             orderBy('playlistId', 'desc'),
             orderBy('createdAt', 'desc')
         ];
-        
+
         // Add published filter if specified
         if (filter === FILTERS.PUBLISHED) {
             queryConditions.push(where('isPublished', '==', true));
         } else if (filter === FILTERS.UNPUBLISHED) {
             queryConditions.push(where('isPublished', '==', false));
         }
-        
+
         const baseQuery = query(reactionsCollection, ...queryConditions);
         const querySnapshot = await getDocs(baseQuery);
         reactions = querySnapshot.docs.map((doc) => ({
@@ -616,14 +616,14 @@ export const getUserPlaylists = async (userId, filter = FILTERS.ALL) => {
     }
     try {
         const playlistsCollection = createCollection(db, COLLECTION_PLAYLISTS, 'getUserPlaylists');
-        
+
         // Build query conditions - note: playlists don't have isPublished field
         // A playlist is considered published if any reaction in it is published
         const queryConditions = [
             where("userId", "==", userId),
             orderBy('createdAt', 'desc')
         ];
-        
+
         const queryRef = query(playlistsCollection, ...queryConditions);
         const querySnapshot = await getDocs(queryRef);
 
@@ -639,7 +639,7 @@ export const getUserPlaylists = async (userId, filter = FILTERS.ALL) => {
                 const batchSize = 10;
                 const reactionIds = playlistData.reactionBinomeIds;
                 const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'getUserPlaylists_reactions');
-                
+
                 // Process reactions in batches of 10
                 for (let i = 0; i < reactionIds.length; i += batchSize) {
                     const batchIds = reactionIds.slice(i, i + batchSize);
@@ -648,7 +648,7 @@ export const getUserPlaylists = async (userId, filter = FILTERS.ALL) => {
                         where('__name__', 'in', batchIds)
                     );
                     const reactionsSnapshot = await getDocs(reactionsQuery);
-                    
+
                     reactionsSnapshot.docs.forEach(doc => {
                         const reactionData = doc.data();
                         if (!firstReactionBinomeData) {
@@ -658,7 +658,7 @@ export const getUserPlaylists = async (userId, filter = FILTERS.ALL) => {
                             hasPublishedReaction = true;
                         }
                     });
-                    
+
                     // Early exit optimization: if we found a published reaction and we're filtering for published,
                     // and we already have display data, we can stop
                     if (hasPublishedReaction && filter === FILTERS.PUBLISHED && firstReactionBinomeData) {
@@ -789,20 +789,33 @@ export const getReactionsToOriginalVideo = async (originalVideoId, exceptReactio
     }
 };
 
+// Helper to log to the same array used by useTwinPlayers
+const log = (msg, data) => {
+    if (typeof window !== 'undefined') {
+        window.__twinPlayersLog = window.__twinPlayersLog || [];
+        window.__twinPlayersLog.push({ ts: Date.now(), msg: `[helpers/firebase] ${msg}`, data });
+    }
+};
+
 export const getReaction = async (reactionId) => {
+    log('getReaction start', { reactionId });
     try {
         const docRef = doc(db, COLLECTION_REACTION_BINOMES, reactionId);
+        log('getReaction calling getDoc', { path: docRef.path });
         const docSnap = await getDoc(docRef);
+        log('getReaction getDoc returned', { exists: docSnap.exists() });
         if (docSnap.exists()) {
             const data = docSnap.data();
             return {
-                    ...data,
-                    id: docSnap.id
-                };
+                ...data,
+                id: docSnap.id
+            };
         } else {
-          console.log("No such document!");
+            console.log("No such document!");
+            log('getReaction: No such document');
         }
     } catch (error) {
+        log('getReaction error', { error: String(error) });
         console.error('Error getting reaction: ', error);
     }
 };
@@ -815,7 +828,7 @@ export const getReactionsByIds = async (reactionIds) => {
     try {
         const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'getReactionsByIds'); // replace 'reactions' with your collection name
         const reactions = [];
-    
+
         for (const id of reactionIds) {
             const reactionRef = doc(
                 reactionsCollection,
@@ -884,16 +897,16 @@ export const checkUserSignInStatusWrapper = () => {
     return new Promise((resolve, reject) => {
         try {
             const unsubscribe = onAuthStateChanged(auth, (user) => {
-            // Unsubscribe immediately after the first invocation
-            unsubscribe();
-    
-            if (user) {
-                // User is signed in
-                resolve(user);
-            } else {
-                // User is signed out
-                resolve(null);
-            }
+                // Unsubscribe immediately after the first invocation
+                unsubscribe();
+
+                if (user) {
+                    // User is signed in
+                    resolve(user);
+                } else {
+                    // User is signed out
+                    resolve(null);
+                }
             });
         } catch (error) {
             reject('Sign in status check failed');
@@ -966,20 +979,20 @@ export async function updatePhotoHelper(user, photoURL) {
 }
 export async function updateEmailHelper(user, newEmail) {
     try {
-      await verifyBeforeUpdateEmail(user, newEmail);
+        await verifyBeforeUpdateEmail(user, newEmail);
     } catch (error) {
-      console.error('Error updating email:', error.message);
-      throw error;
+        console.error('Error updating email:', error.message);
+        throw error;
     }
 }
 export async function updatePasswordHelper(user, newPassword) {
     try {
-      await updatePassword(user, newPassword);
+        await updatePassword(user, newPassword);
     } catch (error) {
-      console.error('Error updating password:', error.message);
-      throw error;
+        console.error('Error updating password:', error.message);
+        throw error;
     }
-  }
+}
 
 export const reauthenticateUserHelper = async (user) => {
     try {
@@ -1055,7 +1068,7 @@ export const removeFollowWrapper = async (userId, reactorId) => {
         let userFollows = [...userExtraData.follows];
         if (userFollows.includes(reactorId)) {
             userFollows = userFollows.filter(currentReactorId => currentReactorId !== reactorId);
-        }        
+        }
         const userExtraDataCollection = createCollection(db, COLLECTION_USER_DATA, 'removeFollowWrapper');
         const userExtraDataRef = doc(userExtraDataCollection, userId);
         await setDoc(userExtraDataRef, {

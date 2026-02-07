@@ -98,6 +98,8 @@
 
     let wrapperRef;
 
+    let wrapperRef;
+
     const handleExitClick = () => dispatch("exitClick");
     const handleExitEnter = () => dispatch("exitEnter");
     const handleExitLeave = () => dispatch("exitLeave");

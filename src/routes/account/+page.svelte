@@ -9,11 +9,25 @@
     } from 'firebase/auth';
     import { auth } from '$lib/helpers/firebase';
     import { handlePrivateRoute } from '$lib/helpers/routing';
+    import { isLoggedIn, currentUser } from '$lib/stores/user';
+    import { onAuthStateChanged } from 'firebase/auth';
     import { Button, Modal } from 'flowbite-svelte';
     import { showToast } from '$lib/stores/toast';
     import { TOASTS } from '$lib/constants/toasts';
+    import { browser } from '$app/environment';
 
     export let data;
+
+    onMount(() => {
+      // Ensure the user is signed in
+      const unsubscribe = onAuthStateChanged(auth, (u) => {
+        user = u;
+        if (!u && browser) {
+          handlePrivateRoute();
+        }
+      });
+      return unsubscribe;
+    });
 
     let user;
     let showDeleteModal = false;
@@ -219,9 +233,6 @@
     onMount(async () => {
       // Ensure the user is signed in
       user = auth.currentUser;
-      if (!user) {
-        handlePrivateRoute();
-      }
     });
 
     onDestroy(() => {
