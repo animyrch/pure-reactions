@@ -36,7 +36,6 @@ Validate **critical cross-system integration** that cannot be tested at lower le
 | Test File | Purpose | What it validates |
 | :--- | :--- | :--- |
 | `twin-player-basic-sync.spec.js` | Twin player boot smoke | Both YouTube IFrames load and reach `PLAYING` state |
-| `twin-player-overlay-visibility.spec.js` | Overlay UI integration | Overlay appears/disappears based on fullscreen/config |
 | `reaction-layout-visual.spec.js` | Layout visual regression | Reactor attribution, layout stability (visual snapshots) |
 | `account-deletion.spec.js` | Account deletion journey | Firebase Auth + Firestore cascade deletion |
 | `firestore.rules.spec.mjs` | Firestore security rules | Rule enforcement via Firebase emulator |
@@ -45,6 +44,7 @@ Validate **critical cross-system integration** that cannot be tested at lower le
 - **Drift measurement** → Integration tests for `computeTwinPlayersSyncTick`
 - **Volume stability** → Integration tests for volume timeline helpers
 - **Playlist transitions** → Integration tests for playlist state logic
+- **Overlay visibility** → Integration tests for `getCurrentOverlayVisibilityFromConfigs`
 - **Homepage sorting** → (Removed; nondeterministic Firestore ordering)
 
 ---
