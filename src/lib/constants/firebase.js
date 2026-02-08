@@ -4,14 +4,14 @@ import { getDatabase, connectDatabaseEmulator } from "firebase/database";
 import { getFirestore, connectFirestoreEmulator } from "firebase/firestore/lite";
 import { getAuth, connectAuthEmulator } from "firebase/auth";
 
-export const COLLECTION_REACTION_BINOMES = env.PUBLIC_FIREBASE_COLLECTION_REACTION_BINOMES;
-export const COLLECTION_USER_DATA = env.PUBLIC_FIREBASE_COLLECTION_USER_DATA;
-export const COLLECTION_PLAYLISTS = env.PUBLIC_FIREBASE_COLLECTION_PLAYLISTS;
-export const COLLECTION_QUEUES = env.PUBLIC_FIREBASE_COLLECTION_QUEUES;
-export const COLLECTION_YOUTUBE_CHANNEL_CLAIMS = env.PUBLIC_FIREBASE_COLLECTION_YOUTUBE_CHANNEL_CLAIMS;
-const DEFAULT_YOUTUBE_CHANNEL_VERIFICATIONS = COLLECTION_YOUTUBE_CHANNEL_CLAIMS
-    ? COLLECTION_YOUTUBE_CHANNEL_CLAIMS.replace('youtubeChannelClaims', 'youtubeChannelVerifications')
-    : undefined;
+export const COLLECTION_REACTION_BINOMES = env.PUBLIC_FIREBASE_COLLECTION_REACTION_BINOMES || 'reactions-local';
+export const COLLECTION_USER_DATA = env.PUBLIC_FIREBASE_COLLECTION_USER_DATA || 'userData_local';
+export const COLLECTION_PLAYLISTS = env.PUBLIC_FIREBASE_COLLECTION_PLAYLISTS || 'playlists_local';
+export const COLLECTION_QUEUES = env.PUBLIC_FIREBASE_COLLECTION_QUEUES || 'queues_local';
+export const COLLECTION_YOUTUBE_CHANNEL_CLAIMS = env.PUBLIC_FIREBASE_COLLECTION_YOUTUBE_CHANNEL_CLAIMS || 'youtubeChannelClaims_local';
+const DEFAULT_YOUTUBE_CHANNEL_VERIFICATIONS = (env.PUBLIC_FIREBASE_COLLECTION_YOUTUBE_CHANNEL_CLAIMS || 'youtubeChannelClaims_local')
+    ? (env.PUBLIC_FIREBASE_COLLECTION_YOUTUBE_CHANNEL_CLAIMS || 'youtubeChannelClaims_local').replace('youtubeChannelClaims', 'youtubeChannelVerifications')
+    : 'youtubeChannelVerifications_local';
 export const COLLECTION_YOUTUBE_CHANNEL_VERIFICATIONS =
     env.PUBLIC_FIREBASE_COLLECTION_YOUTUBE_CHANNEL_VERIFICATIONS || DEFAULT_YOUTUBE_CHANNEL_VERIFICATIONS;
 let parsedConfig = {};
