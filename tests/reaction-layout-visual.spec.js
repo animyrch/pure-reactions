@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { waitForPlayersReady } from './utils/twin-player-helpers.js';
 
 const CASES = [
   {
@@ -43,12 +42,14 @@ test.describe('Reaction page layout visual', () => {
       const stage = page.locator('[data-stage="container"]');
       await expect(stage).toBeVisible({ timeout: 30000 });
 
-      await waitForPlayersReady(page);
-
-      await page.waitForTimeout(1000);
+      // Wait for the loading overlay to disappear (has a ~4 s fallback timeout
+      // even when YouTube players don't fully initialize, e.g. mobile CI).
+      // Using CSS selector for the fixed z-50 overlay rendered by +page.svelte.
+      const loadingOverlay = page.locator('.fixed.inset-0.z-50');
+      await expect(loadingOverlay).toHaveCount(0, { timeout: 20000 });
 
       const metadata = page.locator('[data-testid="reaction-metadata"]');
-      await expect(metadata).toBeVisible({ timeout: 30000 });
+      await expect(metadata).toBeVisible({ timeout: 15000 });
 
       const attribution = page.locator('[data-testid="attribution-block"]');
       if (testCase.expectAttribution) {

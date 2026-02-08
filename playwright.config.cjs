@@ -52,6 +52,10 @@ module.exports = defineConfig({
             // Automatically propagate emulator host/port from firebase-tools to the web app
             PUBLIC_FIRESTORE_EMULATOR_HOST: process.env.FIRESTORE_EMULATOR_HOST?.split(':')[0],
             PUBLIC_FIRESTORE_EMULATOR_PORT: process.env.FIRESTORE_EMULATOR_HOST?.split(':')[1],
+            PUBLIC_AUTH_EMULATOR_HOST: process.env.FIREBASE_AUTH_EMULATOR_HOST?.split(':')[0],
+            PUBLIC_AUTH_EMULATOR_PORT: process.env.FIREBASE_AUTH_EMULATOR_HOST?.split(':')[1],
+            PUBLIC_DATABASE_EMULATOR_HOST: process.env.FIREBASE_DATABASE_EMULATOR_HOST?.split(':')[0],
+            PUBLIC_DATABASE_EMULATOR_PORT: process.env.FIREBASE_DATABASE_EMULATOR_HOST?.split(':')[1],
         },
     },
 });

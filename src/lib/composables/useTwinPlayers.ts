@@ -1104,7 +1104,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         handleStateChangeInReactionVideo(reactionPlayerState, newReactionState);
         reactionPlayerState = newReactionState;
       }
-
+      
       // If the reaction video is UNSTARTED or CUED (e.g., after autoplay transition),
       // pause the original video and wait for user interaction to start both videos
       if (newReactionState === YT?.PlayerState?.UNSTARTED || newReactionState === YT?.PlayerState?.CUED) {
@@ -1114,7 +1114,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         }
         scheduleNextSync(250, runSyncCycle);
         return;
-      }
+      }      
 
       const previousReactionTime = snapshot.reactionCurrentTime;
       const reactionCurrentTime = parseFloat(playerReaction.getCurrentTime().toFixed(1));
@@ -1132,10 +1132,10 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
         updateState({ reactionCurrentTime, reactionDuration, seekMin, seekMax });
       }
-      if (reactionCurrentTime > reactionFinishTime) {
+      if (reactionFinishTime > 0 && reactionCurrentTime > reactionFinishTime) {
         pauseOriginalVideo();
 
-        if (!isPlaylistAutoPlay) {
+        if (!isPlaylistAutoPlay && !isQueueAutoPlay) {
           pauseReactionVideo();
         }
 
@@ -1211,7 +1211,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
       // Handle soft-sync actions separately
       const softSyncAction = result.actions.find((a: any) => a.type === 'applySoftSync');
-
+      
       // Filter out playback rate actions if soft-sync is active or being applied
       // to prevent conflicts
       const filteredActions = softSyncAction || syncTracking.softSyncIsActive
@@ -1256,7 +1256,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
           changingSpeed = true;
           setPlaybackRateForOriginalVideo(softSyncAction.rate);
           changingSpeed = false;
-
+          
           // Schedule reset to desired playback rate from configs
           const desiredRate = getCurrentPlaybackRateFromConfigs(
             reactionCurrentTime,
@@ -1281,20 +1281,20 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
           clearTimeout(syncTracking.softSyncResetTimeoutId);
           syncTracking.softSyncResetTimeoutId = undefined;
         }
-
+        
         const desiredRate = getCurrentPlaybackRateFromConfigs(
           reactionCurrentTime,
           snapshot.playbackRateConfigs,
           snapshot.timeOffset
         );
-
+        
         if (!changingSpeed && playerOriginal && Math.abs(snapshot.currentPlaybackRate - desiredRate) > 0.001) {
           changingSpeed = true;
           setPlaybackRateForOriginalVideo(desiredRate);
           updateState({ currentPlaybackRate: desiredRate });
           changingSpeed = false;
         }
-
+        
         syncTracking.softSyncIsActive = false;
       }
 
@@ -2007,7 +2007,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     const offsetStartTime = Number.isFinite(rawOffsetStartTime) && rawOffsetStartTime >= 0
       ? Math.round(rawOffsetStartTime * 10) / 10
       : 0;
-    const reactionFinishTime = parseFloat(reactionData['reactionFinishTime']) || 100000;
+    const reactionFinishTime = parseFloat(reactionData['reactionFinishTime']) || 0;
     const timeOffset = reactionData['timeOffset'] || 0;
     const globalGainValue = reactionData['globalGain'];
     const globalGain = typeof globalGainValue === 'number' && !Number.isNaN(globalGainValue) ? globalGainValue : 1.0;
@@ -2108,6 +2108,80 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     resetReactionDurationProbe();
     resetOriginalStateTracking();
 
+    // --- Compute metadata from Firestore data BEFORE player creation ---
+    // This ensures metadata (author, reactor, titles) is in state even if YT
+    // player initialization fails (e.g. mobile CI environments).
+    const resolvedReactorId =
+      typeof reactionData?.reactorId === 'string'
+        ? reactionData.reactorId
+        : typeof reactionData?.userId === 'string'
+          ? reactionData.userId
+          : undefined;
+    const rawReactorDisplayName =
+      typeof reactionData?.reactorDisplayName === 'string' ? reactionData.reactorDisplayName.trim() : '';
+    const viewerDisplayName = typeof data?.displayName === 'string' ? data.displayName.trim() : '';
+    const resolvedReactorDisplayName =
+      rawReactorDisplayName || (reactionData?.reactorId === userId ? viewerDisplayName : '');
+    const reactionVideoDescription =
+      (typeof reactionData?.reactionVideoDescription === 'string'
+        ? reactionData.reactionVideoDescription.trim()
+        : '') ||
+      (typeof reactionData?.youtube?.meta?.description === 'string'
+        ? reactionData.youtube.meta.description.trim()
+        : '') ||
+      undefined;
+    const originalVideoDescription =
+      (typeof reactionData?.originalVideoDescription === 'string'
+        ? reactionData.originalVideoDescription.trim()
+        : '') ||
+      (typeof reactionData?.originalYoutube?.meta?.description === 'string'
+        ? reactionData.originalYoutube.meta.description.trim()
+        : '') ||
+      undefined;
+
+    // Set metadata + timeline state before attempting player creation so the
+    // UI always has Firestore-sourced data (attribution, creator details, etc.)
+    // regardless of whether YouTube players initialise successfully.
+    updateState({
+      isPublished: reactionData.isPublished,
+      isReactionMissing: !reactionVideoId,
+      reactorId: resolvedReactorId,
+      isUsersOwnVideo: resolvedReactorId === userId,
+      canShowEditModeButton: resolvedReactorId === userId,
+      playerConfigs,
+      volumeConfigs,
+      reactionVolumeConfigs,
+      playbackRateConfigs,
+      stateTimeline,
+      volumeTimeline,
+      reactionVolumeTimeline,
+      playbackRateTimeline,
+      overlayVisibilityTimeline,
+      playerEventTimeline: normalizedPlayerEvents,
+      reactionVideoId,
+      originalVideoId,
+      reactionVideoAuthor: reactionData?.reactionVideoAuthor,
+      reactorDisplayName: resolvedReactorDisplayName || undefined,
+      reactionVideoTitle: reactionData?.reactionVideoTitle,
+      reactionVideoDescription,
+      originalVideoAuthor: reactionData?.originalVideoAuthor,
+      originalVideoTitle: reactionData?.originalVideoTitle,
+      originalVideoDescription,
+      youtubePlaylistId,
+      offsetStartTime,
+      reactionFinishTime,
+      timeOffset,
+      globalGain,
+      introBufferTime: timeOffset,
+      soundLevel,
+      isReactionMuteModeEnabled: Boolean(reactionData?.muteReactionWhileOriginalPlays),
+      isReactionAutoMuted: false,
+      fullscreenPrimaryVideo,
+      fullscreenOverlayWidthPercent,
+      fullscreenOverlayCorner,
+      currentPlaybackRate,
+    });
+
     // Final guard before creating players - abort if superseded
     if (globalActiveInstanceId !== instanceId) {
       debugClickGate('[TwinPlayers] setUpVideos aborted before player creation (instance superseded)', {
@@ -2176,72 +2250,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       return;
     }
 
-    const resolvedReactorId =
-      typeof reactionData?.reactorId === 'string'
-        ? reactionData.reactorId
-        : typeof reactionData?.userId === 'string'
-          ? reactionData.userId
-          : undefined;
-    const rawReactorDisplayName =
-      typeof reactionData?.reactorDisplayName === 'string' ? reactionData.reactorDisplayName.trim() : '';
-    const viewerDisplayName = typeof data?.displayName === 'string' ? data.displayName.trim() : '';
-    const resolvedReactorDisplayName =
-      rawReactorDisplayName || (reactionData?.reactorId === userId ? viewerDisplayName : '');
-    const reactionVideoDescription =
-      (typeof reactionData?.reactionVideoDescription === 'string'
-        ? reactionData.reactionVideoDescription.trim()
-        : '') ||
-      (typeof reactionData?.youtube?.meta?.description === 'string'
-        ? reactionData.youtube.meta.description.trim()
-        : '') ||
-      undefined;
-    const originalVideoDescription =
-      (typeof reactionData?.originalVideoDescription === 'string'
-        ? reactionData.originalVideoDescription.trim()
-        : '') ||
-      (typeof reactionData?.originalYoutube?.meta?.description === 'string'
-        ? reactionData.originalYoutube.meta.description.trim()
-        : '') ||
-      undefined;
-
+    // Player-specific state update (metadata was already set before player creation)
     updateState({
-      isPublished: reactionData.isPublished,
-      isReactionMissing: !reactionVideoId,
-      reactorId: resolvedReactorId,
-      isUsersOwnVideo: resolvedReactorId === userId,
-      canShowEditModeButton: resolvedReactorId === userId,
-      playerConfigs,
-      volumeConfigs,
-      reactionVolumeConfigs,
-      playbackRateConfigs,
-      stateTimeline,
-      volumeTimeline,
-      reactionVolumeTimeline,
-      playbackRateTimeline,
-      overlayVisibilityTimeline,
-      playerEventTimeline: normalizedPlayerEvents,
-      reactionVideoId,
-      originalVideoId,
-      reactionVideoAuthor: reactionData?.reactionVideoAuthor,
-      reactorDisplayName: resolvedReactorDisplayName || undefined,
-      reactionVideoTitle: reactionData?.reactionVideoTitle,
-      reactionVideoDescription,
-      originalVideoAuthor: reactionData?.originalVideoAuthor,
-      originalVideoTitle: reactionData?.originalVideoTitle,
-      originalVideoDescription,
-      youtubePlaylistId,
-      offsetStartTime,
-      reactionFinishTime,
-      timeOffset,
-      globalGain,
-      introBufferTime: timeOffset,
-      soundLevel,
-      isReactionMuteModeEnabled: Boolean(reactionData?.muteReactionWhileOriginalPlays),
-      isReactionAutoMuted: false,
-      fullscreenPrimaryVideo,
-      fullscreenOverlayWidthPercent,
-      fullscreenOverlayCorner,
-      currentPlaybackRate,
       playerOriginal: newPlayerOriginal,
       playerReaction: newPlayerReaction,
       currentStateOriginalVideo: -1,
@@ -3099,9 +3109,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       return;
     }
     const snapshot = get(state);
-    if (!snapshot.youtubePlaylistId) {
-      return;
-    }
+
 
     let finalValue = parsed;
     if (Number.isFinite(snapshot.reactionDuration) && snapshot.reactionDuration > 0) {

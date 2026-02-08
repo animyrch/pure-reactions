@@ -38,6 +38,11 @@ test.describe('Twin Video Playback (Smoke)', () => {
             return isActive(s.originalPlayerState) && isActive(s.reactionPlayerState);
         }, { timeout: 45000 }).toBe(true);
 
+        // 4) After ~5s of playback, assert drift is still small
+        await page.waitForTimeout(5000);
+
+        const driftThreshold = testInfo.project.name === 'mobile' ? 0.5 : 0.5;
+
         const s = await readTwinPlayersSnapshot(page);
         expect(s, 'Expected twin players snapshot').toBeTruthy();
         expect(isActive(s.originalPlayerState), 'Original player should be active').toBe(true);

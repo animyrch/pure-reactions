@@ -124,26 +124,34 @@ export const waitForPlayersReady = async (page, timeout) => {
             return isReady(players.original) && isReady(players.reaction);
         }, null, { timeout: effectiveTimeout });
     } catch (error) {
-        // Add detailed error information on timeout
-        const diagnostics = await page.evaluate(() => {
-            const players = window.__players;
-            return {
-                playersExists: !!players,
-                originalExists: !!players?.original,
-                reactionExists: !!players?.reaction,
-                originalType: players?.original ? typeof players.original : 'undefined',
-                reactionType: players?.reaction ? typeof players.reaction : 'undefined',
-                originalReadyState: players?.original?.readyState,
-                reactionReadyState: players?.reaction?.readyState,
-                originalHasGetPlayerState: typeof players?.original?.getPlayerState === 'function',
-                reactionHasGetPlayerState: typeof players?.reaction?.getPlayerState === 'function'
-            };
-        });
+        // If the page/context was already closed (e.g. test timeout killed the browser),
+        // skip the diagnostic evaluate and re-throw a clear message.
+        let diagnostics = null;
+        let logs = null;
+        try {
+            diagnostics = await page.evaluate(() => {
+                const players = window.__players;
+                return {
+                    playersExists: !!players,
+                    originalExists: !!players?.original,
+                    reactionExists: !!players?.reaction,
+                    originalType: players?.original ? typeof players.original : 'undefined',
+                    reactionType: players?.reaction ? typeof players.reaction : 'undefined',
+                    originalReadyState: players?.original?.readyState,
+                    reactionReadyState: players?.reaction?.readyState,
+                    originalHasGetPlayerState: typeof players?.original?.getPlayerState === 'function',
+                    reactionHasGetPlayerState: typeof players?.reaction?.getPlayerState === 'function'
+                };
+            });
+            logs = await page.evaluate(() => window.__twinPlayersLog);
+        } catch {
+            // Page already closed — diagnostics unavailable
+        }
 
         throw new Error(
             `waitForPlayersReady timed out after ${effectiveTimeout}ms. ` +
             `Diagnostics: ${JSON.stringify(diagnostics, null, 2)}\n` +
-            `Logs: ${JSON.stringify(await page.evaluate(() => window.__twinPlayersLog), null, 2)}\n` +
+            `Logs: ${JSON.stringify(logs, null, 2)}\n` +
             `Original error: ${error.message}`
         );
     }

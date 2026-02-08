@@ -59,7 +59,18 @@ export const extractYoutubePlaylistId = (originalUrl) => {
 }
 
 export async function fetchFirstPlaylistVideos(playlistId) {
-  const res = await fetch(`/api/youtube/playlist/${playlistId}`); // calls my serverless function
-  const videos = await res.json();
-  return videos;
+  const res = await fetch(`/api/youtube/playlist/${playlistId}`);
+
+  if (!res.ok) {
+    const text = await res.text(); // works even if server returns text/html
+    throw new Error(text || `Failed to load playlist (HTTP ${res.status})`);
+  }
+
+  const contentType = res.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    const text = await res.text();
+    throw new Error(`Expected JSON, got ${contentType}: ${text}`);
+  }
+
+  return await res.json();
 }
