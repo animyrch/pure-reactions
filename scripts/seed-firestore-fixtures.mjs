@@ -167,7 +167,19 @@ async function seed() {
   loadDotEnvIfPresent('.env');
 
   const target = args.target || process.env.FIREBASE_SEED_TARGET || (process.env.FIRESTORE_EMULATOR_HOST ? 'emulator' : 'emulator');
-  const projectId = args.projectId || process.env.FIREBASE_PROJECT_ID || process.env.PUBLIC_FIREBASE_PROJECT_ID || 'pure-reactions';
+  
+  let configProjectId;
+  if (process.env.PUBLIC_FIREBASE_CONFIG) {
+    try {
+        const parsed = JSON.parse(process.env.PUBLIC_FIREBASE_CONFIG);
+        configProjectId = parsed.projectId;
+    } catch (e) {
+        // ignore
+    }
+  }
+
+  const defaultProjectId = target === 'emulator' ? 'demo-pure-reactions' : 'pure-reactions';
+  const projectId = args.projectId || process.env.FIREBASE_PROJECT_ID || process.env.PUBLIC_FIREBASE_PROJECT_ID || configProjectId || defaultProjectId;
   const collection =
     args.collection ||
     process.env.PUBLIC_FIREBASE_COLLECTION_REACTION_BINOMES ||
@@ -239,6 +251,19 @@ async function seed() {
   const message = `[seed-firestore-fixtures] target=${target} projectId=${projectId} collection=${collection} fixture=${fixturePath} created=${created} updated=${updated} skipped=${skipped}`;
   // eslint-disable-next-line no-console
   console.log(message);
+  console.log(`[seed-firestore-fixtures] FIRESTORE_EMULATOR_HOST=${process.env.FIRESTORE_EMULATOR_HOST}`);
+
+  // Verification step
+  if (created > 0 || updated > 0) {
+    const checkId = fixture.docs[0].id; // Check the first one
+    const checkRef = db.collection(collection).doc(checkId);
+    const checkSnap = await checkRef.get();
+    if (checkSnap.exists) {
+        console.log(`[seed-firestore-fixtures] VERIFICATION SUCCESS: Found doc ${checkId} in ${collection}`);
+    } else {
+        console.error(`[seed-firestore-fixtures] VERIFICATION FAILED: Could not find doc ${checkId} in ${collection} after write!`);
+    }
+  }
 
   return { created, skipped };
 }
