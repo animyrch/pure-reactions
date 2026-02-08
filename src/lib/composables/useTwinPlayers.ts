@@ -2108,6 +2108,80 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     resetReactionDurationProbe();
     resetOriginalStateTracking();
 
+    // --- Compute metadata from Firestore data BEFORE player creation ---
+    // This ensures metadata (author, reactor, titles) is in state even if YT
+    // player initialization fails (e.g. mobile CI environments).
+    const resolvedReactorId =
+      typeof reactionData?.reactorId === 'string'
+        ? reactionData.reactorId
+        : typeof reactionData?.userId === 'string'
+          ? reactionData.userId
+          : undefined;
+    const rawReactorDisplayName =
+      typeof reactionData?.reactorDisplayName === 'string' ? reactionData.reactorDisplayName.trim() : '';
+    const viewerDisplayName = typeof data?.displayName === 'string' ? data.displayName.trim() : '';
+    const resolvedReactorDisplayName =
+      rawReactorDisplayName || (reactionData?.reactorId === userId ? viewerDisplayName : '');
+    const reactionVideoDescription =
+      (typeof reactionData?.reactionVideoDescription === 'string'
+        ? reactionData.reactionVideoDescription.trim()
+        : '') ||
+      (typeof reactionData?.youtube?.meta?.description === 'string'
+        ? reactionData.youtube.meta.description.trim()
+        : '') ||
+      undefined;
+    const originalVideoDescription =
+      (typeof reactionData?.originalVideoDescription === 'string'
+        ? reactionData.originalVideoDescription.trim()
+        : '') ||
+      (typeof reactionData?.originalYoutube?.meta?.description === 'string'
+        ? reactionData.originalYoutube.meta.description.trim()
+        : '') ||
+      undefined;
+
+    // Set metadata + timeline state before attempting player creation so the
+    // UI always has Firestore-sourced data (attribution, creator details, etc.)
+    // regardless of whether YouTube players initialise successfully.
+    updateState({
+      isPublished: reactionData.isPublished,
+      isReactionMissing: !reactionVideoId,
+      reactorId: resolvedReactorId,
+      isUsersOwnVideo: resolvedReactorId === userId,
+      canShowEditModeButton: resolvedReactorId === userId,
+      playerConfigs,
+      volumeConfigs,
+      reactionVolumeConfigs,
+      playbackRateConfigs,
+      stateTimeline,
+      volumeTimeline,
+      reactionVolumeTimeline,
+      playbackRateTimeline,
+      overlayVisibilityTimeline,
+      playerEventTimeline: normalizedPlayerEvents,
+      reactionVideoId,
+      originalVideoId,
+      reactionVideoAuthor: reactionData?.reactionVideoAuthor,
+      reactorDisplayName: resolvedReactorDisplayName || undefined,
+      reactionVideoTitle: reactionData?.reactionVideoTitle,
+      reactionVideoDescription,
+      originalVideoAuthor: reactionData?.originalVideoAuthor,
+      originalVideoTitle: reactionData?.originalVideoTitle,
+      originalVideoDescription,
+      youtubePlaylistId,
+      offsetStartTime,
+      reactionFinishTime,
+      timeOffset,
+      globalGain,
+      introBufferTime: timeOffset,
+      soundLevel,
+      isReactionMuteModeEnabled: Boolean(reactionData?.muteReactionWhileOriginalPlays),
+      isReactionAutoMuted: false,
+      fullscreenPrimaryVideo,
+      fullscreenOverlayWidthPercent,
+      fullscreenOverlayCorner,
+      currentPlaybackRate,
+    });
+
     // Final guard before creating players - abort if superseded
     if (globalActiveInstanceId !== instanceId) {
       debugClickGate('[TwinPlayers] setUpVideos aborted before player creation (instance superseded)', {
@@ -2176,72 +2250,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       return;
     }
 
-    const resolvedReactorId =
-      typeof reactionData?.reactorId === 'string'
-        ? reactionData.reactorId
-        : typeof reactionData?.userId === 'string'
-          ? reactionData.userId
-          : undefined;
-    const rawReactorDisplayName =
-      typeof reactionData?.reactorDisplayName === 'string' ? reactionData.reactorDisplayName.trim() : '';
-    const viewerDisplayName = typeof data?.displayName === 'string' ? data.displayName.trim() : '';
-    const resolvedReactorDisplayName =
-      rawReactorDisplayName || (reactionData?.reactorId === userId ? viewerDisplayName : '');
-    const reactionVideoDescription =
-      (typeof reactionData?.reactionVideoDescription === 'string'
-        ? reactionData.reactionVideoDescription.trim()
-        : '') ||
-      (typeof reactionData?.youtube?.meta?.description === 'string'
-        ? reactionData.youtube.meta.description.trim()
-        : '') ||
-      undefined;
-    const originalVideoDescription =
-      (typeof reactionData?.originalVideoDescription === 'string'
-        ? reactionData.originalVideoDescription.trim()
-        : '') ||
-      (typeof reactionData?.originalYoutube?.meta?.description === 'string'
-        ? reactionData.originalYoutube.meta.description.trim()
-        : '') ||
-      undefined;
-
+    // Player-specific state update (metadata was already set before player creation)
     updateState({
-      isPublished: reactionData.isPublished,
-      isReactionMissing: !reactionVideoId,
-      reactorId: resolvedReactorId,
-      isUsersOwnVideo: resolvedReactorId === userId,
-      canShowEditModeButton: resolvedReactorId === userId,
-      playerConfigs,
-      volumeConfigs,
-      reactionVolumeConfigs,
-      playbackRateConfigs,
-      stateTimeline,
-      volumeTimeline,
-      reactionVolumeTimeline,
-      playbackRateTimeline,
-      overlayVisibilityTimeline,
-      playerEventTimeline: normalizedPlayerEvents,
-      reactionVideoId,
-      originalVideoId,
-      reactionVideoAuthor: reactionData?.reactionVideoAuthor,
-      reactorDisplayName: resolvedReactorDisplayName || undefined,
-      reactionVideoTitle: reactionData?.reactionVideoTitle,
-      reactionVideoDescription,
-      originalVideoAuthor: reactionData?.originalVideoAuthor,
-      originalVideoTitle: reactionData?.originalVideoTitle,
-      originalVideoDescription,
-      youtubePlaylistId,
-      offsetStartTime,
-      reactionFinishTime,
-      timeOffset,
-      globalGain,
-      introBufferTime: timeOffset,
-      soundLevel,
-      isReactionMuteModeEnabled: Boolean(reactionData?.muteReactionWhileOriginalPlays),
-      isReactionAutoMuted: false,
-      fullscreenPrimaryVideo,
-      fullscreenOverlayWidthPercent,
-      fullscreenOverlayCorner,
-      currentPlaybackRate,
       playerOriginal: newPlayerOriginal,
       playerReaction: newPlayerReaction,
       currentStateOriginalVideo: -1,
