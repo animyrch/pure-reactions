@@ -160,21 +160,22 @@
         );
     };
 
-    const overlayCornerClasses = {
+    const overlayPositionClasses = {
         "top-left": "left-6 top-6",
         "top-right": "right-6 top-6",
         "bottom-left": "left-6 bottom-6",
         "bottom-right": "right-6 bottom-6",
+        "bottom-center": "left-1/2 -translate-x-1/2 bottom-6",
     };
 
     $: normalizedOverlayWidth = normalizeOverlayWidth(
         fullscreenOverlayWidthPercent,
     );
     $: normalizedOverlayCorner =
-        fullscreenOverlayCorner in overlayCornerClasses
+        fullscreenOverlayCorner in overlayPositionClasses
             ? fullscreenOverlayCorner
             : "top-right";
-    $: overlayCornerClass = overlayCornerClasses[normalizedOverlayCorner];
+    $: overlayCornerClass = overlayPositionClasses[normalizedOverlayCorner];
     $: isReactionPrimary = fullscreenPrimaryVideo === "reaction";
     $: isOverlayLayout = isFullscreen || isMobileLandscape;
     $: isOriginalOverlay = isOverlayLayout && isReactionPrimary;
