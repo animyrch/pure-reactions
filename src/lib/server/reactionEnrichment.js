@@ -1,10 +1,3 @@
-import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore';
-import { logger } from 'firebase-functions';
-import { initializeApp } from 'firebase-admin/app';
-import { FieldValue } from 'firebase-admin/firestore';
-
-initializeApp();
-
 const ENRICHMENT_TTL_MS = 1000 * 60 * 60 * 24 * 7;
 const YOUTUBE_API_URL = 'https://www.googleapis.com/youtube/v3/videos';
 const YOUTUBE_TIMEOUT_MS = 8000;
@@ -54,36 +47,6 @@ function isMetaComplete(meta, youtubeId) {
   return true;
 }
 
-function shouldEnrich(afterData, beforeData, youtubeId) {
-  if (!youtubeId) return false;
-
-  const meta = afterData?.youtube?.meta;
-  const metaComplete = isMetaComplete(meta, youtubeId);
-  const stale = isStale(afterData?.lastEnrichedAt);
-
-  const beforeId = getYoutubeId(beforeData);
-  const idChanged = Boolean(beforeData && beforeId && beforeId !== youtubeId);
-  const metaIdMismatch = Boolean(meta?.videoId && meta.videoId !== youtubeId);
-  const missingInitialMeta = !metaComplete && !afterData?.lastEnrichedAt;
-
-  return idChanged || metaIdMismatch || stale || missingInitialMeta;
-}
-
-function shouldEnrichOriginal(afterData, beforeData, youtubeId) {
-  if (!youtubeId) return false;
-
-  const meta = afterData?.originalYoutube?.meta;
-  const metaComplete = isMetaComplete(meta, youtubeId);
-  const stale = isStale(afterData?.originalYoutube?.lastEnrichedAt);
-
-  const beforeId = getOriginalYoutubeId(beforeData);
-  const idChanged = Boolean(beforeData && beforeId && beforeId !== youtubeId);
-  const metaIdMismatch = Boolean(meta?.videoId && meta.videoId !== youtubeId);
-  const missingInitialMeta = !metaComplete && !afterData?.originalYoutube?.lastEnrichedAt;
-
-  return idChanged || metaIdMismatch || stale || missingInitialMeta;
-}
-
 function parseIsoDurationToSeconds(duration) {
   if (typeof duration !== 'string') return null;
   const match = duration.match(/^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/);
@@ -117,8 +80,7 @@ function pickLargestThumbnail(thumbnails) {
 async function fetchYoutubeMeta(youtubeId) {
   const apiKey = process.env.YOUTUBE_API_KEY;
   if (!apiKey) {
-    logger.error('Missing YOUTUBE_API_KEY for YouTube enrichment', { youtubeId });
-    return null;
+    throw new Error('Missing YOUTUBE_API_KEY for YouTube enrichment.');
   }
 
   const url = new URL(YOUTUBE_API_URL);
@@ -132,33 +94,17 @@ async function fetchYoutubeMeta(youtubeId) {
   try {
     const response = await fetch(url, { signal: controller.signal });
     if (!response.ok) {
-      const status = response.status;
       const body = await response.text().catch(() => '');
-      const isTransient = status === 429 || status >= 500;
-      const log = isTransient ? logger.warn : logger.error;
-      log('YouTube API request failed', {
-        youtubeId,
-        status,
-        body: body.slice(0, 200)
-      });
-      return null;
+      throw new Error(`YouTube API request failed (${response.status}): ${body.slice(0, 200)}`);
     }
 
     const payload = await response.json();
     const item = payload?.items?.[0];
     if (!item) {
-      logger.warn('YouTube API returned no items', { youtubeId });
       return null;
     }
 
     return { snippet: item.snippet, contentDetails: item.contentDetails };
-  } catch (error) {
-    logger.warn('YouTube API request error', {
-      youtubeId,
-      error: error?.message,
-      type: error?.name
-    });
-    return null;
   } finally {
     clearTimeout(timeout);
   }
@@ -190,33 +136,43 @@ function buildMetaFromResponse(response, youtubeId) {
   });
 }
 
-async function enrichReaction(snapshot, beforeData) {
-  const afterData = snapshot.data();
-  if (!afterData) return;
+export async function enrichReactionDocument({ adminDb, adminFieldValue, collectionName, reactionId }) {
+  const docRef = adminDb.collection(collectionName).doc(reactionId);
+  const snapshot = await docRef.get();
+  if (!snapshot.exists) {
+    return { found: false, updated: false, reason: 'not-found' };
+  }
 
-  const reactionYoutubeId = getYoutubeId(afterData);
-  const originalYoutubeId = getOriginalYoutubeId(afterData);
-  const shouldEnrichReaction = reactionYoutubeId && shouldEnrich(afterData, beforeData, reactionYoutubeId);
-  const shouldEnrichOriginalMeta = originalYoutubeId && shouldEnrichOriginal(afterData, beforeData, originalYoutubeId);
+  const data = snapshot.data();
+  const reactionYoutubeId = getYoutubeId(data);
+  const originalYoutubeId = getOriginalYoutubeId(data);
 
-  if (!shouldEnrichReaction && !shouldEnrichOriginalMeta) return;
+  if (!reactionYoutubeId && !originalYoutubeId) {
+    return { found: true, updated: false, reason: 'missing-youtube-id' };
+  }
 
-  logger.info('Enriching YouTube metadata', {
-    reactionId: snapshot.id,
-    reactionYoutubeId,
-    originalYoutubeId,
-    shouldEnrichReaction,
-    shouldEnrichOriginal: shouldEnrichOriginalMeta
-  });
+  const reactionNeedsUpdate =
+    Boolean(reactionYoutubeId) &&
+    (!isMetaComplete(data?.youtube?.meta, reactionYoutubeId) &&
+      (isStale(data?.lastEnrichedAt) || !data?.youtube?.meta));
+
+  const originalNeedsUpdate =
+    Boolean(originalYoutubeId) &&
+    (!isMetaComplete(data?.originalYoutube?.meta, originalYoutubeId) &&
+      (isStale(data?.originalYoutube?.lastEnrichedAt) || !data?.originalYoutube?.meta));
+
+  if (!reactionNeedsUpdate && !originalNeedsUpdate) {
+    return { found: true, updated: false, reason: 'meta-fresh' };
+  }
 
   let reactionResponse = null;
   let originalResponse = null;
 
-  if (shouldEnrichReaction) {
+  if (reactionNeedsUpdate) {
     reactionResponse = await fetchYoutubeMeta(reactionYoutubeId);
   }
 
-  if (shouldEnrichOriginalMeta) {
+  if (originalNeedsUpdate) {
     if (originalYoutubeId === reactionYoutubeId && reactionResponse) {
       originalResponse = reactionResponse;
     } else {
@@ -229,7 +185,7 @@ async function enrichReaction(snapshot, beforeData) {
     const meta = buildMetaFromResponse(reactionResponse, reactionYoutubeId);
     if (Object.keys(meta).length > 0) {
       updates.youtube = { meta };
-      updates.lastEnrichedAt = FieldValue.serverTimestamp();
+      updates.lastEnrichedAt = adminFieldValue.serverTimestamp();
     }
   }
 
@@ -238,22 +194,22 @@ async function enrichReaction(snapshot, beforeData) {
     if (Object.keys(meta).length > 0) {
       updates.originalYoutube = {
         meta,
-        lastEnrichedAt: FieldValue.serverTimestamp()
+        lastEnrichedAt: adminFieldValue.serverTimestamp()
       };
     }
   }
 
-  if (Object.keys(updates).length === 0) return;
+  if (Object.keys(updates).length === 0) {
+    return { found: true, updated: false, reason: 'no-updates' };
+  }
 
-  await snapshot.ref.set(updates, { merge: true });
+  await docRef.set(updates, { merge: true });
+
+  return {
+    found: true,
+    updated: true,
+    reason: 'enriched',
+    reactionYoutubeId,
+    originalYoutubeId
+  };
 }
-
-export const enrichReactionYoutubeOnCreate = onDocumentCreated('reactions/{id}', async (event) => {
-  if (!event?.data) return;
-  await enrichReaction(event.data, null);
-});
-
-export const enrichReactionYoutubeOnUpdate = onDocumentUpdated('reactions/{id}', async (event) => {
-  if (!event?.data) return;
-  await enrichReaction(event.data.after, event.data.before?.data?.());
-});

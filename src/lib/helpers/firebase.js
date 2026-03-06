@@ -47,6 +47,51 @@ const createCollection = (db, params, caller) => {
     return collection(db, params);
 };
 
+const shouldRequestReactionEnrichment = (data) => {
+    if (!data || typeof data !== 'object') {
+        return false;
+    }
+
+    return [
+        data.originalVideoId,
+        data.reactionVideoId,
+        data.youtubeId,
+        data?.youtube?.id,
+        data?.originalYoutube?.id
+    ].some((value) => typeof value === 'string' && value.trim());
+};
+
+export const requestReactionEnrichment = async (reactionId) => {
+    if (!reactionId || typeof fetch !== 'function') {
+        return false;
+    }
+
+    try {
+        const response = await fetch('/api/reactions/enrich', {
+            method: 'POST',
+            headers: {
+                'content-type': 'application/json'
+            },
+            body: JSON.stringify({ reactionId })
+        });
+
+        if (!response.ok) {
+            const details = await response.text().catch(() => '');
+            console.error('Reaction enrichment request failed', {
+                reactionId,
+                status: response.status,
+                details
+            });
+            return false;
+        }
+
+        return true;
+    } catch (error) {
+        console.error('Failed to request reaction enrichment', error);
+        return false;
+    }
+};
+
 export const firestoreDeleteField = () => deleteField();
 
 export const slugifyQueueName = (value) =>
@@ -84,6 +129,7 @@ export const createReactionDocument = async ({
         };
 
         const documentRef = await addDoc(reactionsCollection, dataToAdd);
+        await requestReactionEnrichment(documentRef.id);
         window.currentReactionDocumentId = documentRef.id;
         return documentRef.id; // Return the document ID if needed
     } catch (error) {
@@ -325,6 +371,9 @@ export const updateFirebaseDocument = async (dataToUpdate, documentId) => {
         }
         const documentRef = doc(reactionsCollection, targetDocumentId);
         await updateDoc(documentRef, dataToUpdate);
+        if (shouldRequestReactionEnrichment(dataToUpdate)) {
+            await requestReactionEnrichment(targetDocumentId);
+        }
         return true;
     } catch (error) {
         console.error('Error updating document: ', error);
