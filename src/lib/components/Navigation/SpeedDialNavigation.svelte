@@ -1,5 +1,6 @@
 <script>
   import { onMount } from "svelte";
+  import { afterNavigate } from "$app/navigation";
   import { fly } from "svelte/transition";
   import {
     ShareNodesSolid,
@@ -101,6 +102,14 @@
       closeDial(false);
     }
   };
+
+  afterNavigate(() => {
+    if (!isOpen) {
+      isVisible = true;
+      if (hideTimeout) clearTimeout(hideTimeout);
+      scheduleHide();
+    }
+  });
 
   onMount(() => {
     window.addEventListener("keydown", handleWindowKeydown);
