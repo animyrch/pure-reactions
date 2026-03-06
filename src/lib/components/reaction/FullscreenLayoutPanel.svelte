@@ -195,9 +195,9 @@
 
     <div class="flex flex-col gap-3">
       <h3 class="text-sm font-medium text-text-secondary">
-        Smaller video corner
+        Smaller video position
       </h3>
-      <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">
         <button
           type="button"
           class={`flex flex-col items-center gap-2 rounded-2xl border px-3 py-3 text-sm font-medium transition duration-subtle ease-cinematic focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background ${fullscreenOverlayCorner === "top-left" ? "border-accent-primary bg-accent-primary/10 text-text-primary" : "border-border-subtle bg-background/40 text-text-muted hover:text-text-primary"}`}
@@ -333,6 +333,40 @@
             />
           </svg>
           <span>Bottom right</span>
+        </button>
+        <button
+          type="button"
+          class={`flex flex-col items-center gap-2 rounded-2xl border px-3 py-3 text-sm font-medium transition duration-subtle ease-cinematic focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background ${fullscreenOverlayCorner === "bottom-center" ? "border-accent-primary bg-accent-primary/10 text-text-primary" : "border-border-subtle bg-background/40 text-text-muted hover:text-text-primary"}`}
+          on:click={() => handleCornerSelect("bottom-center")}
+          aria-pressed={fullscreenOverlayCorner === "bottom-center"}
+          aria-label="Place smaller video at the bottom center"
+        >
+          <svg
+            class="h-10 w-10"
+            viewBox="0 0 40 40"
+            fill="none"
+            aria-hidden="true"
+          >
+            <rect
+              x="2"
+              y="2"
+              width="36"
+              height="36"
+              rx="6"
+              stroke="currentColor"
+              stroke-width="2"
+            />
+            <rect
+              x="14"
+              y="26"
+              width="12"
+              height="8"
+              rx="2"
+              fill="currentColor"
+              opacity="0.7"
+            />
+          </svg>
+          <span>Bottom center</span>
         </button>
       </div>
     </div>

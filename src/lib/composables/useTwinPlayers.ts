@@ -65,7 +65,7 @@ declare global {
 type Nullable<T> = T | null | undefined;
 
 type FullscreenPrimaryVideo = 'original' | 'reaction';
-type FullscreenOverlayCorner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+type FullscreenOverlayCorner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'bottom-center';
 
 const DISABLE_YOUTUBE_METADATA_SYNC = env.PUBLIC_DISABLE_YOUTUBE_METADATA_SYNC === 'true';
 
@@ -294,7 +294,7 @@ const normalizeFullscreenPrimaryVideo = (value: unknown): FullscreenPrimaryVideo
   value === 'reaction' ? 'reaction' : 'original';
 
 const normalizeFullscreenOverlayCorner = (value: unknown): FullscreenOverlayCorner => {
-  if (value === 'top-left' || value === 'top-right' || value === 'bottom-left' || value === 'bottom-right') {
+  if (value === 'top-left' || value === 'top-right' || value === 'bottom-left' || value === 'bottom-right' || value === 'bottom-center') {
     return value;
   }
   return DEFAULT_FULLSCREEN_OVERLAY_CORNER;
