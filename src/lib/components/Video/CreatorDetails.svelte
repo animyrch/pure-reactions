@@ -3,6 +3,7 @@
     import BookmarkManagement from '../BookmarkManagement.svelte';
     import FollowManagement from '$lib/components/FollowManagement.svelte';
     import RateVideo from '$lib/components/Video/RateVideo.svelte';
+    import { linkifyText } from '$lib/helpers/system';
 
     export let originalVideoTitle;
     export let originalVideoAuthor;
@@ -90,7 +91,8 @@
                     id="original-description"
                     class={`description-text ${isOriginalDescriptionExpanded || !showOriginalDescriptionToggle ? 'expanded' : 'clamped'}`}
                 >
-                    {originalVideoDescription}
+                    <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+                    {@html linkifyText(originalVideoDescription)}
                 </p>
                 {#if showOriginalDescriptionToggle}
                     <button
@@ -167,7 +169,8 @@
                     id="reaction-description"
                     class={`description-text ${isReactionDescriptionExpanded || !showReactionDescriptionToggle ? 'expanded' : 'clamped'}`}
                 >
-                    {reactionVideoDescription}
+                    <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+                    {@html linkifyText(reactionVideoDescription)}
                 </p>
                 {#if showReactionDescriptionToggle}
                     <button
@@ -242,6 +245,19 @@
         color: rgba(199, 203, 215, 0.85);
         word-break: break-word;
         white-space: pre-line;
+    }
+
+    .description-text :global(a) {
+        color: rgba(92, 178, 255, 0.9);
+        text-decoration: underline;
+        text-underline-offset: 2px;
+        overflow-wrap: break-word;
+    }
+
+    .description-text :global(a:hover),
+    .description-text :global(a:focus-visible) {
+        color: rgba(130, 197, 255, 0.95);
+        outline: none;
     }
 
     .description-text.clamped {
