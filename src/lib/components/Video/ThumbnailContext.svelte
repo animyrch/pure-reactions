@@ -201,6 +201,7 @@
 	});
 
 	onDestroy(() => {
+		if (typeof window === 'undefined') return;
 		window.removeEventListener('click', handleClickOutside);
 		window.removeEventListener('keydown', handleEscape);
 		window.removeEventListener(menuOpenEventName, handleAnotherMenuOpen);
