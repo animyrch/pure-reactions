@@ -1,4 +1,5 @@
 <script>
+    import { onMount } from "svelte";
     import VideoAuthor from "$lib/components/VideoAuthor.svelte";
     import ThumbnailContext from "$lib/components/Video/ThumbnailContext.svelte";
 
@@ -83,12 +84,19 @@
         normalizeAuthor(reactionVideoAuthor);
 
     let isThumbnailLoaded = false;
+    let imgEl;
 
     $: skeletonVisible = isQueue ? false : !isThumbnailLoaded;
 
     const handleThumbLoad = () => {
         isThumbnailLoaded = true;
     };
+
+    onMount(() => {
+        if (imgEl?.complete) {
+            isThumbnailLoaded = true;
+        }
+    });
 </script>
 
 <div
@@ -191,6 +199,7 @@
                                 />
                             {/if}
                             <img
+                                bind:this={imgEl}
                                 src={buildYouTubeSrc(mainVideoId, "mqdefault")}
                                 alt={thumbnailAlt}
                                 loading="lazy"
@@ -300,6 +309,7 @@
                                 />
                             {/if}
                             <img
+                                bind:this={imgEl}
                                 src={buildYouTubeSrc(mainVideoId, "mqdefault")}
                                 alt={thumbnailAlt}
                                 loading="lazy"
