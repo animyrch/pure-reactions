@@ -8,6 +8,7 @@ import process from 'node:process';
 const OUTPUT_PATH = path.resolve(process.cwd(), 'static/sitemap.xml');
 const DEFAULT_THUMBNAIL_PATH = '/icon-512.png';
 const MAX_ENTRIES = 5000;
+const YOUTUBE_EMBED_BASE_URL = 'https://www.youtube.com/embed/';
 
 function loadDotEnvIfPresent(envPath = '.env') {
   const abs = path.resolve(process.cwd(), envPath);
@@ -116,9 +117,25 @@ function pickLastmod(values) {
   return dates[0].toISOString();
 }
 
+function pickReactionVideoId(data) {
+  return pickText(
+    data.reactionVideoId,
+    data.youtube?.id,
+    data.youtubeId,
+    data.youtube?.meta?.videoId
+  );
+}
+
+function buildYoutubePlayerUrl(videoId) {
+  if (!videoId) return null;
+  return `${YOUTUBE_EMBED_BASE_URL}${encodeURIComponent(videoId)}`;
+}
+
 function buildEntry({ docId, data, baseUrl }) {
   const slug = pickText(data.slug, docId);
   const loc = new URL(`/reaction/${slug}`, baseUrl).toString();
+  const reactionVideoId = pickReactionVideoId(data);
+  const playerLoc = buildYoutubePlayerUrl(reactionVideoId);
 
   const title = pickText(data.title, data.reactionVideoTitle, data.youtube?.meta?.title, slug);
   const description = pickText(
@@ -146,12 +163,12 @@ function buildEntry({ docId, data, baseUrl }) {
     lines.push(`    <lastmod>${lastmod}</lastmod>`);
   }
 
-  if (thumbnail) {
+  if (thumbnail && playerLoc) {
     lines.push('    <video:video>');
     lines.push(`      <video:thumbnail_loc>${escapeXml(thumbnail)}</video:thumbnail_loc>`);
     lines.push(`      <video:title>${wrapCdata(title)}</video:title>`);
     lines.push(`      <video:description>${wrapCdata(description)}</video:description>`);
-    lines.push(`      <video:player_loc>${escapeXml(loc)}</video:player_loc>`);
+    lines.push(`      <video:player_loc>${escapeXml(playerLoc)}</video:player_loc>`);
     if (durationSeconds && durationSeconds > 0) {
       lines.push(`      <video:duration>${durationSeconds}</video:duration>`);
     }
