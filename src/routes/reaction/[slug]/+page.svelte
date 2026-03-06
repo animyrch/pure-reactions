@@ -298,6 +298,7 @@
       <OtherReactions
         originalVideoId={$state.originalVideoId}
         reactionVideoId={$state.reactionVideoId}
+        originalVideoTitle={$state.originalVideoTitle}
       />
     {/if}
   {/if}

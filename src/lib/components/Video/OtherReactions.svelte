@@ -1,26 +1,25 @@
 <script>
     import ReactionsListElement from "$lib/components/ReactionsListElement.svelte";
     import { onMount } from "svelte";
+    import { goto } from "$app/navigation";
     import { getReactionsToOriginalVideo } from "$lib/helpers/firebase";
 
     export let originalVideoId;
     export let reactionVideoId;
+    export let originalVideoTitle = "";
 
     let otherReactions = [];
     let itemRefs = [];
     let activeIndex = -1;
     let fetchKey = "";
 
-    function jumpToHeaderSearch() {
-        if (typeof window === 'undefined') return;
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        setTimeout(() => {
-            const headerSearch = document.querySelector('header .search-trigger');
-            if (headerSearch) {
-                if (typeof headerSearch.click === 'function') headerSearch.click();
-                if (typeof headerSearch.focus === 'function') headerSearch.focus();
-            }
-        }, 350);
+    function viewAllReactions() {
+        const query = originalVideoTitle ? originalVideoTitle.trim() : "";
+        if (query) {
+            goto(`/search?q=${encodeURIComponent(query)}`);
+        } else {
+            goto("/search");
+        }
     }
 
     async function loadOtherReactions() {
@@ -135,7 +134,7 @@
             <button
                 class="inline-flex items-center gap-1.5 text-xs font-medium text-accent-primary transition hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:gap-2 sm:text-sm"
                 type="button"
-                on:click={jumpToHeaderSearch}
+                on:click={viewAllReactions}
             >
                 View all reactions
                 <span aria-hidden="true">→</span>
