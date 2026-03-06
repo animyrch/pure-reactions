@@ -260,6 +260,7 @@
           fullscreenPrimaryVideo={$state.fullscreenPrimaryVideo}
           fullscreenOverlayWidthPercent={$state.fullscreenOverlayWidthPercent}
           fullscreenOverlayCorner={$state.fullscreenOverlayCorner}
+          originalVideoPlatform={$state.originalVideoPlatform}
           onCreatePlayerConfig={actions.createPlayerConfig}
           onCreateVolumeConfig={actions.createVolumeConfig}
           onCreateReactionVolumeConfig={actions.createReactionVolumeConfig}

@@ -108,7 +108,8 @@ export const createReactionDocument = async ({
     userId,
     originalVideoAuthor,
     originalVideoTitle,
-    offsetStartTime
+    offsetStartTime,
+    originalVideoPlatform
 }) => {
     try {
         const reactorDisplayName = auth?.currentUser?.displayName?.trim?.() || '';
@@ -117,6 +118,7 @@ export const createReactionDocument = async ({
             originalVideoId,
             originalVideoAuthor,
             originalVideoTitle,
+            originalVideoPlatform: originalVideoPlatform || 'youtube',
             reactionConfigs: {},
             playbackRateConfigs: {},
             reactorId: userId,

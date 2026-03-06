@@ -135,6 +135,7 @@
 
     // Debug mode
     let debugMode = false;
+    let isTikTokOriginal = false;
 
     // Navigation-aware derived params
     $: {
@@ -181,6 +182,7 @@
                 sharedSessionId = nextSharedSessionId;
             }
             debugMode = params.get("debug") === "true";
+            isTikTokOriginal = params.get("platform") === "tiktok";
         }
     }
 
@@ -863,6 +865,7 @@
             originalVideoAuthor,
             originalVideoTitle,
             offsetStartTime: playlistBufferTime || 0,
+            originalVideoPlatform: isTikTokOriginal ? "tiktok" : "youtube",
         });
 
         playbackRateConfigs.clear();
@@ -945,7 +948,7 @@
 
     const onClickFocusReact = () => {
         isFocusReactOn = !isFocusReactOn;
-        const soundLevel = isFocusReactOn ? 20 : 100;
+        const soundLevel = isFocusReactOn ? (isTikTokOriginal ? 0 : 20) : 100;
         logVolumeChange(soundLevel);
     };
 
@@ -1451,6 +1454,22 @@
                 </section>
 
                 <aside class="flex w-full flex-col gap-4">
+                    {#if isTikTokOriginal}
+                        <div
+                            class="flex items-start gap-3 rounded-3xl border border-amber-500/30 bg-amber-500/5 px-5 py-4"
+                            role="note"
+                            aria-label="TikTok limitations"
+                        >
+                            <span class="mt-0.5 text-amber-400" aria-hidden="true">ⓘ</span>
+                            <p class="text-sm text-amber-200">
+                                <span class="font-medium">TikTok original:</span> playback
+                                speed control and fine-grained volume are unavailable.
+                                Volume is limited to mute or full.
+                            </p>
+                        </div>
+                    {/if}
+
+                    {#if !isTikTokOriginal}
                     <div
                         class="rounded-3xl border border-slate-900/60 bg-slate-900/40 p-5"
                     >
@@ -1506,6 +1525,7 @@
                             {/each}
                         </div>
                     </div>
+                    {/if}
 
                     {#if showRecorder}
                         <div

@@ -12,6 +12,7 @@
   export let overlayVisibilityEvents = [];
   export let seekMin = 0;
   export let seekMax = Number.POSITIVE_INFINITY;
+  export let allowPlaybackRate = true;
 
   const clamp01 = (value) => {
     if (!Number.isFinite(value)) return 0;
@@ -482,13 +483,17 @@
       showProgress: false,
       interactive: true,
     },
-    {
-      id: "speed",
-      label: "Playback speed",
-      markers: playbackRateMarkers,
-      showProgress: false,
-      interactive: false,
-    },
+    ...(allowPlaybackRate
+      ? [
+          {
+            id: "speed",
+            label: "Playback speed",
+            markers: playbackRateMarkers,
+            showProgress: false,
+            interactive: false,
+          },
+        ]
+      : []),
     {
       id: "volume",
       label: "Volume Original",

@@ -7,6 +7,7 @@ import {
   getCurrentStateFromStateConfigs,
   getCurrentVolumeFromVolumeConfigs
 } from '$lib/helpers/reaction';
+import { normalizeOriginalVideoPlatform } from '$lib/helpers/platform';
 import {
   getReaction,
   updateFirebaseDocument,
@@ -138,6 +139,7 @@ type TwinPlayersState = {
   isOutOfSync: boolean;
   seekMin: number;
   seekMax: number;
+  originalVideoPlatform: 'youtube' | 'tiktok';
 };
 
 type UseTwinPlayersOptions = {
@@ -396,7 +398,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     pageSlug: slug,
     isOutOfSync: false,
     seekMin: 0,
-    seekMax: 100000
+    seekMax: 100000,
+    originalVideoPlatform: 'youtube'
   });
 
   let overlayElement: HTMLDivElement | undefined;
@@ -1236,6 +1239,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
           muteReactionAudio,
           unmuteReactionAudio,
           updateState
+        },
+        options: {
+          isTikTokOriginal: snapshot.originalVideoPlatform === 'tiktok'
         }
       });
 
@@ -1629,7 +1635,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       },
       options: {
         allowStateActions: false,
-        allowPlaybackRate: false
+        allowPlaybackRate: false,
+        isTikTokOriginal: snapshot.originalVideoPlatform === 'tiktok'
       }
     });
 
@@ -2180,6 +2187,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       fullscreenOverlayWidthPercent,
       fullscreenOverlayCorner,
       currentPlaybackRate,
+      originalVideoPlatform: normalizeOriginalVideoPlatform(reactionData?.originalVideoPlatform),
     });
 
     // Final guard before creating players - abort if superseded
