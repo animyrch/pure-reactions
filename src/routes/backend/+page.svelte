@@ -1495,18 +1495,22 @@
                         class="overflow-hidden rounded-3xl border border-slate-900/60 bg-slate-900/60 shadow-[0_30px_60px_-40px_rgba(15,23,42,0.8)]"
                     >
                         {#if isTikTokOriginal}
-                            <!-- TikTok videos are vertical (9:16), centred in a dark container -->
+                            <!-- TikTok: keep the same height as the YouTube player (aspect-video),
+                                 then centre a narrow 9:16 strip inside it. -->
                             <div
-                                class="flex w-full items-center justify-center bg-black py-4"
+                                class="relative aspect-video w-full bg-black"
                                 aria-busy={isBuffering}
                             >
-                                <div
-                                    class="relative aspect-[9/16] w-full max-w-[360px] overflow-hidden rounded-2xl bg-black"
-                                >
+                                <div class="absolute inset-0 flex items-center justify-center">
                                     <div
-                                        bind:this={playerContainerNode}
-                                        class="h-full w-full"
-                                    ></div>
+                                        class="relative h-full overflow-hidden rounded-2xl bg-black"
+                                        style="aspect-ratio: 9/16;"
+                                    >
+                                        <div
+                                            bind:this={playerContainerNode}
+                                            class="h-full w-full"
+                                        ></div>
+                                    </div>
                                 </div>
                             </div>
                         {:else}

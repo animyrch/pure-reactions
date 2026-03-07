@@ -200,6 +200,7 @@
     isUsersOwnVideo={$state.isUsersOwnVideo}
     playerOriginal={$state.playerOriginal}
     playerReaction={$state.playerReaction}
+    originalVideoPlatform={$state.originalVideoPlatform}
     {stickyControlsClass}
     bothVideosStarted={$state.bothVideosStarted}
     isPlaylist={Boolean($state.playlistDocumentId)}

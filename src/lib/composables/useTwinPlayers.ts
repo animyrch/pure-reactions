@@ -7,7 +7,7 @@ import {
   getCurrentStateFromStateConfigs,
   getCurrentVolumeFromVolumeConfigs
 } from '$lib/helpers/reaction';
-import { normalizeOriginalVideoPlatform } from '$lib/helpers/platform';
+import { normalizeOriginalVideoPlatform, getTikTokEmbedUrl } from '$lib/helpers/platform';
 import {
   getReaction,
   updateFirebaseDocument,
@@ -445,6 +445,12 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   let isDestroyed = false;
   let isSwitchingReactionInPlace = false;
   let lastUserResumeAt = 0;
+
+  // TikTok original-player state (lives alongside the YouTube playerOriginal concept)
+  const TIKTOK_ORIGIN = 'https://www.tiktok.com';
+  let tiktokOriginalIframe: HTMLIFrameElement | null = null;
+  let tiktokOriginalUnlisten: (() => void) | null = null;
+  let tiktokOriginalPlayerState = -1; // -1 = unstarted, 1 = playing, 2 = paused
 
   const getPlayerDebugInfo = (target: any) => {
     let iframeId: string | undefined;
@@ -1954,7 +1960,133 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     }
   };
 
-  const setUpVideos = async (reactionData: Record<string, any>) => {
+  const updateUIElements = (slugValue: string) => {
+    updateState({ pageSlug: slugValue });
+    if (typeof window !== 'undefined') {
+      (window as any).currentReactionDocumentId = slugValue;
+    }
+  };
+
+  /**
+   * Destroys any currently active TikTok original-player iframe and listener.
+   * Called at the start of setUpVideos so a fresh iframe can be injected.
+   */
+  const destroyTikTokOriginalPlayer = () => {
+    if (tiktokOriginalUnlisten) {
+      tiktokOriginalUnlisten();
+      tiktokOriginalUnlisten = null;
+    }
+    if (tiktokOriginalIframe) {
+      tiktokOriginalIframe.remove();
+      tiktokOriginalIframe = null;
+    }
+    tiktokOriginalPlayerState = -1;
+  };
+
+  /**
+   * Creates a TikTok iframe inside #player-original and returns a YouTube-like
+   * mock player object so the rest of the composable can treat it uniformly.
+   */
+  const createTikTokOriginalPlayer = (videoId: string) => {
+    const container = document.getElementById('player-original');
+    if (!container) return null;
+
+    // Clear any previous content (e.g. stale TikTok iframes)
+    container.innerHTML = '';
+
+    const iframe = document.createElement('iframe');
+    iframe.src = getTikTokEmbedUrl(videoId);
+    iframe.title = `TikTok video ${videoId}`;
+    iframe.style.cssText = 'width:100%;height:100%;border:0;';
+    iframe.allow = 'autoplay; encrypted-media; fullscreen';
+    iframe.setAttribute('allowfullscreen', '');
+    iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+    container.appendChild(iframe);
+    tiktokOriginalIframe = iframe;
+    tiktokOriginalPlayerState = -1;
+
+    const postToTikTok = (type: string, value?: any) => {
+      iframe.contentWindow?.postMessage(
+        { type, value, 'x-tiktok-player': true },
+        TIKTOK_ORIGIN,
+      );
+    };
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== TIKTOK_ORIGIN) return;
+      const message = event.data;
+      if (!message || typeof message !== 'object') return;
+
+      if (message.type === 'onPlayerReady') {
+        tiktokOriginalPlayerState = -1; // unstarted (ready but not yet playing)
+        markPlayerReady();
+        // Send the first unmute immediately. A second attempt fires after 250 ms because
+        // TikTok's player sometimes processes the first command before its internal audio
+        // context is fully initialised and silently drops it.
+        postToTikTok('unMute');
+        setTimeout(() => postToTikTok('unMute'), 250);
+      }
+
+      if (message.type === 'onStateChange') {
+        if (message.value === 1) {
+          tiktokOriginalPlayerState = 1; // playing
+        } else if (message.value === 2) {
+          tiktokOriginalPlayerState = 2; // paused
+        }
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    tiktokOriginalUnlisten = () => window.removeEventListener('message', handleMessage);
+
+    // Return a YouTube-like mock so all sync/control paths work without branching.
+    //
+    // TikTok platform limitations (enforced here and in twinPlayersSyncApply.ts):
+    //  - getCurrentTime / getDuration always return 0: TikTok's player/v1 postMessage API
+    //    does not expose playback position or duration, so sync drift-correction is disabled
+    //    for the original video. The reaction video timeline still drives the sync scheduler.
+    //  - seekTo is a no-op: TikTok does not expose a seek command via postMessage.
+    //  - setPlaybackRate is a no-op: speed changes for TikTok originals are already suppressed
+    //    by the isTikTokOriginal flag passed to applyTwinPlayersSyncActions.
+    //  - setVolume is binary (mute/unmute): TikTok volume is 0 or 100. Values in between are
+    //    snapped by the applyTwinPlayersSyncActions layer before reaching this mock.
+    return {
+      getPlayerState: () => tiktokOriginalPlayerState,
+      getCurrentTime: () => 0,
+      getDuration: () => 0,
+      isMuted: () => false,
+      seekTo: () => {},
+      setVolume: (v: number) => {
+        if (v >= 100) {
+          postToTikTok('unMute');
+        } else {
+          postToTikTok('mute');
+        }
+      },
+      setPlaybackRate: () => {},
+      playVideo: () => {
+        postToTikTok('unMute');
+        postToTikTok('play');
+        tiktokOriginalPlayerState = 1;
+      },
+      pauseVideo: () => {
+        postToTikTok('pause');
+        tiktokOriginalPlayerState = 2;
+      },
+      stopVideo: () => {
+        postToTikTok('pause');
+        tiktokOriginalPlayerState = 2;
+      },
+      cueVideoById: () => {},
+      loadVideoById: () => {},
+      getIframe: () => iframe,
+      destroy: () => {
+        destroyTikTokOriginalPlayer();
+      },
+    };
+  };
+
+
     log('setUpVideos called', { reactionDataExists: !!reactionData });
     // CRITICAL: Abort if this instance has been superseded
     if (globalActiveInstanceId !== instanceId) {
@@ -2083,6 +2215,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     playerOriginal?.destroy?.();
     playerReaction?.destroy?.();
 
+    // Clean up any existing TikTok iframe before (re)creating players
+    destroyTikTokOriginalPlayer();
+
     // Clean up any orphaned iframes that YouTube may have left behind
     // This can happen during client-side navigation if the player wasn't properly destroyed
     const cleanupOrphanedIframe = (containerId: string) => {
@@ -2207,6 +2342,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     let newPlayerReaction: any = null;
     let newPlayerOriginal: any = null;
 
+    const isTikTokOriginalVideo = normalizeOriginalVideoPlatform(reactionData?.originalVideoPlatform) === 'tiktok';
+
     try {
       if (reactionVideoId) {
         newPlayerReaction = new YT.Player('player-reaction', {
@@ -2223,20 +2360,28 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         });
       }
 
-      newPlayerOriginal = new YT.Player('player-original', {
-        videoId: originalVideoId,
-        playerVars: {
-          ...playerOptions,
-          start: Math.round(initialTargetTime)
-        },
-        ...iframeOptionDefault,
-        events: {
-          onReady: onPlayerReady,
-          onStateChange: onStateChangeOriginal
-        }
-      });
+      if (isTikTokOriginalVideo) {
+        // TikTok original: inject iframe and return a YouTube-compatible mock so the
+        // rest of the composable can interact with it without additional branching.
+        // markPlayerReady() is called inside createTikTokOriginalPlayer when the
+        // TikTok player fires onPlayerReady via postMessage.
+        newPlayerOriginal = createTikTokOriginalPlayer(originalVideoId);
+      } else {
+        newPlayerOriginal = new YT.Player('player-original', {
+          videoId: originalVideoId,
+          playerVars: {
+            ...playerOptions,
+            start: Math.round(initialTargetTime)
+          },
+          ...iframeOptionDefault,
+          events: {
+            onReady: onPlayerReady,
+            onStateChange: onStateChangeOriginal
+          }
+        });
+      }
     } catch (error) {
-      console.error('Failed to initialise YouTube players', error);
+      console.error('Failed to initialise players', error);
       finalizeLoadingState();
       return;
     }
@@ -4263,6 +4408,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     } catch (error) {
       console.warn('Failed to destroy YouTube players on teardown', error);
     }
+
+    // Clean up any TikTok iframe/listener that may have been left behind
+    destroyTikTokOriginalPlayer();
 
     if (typeof document !== 'undefined') {
       document.body.classList.remove('reaction-fullscreen');

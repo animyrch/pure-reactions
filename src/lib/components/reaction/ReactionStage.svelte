@@ -25,6 +25,8 @@
     export let fullscreenOverlayWidthPercent = 35;
     export let fullscreenOverlayCorner = "top-right";
     export let fullscreenOverlayVisible = true;
+    /** 'tiktok' | 'youtube' — controls the original player container aspect ratio */
+    export let originalVideoPlatform = 'youtube';
 
     export let alwaysShowMissingPlaceholder = false;
 
@@ -301,10 +303,25 @@
                     data-stage="original-frame-inner"
                     class="relative h-full w-full"
                 >
-                    <div
-                        id="player-original"
-                        class="absolute inset-0 h-full w-full"
-                    ></div>
+                    {#if !isOverlayLayout && originalVideoPlatform === 'tiktok'}
+                        <!-- TikTok: keep the 16:9 height, centre a narrow 9:16 strip inside -->
+                        <div class="absolute inset-0 flex items-center justify-center bg-black">
+                            <div
+                                class="relative h-full overflow-hidden bg-black"
+                                style="aspect-ratio: 9/16;"
+                            >
+                                <div
+                                    id="player-original"
+                                    class="h-full w-full"
+                                ></div>
+                            </div>
+                        </div>
+                    {:else}
+                        <div
+                            id="player-original"
+                            class="absolute inset-0 h-full w-full"
+                        ></div>
+                    {/if}
                 </div>
             </div>
             {#if showCinematicBars}
