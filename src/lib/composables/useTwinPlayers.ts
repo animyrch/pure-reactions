@@ -1960,13 +1960,6 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     }
   };
 
-  const updateUIElements = (slugValue: string) => {
-    updateState({ pageSlug: slugValue });
-    if (typeof window !== 'undefined') {
-      (window as any).currentReactionDocumentId = slugValue;
-    }
-  };
-
   /**
    * Destroys any currently active TikTok original-player iframe and listener.
    * Called at the start of setUpVideos so a fresh iframe can be injected.
@@ -2085,6 +2078,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       },
     };
   };
+
+  const setUpVideos = async (reactionData: any) => {
 
 
     log('setUpVideos called', { reactionDataExists: !!reactionData });
@@ -2324,6 +2319,10 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       currentPlaybackRate,
       originalVideoPlatform: normalizeOriginalVideoPlatform(reactionData?.originalVideoPlatform),
     });
+
+    // Let Svelte flush any layout changes driven by the updated platform state
+    // before we attach iframe-based players to #player-original / #player-reaction.
+    await tick();
 
     // Final guard before creating players - abort if superseded
     if (globalActiveInstanceId !== instanceId) {

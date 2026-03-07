@@ -11,6 +11,159 @@ export const YT_PLAYER_STATE = {
 };
 
 /**
+ * Installs a deterministic mock for the YouTube IFrame API before app code runs.
+ * The mock simulates player lifecycle, click-to-start, and state transitions.
+ * @param {import('@playwright/test').Page} page
+ */
+export const installMockYouTubeApi = async (page) => {
+    await page.addInitScript(() => {
+        const ensureIframeInContainer = (containerOrId, prefix) => {
+            let container = containerOrId;
+            if (typeof containerOrId === 'string') {
+                container = document.getElementById(containerOrId);
+            }
+
+            if (!container) {
+                container = document.createElement('div');
+                if (typeof containerOrId === 'string') {
+                    container.id = containerOrId;
+                }
+                document.body.appendChild(container);
+            }
+
+            let iframe = container.querySelector('iframe');
+            if (!iframe) {
+                iframe = document.createElement('iframe');
+                iframe.setAttribute('title', `${prefix} mock iframe`);
+                iframe.setAttribute('src', 'about:blank');
+                iframe.style.width = '100%';
+                iframe.style.height = '100%';
+                iframe.style.border = '0';
+                container.appendChild(iframe);
+            }
+
+            return iframe;
+        };
+
+        class MockYTPlayer {
+            constructor(containerOrId, options = {}) {
+                this._containerOrId = containerOrId;
+                this._options = options;
+                this._events = options.events || {};
+                this._state = -1;
+                this._currentTime = Number(options.playerVars?.start || 0);
+                this._volume = 100;
+                this._muted = false;
+                this._playbackRate = 1;
+                this._destroyed = false;
+                this._iframe = ensureIframeInContainer(containerOrId, 'yt-player');
+
+                this._onIframeClick = () => {
+                    this.playVideo();
+                };
+                this._iframe.addEventListener('click', this._onIframeClick);
+
+                queueMicrotask(() => {
+                    if (this._destroyed) return;
+                    this._events.onReady?.({ target: this });
+                });
+            }
+
+            _emitState(state) {
+                if (this._destroyed) return;
+                this._state = state;
+                this._events.onStateChange?.({ data: state, target: this });
+            }
+
+            getPlayerState() {
+                return this._state;
+            }
+
+            getCurrentTime() {
+                return this._currentTime;
+            }
+
+            getDuration() {
+                return 300;
+            }
+
+            seekTo(seconds) {
+                this._currentTime = Number.isFinite(Number(seconds)) ? Number(seconds) : this._currentTime;
+            }
+
+            playVideo() {
+                this._emitState(1);
+            }
+
+            pauseVideo() {
+                this._emitState(2);
+            }
+
+            stopVideo() {
+                this._emitState(0);
+            }
+
+            setVolume(value) {
+                const volume = Number(value);
+                if (!Number.isFinite(volume)) return;
+                this._volume = Math.max(0, Math.min(100, Math.round(volume)));
+                this._muted = this._volume === 0;
+            }
+
+            getVolume() {
+                return this._volume;
+            }
+
+            mute() {
+                this._muted = true;
+            }
+
+            unMute() {
+                this._muted = false;
+            }
+
+            isMuted() {
+                return this._muted;
+            }
+
+            setPlaybackRate(rate) {
+                const nextRate = Number(rate);
+                if (!Number.isFinite(nextRate) || nextRate <= 0) return;
+                this._playbackRate = nextRate;
+            }
+
+            getPlaybackRate() {
+                return this._playbackRate;
+            }
+
+            getIframe() {
+                return this._iframe;
+            }
+
+            destroy() {
+                this._destroyed = true;
+                if (this._iframe) {
+                    this._iframe.removeEventListener('click', this._onIframeClick);
+                    this._iframe.remove();
+                }
+            }
+        }
+
+        window.YT = {
+            Player: MockYTPlayer,
+            PlayerState: {
+                UNSTARTED: -1,
+                ENDED: 0,
+                PLAYING: 1,
+                PAUSED: 2,
+                BUFFERING: 3,
+                CUED: 5,
+            },
+        };
+    });
+};
+
+/**
  * Reads the current state of twin players from the window object.
  * Returns a snapshot of time, state, readiness, error, and VOLUME.
  * @param {import('@playwright/test').Page} page

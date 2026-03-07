@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import {
     YT_PLAYER_STATE,
+    installMockYouTubeApi,
     readTwinPlayersSnapshot,
     waitForPlayersReady,
     startPlaybackInteraction
@@ -15,6 +16,27 @@ const isActive = (state) => state === YT_PLAYER_STATE.PLAYING || state === YT_PL
 test.describe('Twin Video Playback (Smoke)', () => {
 
     test.describe.configure({ timeout: 90000 });
+
+    test('Should start both players after click-gate release (mocked YT, CI-safe)', async ({ page }) => {
+        await installMockYouTubeApi(page);
+        await page.goto(REACTION_PAGE_URLS.basicSync);
+
+        await waitForPlayersReady(page, 15000);
+
+        await startPlaybackInteraction(page);
+
+        await expect.poll(async () => {
+            const s = await readTwinPlayersSnapshot(page);
+            if (!s) return false;
+            return Boolean(s.bothVideosStarted) && isActive(s.originalPlayerState) && isActive(s.reactionPlayerState);
+        }, { timeout: 15000 }).toBe(true);
+
+        const snapshot = await readTwinPlayersSnapshot(page);
+        expect(snapshot, 'Expected twin players snapshot').toBeTruthy();
+        expect(snapshot.bothVideosStarted, 'Click gate should be released').toBe(true);
+        expect(isActive(snapshot.originalPlayerState), 'Original player should be active').toBe(true);
+        expect(isActive(snapshot.reactionPlayerState), 'Reaction player should be active').toBe(true);
+    });
 
     // Real YouTube playback is unreliable in headless CI (no guaranteed media delivery).
     // This smoke test is meant for local validation; skip it in CI to avoid flakes.
