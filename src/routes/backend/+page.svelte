@@ -197,7 +197,15 @@
     let viewerLabel = "viewers";
     let sessionUnsubscribe = null;
     const YOUTUBE_IFRAME_API_SRC = "https://www.youtube.com/iframe_api";
+    const TIKTOK_ORIGIN = "https://www.tiktok.com";
+    // TikTok player/v1 state codes (mirrors YouTube PlayerState values)
+    const TIKTOK_STATE_PLAYING = 1;
+    const TIKTOK_STATE_PAUSED = 2;
+    // Delay before retrying unMute — gives the player time to process the first command
+    const TIKTOK_UNMUTE_RETRY_DELAY_MS = 250;
     let playerContainerNode;
+    let tiktokIframeElement = null;
+    let tiktokMessageUnlisten = null;
     let youtubeApiReadyPromise;
     let hasInitialisedBackend = false;
     let isInitialisingBackend = false;
@@ -293,21 +301,63 @@
         });
     }
 
+    function postToTikTokPlayer(type, value) {
+        tiktokIframeElement?.contentWindow?.postMessage(
+            { type, value, 'x-tiktok-player': true },
+            TIKTOK_ORIGIN,
+        );
+    }
+
     function loadTikTokPlayer(videoId) {
         if (!playerContainerNode || !videoId) return;
+        // Remove any existing TikTok message listener
+        if (tiktokMessageUnlisten) {
+            tiktokMessageUnlisten();
+            tiktokMessageUnlisten = null;
+        }
         // Clear any existing player content
         playerContainerNode.innerHTML = '';
+        tiktokIframeElement = null;
+
         const iframe = document.createElement('iframe');
         iframe.src = getTikTokEmbedUrl(videoId);
+        iframe.title = `TikTok video ${videoId}`;
         iframe.style.width = '100%';
         iframe.style.height = '100%';
         iframe.style.border = 'none';
-        iframe.allow = 'autoplay; fullscreen';
+        iframe.allow = 'autoplay; encrypted-media; fullscreen';
         iframe.setAttribute('allowfullscreen', '');
-        iframe.onload = () => {
-            isPlayerOriginalReady = true;
-        };
+        iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+        tiktokIframeElement = iframe;
         playerContainerNode.appendChild(iframe);
+
+        // Listen for TikTok player events via postMessage
+        const handleTikTokMessage = (event) => {
+            if (event.origin !== TIKTOK_ORIGIN) return;
+            const message = event.data;
+            if (!message || typeof message !== 'object') return;
+
+            if (message.type === 'onPlayerReady') {
+                isPlayerOriginalReady = true;
+                // Attempt to unmute on ready in case autoplay started muted.
+                // A short retry is needed as the first command can race player init.
+                postToTikTokPlayer('unMute');
+                window.setTimeout(() => postToTikTokPlayer('unMute'), TIKTOK_UNMUTE_RETRY_DELAY_MS);
+            }
+
+            if (message.type === 'onStateChange') {
+                if (message.value === TIKTOK_STATE_PLAYING) {
+                    // Playing — ensure unmuted
+                    postToTikTokPlayer('unMute');
+                    isPlaying = true;
+                } else if (message.value === TIKTOK_STATE_PAUSED) {
+                    // Paused
+                    isPlaying = false;
+                }
+            }
+        };
+        window.addEventListener('message', handleTikTokMessage);
+        tiktokMessageUnlisten = () => window.removeEventListener('message', handleTikTokMessage);
     }
 
     async function loadPlaylist() {
@@ -340,6 +390,12 @@
     }
 
     function resetPlayer() {
+        // Clean up TikTok message listener if present
+        if (tiktokMessageUnlisten) {
+            tiktokMessageUnlisten();
+            tiktokMessageUnlisten = null;
+        }
+        tiktokIframeElement = null;
         if (playerOriginal?.destroy) {
             try {
                 playerOriginal.destroy();
@@ -791,7 +847,9 @@
 
     function startOriginalVideo() {
         if (isTikTokOriginal) {
-            // TikTok player is controlled manually by the user; just advance recording state
+            // Send play + unMute commands to the TikTok player via postMessage
+            postToTikTokPlayer('unMute');
+            postToTikTokPlayer('play');
             isPlayerOriginalReady = true;
             isPlaying = true;
             currentButtonGroupState = BUTTON_GROUP_STATES.RECORDING;
@@ -836,8 +894,9 @@
     }
     function pauseOriginalVideo() {
         if (isTikTokOriginal) {
-            // TikTok player is controlled manually; just update recording state.
+            // Send pause command to the TikTok player via postMessage.
             // currentTime is 0 because TikTok does not expose a JS playback API.
+            postToTikTokPlayer('pause');
             if (sharedSessionId) {
                 updateSessionState(sharedSessionId, {
                     state: SESSION_STATES.PAUSED,
@@ -1435,23 +1494,40 @@
                     <div
                         class="overflow-hidden rounded-3xl border border-slate-900/60 bg-slate-900/60 shadow-[0_30px_60px_-40px_rgba(15,23,42,0.8)]"
                     >
-                        <div
-                            class="relative aspect-video w-full bg-black"
-                            aria-busy={isBuffering}
-                        >
-                            {#if isBuffering}
+                        {#if isTikTokOriginal}
+                            <!-- TikTok videos are vertical (9:16), centred in a dark container -->
+                            <div
+                                class="flex w-full items-center justify-center bg-black py-4"
+                                aria-busy={isBuffering}
+                            >
                                 <div
-                                    class="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-400/70 via-blue-200/40 to-blue-400/70 animate-pulse"
+                                    class="relative aspect-[9/16] w-full max-w-[360px] overflow-hidden rounded-2xl bg-black"
+                                >
+                                    <div
+                                        bind:this={playerContainerNode}
+                                        class="h-full w-full"
+                                    ></div>
+                                </div>
+                            </div>
+                        {:else}
+                            <div
+                                class="relative aspect-video w-full bg-black"
+                                aria-busy={isBuffering}
+                            >
+                                {#if isBuffering}
+                                    <div
+                                        class="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-400/70 via-blue-200/40 to-blue-400/70 animate-pulse"
+                                    ></div>
+                                {/if}
+                                <div
+                                    bind:this={playerContainerNode}
+                                    class="h-full w-full"
                                 ></div>
-                            {/if}
-                            <div
-                                bind:this={playerContainerNode}
-                                class="h-full w-full"
-                            ></div>
-                            <div
-                                class="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/70 via-slate-950/10 to-transparent"
-                            ></div>
-                        </div>
+                                <div
+                                    class="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/70 via-slate-950/10 to-transparent"
+                                ></div>
+                            </div>
+                        {/if}
                     </div>
 
                     <button

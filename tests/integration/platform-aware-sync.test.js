@@ -95,10 +95,11 @@ describe('Platform helpers', () => {
     });
 
     describe('getTikTokEmbedUrl', () => {
-        it('returns the correct embed URL', () => {
-            expect(getTikTokEmbedUrl('7056208472144235823')).toBe(
-                'https://www.tiktok.com/embed/v2/7056208472144235823'
-            );
+        it('returns the correct player/v1 embed URL', () => {
+            const url = getTikTokEmbedUrl('7056208472144235823');
+            expect(url).toContain('https://www.tiktok.com/player/v1/7056208472144235823');
+            expect(url).toContain('autoplay=0');
+            expect(url).toContain('controls=1');
         });
     });
 });

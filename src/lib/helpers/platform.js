@@ -70,10 +70,12 @@ export const extractTikTokVideoId = (url) => {
 };
 
 /**
- * Returns the TikTok embed URL for a given video ID.
+ * Returns the TikTok player/v1 embed URL for a given video ID.
+ * Uses the documented player/v1 API which supports postMessage control
+ * (play, pause, mute, unmute).
  *
  * @param {string} videoId
  * @returns {string}
  */
 export const getTikTokEmbedUrl = (videoId) =>
-  `https://www.tiktok.com/embed/v2/${videoId}`;
+  `https://www.tiktok.com/player/v1/${videoId}?autoplay=0&muted=0&controls=1&play_button=1&volume_control=1&fullscreen_button=1&description=1`;
