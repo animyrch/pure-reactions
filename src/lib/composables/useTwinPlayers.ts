@@ -2005,6 +2005,19 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       );
     };
 
+    let mockPlayer: any;
+
+    const forwardTikTokStateChange = (stateValue: number) => {
+      if (!mockPlayer) {
+        return;
+      }
+
+      onStateChangeOriginal({
+        data: stateValue,
+        target: mockPlayer
+      });
+    };
+
     const handleMessage = (event: MessageEvent) => {
       if (event.origin !== TIKTOK_ORIGIN) return;
       const message = event.data;
@@ -2023,8 +2036,10 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       if (message.type === 'onStateChange') {
         if (message.value === 1) {
           tiktokOriginalPlayerState = 1; // playing
+          forwardTikTokStateChange(1);
         } else if (message.value === 2) {
           tiktokOriginalPlayerState = 2; // paused
+          forwardTikTokStateChange(2);
         }
       }
     };
@@ -2043,7 +2058,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     //    by the isTikTokOriginal flag passed to applyTwinPlayersSyncActions.
     //  - setVolume is binary (mute/unmute): TikTok volume is 0 or 100. Values in between are
     //    snapped by the applyTwinPlayersSyncActions layer before reaching this mock.
-    return {
+    mockPlayer = {
       getPlayerState: () => tiktokOriginalPlayerState,
       getCurrentTime: () => 0,
       getDuration: () => 0,
@@ -2077,6 +2092,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         destroyTikTokOriginalPlayer();
       },
     };
+
+    return mockPlayer;
   };
 
   const setUpVideos = async (reactionData: any) => {

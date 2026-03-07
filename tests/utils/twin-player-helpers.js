@@ -164,6 +164,90 @@ export const installMockYouTubeApi = async (page) => {
 };
 
 /**
+ * Routes TikTok player embeds to a deterministic in-browser mock.
+ * The mock sends onPlayerReady/onStateChange messages from the TikTok origin
+ * and responds to play/pause/mute/unMute commands sent by the parent page.
+ * @param {import('@playwright/test').Page} page
+ */
+export const installMockTikTokEmbed = async (page) => {
+        await page.route('https://www.tiktok.com/player/v1/**', async (route) => {
+                const html = `<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>TikTok mock player</title>
+        <style>
+            html, body {
+                margin: 0;
+                width: 100%;
+                height: 100%;
+                background: #000;
+                overflow: hidden;
+            }
+
+            button {
+                width: 100%;
+                height: 100%;
+                border: 0;
+                background: linear-gradient(180deg, #141414 0%, #050505 100%);
+                color: white;
+                font: 600 16px/1.2 sans-serif;
+                cursor: pointer;
+            }
+        </style>
+    </head>
+    <body>
+        <button id="player-surface" type="button" aria-label="Play TikTok mock">TikTok mock player</button>
+        <script>
+            (() => {
+                let state = -1;
+
+                const emit = (type, value) => {
+                    window.parent.postMessage({ type, value }, '*');
+                };
+
+                const setState = (nextState) => {
+                    state = nextState;
+                    emit('onStateChange', nextState);
+                };
+
+                window.addEventListener('message', (event) => {
+                    const message = event.data;
+                    if (!message || typeof message !== 'object' || !message['x-tiktok-player']) {
+                        return;
+                    }
+
+                    if (message.type === 'play') {
+                        setState(1);
+                        return;
+                    }
+
+                    if (message.type === 'pause') {
+                        setState(2);
+                    }
+                });
+
+                document.getElementById('player-surface').addEventListener('click', () => {
+                    setState(1);
+                });
+
+                queueMicrotask(() => {
+                    emit('onPlayerReady');
+                });
+            })();
+        <\/script>
+    </body>
+</html>`;
+
+                await route.fulfill({
+                        status: 200,
+                        contentType: 'text/html',
+                        body: html
+                });
+        });
+};
+
+/**
  * Reads the current state of twin players from the window object.
  * Returns a snapshot of time, state, readiness, error, and VOLUME.
  * @param {import('@playwright/test').Page} page
@@ -232,6 +316,53 @@ export const readTwinPlayersSnapshot = async (page) => {
             bothVideosStarted: players.bothVideosStarted,
         };
     });
+};
+
+const resolvePlayerIframeId = async (page, playerKey) => {
+    return page.evaluate((key) => {
+        const players = window.__players;
+        const iframe = players?.[key]?.getIframe?.();
+        if (!iframe) return null;
+        if (!iframe.id) {
+            iframe.id = `${key}-iframe-${Math.random().toString(36).slice(2, 10)}`;
+        }
+        return iframe.id;
+    }, playerKey);
+};
+
+export const clickPlayerSurface = async (page, playerKey) => {
+    const iframeId = await resolvePlayerIframeId(page, playerKey);
+    if (!iframeId) {
+        return null;
+    }
+
+    await page.evaluate((id) => {
+        const iframe = document.getElementById(id);
+        if (!iframe) return;
+        iframe.dispatchEvent(new MouseEvent('click', {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            view: window
+        }));
+    }, iframeId).catch(() => { });
+
+    await page.locator(`#${iframeId}`).click({ force: true }).catch(() => { });
+
+    await page
+        .frameLocator(`#${iframeId}`)
+        .locator('body')
+        .click({ timeout: 2500 })
+        .catch(() => { });
+
+    await page
+        .frameLocator(`#${iframeId}`)
+        .getByRole('button')
+        .first()
+        .click({ timeout: 2500 })
+        .catch(() => { });
+
+    return iframeId;
 };
 
 /**
@@ -321,22 +452,8 @@ export const startPlaybackInteraction = async (page) => {
         return Boolean(players?.original?.getIframe?.() && players?.reaction?.getIframe?.());
     }, null, { timeout: 30000 });
 
-    const { originalIframeId, reactionIframeId } = await page.evaluate(() => {
-        const players = window.__players;
-        const ensureId = (iframe, prefix) => {
-            if (!iframe) return null;
-            if (!iframe.id) iframe.id = `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
-            return iframe.id;
-        };
-
-        return {
-            originalIframeId: ensureId(players?.original?.getIframe?.(), 'original-yt'),
-            reactionIframeId: ensureId(players?.reaction?.getIframe?.(), 'reaction-yt'),
-        };
-    });
-
-    if (originalIframeId) await page.locator(`#${originalIframeId}`).click({ force: true }).catch(() => { });
-    if (reactionIframeId) await page.locator(`#${reactionIframeId}`).click({ force: true }).catch(() => { });
+    const originalIframeId = await clickPlayerSurface(page, 'original');
+    const reactionIframeId = await clickPlayerSurface(page, 'reaction');
 
     const isMobileLikeUA = await page.evaluate(() => /iPhone|iPad|Android|Mobile/i.test(navigator.userAgent));
 

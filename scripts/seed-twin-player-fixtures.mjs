@@ -11,6 +11,7 @@ import { spawnSync } from 'node:child_process';
 
 const FIXTURES = [
   'tests/fixtures/reactions/twin-basic-sync.json',
+  'tests/fixtures/reactions/twin-tiktok-original-sync.json',
   'tests/fixtures/reactions/twin-play-trigger.json',
   'tests/fixtures/reactions/twin-volume-stability.json',
   'tests/fixtures/reactions/twin-resume-after-config-pause.json',
