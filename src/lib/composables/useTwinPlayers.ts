@@ -22,6 +22,11 @@ import {
   fetchFirstPlaylistVideos
 } from '$lib/helpers/youtube';
 import {
+  fetchOriginalVideoMetadata,
+  normalizeOriginalVideoMetadata,
+  originalVideoMetadataToFirestoreFields,
+} from '$lib/helpers/originalVideo';
+import {
   deriveTimelines,
   readAutoPlayCookie,
   readCinematicBarsCookie,
@@ -85,6 +90,7 @@ type TwinPlayersState = {
   reactionVideoTitle?: string;
   reactionVideoDescription?: string;
   originalVideoAuthor?: string;
+  originalVideoAuthorUrl?: string;
   originalVideoTitle?: string;
   originalVideoDescription?: string;
   originalVideoId?: string;
@@ -256,9 +262,13 @@ type VerifyVideoDetailsResult = {
 type VerifyAndSyncMetadataParams = {
   documentId?: string;
   originalVideoId?: string;
+  originalVideoPlatform?: 'youtube' | 'tiktok';
+  originalVideoUrl?: string | null;
   reactionVideoId?: string;
   currentOriginalTitle?: string | null;
   currentOriginalAuthor?: string | null;
+  currentOriginalAuthorUrl?: string | null;
+  currentOriginalDescription?: string | null;
   currentReactionTitle?: string | null;
   currentReactionAuthor?: string | null;
 };
@@ -341,6 +351,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     isPublished: false,
     reactionVideoId: '',
     originalVideoAuthor: undefined,
+    originalVideoAuthorUrl: undefined,
     originalVideoTitle: undefined,
     reactionVideoAuthor: undefined,
     reactorDisplayName: undefined,
@@ -2284,14 +2295,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         ? reactionData.youtube.meta.description.trim()
         : '') ||
       undefined;
-    const originalVideoDescription =
-      (typeof reactionData?.originalVideoDescription === 'string'
-        ? reactionData.originalVideoDescription.trim()
-        : '') ||
-      (typeof reactionData?.originalYoutube?.meta?.description === 'string'
-        ? reactionData.originalYoutube.meta.description.trim()
-        : '') ||
-      undefined;
+    const normalizedOriginalMetadata = normalizeOriginalVideoMetadata(reactionData);
 
     // Set metadata + timeline state before attempting player creation so the
     // UI always has Firestore-sourced data (attribution, creator details, etc.)
@@ -2318,9 +2322,10 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       reactorDisplayName: resolvedReactorDisplayName || undefined,
       reactionVideoTitle: reactionData?.reactionVideoTitle,
       reactionVideoDescription,
-      originalVideoAuthor: reactionData?.originalVideoAuthor,
-      originalVideoTitle: reactionData?.originalVideoTitle,
-      originalVideoDescription,
+      originalVideoAuthor: normalizedOriginalMetadata.author,
+      originalVideoAuthorUrl: normalizedOriginalMetadata.authorUrl,
+      originalVideoTitle: normalizedOriginalMetadata.title,
+      originalVideoDescription: normalizedOriginalMetadata.description,
       youtubePlaylistId,
       offsetStartTime,
       reactionFinishTime,
@@ -2445,9 +2450,13 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     await verifyAndSyncMetadata({
       documentId: typeof reactionData?.id === 'string' ? reactionData.id : undefined,
       originalVideoId,
+      originalVideoPlatform: normalizeOriginalVideoPlatform(reactionData?.originalVideoPlatform),
+      originalVideoUrl: reactionData?.originalVideoUrl,
       reactionVideoId,
-      currentOriginalTitle: reactionData?.originalVideoTitle,
-      currentOriginalAuthor: reactionData?.originalVideoAuthor,
+      currentOriginalTitle: normalizedOriginalMetadata.title,
+      currentOriginalAuthor: normalizedOriginalMetadata.author,
+      currentOriginalAuthorUrl: normalizedOriginalMetadata.authorUrl,
+      currentOriginalDescription: normalizedOriginalMetadata.description,
       currentReactionTitle: reactionData?.reactionVideoTitle,
       currentReactionAuthor: reactionData?.reactionVideoAuthor
     });
@@ -2846,12 +2855,18 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
       updateUIElements(nextReactionDocumentId);
 
+      const normalizedOriginalMetadata = normalizeOriginalVideoMetadata(reactionData);
+
       await verifyAndSyncMetadata({
         documentId: typeof reactionData?.id === 'string' ? reactionData.id : undefined,
         originalVideoId,
+        originalVideoPlatform: normalizeOriginalVideoPlatform(reactionData?.originalVideoPlatform),
+        originalVideoUrl: reactionData?.originalVideoUrl,
         reactionVideoId,
-        currentOriginalTitle: reactionData?.originalVideoTitle,
-        currentOriginalAuthor: reactionData?.originalVideoAuthor,
+        currentOriginalTitle: normalizedOriginalMetadata.title,
+        currentOriginalAuthor: normalizedOriginalMetadata.author,
+        currentOriginalAuthorUrl: normalizedOriginalMetadata.authorUrl,
+        currentOriginalDescription: normalizedOriginalMetadata.description,
         currentReactionTitle: reactionData?.reactionVideoTitle,
         currentReactionAuthor: reactionData?.reactionVideoAuthor
       });
@@ -3057,6 +3072,70 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     return { videoAuthor, videoTitle };
   };
 
+  const verifyOriginalVideoDetails = async ({
+    platform,
+    videoId,
+    videoUrl,
+    currentTitle,
+    currentAuthor,
+    currentAuthorUrl,
+    currentDescription
+  }: {
+    platform?: 'youtube' | 'tiktok';
+    videoId?: string;
+    videoUrl?: string | null;
+    currentTitle?: string | null;
+    currentAuthor?: string | null;
+    currentAuthorUrl?: string | null;
+    currentDescription?: string | null;
+  }) => {
+    const result: {
+      metadata?: ReturnType<typeof normalizeOriginalVideoMetadata>;
+      updates: Record<string, string | number>;
+    } = {
+      updates: {}
+    };
+
+    if (!videoId) {
+      return result;
+    }
+
+    try {
+      const metadata = await fetchOriginalVideoMetadata({
+        platform,
+        videoId,
+        videoUrl: videoUrl || undefined
+      });
+      const normalizedFields = originalVideoMetadataToFirestoreFields(metadata);
+      const currentComparison = {
+        originalVideoTitle: typeof currentTitle === 'string' ? currentTitle.trim() : undefined,
+        originalVideoAuthor: typeof currentAuthor === 'string' ? currentAuthor.trim() : undefined,
+        originalVideoAuthorUrl:
+          typeof currentAuthorUrl === 'string' ? currentAuthorUrl.trim() : undefined,
+        originalVideoDescription:
+          typeof currentDescription === 'string' ? currentDescription.trim() : undefined
+      };
+
+      for (const [key, value] of Object.entries(normalizedFields)) {
+        if (typeof value !== 'string' && typeof value !== 'number') {
+          continue;
+        }
+
+        const nextValue = typeof value === 'string' ? value.trim() : value;
+        const currentValue = currentComparison[key as keyof typeof currentComparison];
+        if (nextValue && nextValue !== currentValue) {
+          result.updates[key] = value;
+        }
+      }
+
+      result.metadata = metadata;
+    } catch (error) {
+      console.error(`Failed to verify original metadata for video ${videoId}`, error);
+    }
+
+    return result;
+  };
+
   const verifyVideoDetails = async ({
     videoId,
     currentTitle,
@@ -3104,9 +3183,13 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   const verifyAndSyncMetadata = async ({
     documentId,
     originalVideoId,
+    originalVideoPlatform,
+    originalVideoUrl,
     reactionVideoId,
     currentOriginalTitle,
     currentOriginalAuthor,
+    currentOriginalAuthorUrl,
+    currentOriginalDescription,
     currentReactionTitle,
     currentReactionAuthor
   }: VerifyAndSyncMetadataParams) => {
@@ -3122,12 +3205,14 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     }
 
     const [originalVerification, reactionVerification] = await Promise.all([
-      verifyVideoDetails({
+      verifyOriginalVideoDetails({
+        platform: originalVideoPlatform,
         videoId: originalVideoId,
+        videoUrl: originalVideoUrl,
         currentTitle: currentOriginalTitle,
         currentAuthor: currentOriginalAuthor,
-        titleField: 'originalVideoTitle',
-        authorField: 'originalVideoAuthor'
+        currentAuthorUrl: currentOriginalAuthorUrl,
+        currentDescription: currentOriginalDescription
       }),
       verifyVideoDetails({
         videoId: reactionVideoId,
@@ -3159,17 +3244,43 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     const partialUpdate: Partial<TwinPlayersState> = {};
     const normalizedOriginalTitle = typeof currentOriginalTitle === 'string' ? currentOriginalTitle.trim() : undefined;
     const normalizedOriginalAuthor = typeof currentOriginalAuthor === 'string' ? currentOriginalAuthor.trim() : undefined;
+    const normalizedOriginalAuthorUrl =
+      typeof currentOriginalAuthorUrl === 'string' ? currentOriginalAuthorUrl.trim() : undefined;
+    const normalizedOriginalDescription =
+      typeof currentOriginalDescription === 'string' ? currentOriginalDescription.trim() : undefined;
     const normalizedReactionTitle = typeof currentReactionTitle === 'string' ? currentReactionTitle.trim() : undefined;
     const normalizedReactionAuthor = typeof currentReactionAuthor === 'string' ? currentReactionAuthor.trim() : undefined;
 
-    const nextOriginalTitle = typeof originalVerification.title === 'string' ? originalVerification.title.trim() : undefined;
+    const nextOriginalTitle =
+      typeof originalVerification.metadata?.title === 'string'
+        ? originalVerification.metadata.title.trim()
+        : undefined;
     if (nextOriginalTitle && nextOriginalTitle !== normalizedOriginalTitle) {
       partialUpdate.originalVideoTitle = nextOriginalTitle;
     }
 
-    const nextOriginalAuthor = typeof originalVerification.author === 'string' ? originalVerification.author.trim() : undefined;
+    const nextOriginalAuthor =
+      typeof originalVerification.metadata?.author === 'string'
+        ? originalVerification.metadata.author.trim()
+        : undefined;
     if (nextOriginalAuthor && nextOriginalAuthor !== normalizedOriginalAuthor) {
       partialUpdate.originalVideoAuthor = nextOriginalAuthor;
+    }
+
+    const nextOriginalAuthorUrl =
+      typeof originalVerification.metadata?.authorUrl === 'string'
+        ? originalVerification.metadata.authorUrl.trim()
+        : undefined;
+    if (nextOriginalAuthorUrl && nextOriginalAuthorUrl !== normalizedOriginalAuthorUrl) {
+      partialUpdate.originalVideoAuthorUrl = nextOriginalAuthorUrl;
+    }
+
+    const nextOriginalDescription =
+      typeof originalVerification.metadata?.description === 'string'
+        ? originalVerification.metadata.description.trim()
+        : undefined;
+    if (nextOriginalDescription && nextOriginalDescription !== normalizedOriginalDescription) {
+      partialUpdate.originalVideoDescription = nextOriginalDescription;
     }
 
     const nextReactionTitle = typeof reactionVerification.title === 'string' ? reactionVerification.title.trim() : undefined;

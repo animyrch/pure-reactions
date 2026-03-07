@@ -13,6 +13,7 @@
     import { isMobileDevice } from "$lib/helpers/system";
     import { getCompensatedReactionTime } from "$lib/helpers/reaction";
     import { getTikTokEmbedUrl } from "$lib/helpers/platform";
+    import { fetchOriginalVideoMetadata } from "$lib/helpers/originalVideo";
     import PlaylistQueue from "$lib/components/Video/PlaylistQueue.svelte";
     import { isLoggedIn } from "$lib/stores/user";
     import { page } from "$app/stores";
@@ -28,10 +29,7 @@
         UsersSolid,
     } from "flowbite-svelte-icons";
     import { sineOut } from "svelte/easing";
-    import {
-        downloadBasicVideoDetails,
-        fetchFirstPlaylistVideos,
-    } from "$lib/helpers/youtube";
+    import { fetchFirstPlaylistVideos } from "$lib/helpers/youtube";
     import {
         createSharedSession,
         updateSessionState,
@@ -50,6 +48,7 @@
     let playlistId = "";
     let playlistBufferTime = "";
     let playlistItems = [];
+    let originalVideoUrl = "";
     let showRecorder = false;
     let currentPlaylistDocumentId = "";
     let playlistElements;
@@ -160,6 +159,10 @@
                 if (!nextPlaylistBufferTime) {
                     autoStartedBufferVideoId = "";
                 }
+            }
+            const nextOriginalVideoUrl = params.get("originalUrl") || "";
+            if (nextOriginalVideoUrl !== originalVideoUrl) {
+                originalVideoUrl = nextOriginalVideoUrl;
             }
             showRecorder = params.has("record");
             const nextPlaylistDocumentId =
@@ -430,9 +433,7 @@
                     return;
                 }
                 loadTikTokPlayer(videoId);
-                // TikTok metadata is not available via YouTube oEmbed
-                originalVideoTitle = `TikTok video ${videoId}`;
-                originalVideoAuthor = '';
+                await getBasicDetailsOriginal();
                 if (sharedSessionId) {
                     shareUrl = generateShareUrl(sharedSessionId);
                     subscribeToSession();
@@ -989,7 +990,16 @@
             originalVideoId,
             userId: data.userId,
             originalVideoAuthor,
+            originalVideoAuthorHandle,
+            originalVideoAuthorUrl,
             originalVideoTitle,
+            originalVideoDescription,
+            originalVideoThumbnailUrl,
+            originalVideoThumbnailWidth,
+            originalVideoThumbnailHeight,
+            originalVideoProviderName,
+            originalVideoProviderUrl,
+            originalVideoUrl,
             offsetStartTime: playlistBufferTime || 0,
             originalVideoPlatform: isTikTokOriginal ? "tiktok" : "youtube",
         });
@@ -1004,11 +1014,15 @@
                     currentReactionDocumentId,
                     originalVideoId,
                     data.userId,
+                    isTikTokOriginal ? "tiktok" : "youtube",
+                    originalVideoUrl,
                 );
                 console.log("Shared session created:", sharedSessionId);
             } else {
                 await updateSessionState(sharedSessionId, {
                     originalVideoId,
+                    originalVideoPlatform: isTikTokOriginal ? "tiktok" : "youtube",
+                    originalVideoUrl,
                     reactorId: data.userId,
                     activeReactionDocumentId: currentReactionDocumentId,
                     state: SESSION_STATES.WAITING,
@@ -1356,11 +1370,31 @@
 
     let originalVideoAuthor;
     let originalVideoTitle;
+    let originalVideoAuthorHandle;
+    let originalVideoAuthorUrl;
+    let originalVideoDescription;
+    let originalVideoThumbnailUrl;
+    let originalVideoThumbnailWidth;
+    let originalVideoThumbnailHeight;
+    let originalVideoProviderName;
+    let originalVideoProviderUrl;
     const getBasicDetailsOriginal = async () => {
-        const { videoAuthor, videoTitle } =
-            await downloadBasicVideoDetails(originalVideoId);
-        originalVideoAuthor = videoAuthor;
-        originalVideoTitle = videoTitle;
+        const metadata = await fetchOriginalVideoMetadata({
+            platform: isTikTokOriginal ? "tiktok" : "youtube",
+            videoId: originalVideoId,
+            videoUrl: originalVideoUrl,
+        });
+        originalVideoAuthor = metadata.author || "";
+        originalVideoAuthorHandle = metadata.authorHandle || "";
+        originalVideoAuthorUrl = metadata.authorUrl || "";
+        originalVideoTitle = metadata.title || "";
+        originalVideoDescription = metadata.description || "";
+        originalVideoThumbnailUrl = metadata.thumbnailUrl || "";
+        originalVideoThumbnailWidth = metadata.thumbnailWidth;
+        originalVideoThumbnailHeight = metadata.thumbnailHeight;
+        originalVideoProviderName = metadata.providerName || "";
+        originalVideoProviderUrl = metadata.providerUrl || "";
+        originalVideoUrl = metadata.canonicalUrl || originalVideoUrl;
     };
     function handleKeydown(event) {
         if (

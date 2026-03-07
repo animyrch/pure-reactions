@@ -10,7 +10,7 @@
         leaveSharedSession,
         SESSION_STATES
     } from '$lib/helpers/sharedSession';
-    import { downloadBasicVideoDetails } from '$lib/helpers/youtube';
+    import { fetchOriginalVideoMetadata } from '$lib/helpers/originalVideo';
     import { UsersSolid, ArrowLeftOutline } from 'flowbite-svelte-icons';
 
     let sessionId = $page.params.sessionId;
@@ -67,9 +67,13 @@
         }
 
         try {
-            const { videoAuthor, videoTitle } = await downloadBasicVideoDetails(videoId);
-            originalVideoAuthor = videoAuthor;
-            originalVideoTitle = videoTitle;
+            const metadata = await fetchOriginalVideoMetadata({
+                platform: sessionData?.originalVideoPlatform,
+                videoId,
+                videoUrl: sessionData?.originalVideoUrl,
+            });
+            originalVideoAuthor = metadata.author || '';
+            originalVideoTitle = metadata.title || '';
         } catch (error) {
             console.error('Failed to download video details:', error);
             originalVideoAuthor = '';

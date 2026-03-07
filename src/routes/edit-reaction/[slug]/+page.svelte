@@ -407,8 +407,10 @@
     <div class="mx-auto w-full px-4 pb-10 sm:px-6 lg:px-10">
       <CreatorDetails
         originalVideoAuthor={$state.originalVideoAuthor}
+        originalVideoAuthorUrl={$state.originalVideoAuthorUrl}
         originalVideoTitle={$state.originalVideoTitle}
         originalVideoId={$state.originalVideoId}
+        originalVideoPlatform={$state.originalVideoPlatform}
         reactionVideoAuthor={$state.reactionVideoAuthor}
         reactionVideoTitle={$state.reactionVideoTitle}
         reactionVideoId={$state.reactionVideoId}

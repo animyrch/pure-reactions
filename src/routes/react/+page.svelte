@@ -48,7 +48,7 @@
 
     const proceedToRecorder = async (videoId, originalValue, platform = 'youtube') => {
         if (platform === 'tiktok') {
-            await goToRoute(`/backend?id=${videoId}&platform=tiktok`);
+            await goToRoute(`/backend?id=${encodeURIComponent(videoId)}&platform=tiktok&originalUrl=${encodeURIComponent(originalValue)}`);
             return;
         }
         const playlistId = extractYoutubePlaylistId(originalValue);

@@ -107,7 +107,16 @@ export const createReactionDocument = async ({
     originalVideoId,
     userId,
     originalVideoAuthor,
+    originalVideoAuthorHandle,
+    originalVideoAuthorUrl,
     originalVideoTitle,
+    originalVideoDescription,
+    originalVideoThumbnailUrl,
+    originalVideoThumbnailWidth,
+    originalVideoThumbnailHeight,
+    originalVideoProviderName,
+    originalVideoProviderUrl,
+    originalVideoUrl,
     offsetStartTime,
     originalVideoPlatform
 }) => {
@@ -129,6 +138,34 @@ export const createReactionDocument = async ({
             fullscreenOverlayCorner: "top-right",
             createdAt: serverTimestamp()
         };
+
+        if (typeof originalVideoAuthorHandle === 'string' && originalVideoAuthorHandle.trim()) {
+            dataToAdd.originalVideoAuthorHandle = originalVideoAuthorHandle.trim();
+        }
+        if (typeof originalVideoAuthorUrl === 'string' && originalVideoAuthorUrl.trim()) {
+            dataToAdd.originalVideoAuthorUrl = originalVideoAuthorUrl.trim();
+        }
+        if (typeof originalVideoDescription === 'string' && originalVideoDescription.trim()) {
+            dataToAdd.originalVideoDescription = originalVideoDescription.trim();
+        }
+        if (typeof originalVideoThumbnailUrl === 'string' && originalVideoThumbnailUrl.trim()) {
+            dataToAdd.originalVideoThumbnailUrl = originalVideoThumbnailUrl.trim();
+        }
+        if (typeof originalVideoThumbnailWidth === 'number' && Number.isFinite(originalVideoThumbnailWidth)) {
+            dataToAdd.originalVideoThumbnailWidth = originalVideoThumbnailWidth;
+        }
+        if (typeof originalVideoThumbnailHeight === 'number' && Number.isFinite(originalVideoThumbnailHeight)) {
+            dataToAdd.originalVideoThumbnailHeight = originalVideoThumbnailHeight;
+        }
+        if (typeof originalVideoProviderName === 'string' && originalVideoProviderName.trim()) {
+            dataToAdd.originalVideoProviderName = originalVideoProviderName.trim();
+        }
+        if (typeof originalVideoProviderUrl === 'string' && originalVideoProviderUrl.trim()) {
+            dataToAdd.originalVideoProviderUrl = originalVideoProviderUrl.trim();
+        }
+        if (typeof originalVideoUrl === 'string' && originalVideoUrl.trim()) {
+            dataToAdd.originalVideoUrl = originalVideoUrl.trim();
+        }
 
         const documentRef = await addDoc(reactionsCollection, dataToAdd);
         await requestReactionEnrichment(documentRef.id);
