@@ -19,6 +19,7 @@
   export let seekMin = 0;
   export let seekMax = Number.POSITIVE_INFINITY;
   export let playerEventTimeline = [];
+  export let allowPlaybackRate = true;
 
   const YOUTUBE_STATE_LABELS = {
     "-1": "Unstarted",
@@ -369,6 +370,7 @@
       {reactionVolumeEvents}
       playbackRateEvents={playbackEvents}
       overlayVisibilityEvents={overlayVisibilityEvents}
+      {allowPlaybackRate}
       on:createPlayerConfig={(event) =>
         dispatch("createPlayerConfig", event.detail)}
       on:createVolumeConfig={(event) =>

@@ -5,6 +5,7 @@
     import { onMount } from 'svelte';
     import { goToRoute, handlePrivateRoute } from '$lib/helpers/routing';
     import { extractYouTubeVideoId, extractYoutubePlaylistId } from '$lib/helpers/youtube';
+    import { extractTikTokVideoId } from '$lib/helpers/platform';
     import { auth } from '$lib/helpers/firebase';
 
     const steps = [
@@ -12,7 +13,7 @@
             id: 'original-video',
             title: 'Original video',
             prompt: 'What are you reacting to?',
-            helper: 'Paste the YouTube URL or video ID. We will load it instantly and keep playback locked to your session.'
+            helper: 'Paste a YouTube or TikTok URL. We will load it instantly and keep playback locked to your session.'
         }
     ];
 
@@ -45,7 +46,11 @@
         goToRoute('/');
     };
 
-    const proceedToRecorder = async (videoId, originalValue) => {
+    const proceedToRecorder = async (videoId, originalValue, platform = 'youtube') => {
+        if (platform === 'tiktok') {
+            await goToRoute(`/backend?id=${encodeURIComponent(videoId)}&platform=tiktok&originalUrl=${encodeURIComponent(originalValue)}`);
+            return;
+        }
         const playlistId = extractYoutubePlaylistId(originalValue);
         const redirectUrl = playlistId
             ? `/backend?id=${videoId}&playlist=${playlistId}`
@@ -59,25 +64,41 @@
         }
         const rawValue = createReactForm.originalVideoId?.trim();
         if (!rawValue) {
-            createReactForm.errors.originalVideoId = 'Paste a YouTube link or the 11-character video ID to continue.';
+            createReactForm.errors.originalVideoId = 'Paste a YouTube or TikTok link or video ID to continue.';
             return;
         }
 
-        const videoId = extractYouTubeVideoId(rawValue);
-        if (!videoId) {
-            createReactForm.errors.originalVideoId = 'We couldn’t read that link. Make sure it is a valid YouTube URL or video ID.';
+        // Try YouTube first
+        const youtubeVideoId = extractYouTubeVideoId(rawValue);
+        if (youtubeVideoId) {
+            isSubmitting = true;
+            createReactForm.errors.originalVideoId = '';
+            try {
+                await proceedToRecorder(youtubeVideoId, rawValue, 'youtube');
+            } catch (error) {
+                console.error('Failed to navigate to recorder:', error);
+                isSubmitting = false;
+                createReactForm.errors.originalVideoId = 'Something went wrong. Please try again.';
+            }
             return;
         }
 
-        isSubmitting = true;
-        createReactForm.errors.originalVideoId = '';
-        try {
-            await proceedToRecorder(videoId, rawValue);
-        } catch (error) {
-            console.error('Failed to navigate to recorder:', error);
-            isSubmitting = false;
-            createReactForm.errors.originalVideoId = 'Something went wrong. Please try again.';
+        // Try TikTok
+        const tiktokVideoId = extractTikTokVideoId(rawValue);
+        if (tiktokVideoId) {
+            isSubmitting = true;
+            createReactForm.errors.originalVideoId = '';
+            try {
+                await proceedToRecorder(tiktokVideoId, rawValue, 'tiktok');
+            } catch (error) {
+                console.error('Failed to navigate to recorder:', error);
+                isSubmitting = false;
+                createReactForm.errors.originalVideoId = 'Something went wrong. Please try again.';
+            }
+            return;
         }
+
+        createReactForm.errors.originalVideoId = 'We couldn’t read that link. Make sure it is a valid YouTube or TikTok URL.';
     };
 
     onMount(async () => {
@@ -139,7 +160,7 @@
 
                         <div class="space-y-2">
                             <label class="text-sm font-medium text-slate-200" for="original-video-id">
-                                YouTube link or video ID
+                                YouTube or TikTok link
                             </label>
                             <input
                                 id="original-video-id"
@@ -148,7 +169,7 @@
                                 bind:this={originalVideoInput}
                                 bind:value={createReactForm.originalVideoId}
                                 on:input={clearOriginalVideoError}
-                                placeholder="https://youtube.com/watch?v=..."
+                                placeholder="https://youtube.com/watch?v=… or https://www.tiktok.com/@user/video/…"
                                 class={`w-full rounded-2xl border bg-slate-950/60 px-5 py-4 text-base text-slate-100 shadow-[0_20px_60px_-45px_rgba(15,23,42,1)] focus:border-blue-400 focus:outline-none focus:ring-4 focus:ring-blue-500/20 ${
                                     createReactForm.errors.originalVideoId ? 'border-rose-500/80' : 'border-slate-800/80'
                                 }`}

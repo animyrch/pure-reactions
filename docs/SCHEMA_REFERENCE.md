@@ -17,9 +17,19 @@ The main collection for reaction videos.
 | `reactionVideoId` | string | Yes | YouTube video ID of the reaction |
 | `reactionVideoTitle` | string | Yes | Title of the reaction video |
 | `reactionVideoAuthor` | string | No | YouTube channel handle for the reaction video (e.g., `@channel`) |
-| `originalVideoId` | string | Yes | YouTube video ID of the original content |
+| `originalVideoId` | string | Yes | Platform-native ID of the original content (YouTube ID or TikTok video ID) |
 | `originalVideoTitle` | string | Yes | Title of the original video |
-| `originalVideoAuthor` | string | No | YouTube channel handle for the original video |
+| `originalVideoAuthor` | string | No | Platform-native creator handle for the original video |
+| `originalVideoAuthorHandle` | string | No | Platform-native creator handle/unique ID for the original video |
+| `originalVideoAuthorUrl` | string | No | Canonical profile URL for the original creator |
+| `originalVideoDescription` | string | No | Normalized description or caption for the original video |
+| `originalVideoThumbnailUrl` | string | No | Canonical thumbnail/poster URL for the original video |
+| `originalVideoThumbnailWidth` | number | No | Thumbnail width when known |
+| `originalVideoThumbnailHeight` | number | No | Thumbnail height when known |
+| `originalVideoUrl` | string | No | Canonical public URL of the original video |
+| `originalVideoProviderName` | string | No | Source platform display name (for example `YouTube`, `TikTok`) |
+| `originalVideoProviderUrl` | string | No | Source platform base URL |
+| `originalVideoPlatform` | string | No | Original platform identifier: `youtube` or `tiktok` (defaults to `youtube` when omitted) |
 | `slug` | string | No | URL-friendly identifier (falls back to doc ID) |
 | `isPublished` | boolean | Yes | Visibility status (true = public, false = draft/unlisted) |
 | `createdAt` | Timestamp | Yes | Document creation timestamp |
@@ -41,6 +51,48 @@ The main collection for reaction videos.
 | `description` | string | No | Description or notes |
 | `duration` | number | No | Video duration in seconds |
 | `thumbnailUrl` | string | No | Custom thumbnail URL (if not using YouTube default) |
+
+#### Enriched Metadata Fields
+
+Optional enrichment payloads populated by the server-side metadata enrichment flow.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `youtube.meta` | object | No | Enriched metadata for the reaction video's YouTube source |
+| `youtube.meta.videoId` | string | No | Canonical YouTube video ID for the reaction |
+| `youtube.meta.title` | string | No | Enriched reaction title from YouTube |
+| `youtube.meta.description` | string | No | Enriched reaction description from YouTube |
+| `youtube.meta.thumbnail` | string | No | Best-fit YouTube thumbnail URL for the reaction |
+| `youtube.meta.publishedAt` | string | No | ISO timestamp from the YouTube API |
+| `youtube.meta.durationSeconds` | number | No | Reaction duration derived from YouTube ISO duration |
+| `lastEnrichedAt` | Timestamp | No | Last time the reaction-side YouTube metadata was refreshed |
+| `originalYoutube.meta` | object | No | Enriched metadata for the original video when the original platform is YouTube |
+| `originalYoutube.meta.videoId` | string | No | Canonical YouTube video ID for the original |
+| `originalYoutube.meta.title` | string | No | Enriched original title from YouTube |
+| `originalYoutube.meta.description` | string | No | Enriched original description from YouTube |
+| `originalYoutube.meta.thumbnail` | string | No | Best-fit YouTube thumbnail URL for the original |
+| `originalYoutube.meta.publishedAt` | string | No | ISO timestamp from the YouTube API |
+| `originalYoutube.meta.durationSeconds` | number | No | Original duration derived from YouTube ISO duration |
+| `originalYoutube.lastEnrichedAt` | Timestamp | No | Last time the original-side YouTube metadata was refreshed |
+| `originalTikTok.meta` | object | No | Enriched metadata for the original video when the original platform is TikTok |
+| `originalTikTok.meta.videoId` | string | No | Canonical TikTok video ID for the original |
+| `originalTikTok.meta.title` | string | No | Enriched TikTok caption/title for the original |
+| `originalTikTok.meta.description` | string | No | Normalized TikTok description/caption text |
+| `originalTikTok.meta.authorName` | string | No | Creator display name from TikTok oEmbed |
+| `originalTikTok.meta.authorHandle` | string | No | Creator handle from TikTok oEmbed |
+| `originalTikTok.meta.authorUrl` | string | No | Creator profile URL from TikTok oEmbed |
+| `originalTikTok.meta.thumbnail` | string | No | Poster thumbnail URL from TikTok oEmbed |
+| `originalTikTok.meta.thumbnailWidth` | number | No | Poster thumbnail width |
+| `originalTikTok.meta.thumbnailHeight` | number | No | Poster thumbnail height |
+| `originalTikTok.meta.providerName` | string | No | Source platform name (`TikTok`) |
+| `originalTikTok.meta.providerUrl` | string | No | Source platform URL (`https://www.tiktok.com`) |
+| `originalTikTok.meta.embedType` | string | No | Embed type returned by TikTok oEmbed |
+| `originalTikTok.meta.embedHtml` | string | No | Raw embed HTML returned by TikTok oEmbed |
+| `originalTikTok.meta.embedProductId` | string | No | TikTok embed product/video ID |
+| `originalTikTok.meta.canonicalUrl` | string | No | Canonical TikTok video URL used for enrichment |
+| `originalTikTok.lastEnrichedAt` | Timestamp | No | Last time the original-side TikTok metadata was refreshed |
+
+**Platform note**: `originalYoutube.*` is only expected when the original content is on YouTube. `originalTikTok.*` is only expected when the original content is on TikTok. Both platforms should populate the normalized top-level `originalVideo*` fields above so the interface can stay platform-agnostic.
 
 #### User & Ownership
 
@@ -220,6 +272,9 @@ Real-time co-watching sessions.
 {
   hostId: string,           // User ID of session host
   reactionId: string,       // Current reaction being watched
+  originalVideoId: string,  // Current original video ID
+  originalVideoPlatform: string, // 'youtube' | 'tiktok'
+  originalVideoUrl: string, // Canonical original video URL when known
   state: string,            // 'playing' | 'paused'
   currentTime: number,      // Playback position in seconds
   volume: number,           // Volume level (0-100)
@@ -254,6 +309,7 @@ Real-time co-watching sessions.
 
 - Document IDs: Auto-generated by Firestore or custom slugs
 - YouTube IDs: Always 11 characters (e.g., `dQw4w9WgXcQ`)
+- TikTok video IDs: Numeric platform IDs, typically 15-20 digits
 - User IDs: Firebase Auth UIDs
 - Slugs: Lowercase, hyphenated, URL-safe strings
 
@@ -349,6 +405,7 @@ const docRef = await addDoc(collection(db, 'reactions'), {
   reactionVideoTitle: 'My Reaction',
   originalVideoId: 'xyz789',
   originalVideoTitle: 'Original Video',
+  originalVideoPlatform: 'youtube',
   reactionVideoAuthor: '@mychannel',
   isPublished: false, // Start as draft
   createdAt: serverTimestamp(),
@@ -378,6 +435,8 @@ const docRef = await addDoc(collection(db, 'reactions'), {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.3 | 2026-03-07 | Added normalized original-video author/description/thumbnail/url fields, documented `originalTikTok` enrichment metadata, and extended shared-session schema with original platform/url |
+| 1.2 | 2026-03-07 | Documented `originalVideoPlatform`, clarified cross-platform original IDs, and added optional `originalYoutube`/`youtube` enrichment metadata for reaction docs |
 | 1.1 | 2026-01-30 | Updated user data, playlist, and queue fields; documented export timestamp |
 | 1.0 | 2026-01-22 | Initial schema documentation |
 

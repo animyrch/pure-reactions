@@ -200,6 +200,7 @@
     isUsersOwnVideo={$state.isUsersOwnVideo}
     playerOriginal={$state.playerOriginal}
     playerReaction={$state.playerReaction}
+    originalVideoPlatform={$state.originalVideoPlatform}
     {stickyControlsClass}
     bothVideosStarted={$state.bothVideosStarted}
     isPlaylist={Boolean($state.playlistDocumentId)}
@@ -258,9 +259,11 @@
       <div data-testid="reaction-metadata">
         <CreatorDetails
           originalVideoAuthor={$state.originalVideoAuthor}
+          originalVideoAuthorUrl={$state.originalVideoAuthorUrl}
           originalVideoTitle={$state.originalVideoTitle}
           originalVideoId={$state.originalVideoId}
           originalVideoDescription={$state.originalVideoDescription}
+          originalVideoPlatform={$state.originalVideoPlatform}
           reactionVideoAuthor={$state.reactionVideoAuthor}
           reactionVideoTitle={$state.reactionVideoTitle}
           reactionVideoId={$state.reactionVideoId}

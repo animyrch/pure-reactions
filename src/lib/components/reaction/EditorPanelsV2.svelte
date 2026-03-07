@@ -33,6 +33,8 @@
   export let fullscreenPrimaryVideo = "original";
   export let fullscreenOverlayWidthPercent = 35;
   export let fullscreenOverlayCorner = "top-right";
+  /** Original video platform. Controls which editing capabilities are available. */
+  export let originalVideoPlatform = "youtube";
   export let onCreatePlayerConfig = async () => {};
   export let onCreateVolumeConfig = async () => {};
   export let onCreateReactionVolumeConfig = async () => {};
@@ -60,6 +62,8 @@
   export let onSetFullscreenOverlayCorner = () => {};
   export let onToggleFineTuneMode = () => {};
   export let onSeek = (_time) => {};
+
+  $: isTikTokOriginal = originalVideoPlatform === "tiktok";
 
   const SOUND_LEVEL_MIN = 0;
   const SOUND_LEVEL_MAX = 200;
@@ -507,6 +511,21 @@
         </div>
       </header>
 
+      {#if isTikTokOriginal}
+        <div
+          class="mt-4 flex items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 px-4 py-3"
+          role="note"
+          aria-label="TikTok limitations"
+        >
+          <span class="mt-0.5 text-amber-400" aria-hidden="true">ⓘ</span>
+          <p class="text-sm text-amber-200">
+            <span class="font-medium">TikTok original:</span> playback speed and
+            fine-grained volume control are unavailable. Volume is limited to mute
+            or full.
+          </p>
+        </div>
+      {/if}
+
       <div class="mt-6 flex flex-col gap-6">
         <div class="grid gap-6 lg:grid-cols-2">
           <form
@@ -644,16 +663,40 @@
               >
               <span class="text-sm text-text-muted">{soundLevelValue}%</span>
             </div>
-            <input
-              id="original-sound-level"
-              class="h-2 w-full rounded-full bg-border-subtle accent-accent-primary"
-              type="range"
-              min={SOUND_LEVEL_MIN}
-              max={SOUND_LEVEL_MAX}
-              step={SOUND_LEVEL_STEP}
-              value={soundLevelValue}
-              on:input={handleRangeInput}
-            />
+            {#if isTikTokOriginal}
+              <p class="text-xs text-text-muted">
+                TikTok originals only support mute or full volume.
+              </p>
+              <div class="flex gap-3">
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={soundLevelValue === 0}
+                  aria-label="Mute original audio"
+                  class={`flex-1 rounded-xl border px-4 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 ${soundLevelValue === 0 ? "border-accent-primary bg-accent-primary/10 text-accent-primary" : "border-border-subtle bg-surface/60 text-text-secondary hover:bg-surface"}`}
+                  on:click={() => { soundLevelValue = 0; }}
+                >Mute</button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={soundLevelValue === 100}
+                  aria-label="Restore original audio to full volume"
+                  class={`flex-1 rounded-xl border px-4 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 ${soundLevelValue === 100 ? "border-accent-primary bg-accent-primary/10 text-accent-primary" : "border-border-subtle bg-surface/60 text-text-secondary hover:bg-surface"}`}
+                  on:click={() => { soundLevelValue = 100; }}
+                >Full volume</button>
+              </div>
+            {:else}
+              <input
+                id="original-sound-level"
+                class="h-2 w-full rounded-full bg-border-subtle accent-accent-primary"
+                type="range"
+                min={SOUND_LEVEL_MIN}
+                max={SOUND_LEVEL_MAX}
+                step={SOUND_LEVEL_STEP}
+                value={soundLevelValue}
+                on:input={handleRangeInput}
+              />
+            {/if}
           </div>
           <div class="flex justify-end">
             <CinematicButton
@@ -753,6 +796,7 @@
                 ? reactionFinishTime
                 : Number.POSITIVE_INFINITY}
               {playerEventTimeline}
+              allowPlaybackRate={!isTikTokOriginal}
               on:createPlayerConfig={handleCreatePlayerConfig}
               on:createVolumeConfig={handleCreateVolumeConfig}
               on:createReactionVolumeConfig={handleCreateReactionVolumeConfig}

@@ -260,6 +260,7 @@
           fullscreenPrimaryVideo={$state.fullscreenPrimaryVideo}
           fullscreenOverlayWidthPercent={$state.fullscreenOverlayWidthPercent}
           fullscreenOverlayCorner={$state.fullscreenOverlayCorner}
+          originalVideoPlatform={$state.originalVideoPlatform}
           onCreatePlayerConfig={actions.createPlayerConfig}
           onCreateVolumeConfig={actions.createVolumeConfig}
           onCreateReactionVolumeConfig={actions.createReactionVolumeConfig}
@@ -321,12 +322,29 @@
         <div
           class="relative overflow-hidden rounded-xl bg-black shadow-elevated"
         >
-          <div class="relative aspect-[16/9] sm:aspect-[3/2]">
-            <div
-              id="player-original"
-              class="absolute inset-0 h-full w-full"
-            ></div>
-          </div>
+          {#if $state.originalVideoPlatform === 'tiktok'}
+            <!-- TikTok: keep the same height as the 16:9 container, centre the 9:16 iframe inside -->
+            <div class="relative aspect-[16/9] sm:aspect-[3/2]">
+              <div class="absolute inset-0 flex items-center justify-center">
+                <div
+                  class="relative h-full overflow-hidden bg-black"
+                  style="aspect-ratio: 9/16;"
+                >
+                  <div
+                    id="player-original"
+                    class="h-full w-full"
+                  ></div>
+                </div>
+              </div>
+            </div>
+          {:else}
+            <div class="relative aspect-[16/9] sm:aspect-[3/2]">
+              <div
+                id="player-original"
+                class="absolute inset-0 h-full w-full"
+              ></div>
+            </div>
+          {/if}
           {#if $state.showCinematicBars}
             <div
               class="pointer-events-none absolute inset-x-0 top-0 h-[12%] bg-gradient-to-b from-black via-black/80 to-transparent"
@@ -389,8 +407,10 @@
     <div class="mx-auto w-full px-4 pb-10 sm:px-6 lg:px-10">
       <CreatorDetails
         originalVideoAuthor={$state.originalVideoAuthor}
+        originalVideoAuthorUrl={$state.originalVideoAuthorUrl}
         originalVideoTitle={$state.originalVideoTitle}
         originalVideoId={$state.originalVideoId}
+        originalVideoPlatform={$state.originalVideoPlatform}
         reactionVideoAuthor={$state.reactionVideoAuthor}
         reactionVideoTitle={$state.reactionVideoTitle}
         reactionVideoId={$state.reactionVideoId}

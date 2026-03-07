@@ -12,6 +12,8 @@
     import { handlePrivateRoute, goToRoute } from "$lib/helpers/routing";
     import { isMobileDevice } from "$lib/helpers/system";
     import { getCompensatedReactionTime } from "$lib/helpers/reaction";
+    import { getTikTokEmbedUrl } from "$lib/helpers/platform";
+    import { fetchOriginalVideoMetadata } from "$lib/helpers/originalVideo";
     import PlaylistQueue from "$lib/components/Video/PlaylistQueue.svelte";
     import { isLoggedIn } from "$lib/stores/user";
     import { page } from "$app/stores";
@@ -27,10 +29,7 @@
         UsersSolid,
     } from "flowbite-svelte-icons";
     import { sineOut } from "svelte/easing";
-    import {
-        downloadBasicVideoDetails,
-        fetchFirstPlaylistVideos,
-    } from "$lib/helpers/youtube";
+    import { fetchFirstPlaylistVideos } from "$lib/helpers/youtube";
     import {
         createSharedSession,
         updateSessionState,
@@ -49,6 +48,7 @@
     let playlistId = "";
     let playlistBufferTime = "";
     let playlistItems = [];
+    let originalVideoUrl = "";
     let showRecorder = false;
     let currentPlaylistDocumentId = "";
     let playlistElements;
@@ -135,6 +135,7 @@
 
     // Debug mode
     let debugMode = false;
+    let isTikTokOriginal = false;
 
     // Navigation-aware derived params
     $: {
@@ -159,6 +160,10 @@
                     autoStartedBufferVideoId = "";
                 }
             }
+            const nextOriginalVideoUrl = params.get("originalUrl") || "";
+            if (nextOriginalVideoUrl !== originalVideoUrl) {
+                originalVideoUrl = nextOriginalVideoUrl;
+            }
             showRecorder = params.has("record");
             const nextPlaylistDocumentId =
                 params.get("playlistDocumentId") || "";
@@ -181,6 +186,7 @@
                 sharedSessionId = nextSharedSessionId;
             }
             debugMode = params.get("debug") === "true";
+            isTikTokOriginal = params.get("platform") === "tiktok";
         }
     }
 
@@ -194,7 +200,15 @@
     let viewerLabel = "viewers";
     let sessionUnsubscribe = null;
     const YOUTUBE_IFRAME_API_SRC = "https://www.youtube.com/iframe_api";
+    const TIKTOK_ORIGIN = "https://www.tiktok.com";
+    // TikTok player/v1 state codes (mirrors YouTube PlayerState values)
+    const TIKTOK_STATE_PLAYING = 1;
+    const TIKTOK_STATE_PAUSED = 2;
+    // Delay before retrying unMute — gives the player time to process the first command
+    const TIKTOK_UNMUTE_RETRY_DELAY_MS = 250;
     let playerContainerNode;
+    let tiktokIframeElement = null;
+    let tiktokMessageUnlisten = null;
     let youtubeApiReadyPromise;
     let hasInitialisedBackend = false;
     let isInitialisingBackend = false;
@@ -290,6 +304,65 @@
         });
     }
 
+    function postToTikTokPlayer(type, value) {
+        tiktokIframeElement?.contentWindow?.postMessage(
+            { type, value, 'x-tiktok-player': true },
+            TIKTOK_ORIGIN,
+        );
+    }
+
+    function loadTikTokPlayer(videoId) {
+        if (!playerContainerNode || !videoId) return;
+        // Remove any existing TikTok message listener
+        if (tiktokMessageUnlisten) {
+            tiktokMessageUnlisten();
+            tiktokMessageUnlisten = null;
+        }
+        // Clear any existing player content
+        playerContainerNode.innerHTML = '';
+        tiktokIframeElement = null;
+
+        const iframe = document.createElement('iframe');
+        iframe.src = getTikTokEmbedUrl(videoId);
+        iframe.title = `TikTok video ${videoId}`;
+        iframe.style.width = '100%';
+        iframe.style.height = '100%';
+        iframe.style.border = 'none';
+        iframe.allow = 'autoplay; encrypted-media; fullscreen';
+        iframe.setAttribute('allowfullscreen', '');
+        iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+        tiktokIframeElement = iframe;
+        playerContainerNode.appendChild(iframe);
+
+        // Listen for TikTok player events via postMessage
+        const handleTikTokMessage = (event) => {
+            if (event.origin !== TIKTOK_ORIGIN) return;
+            const message = event.data;
+            if (!message || typeof message !== 'object') return;
+
+            if (message.type === 'onPlayerReady') {
+                isPlayerOriginalReady = true;
+                // Attempt to unmute on ready in case autoplay started muted.
+                // A short retry is needed as the first command can race player init.
+                postToTikTokPlayer('unMute');
+                window.setTimeout(() => postToTikTokPlayer('unMute'), TIKTOK_UNMUTE_RETRY_DELAY_MS);
+            }
+
+            if (message.type === 'onStateChange') {
+                if (message.value === TIKTOK_STATE_PLAYING) {
+                    // Playing — ensure unmuted
+                    postToTikTokPlayer('unMute');
+                    isPlaying = true;
+                } else if (message.value === TIKTOK_STATE_PAUSED) {
+                    // Paused
+                    isPlaying = false;
+                }
+            }
+        };
+        window.addEventListener('message', handleTikTokMessage);
+        tiktokMessageUnlisten = () => window.removeEventListener('message', handleTikTokMessage);
+    }
+
     async function loadPlaylist() {
         if (playlistId) {
             playlistItems = await fetchFirstPlaylistVideos(playlistId);
@@ -320,6 +393,12 @@
     }
 
     function resetPlayer() {
+        // Clean up TikTok message listener if present
+        if (tiktokMessageUnlisten) {
+            tiktokMessageUnlisten();
+            tiktokMessageUnlisten = null;
+        }
+        tiktokIframeElement = null;
         if (playerOriginal?.destroy) {
             try {
                 playerOriginal.destroy();
@@ -347,6 +426,24 @@
         initialisationAbortController = controller;
         isInitialisingBackend = true;
         try {
+            if (isTikTokOriginal) {
+                // TikTok flow: embed iframe, no YouTube API needed
+                const mountReady = await waitForPlayerMountpoint(controller.signal);
+                if (!mountReady || controller.signal.aborted) {
+                    return;
+                }
+                loadTikTokPlayer(videoId);
+                await getBasicDetailsOriginal();
+                if (sharedSessionId) {
+                    shareUrl = generateShareUrl(sharedSessionId);
+                    subscribeToSession();
+                }
+                hasInitialisedBackend = true;
+                lastInitialisedVideoId = videoId;
+                return;
+            }
+
+            // YouTube flow
             injectYoutubeIframeApiScript();
             await waitForYoutubeIframeApiReady();
             if (controller.signal.aborted) {
@@ -750,6 +847,25 @@
     }
 
     function startOriginalVideo() {
+        if (isTikTokOriginal) {
+            // Send play + unMute commands to the TikTok player via postMessage
+            postToTikTokPlayer('unMute');
+            postToTikTokPlayer('play');
+            isPlayerOriginalReady = true;
+            isPlaying = true;
+            currentButtonGroupState = BUTTON_GROUP_STATES.RECORDING;
+            if (sharedSessionId) {
+                // Note: TikTok does not expose a JS playback API, so currentTime is
+                // always reported as 0. Shared-session viewers will see the TikTok
+                // embed but cannot sync to the host's playback position.
+                updateSessionState(sharedSessionId, {
+                    state: SESSION_STATES.PLAYING,
+                    currentTime: 0,
+                    playbackRate: 1,
+                });
+            }
+            return true;
+        }
         applyPlaybackRate(playbackRate, {
             shouldLog: false,
             syncSession: false,
@@ -778,6 +894,19 @@
         return true;
     }
     function pauseOriginalVideo() {
+        if (isTikTokOriginal) {
+            // Send pause command to the TikTok player via postMessage.
+            // currentTime is 0 because TikTok does not expose a JS playback API.
+            postToTikTokPlayer('pause');
+            if (sharedSessionId) {
+                updateSessionState(sharedSessionId, {
+                    state: SESSION_STATES.PAUSED,
+                    currentTime: 0,
+                    playbackRate: 1,
+                });
+            }
+            return;
+        }
         if (
             !playerOriginal ||
             typeof playerOriginal.pauseVideo !== "function"
@@ -861,8 +990,18 @@
             originalVideoId,
             userId: data.userId,
             originalVideoAuthor,
+            originalVideoAuthorHandle,
+            originalVideoAuthorUrl,
             originalVideoTitle,
+            originalVideoDescription,
+            originalVideoThumbnailUrl,
+            originalVideoThumbnailWidth,
+            originalVideoThumbnailHeight,
+            originalVideoProviderName,
+            originalVideoProviderUrl,
+            originalVideoUrl,
             offsetStartTime: playlistBufferTime || 0,
+            originalVideoPlatform: isTikTokOriginal ? "tiktok" : "youtube",
         });
 
         playbackRateConfigs.clear();
@@ -875,11 +1014,15 @@
                     currentReactionDocumentId,
                     originalVideoId,
                     data.userId,
+                    isTikTokOriginal ? "tiktok" : "youtube",
+                    originalVideoUrl,
                 );
                 console.log("Shared session created:", sharedSessionId);
             } else {
                 await updateSessionState(sharedSessionId, {
                     originalVideoId,
+                    originalVideoPlatform: isTikTokOriginal ? "tiktok" : "youtube",
+                    originalVideoUrl,
                     reactorId: data.userId,
                     activeReactionDocumentId: currentReactionDocumentId,
                     state: SESSION_STATES.WAITING,
@@ -945,7 +1088,7 @@
 
     const onClickFocusReact = () => {
         isFocusReactOn = !isFocusReactOn;
-        const soundLevel = isFocusReactOn ? 20 : 100;
+        const soundLevel = isFocusReactOn ? (isTikTokOriginal ? 0 : 20) : 100;
         logVolumeChange(soundLevel);
     };
 
@@ -1227,11 +1370,31 @@
 
     let originalVideoAuthor;
     let originalVideoTitle;
+    let originalVideoAuthorHandle;
+    let originalVideoAuthorUrl;
+    let originalVideoDescription;
+    let originalVideoThumbnailUrl;
+    let originalVideoThumbnailWidth;
+    let originalVideoThumbnailHeight;
+    let originalVideoProviderName;
+    let originalVideoProviderUrl;
     const getBasicDetailsOriginal = async () => {
-        const { videoAuthor, videoTitle } =
-            await downloadBasicVideoDetails(originalVideoId);
-        originalVideoAuthor = videoAuthor;
-        originalVideoTitle = videoTitle;
+        const metadata = await fetchOriginalVideoMetadata({
+            platform: isTikTokOriginal ? "tiktok" : "youtube",
+            videoId: originalVideoId,
+            videoUrl: originalVideoUrl,
+        });
+        originalVideoAuthor = metadata.author || "";
+        originalVideoAuthorHandle = metadata.authorHandle || "";
+        originalVideoAuthorUrl = metadata.authorUrl || "";
+        originalVideoTitle = metadata.title || "";
+        originalVideoDescription = metadata.description || "";
+        originalVideoThumbnailUrl = metadata.thumbnailUrl || "";
+        originalVideoThumbnailWidth = metadata.thumbnailWidth;
+        originalVideoThumbnailHeight = metadata.thumbnailHeight;
+        originalVideoProviderName = metadata.providerName || "";
+        originalVideoProviderUrl = metadata.providerUrl || "";
+        originalVideoUrl = metadata.canonicalUrl || originalVideoUrl;
     };
     function handleKeydown(event) {
         if (
@@ -1365,23 +1528,44 @@
                     <div
                         class="overflow-hidden rounded-3xl border border-slate-900/60 bg-slate-900/60 shadow-[0_30px_60px_-40px_rgba(15,23,42,0.8)]"
                     >
-                        <div
-                            class="relative aspect-video w-full bg-black"
-                            aria-busy={isBuffering}
-                        >
-                            {#if isBuffering}
+                        {#if isTikTokOriginal}
+                            <!-- TikTok: keep the same height as the YouTube player (aspect-video),
+                                 then centre a narrow 9:16 strip inside it. -->
+                            <div
+                                class="relative aspect-video w-full bg-black"
+                                aria-busy={isBuffering}
+                            >
+                                <div class="absolute inset-0 flex items-center justify-center">
+                                    <div
+                                        class="relative h-full overflow-hidden rounded-2xl bg-black"
+                                        style="aspect-ratio: 9/16;"
+                                    >
+                                        <div
+                                            bind:this={playerContainerNode}
+                                            class="h-full w-full"
+                                        ></div>
+                                    </div>
+                                </div>
+                            </div>
+                        {:else}
+                            <div
+                                class="relative aspect-video w-full bg-black"
+                                aria-busy={isBuffering}
+                            >
+                                {#if isBuffering}
+                                    <div
+                                        class="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-400/70 via-blue-200/40 to-blue-400/70 animate-pulse"
+                                    ></div>
+                                {/if}
                                 <div
-                                    class="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-400/70 via-blue-200/40 to-blue-400/70 animate-pulse"
+                                    bind:this={playerContainerNode}
+                                    class="h-full w-full"
                                 ></div>
-                            {/if}
-                            <div
-                                bind:this={playerContainerNode}
-                                class="h-full w-full"
-                            ></div>
-                            <div
-                                class="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/70 via-slate-950/10 to-transparent"
-                            ></div>
-                        </div>
+                                <div
+                                    class="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/70 via-slate-950/10 to-transparent"
+                                ></div>
+                            </div>
+                        {/if}
                     </div>
 
                     <button
@@ -1451,6 +1635,22 @@
                 </section>
 
                 <aside class="flex w-full flex-col gap-4">
+                    {#if isTikTokOriginal}
+                        <div
+                            class="flex items-start gap-3 rounded-3xl border border-amber-500/30 bg-amber-500/5 px-5 py-4"
+                            role="note"
+                            aria-label="TikTok limitations"
+                        >
+                            <span class="mt-0.5 text-amber-400" aria-hidden="true">ⓘ</span>
+                            <p class="text-sm text-amber-200">
+                                <span class="font-medium">TikTok original:</span> playback
+                                speed control and fine-grained volume are unavailable.
+                                Volume is limited to mute or full.
+                            </p>
+                        </div>
+                    {/if}
+
+                    {#if !isTikTokOriginal}
                     <div
                         class="rounded-3xl border border-slate-900/60 bg-slate-900/40 p-5"
                     >
@@ -1506,6 +1706,7 @@
                             {/each}
                         </div>
                     </div>
+                    {/if}
 
                     {#if showRecorder}
                         <div

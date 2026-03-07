@@ -7,6 +7,8 @@
 
     export let originalVideoTitle;
     export let originalVideoAuthor;
+    export let originalVideoAuthorUrl;
+    export let originalVideoPlatform = 'youtube';
     export let reactionVideoTitle;
     export let reactionVideoAuthor;
     export let reactorId;
@@ -23,6 +25,10 @@
     $: reactionAvatarSrc = createAvatarPlaceholder(reactionVideoAuthor);
 
     const youtubeChannelUrl = (author) => (author ? `https://www.youtube.com/${author}` : undefined);
+    $: originalAuthorHref =
+        originalVideoAuthorUrl ||
+        (originalVideoPlatform === 'youtube' ? youtubeChannelUrl(originalVideoAuthor) : undefined);
+    $: originalAuthorPlatformLabel = originalVideoPlatform === 'tiktok' ? 'TikTok' : 'YouTube';
 
         let viewerData;
         $: viewerData = $userExtraDataStore?.userExtraData;
@@ -72,10 +78,10 @@
                 {#if originalVideoAuthor}
                     <a
                         class="author"
-                        href={youtubeChannelUrl(originalVideoAuthor)}
+                        href={originalAuthorHref}
                         target="_blank"
                         rel="noopener noreferrer"
-                        title={`Visit ${originalVideoAuthor} on YouTube`}
+                        title={`Visit ${originalVideoAuthor} on ${originalAuthorPlatformLabel}`}
                     >
                         {originalVideoAuthor}
                     </a>

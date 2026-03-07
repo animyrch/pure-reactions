@@ -10,11 +10,19 @@ export const SESSION_STATES = {
 };
 
 // Create a new shared session
-export const createSharedSession = async (reactionDocumentId, originalVideoId, reactorId) => {
+export const createSharedSession = async (
+    reactionDocumentId,
+    originalVideoId,
+    reactorId,
+    originalVideoPlatform = 'youtube',
+    originalVideoUrl = ''
+) => {
     try {
         const sessionRef = ref(database, `sharedSessions/${reactionDocumentId}`);
         const sessionData = {
             originalVideoId,
+            originalVideoPlatform,
+            originalVideoUrl,
             reactorId,
             activeReactionDocumentId: reactionDocumentId,
             state: SESSION_STATES.WAITING,

@@ -11,6 +11,243 @@ export const YT_PLAYER_STATE = {
 };
 
 /**
+ * Installs a deterministic mock for the YouTube IFrame API before app code runs.
+ * The mock simulates player lifecycle, click-to-start, and state transitions.
+ * @param {import('@playwright/test').Page} page
+ */
+export const installMockYouTubeApi = async (page) => {
+    await page.addInitScript(() => {
+        const ensureIframeInContainer = (containerOrId, prefix) => {
+            let container = containerOrId;
+            if (typeof containerOrId === 'string') {
+                container = document.getElementById(containerOrId);
+            }
+
+            if (!container) {
+                container = document.createElement('div');
+                if (typeof containerOrId === 'string') {
+                    container.id = containerOrId;
+                }
+                document.body.appendChild(container);
+            }
+
+            let iframe = container.querySelector('iframe');
+            if (!iframe) {
+                iframe = document.createElement('iframe');
+                iframe.setAttribute('title', `${prefix} mock iframe`);
+                iframe.setAttribute('src', 'about:blank');
+                iframe.style.width = '100%';
+                iframe.style.height = '100%';
+                iframe.style.border = '0';
+                container.appendChild(iframe);
+            }
+
+            return iframe;
+        };
+
+        class MockYTPlayer {
+            constructor(containerOrId, options = {}) {
+                this._containerOrId = containerOrId;
+                this._options = options;
+                this._events = options.events || {};
+                this._state = -1;
+                this._currentTime = Number(options.playerVars?.start || 0);
+                this._volume = 100;
+                this._muted = false;
+                this._playbackRate = 1;
+                this._destroyed = false;
+                this._iframe = ensureIframeInContainer(containerOrId, 'yt-player');
+
+                this._onIframeClick = () => {
+                    this.playVideo();
+                };
+                this._iframe.addEventListener('click', this._onIframeClick);
+
+                queueMicrotask(() => {
+                    if (this._destroyed) return;
+                    this._events.onReady?.({ target: this });
+                });
+            }
+
+            _emitState(state) {
+                if (this._destroyed) return;
+                this._state = state;
+                this._events.onStateChange?.({ data: state, target: this });
+            }
+
+            getPlayerState() {
+                return this._state;
+            }
+
+            getCurrentTime() {
+                return this._currentTime;
+            }
+
+            getDuration() {
+                return 300;
+            }
+
+            seekTo(seconds) {
+                this._currentTime = Number.isFinite(Number(seconds)) ? Number(seconds) : this._currentTime;
+            }
+
+            playVideo() {
+                this._emitState(1);
+            }
+
+            pauseVideo() {
+                this._emitState(2);
+            }
+
+            stopVideo() {
+                this._emitState(0);
+            }
+
+            setVolume(value) {
+                const volume = Number(value);
+                if (!Number.isFinite(volume)) return;
+                this._volume = Math.max(0, Math.min(100, Math.round(volume)));
+                this._muted = this._volume === 0;
+            }
+
+            getVolume() {
+                return this._volume;
+            }
+
+            mute() {
+                this._muted = true;
+            }
+
+            unMute() {
+                this._muted = false;
+            }
+
+            isMuted() {
+                return this._muted;
+            }
+
+            setPlaybackRate(rate) {
+                const nextRate = Number(rate);
+                if (!Number.isFinite(nextRate) || nextRate <= 0) return;
+                this._playbackRate = nextRate;
+            }
+
+            getPlaybackRate() {
+                return this._playbackRate;
+            }
+
+            getIframe() {
+                return this._iframe;
+            }
+
+            destroy() {
+                this._destroyed = true;
+                if (this._iframe) {
+                    this._iframe.removeEventListener('click', this._onIframeClick);
+                    this._iframe.remove();
+                }
+            }
+        }
+
+        window.YT = {
+            Player: MockYTPlayer,
+            PlayerState: {
+                UNSTARTED: -1,
+                ENDED: 0,
+                PLAYING: 1,
+                PAUSED: 2,
+                BUFFERING: 3,
+                CUED: 5,
+            },
+        };
+    });
+};
+
+/**
+ * Routes TikTok player embeds to a deterministic in-browser mock.
+ * The mock sends onPlayerReady/onStateChange messages from the TikTok origin
+ * and responds to play/pause/mute/unMute commands sent by the parent page.
+ * @param {import('@playwright/test').Page} page
+ */
+export const installMockTikTokEmbed = async (page) => {
+        await page.route('https://www.tiktok.com/player/v1/**', async (route) => {
+                const html = `<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>TikTok mock player</title>
+        <style>
+            html, body {
+                margin: 0;
+                width: 100%;
+                height: 100%;
+                background: #000;
+                overflow: hidden;
+            }
+
+            button {
+                width: 100%;
+                height: 100%;
+                border: 0;
+                background: linear-gradient(180deg, #141414 0%, #050505 100%);
+                color: white;
+                font: 600 16px/1.2 sans-serif;
+                cursor: pointer;
+            }
+        </style>
+    </head>
+    <body>
+        <button id="player-surface" type="button" aria-label="Play TikTok mock">TikTok mock player</button>
+        <script>
+            (() => {
+                let state = -1;
+
+                const emit = (type, value) => {
+                    window.parent.postMessage({ type, value }, '*');
+                };
+
+                const setState = (nextState) => {
+                    state = nextState;
+                    emit('onStateChange', nextState);
+                };
+
+                window.addEventListener('message', (event) => {
+                    const message = event.data;
+                    if (!message || typeof message !== 'object' || !message['x-tiktok-player']) {
+                        return;
+                    }
+
+                    if (message.type === 'play') {
+                        setState(1);
+                        return;
+                    }
+
+                    if (message.type === 'pause') {
+                        setState(2);
+                    }
+                });
+
+                document.getElementById('player-surface').addEventListener('click', () => {
+                    setState(1);
+                });
+
+                queueMicrotask(() => {
+                    emit('onPlayerReady');
+                });
+            })();
+        <\/script>
+    </body>
+</html>`;
+
+                await route.fulfill({
+                        status: 200,
+                        contentType: 'text/html',
+                        body: html
+                });
+        });
+};
+
+/**
  * Reads the current state of twin players from the window object.
  * Returns a snapshot of time, state, readiness, error, and VOLUME.
  * @param {import('@playwright/test').Page} page
@@ -79,6 +316,53 @@ export const readTwinPlayersSnapshot = async (page) => {
             bothVideosStarted: players.bothVideosStarted,
         };
     });
+};
+
+const resolvePlayerIframeId = async (page, playerKey) => {
+    return page.evaluate((key) => {
+        const players = window.__players;
+        const iframe = players?.[key]?.getIframe?.();
+        if (!iframe) return null;
+        if (!iframe.id) {
+            iframe.id = `${key}-iframe-${Math.random().toString(36).slice(2, 10)}`;
+        }
+        return iframe.id;
+    }, playerKey);
+};
+
+export const clickPlayerSurface = async (page, playerKey) => {
+    const iframeId = await resolvePlayerIframeId(page, playerKey);
+    if (!iframeId) {
+        return null;
+    }
+
+    await page.evaluate((id) => {
+        const iframe = document.getElementById(id);
+        if (!iframe) return;
+        iframe.dispatchEvent(new MouseEvent('click', {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            view: window
+        }));
+    }, iframeId).catch(() => { });
+
+    await page.locator(`#${iframeId}`).click({ force: true }).catch(() => { });
+
+    await page
+        .frameLocator(`#${iframeId}`)
+        .locator('body')
+        .click({ timeout: 2500 })
+        .catch(() => { });
+
+    await page
+        .frameLocator(`#${iframeId}`)
+        .getByRole('button')
+        .first()
+        .click({ timeout: 2500 })
+        .catch(() => { });
+
+    return iframeId;
 };
 
 /**
@@ -168,22 +452,8 @@ export const startPlaybackInteraction = async (page) => {
         return Boolean(players?.original?.getIframe?.() && players?.reaction?.getIframe?.());
     }, null, { timeout: 30000 });
 
-    const { originalIframeId, reactionIframeId } = await page.evaluate(() => {
-        const players = window.__players;
-        const ensureId = (iframe, prefix) => {
-            if (!iframe) return null;
-            if (!iframe.id) iframe.id = `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
-            return iframe.id;
-        };
-
-        return {
-            originalIframeId: ensureId(players?.original?.getIframe?.(), 'original-yt'),
-            reactionIframeId: ensureId(players?.reaction?.getIframe?.(), 'reaction-yt'),
-        };
-    });
-
-    if (originalIframeId) await page.locator(`#${originalIframeId}`).click({ force: true }).catch(() => { });
-    if (reactionIframeId) await page.locator(`#${reactionIframeId}`).click({ force: true }).catch(() => { });
+    const originalIframeId = await clickPlayerSurface(page, 'original');
+    const reactionIframeId = await clickPlayerSurface(page, 'reaction');
 
     const isMobileLikeUA = await page.evaluate(() => /iPhone|iPad|Android|Mobile/i.test(navigator.userAgent));
 

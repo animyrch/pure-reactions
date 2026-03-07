@@ -7,6 +7,7 @@ import {
   getCurrentStateFromStateConfigs,
   getCurrentVolumeFromVolumeConfigs
 } from '$lib/helpers/reaction';
+import { normalizeOriginalVideoPlatform, getTikTokEmbedUrl } from '$lib/helpers/platform';
 import {
   getReaction,
   updateFirebaseDocument,
@@ -20,6 +21,11 @@ import {
   extractYouTubeVideoId,
   fetchFirstPlaylistVideos
 } from '$lib/helpers/youtube';
+import {
+  fetchOriginalVideoMetadata,
+  normalizeOriginalVideoMetadata,
+  originalVideoMetadataToFirestoreFields,
+} from '$lib/helpers/originalVideo';
 import {
   deriveTimelines,
   readAutoPlayCookie,
@@ -84,6 +90,7 @@ type TwinPlayersState = {
   reactionVideoTitle?: string;
   reactionVideoDescription?: string;
   originalVideoAuthor?: string;
+  originalVideoAuthorUrl?: string;
   originalVideoTitle?: string;
   originalVideoDescription?: string;
   originalVideoId?: string;
@@ -138,6 +145,7 @@ type TwinPlayersState = {
   isOutOfSync: boolean;
   seekMin: number;
   seekMax: number;
+  originalVideoPlatform: 'youtube' | 'tiktok';
 };
 
 type UseTwinPlayersOptions = {
@@ -254,9 +262,13 @@ type VerifyVideoDetailsResult = {
 type VerifyAndSyncMetadataParams = {
   documentId?: string;
   originalVideoId?: string;
+  originalVideoPlatform?: 'youtube' | 'tiktok';
+  originalVideoUrl?: string | null;
   reactionVideoId?: string;
   currentOriginalTitle?: string | null;
   currentOriginalAuthor?: string | null;
+  currentOriginalAuthorUrl?: string | null;
+  currentOriginalDescription?: string | null;
   currentReactionTitle?: string | null;
   currentReactionAuthor?: string | null;
 };
@@ -339,6 +351,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     isPublished: false,
     reactionVideoId: '',
     originalVideoAuthor: undefined,
+    originalVideoAuthorUrl: undefined,
     originalVideoTitle: undefined,
     reactionVideoAuthor: undefined,
     reactorDisplayName: undefined,
@@ -396,7 +409,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     pageSlug: slug,
     isOutOfSync: false,
     seekMin: 0,
-    seekMax: 100000
+    seekMax: 100000,
+    originalVideoPlatform: 'youtube'
   });
 
   let overlayElement: HTMLDivElement | undefined;
@@ -442,6 +456,12 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   let isDestroyed = false;
   let isSwitchingReactionInPlace = false;
   let lastUserResumeAt = 0;
+
+  // TikTok original-player state (lives alongside the YouTube playerOriginal concept)
+  const TIKTOK_ORIGIN = 'https://www.tiktok.com';
+  let tiktokOriginalIframe: HTMLIFrameElement | null = null;
+  let tiktokOriginalUnlisten: (() => void) | null = null;
+  let tiktokOriginalPlayerState = -1; // -1 = unstarted, 1 = playing, 2 = paused
 
   const getPlayerDebugInfo = (target: any) => {
     let iframeId: string | undefined;
@@ -1236,6 +1256,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
           muteReactionAudio,
           unmuteReactionAudio,
           updateState
+        },
+        options: {
+          isTikTokOriginal: snapshot.originalVideoPlatform === 'tiktok'
         }
       });
 
@@ -1629,7 +1652,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       },
       options: {
         allowStateActions: false,
-        allowPlaybackRate: false
+        allowPlaybackRate: false,
+        isTikTokOriginal: snapshot.originalVideoPlatform === 'tiktok'
       }
     });
 
@@ -1947,7 +1971,145 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     }
   };
 
-  const setUpVideos = async (reactionData: Record<string, any>) => {
+  /**
+   * Destroys any currently active TikTok original-player iframe and listener.
+   * Called at the start of setUpVideos so a fresh iframe can be injected.
+   */
+  const destroyTikTokOriginalPlayer = () => {
+    if (tiktokOriginalUnlisten) {
+      tiktokOriginalUnlisten();
+      tiktokOriginalUnlisten = null;
+    }
+    if (tiktokOriginalIframe) {
+      tiktokOriginalIframe.remove();
+      tiktokOriginalIframe = null;
+    }
+    tiktokOriginalPlayerState = -1;
+  };
+
+  /**
+   * Creates a TikTok iframe inside #player-original and returns a YouTube-like
+   * mock player object so the rest of the composable can treat it uniformly.
+   */
+  const createTikTokOriginalPlayer = (videoId: string) => {
+    const container = document.getElementById('player-original');
+    if (!container) return null;
+
+    // Clear any previous content (e.g. stale TikTok iframes)
+    container.innerHTML = '';
+
+    const iframe = document.createElement('iframe');
+    iframe.src = getTikTokEmbedUrl(videoId);
+    iframe.title = `TikTok video ${videoId}`;
+    iframe.style.cssText = 'width:100%;height:100%;border:0;';
+    iframe.allow = 'autoplay; encrypted-media; fullscreen';
+    iframe.setAttribute('allowfullscreen', '');
+    iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+    container.appendChild(iframe);
+    tiktokOriginalIframe = iframe;
+    tiktokOriginalPlayerState = -1;
+
+    const postToTikTok = (type: string, value?: any) => {
+      iframe.contentWindow?.postMessage(
+        { type, value, 'x-tiktok-player': true },
+        TIKTOK_ORIGIN,
+      );
+    };
+
+    let mockPlayer: any;
+
+    const forwardTikTokStateChange = (stateValue: number) => {
+      if (!mockPlayer) {
+        return;
+      }
+
+      onStateChangeOriginal({
+        data: stateValue,
+        target: mockPlayer
+      });
+    };
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== TIKTOK_ORIGIN) return;
+      const message = event.data;
+      if (!message || typeof message !== 'object') return;
+
+      if (message.type === 'onPlayerReady') {
+        tiktokOriginalPlayerState = -1; // unstarted (ready but not yet playing)
+        markPlayerReady();
+        // Send the first unmute immediately. A second attempt fires after 250 ms because
+        // TikTok's player sometimes processes the first command before its internal audio
+        // context is fully initialised and silently drops it.
+        postToTikTok('unMute');
+        setTimeout(() => postToTikTok('unMute'), 250);
+      }
+
+      if (message.type === 'onStateChange') {
+        if (message.value === 1) {
+          tiktokOriginalPlayerState = 1; // playing
+          forwardTikTokStateChange(1);
+        } else if (message.value === 2) {
+          tiktokOriginalPlayerState = 2; // paused
+          forwardTikTokStateChange(2);
+        }
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    tiktokOriginalUnlisten = () => window.removeEventListener('message', handleMessage);
+
+    // Return a YouTube-like mock so all sync/control paths work without branching.
+    //
+    // TikTok platform limitations (enforced here and in twinPlayersSyncApply.ts):
+    //  - getCurrentTime / getDuration always return 0: TikTok's player/v1 postMessage API
+    //    does not expose playback position or duration, so sync drift-correction is disabled
+    //    for the original video. The reaction video timeline still drives the sync scheduler.
+    //  - seekTo is a no-op: TikTok does not expose a seek command via postMessage.
+    //  - setPlaybackRate is a no-op: speed changes for TikTok originals are already suppressed
+    //    by the isTikTokOriginal flag passed to applyTwinPlayersSyncActions.
+    //  - setVolume is binary (mute/unmute): TikTok volume is 0 or 100. Values in between are
+    //    snapped by the applyTwinPlayersSyncActions layer before reaching this mock.
+    mockPlayer = {
+      getPlayerState: () => tiktokOriginalPlayerState,
+      getCurrentTime: () => 0,
+      getDuration: () => 0,
+      isMuted: () => false,
+      seekTo: () => {},
+      setVolume: (v: number) => {
+        if (v >= 100) {
+          postToTikTok('unMute');
+        } else {
+          postToTikTok('mute');
+        }
+      },
+      setPlaybackRate: () => {},
+      playVideo: () => {
+        postToTikTok('unMute');
+        postToTikTok('play');
+        tiktokOriginalPlayerState = 1;
+      },
+      pauseVideo: () => {
+        postToTikTok('pause');
+        tiktokOriginalPlayerState = 2;
+      },
+      stopVideo: () => {
+        postToTikTok('pause');
+        tiktokOriginalPlayerState = 2;
+      },
+      cueVideoById: () => {},
+      loadVideoById: () => {},
+      getIframe: () => iframe,
+      destroy: () => {
+        destroyTikTokOriginalPlayer();
+      },
+    };
+
+    return mockPlayer;
+  };
+
+  const setUpVideos = async (reactionData: any) => {
+
+
     log('setUpVideos called', { reactionDataExists: !!reactionData });
     // CRITICAL: Abort if this instance has been superseded
     if (globalActiveInstanceId !== instanceId) {
@@ -2076,6 +2238,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     playerOriginal?.destroy?.();
     playerReaction?.destroy?.();
 
+    // Clean up any existing TikTok iframe before (re)creating players
+    destroyTikTokOriginalPlayer();
+
     // Clean up any orphaned iframes that YouTube may have left behind
     // This can happen during client-side navigation if the player wasn't properly destroyed
     const cleanupOrphanedIframe = (containerId: string) => {
@@ -2130,14 +2295,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         ? reactionData.youtube.meta.description.trim()
         : '') ||
       undefined;
-    const originalVideoDescription =
-      (typeof reactionData?.originalVideoDescription === 'string'
-        ? reactionData.originalVideoDescription.trim()
-        : '') ||
-      (typeof reactionData?.originalYoutube?.meta?.description === 'string'
-        ? reactionData.originalYoutube.meta.description.trim()
-        : '') ||
-      undefined;
+    const normalizedOriginalMetadata = normalizeOriginalVideoMetadata(reactionData);
 
     // Set metadata + timeline state before attempting player creation so the
     // UI always has Firestore-sourced data (attribution, creator details, etc.)
@@ -2164,9 +2322,10 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       reactorDisplayName: resolvedReactorDisplayName || undefined,
       reactionVideoTitle: reactionData?.reactionVideoTitle,
       reactionVideoDescription,
-      originalVideoAuthor: reactionData?.originalVideoAuthor,
-      originalVideoTitle: reactionData?.originalVideoTitle,
-      originalVideoDescription,
+      originalVideoAuthor: normalizedOriginalMetadata.author,
+      originalVideoAuthorUrl: normalizedOriginalMetadata.authorUrl,
+      originalVideoTitle: normalizedOriginalMetadata.title,
+      originalVideoDescription: normalizedOriginalMetadata.description,
       youtubePlaylistId,
       offsetStartTime,
       reactionFinishTime,
@@ -2180,7 +2339,12 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       fullscreenOverlayWidthPercent,
       fullscreenOverlayCorner,
       currentPlaybackRate,
+      originalVideoPlatform: normalizeOriginalVideoPlatform(reactionData?.originalVideoPlatform),
     });
+
+    // Let Svelte flush any layout changes driven by the updated platform state
+    // before we attach iframe-based players to #player-original / #player-reaction.
+    await tick();
 
     // Final guard before creating players - abort if superseded
     if (globalActiveInstanceId !== instanceId) {
@@ -2199,6 +2363,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     let newPlayerReaction: any = null;
     let newPlayerOriginal: any = null;
 
+    const isTikTokOriginalVideo = normalizeOriginalVideoPlatform(reactionData?.originalVideoPlatform) === 'tiktok';
+
     try {
       if (reactionVideoId) {
         newPlayerReaction = new YT.Player('player-reaction', {
@@ -2215,20 +2381,28 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         });
       }
 
-      newPlayerOriginal = new YT.Player('player-original', {
-        videoId: originalVideoId,
-        playerVars: {
-          ...playerOptions,
-          start: Math.round(initialTargetTime)
-        },
-        ...iframeOptionDefault,
-        events: {
-          onReady: onPlayerReady,
-          onStateChange: onStateChangeOriginal
-        }
-      });
+      if (isTikTokOriginalVideo) {
+        // TikTok original: inject iframe and return a YouTube-compatible mock so the
+        // rest of the composable can interact with it without additional branching.
+        // markPlayerReady() is called inside createTikTokOriginalPlayer when the
+        // TikTok player fires onPlayerReady via postMessage.
+        newPlayerOriginal = createTikTokOriginalPlayer(originalVideoId);
+      } else {
+        newPlayerOriginal = new YT.Player('player-original', {
+          videoId: originalVideoId,
+          playerVars: {
+            ...playerOptions,
+            start: Math.round(initialTargetTime)
+          },
+          ...iframeOptionDefault,
+          events: {
+            onReady: onPlayerReady,
+            onStateChange: onStateChangeOriginal
+          }
+        });
+      }
     } catch (error) {
-      console.error('Failed to initialise YouTube players', error);
+      console.error('Failed to initialise players', error);
       finalizeLoadingState();
       return;
     }
@@ -2276,9 +2450,13 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     await verifyAndSyncMetadata({
       documentId: typeof reactionData?.id === 'string' ? reactionData.id : undefined,
       originalVideoId,
+      originalVideoPlatform: normalizeOriginalVideoPlatform(reactionData?.originalVideoPlatform),
+      originalVideoUrl: reactionData?.originalVideoUrl,
       reactionVideoId,
-      currentOriginalTitle: reactionData?.originalVideoTitle,
-      currentOriginalAuthor: reactionData?.originalVideoAuthor,
+      currentOriginalTitle: normalizedOriginalMetadata.title,
+      currentOriginalAuthor: normalizedOriginalMetadata.author,
+      currentOriginalAuthorUrl: normalizedOriginalMetadata.authorUrl,
+      currentOriginalDescription: normalizedOriginalMetadata.description,
       currentReactionTitle: reactionData?.reactionVideoTitle,
       currentReactionAuthor: reactionData?.reactionVideoAuthor
     });
@@ -2677,12 +2855,18 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
       updateUIElements(nextReactionDocumentId);
 
+      const normalizedOriginalMetadata = normalizeOriginalVideoMetadata(reactionData);
+
       await verifyAndSyncMetadata({
         documentId: typeof reactionData?.id === 'string' ? reactionData.id : undefined,
         originalVideoId,
+        originalVideoPlatform: normalizeOriginalVideoPlatform(reactionData?.originalVideoPlatform),
+        originalVideoUrl: reactionData?.originalVideoUrl,
         reactionVideoId,
-        currentOriginalTitle: reactionData?.originalVideoTitle,
-        currentOriginalAuthor: reactionData?.originalVideoAuthor,
+        currentOriginalTitle: normalizedOriginalMetadata.title,
+        currentOriginalAuthor: normalizedOriginalMetadata.author,
+        currentOriginalAuthorUrl: normalizedOriginalMetadata.authorUrl,
+        currentOriginalDescription: normalizedOriginalMetadata.description,
         currentReactionTitle: reactionData?.reactionVideoTitle,
         currentReactionAuthor: reactionData?.reactionVideoAuthor
       });
@@ -2888,6 +3072,70 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     return { videoAuthor, videoTitle };
   };
 
+  const verifyOriginalVideoDetails = async ({
+    platform,
+    videoId,
+    videoUrl,
+    currentTitle,
+    currentAuthor,
+    currentAuthorUrl,
+    currentDescription
+  }: {
+    platform?: 'youtube' | 'tiktok';
+    videoId?: string;
+    videoUrl?: string | null;
+    currentTitle?: string | null;
+    currentAuthor?: string | null;
+    currentAuthorUrl?: string | null;
+    currentDescription?: string | null;
+  }) => {
+    const result: {
+      metadata?: ReturnType<typeof normalizeOriginalVideoMetadata>;
+      updates: Record<string, string | number>;
+    } = {
+      updates: {}
+    };
+
+    if (!videoId) {
+      return result;
+    }
+
+    try {
+      const metadata = await fetchOriginalVideoMetadata({
+        platform,
+        videoId,
+        videoUrl: videoUrl || undefined
+      });
+      const normalizedFields = originalVideoMetadataToFirestoreFields(metadata);
+      const currentComparison = {
+        originalVideoTitle: typeof currentTitle === 'string' ? currentTitle.trim() : undefined,
+        originalVideoAuthor: typeof currentAuthor === 'string' ? currentAuthor.trim() : undefined,
+        originalVideoAuthorUrl:
+          typeof currentAuthorUrl === 'string' ? currentAuthorUrl.trim() : undefined,
+        originalVideoDescription:
+          typeof currentDescription === 'string' ? currentDescription.trim() : undefined
+      };
+
+      for (const [key, value] of Object.entries(normalizedFields)) {
+        if (typeof value !== 'string' && typeof value !== 'number') {
+          continue;
+        }
+
+        const nextValue = typeof value === 'string' ? value.trim() : value;
+        const currentValue = currentComparison[key as keyof typeof currentComparison];
+        if (nextValue && nextValue !== currentValue) {
+          result.updates[key] = value;
+        }
+      }
+
+      result.metadata = metadata;
+    } catch (error) {
+      console.error(`Failed to verify original metadata for video ${videoId}`, error);
+    }
+
+    return result;
+  };
+
   const verifyVideoDetails = async ({
     videoId,
     currentTitle,
@@ -2935,9 +3183,13 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   const verifyAndSyncMetadata = async ({
     documentId,
     originalVideoId,
+    originalVideoPlatform,
+    originalVideoUrl,
     reactionVideoId,
     currentOriginalTitle,
     currentOriginalAuthor,
+    currentOriginalAuthorUrl,
+    currentOriginalDescription,
     currentReactionTitle,
     currentReactionAuthor
   }: VerifyAndSyncMetadataParams) => {
@@ -2953,12 +3205,14 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     }
 
     const [originalVerification, reactionVerification] = await Promise.all([
-      verifyVideoDetails({
+      verifyOriginalVideoDetails({
+        platform: originalVideoPlatform,
         videoId: originalVideoId,
+        videoUrl: originalVideoUrl,
         currentTitle: currentOriginalTitle,
         currentAuthor: currentOriginalAuthor,
-        titleField: 'originalVideoTitle',
-        authorField: 'originalVideoAuthor'
+        currentAuthorUrl: currentOriginalAuthorUrl,
+        currentDescription: currentOriginalDescription
       }),
       verifyVideoDetails({
         videoId: reactionVideoId,
@@ -2990,17 +3244,43 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     const partialUpdate: Partial<TwinPlayersState> = {};
     const normalizedOriginalTitle = typeof currentOriginalTitle === 'string' ? currentOriginalTitle.trim() : undefined;
     const normalizedOriginalAuthor = typeof currentOriginalAuthor === 'string' ? currentOriginalAuthor.trim() : undefined;
+    const normalizedOriginalAuthorUrl =
+      typeof currentOriginalAuthorUrl === 'string' ? currentOriginalAuthorUrl.trim() : undefined;
+    const normalizedOriginalDescription =
+      typeof currentOriginalDescription === 'string' ? currentOriginalDescription.trim() : undefined;
     const normalizedReactionTitle = typeof currentReactionTitle === 'string' ? currentReactionTitle.trim() : undefined;
     const normalizedReactionAuthor = typeof currentReactionAuthor === 'string' ? currentReactionAuthor.trim() : undefined;
 
-    const nextOriginalTitle = typeof originalVerification.title === 'string' ? originalVerification.title.trim() : undefined;
+    const nextOriginalTitle =
+      typeof originalVerification.metadata?.title === 'string'
+        ? originalVerification.metadata.title.trim()
+        : undefined;
     if (nextOriginalTitle && nextOriginalTitle !== normalizedOriginalTitle) {
       partialUpdate.originalVideoTitle = nextOriginalTitle;
     }
 
-    const nextOriginalAuthor = typeof originalVerification.author === 'string' ? originalVerification.author.trim() : undefined;
+    const nextOriginalAuthor =
+      typeof originalVerification.metadata?.author === 'string'
+        ? originalVerification.metadata.author.trim()
+        : undefined;
     if (nextOriginalAuthor && nextOriginalAuthor !== normalizedOriginalAuthor) {
       partialUpdate.originalVideoAuthor = nextOriginalAuthor;
+    }
+
+    const nextOriginalAuthorUrl =
+      typeof originalVerification.metadata?.authorUrl === 'string'
+        ? originalVerification.metadata.authorUrl.trim()
+        : undefined;
+    if (nextOriginalAuthorUrl && nextOriginalAuthorUrl !== normalizedOriginalAuthorUrl) {
+      partialUpdate.originalVideoAuthorUrl = nextOriginalAuthorUrl;
+    }
+
+    const nextOriginalDescription =
+      typeof originalVerification.metadata?.description === 'string'
+        ? originalVerification.metadata.description.trim()
+        : undefined;
+    if (nextOriginalDescription && nextOriginalDescription !== normalizedOriginalDescription) {
+      partialUpdate.originalVideoDescription = nextOriginalDescription;
     }
 
     const nextReactionTitle = typeof reactionVerification.title === 'string' ? reactionVerification.title.trim() : undefined;
@@ -4255,6 +4535,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     } catch (error) {
       console.warn('Failed to destroy YouTube players on teardown', error);
     }
+
+    // Clean up any TikTok iframe/listener that may have been left behind
+    destroyTikTokOriginalPlayer();
 
     if (typeof document !== 'undefined') {
       document.body.classList.remove('reaction-fullscreen');

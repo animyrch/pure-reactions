@@ -1,3 +1,7 @@
+import { normalizeOriginalVideoPlatform } from '$lib/helpers/platform';
+import { originalVideoMetadataToFirestoreFields } from '$lib/helpers/originalVideo';
+import { fetchTikTokOriginalVideoMetadata } from '$lib/server/originalVideoMetadata';
+
 const ENRICHMENT_TTL_MS = 1000 * 60 * 60 * 24 * 7;
 const YOUTUBE_API_URL = 'https://www.googleapis.com/youtube/v3/videos';
 const YOUTUBE_TIMEOUT_MS = 8000;
@@ -14,6 +18,16 @@ function getYoutubeId(data) {
 
 function getOriginalYoutubeId(data) {
   const candidates = [data?.originalVideoId, data?.originalYoutube?.id, data?.originalYoutube?.meta?.videoId];
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.trim()) {
+      return candidate.trim();
+    }
+  }
+  return null;
+}
+
+function getOriginalTikTokId(data) {
+  const candidates = [data?.originalVideoId, data?.originalTikTok?.meta?.videoId];
   for (const candidate of candidates) {
     if (typeof candidate === 'string' && candidate.trim()) {
       return candidate.trim();
@@ -44,6 +58,13 @@ function isMetaComplete(meta, youtubeId) {
   if (meta.videoId && youtubeId && meta.videoId !== youtubeId) return false;
   if (!meta.title || !meta.thumbnail || !meta.publishedAt) return false;
   if (!Number.isFinite(meta.durationSeconds)) return false;
+  return true;
+}
+
+function isTikTokMetaComplete(meta, videoId) {
+  if (!meta || typeof meta !== 'object') return false;
+  if (meta.videoId && videoId && meta.videoId !== videoId) return false;
+  if (!meta.title || !meta.thumbnail || !meta.authorUrl) return false;
   return true;
 }
 
@@ -145,9 +166,11 @@ export async function enrichReactionDocument({ adminDb, adminFieldValue, collect
 
   const data = snapshot.data();
   const reactionYoutubeId = getYoutubeId(data);
-  const originalYoutubeId = getOriginalYoutubeId(data);
+  const originalPlatform = normalizeOriginalVideoPlatform(data?.originalVideoPlatform);
+  const originalYoutubeId = originalPlatform === 'youtube' ? getOriginalYoutubeId(data) : null;
+  const originalTikTokId = originalPlatform === 'tiktok' ? getOriginalTikTokId(data) : null;
 
-  if (!reactionYoutubeId && !originalYoutubeId) {
+  if (!reactionYoutubeId && !originalYoutubeId && !originalTikTokId) {
     return { found: true, updated: false, reason: 'missing-youtube-id' };
   }
 
@@ -157,9 +180,13 @@ export async function enrichReactionDocument({ adminDb, adminFieldValue, collect
       (isStale(data?.lastEnrichedAt) || !data?.youtube?.meta));
 
   const originalNeedsUpdate =
-    Boolean(originalYoutubeId) &&
-    (!isMetaComplete(data?.originalYoutube?.meta, originalYoutubeId) &&
-      (isStale(data?.originalYoutube?.lastEnrichedAt) || !data?.originalYoutube?.meta));
+    originalPlatform === 'youtube'
+      ? Boolean(originalYoutubeId) &&
+        (!isMetaComplete(data?.originalYoutube?.meta, originalYoutubeId) &&
+          (isStale(data?.originalYoutube?.lastEnrichedAt) || !data?.originalYoutube?.meta))
+      : Boolean(originalTikTokId) &&
+        (!isTikTokMetaComplete(data?.originalTikTok?.meta, originalTikTokId) &&
+          (isStale(data?.originalTikTok?.lastEnrichedAt) || !data?.originalTikTok?.meta));
 
   if (!reactionNeedsUpdate && !originalNeedsUpdate) {
     return { found: true, updated: false, reason: 'meta-fresh' };
@@ -167,16 +194,24 @@ export async function enrichReactionDocument({ adminDb, adminFieldValue, collect
 
   let reactionResponse = null;
   let originalResponse = null;
+  let originalTikTokResponse = null;
 
   if (reactionNeedsUpdate) {
     reactionResponse = await fetchYoutubeMeta(reactionYoutubeId);
   }
 
   if (originalNeedsUpdate) {
-    if (originalYoutubeId === reactionYoutubeId && reactionResponse) {
-      originalResponse = reactionResponse;
+    if (originalPlatform === 'youtube') {
+      if (originalYoutubeId === reactionYoutubeId && reactionResponse) {
+        originalResponse = reactionResponse;
+      } else {
+        originalResponse = await fetchYoutubeMeta(originalYoutubeId);
+      }
     } else {
-      originalResponse = await fetchYoutubeMeta(originalYoutubeId);
+      originalTikTokResponse = await fetchTikTokOriginalVideoMetadata({
+        videoId: originalTikTokId,
+        videoUrl: data?.originalVideoUrl,
+      });
     }
   }
 
@@ -199,6 +234,14 @@ export async function enrichReactionDocument({ adminDb, adminFieldValue, collect
     }
   }
 
+  if (originalTikTokResponse?.meta && Object.keys(originalTikTokResponse.meta).length > 0) {
+    updates.originalTikTok = {
+      meta: originalTikTokResponse.meta,
+      lastEnrichedAt: adminFieldValue.serverTimestamp()
+    };
+    Object.assign(updates, originalVideoMetadataToFirestoreFields(originalTikTokResponse.metadata));
+  }
+
   if (Object.keys(updates).length === 0) {
     return { found: true, updated: false, reason: 'no-updates' };
   }
@@ -210,6 +253,7 @@ export async function enrichReactionDocument({ adminDb, adminFieldValue, collect
     updated: true,
     reason: 'enriched',
     reactionYoutubeId,
-    originalYoutubeId
+    originalYoutubeId,
+    originalTikTokId
   };
 }

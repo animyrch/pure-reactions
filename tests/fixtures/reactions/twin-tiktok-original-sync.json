@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "description": "Twin-player fixture: TikTok original click-gate sync test",
+  "docs": [
+    {
+      "id": "nM2iTikTokGateA1B2Cx",
+      "data": {
+        "isPublished": false,
+        "offsetStartTime": 0,
+        "originalVideoAuthor": "@tiktok-creator",
+        "originalVideoId": "7056208472144235823",
+        "originalVideoPlatform": "tiktok",
+        "originalVideoTitle": "TikTok original test fixture",
+        "playbackTimeline": [
+          {
+            "rate": 1,
+            "t": 0
+          }
+        ],
+        "playlistId": "",
+        "reactionVideoAuthor": "@the_animaniace",
+        "reactionVideoId": "8-3PahRtgF4",
+        "reactionVideoTitle": "The original Dragon Ball was UNHINGED 💀 | Mercenary Tao HUNTS down the Goku #dbd #dragonballz #goku",
+        "reactionVolumeTimeline": [],
+        "reactorId": "jOH8zi59HPWyoyywMQVygllqSUz2",
+        "stateTimeline": [
+          {
+            "state": 1,
+            "t": 0,
+            "targetTime": 0
+          }
+        ],
+        "volumeTimeline": [],
+        "youtubePlaylistId": "",
+        "updatedAt": "2026-03-07T12:00:00Z"
+      }
+    }
+  ]
+}

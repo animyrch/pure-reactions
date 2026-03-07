@@ -10,6 +10,8 @@ export type TwinPlayersSyncApplyOptions = {
   allowStateActions?: boolean;
   allowPlaybackRate?: boolean;
   allowVolume?: boolean;
+  /** When true, playback-rate actions are skipped and original volume is snapped to 0 or 100. */
+  isTikTokOriginal?: boolean;
 };
 
 export type TwinPlayersSyncApplyDeps = {
@@ -58,8 +60,9 @@ export function applyTwinPlayersSyncActions(
   }
 ): { nextGuards: TwinPlayersSyncApplyGuards; nextWorkingState: number } {
   const allowVolume = options?.allowVolume !== false;
-  const allowPlaybackRate = options?.allowPlaybackRate !== false;
+  const allowPlaybackRate = options?.allowPlaybackRate !== false && !options?.isTikTokOriginal;
   const allowStateActions = options?.allowStateActions !== false;
+  const isTikTokOriginal = Boolean(options?.isTikTokOriginal);
 
   let nextWorkingState = workingState;
   const nextGuards: TwinPlayersSyncApplyGuards = { ...guards };
@@ -70,10 +73,13 @@ export function applyTwinPlayersSyncActions(
         if (!allowVolume) {
           break;
         }
-        if (!nextGuards.changingVolume && snapshot.currentVolumeOriginalVideo !== action.volume) {
+        const resolvedVolume = isTikTokOriginal
+          ? (action.volume >= 100 ? 100 : 0)
+          : action.volume;
+        if (!nextGuards.changingVolume && snapshot.currentVolumeOriginalVideo !== resolvedVolume) {
           nextGuards.changingVolume = true;
-          deps.setVolumeForOriginalVideo(action.volume);
-          deps.updateState({ currentVolumeOriginalVideo: action.volume });
+          deps.setVolumeForOriginalVideo(resolvedVolume);
+          deps.updateState({ currentVolumeOriginalVideo: resolvedVolume });
           nextGuards.changingVolume = false;
         }
         break;
