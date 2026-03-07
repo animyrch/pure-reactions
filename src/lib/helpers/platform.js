@@ -41,3 +41,39 @@ export const isTikTokPlatform = (platform) =>
  * @returns {0 | 100}
  */
 export const snapVolumeForTikTok = (volume) => (volume >= 100 ? 100 : 0);
+
+/**
+ * Extracts a TikTok video ID from a URL or returns the raw value if it
+ * looks like a bare numeric TikTok video ID.
+ *
+ * Supported formats:
+ *   https://www.tiktok.com/@username/video/7056208472144235823
+ *   https://www.tiktok.com/@username/video/7056208472144235823?_r=1
+ *
+ * Note: Short links (vm.tiktok.com) cannot be resolved client-side and are
+ * not supported — this function returns null for them.
+ *
+ * @param {string} url
+ * @returns {string | null}
+ */
+export const extractTikTokVideoId = (url) => {
+  if (!url) return null;
+  const trimmed = url.trim();
+  // Reject vm.tiktok.com short links — they require server-side resolution
+  if (/vm\.tiktok\.com/i.test(trimmed)) return null;
+  // Full URL: https://www.tiktok.com/@<handle>/video/<numeric_id>
+  const longMatch = trimmed.match(/tiktok\.com\/@[^/?#]+\/video\/(\d+)/);
+  if (longMatch) return longMatch[1];
+  // Bare numeric ID (15-20 digits)
+  if (/^\d{15,20}$/.test(trimmed)) return trimmed;
+  return null;
+};
+
+/**
+ * Returns the TikTok embed URL for a given video ID.
+ *
+ * @param {string} videoId
+ * @returns {string}
+ */
+export const getTikTokEmbedUrl = (videoId) =>
+  `https://www.tiktok.com/embed/v2/${videoId}`;

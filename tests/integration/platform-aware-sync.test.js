@@ -3,6 +3,8 @@ import {
     normalizeOriginalVideoPlatform,
     isTikTokPlatform,
     snapVolumeForTikTok,
+    extractTikTokVideoId,
+    getTikTokEmbedUrl,
     ORIGINAL_VIDEO_PLATFORMS
 } from '../../src/lib/helpers/platform.js';
 import { applyTwinPlayersSyncActions } from '../../src/lib/helpers/twinPlayersSyncApply.ts';
@@ -54,6 +56,49 @@ describe('Platform helpers', () => {
             expect(snapVolumeForTikTok(50)).toBe(0);
             expect(snapVolumeForTikTok(20)).toBe(0);
             expect(snapVolumeForTikTok(0)).toBe(0);
+        });
+    });
+
+    describe('extractTikTokVideoId', () => {
+        it('extracts ID from a standard TikTok URL', () => {
+            expect(extractTikTokVideoId(
+                'https://www.tiktok.com/@jamiestreck518/video/7056208472144235823'
+            )).toBe('7056208472144235823');
+        });
+
+        it('extracts ID from a TikTok URL with query params', () => {
+            expect(extractTikTokVideoId(
+                'https://www.tiktok.com/@jamiestreck518/video/7056208472144235823?_r=1&_t=ZP-91mlPkPpRRn'
+            )).toBe('7056208472144235823');
+        });
+
+        it('accepts a bare numeric TikTok video ID (15-20 digits)', () => {
+            expect(extractTikTokVideoId('7056208472144235823')).toBe('7056208472144235823');
+        });
+
+        it('returns null for vm.tiktok.com short links (not supported client-side)', () => {
+            expect(extractTikTokVideoId('https://vm.tiktok.com/ZMhFGnbeh/')).toBeNull();
+        });
+
+        it('returns null for a YouTube URL', () => {
+            expect(extractTikTokVideoId('https://www.youtube.com/watch?v=abc123')).toBeNull();
+        });
+
+        it('returns null for an empty string', () => {
+            expect(extractTikTokVideoId('')).toBeNull();
+        });
+
+        it('returns null for null/undefined', () => {
+            expect(extractTikTokVideoId(null)).toBeNull();
+            expect(extractTikTokVideoId(undefined)).toBeNull();
+        });
+    });
+
+    describe('getTikTokEmbedUrl', () => {
+        it('returns the correct embed URL', () => {
+            expect(getTikTokEmbedUrl('7056208472144235823')).toBe(
+                'https://www.tiktok.com/embed/v2/7056208472144235823'
+            );
         });
     });
 });

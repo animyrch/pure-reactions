@@ -12,6 +12,7 @@
     import { handlePrivateRoute, goToRoute } from "$lib/helpers/routing";
     import { isMobileDevice } from "$lib/helpers/system";
     import { getCompensatedReactionTime } from "$lib/helpers/reaction";
+    import { getTikTokEmbedUrl } from "$lib/helpers/platform";
     import PlaylistQueue from "$lib/components/Video/PlaylistQueue.svelte";
     import { isLoggedIn } from "$lib/stores/user";
     import { page } from "$app/stores";
@@ -292,6 +293,23 @@
         });
     }
 
+    function loadTikTokPlayer(videoId) {
+        if (!playerContainerNode || !videoId) return;
+        // Clear any existing player content
+        playerContainerNode.innerHTML = '';
+        const iframe = document.createElement('iframe');
+        iframe.src = getTikTokEmbedUrl(videoId);
+        iframe.style.width = '100%';
+        iframe.style.height = '100%';
+        iframe.style.border = 'none';
+        iframe.allow = 'autoplay; fullscreen';
+        iframe.setAttribute('allowfullscreen', '');
+        iframe.onload = () => {
+            isPlayerOriginalReady = true;
+        };
+        playerContainerNode.appendChild(iframe);
+    }
+
     async function loadPlaylist() {
         if (playlistId) {
             playlistItems = await fetchFirstPlaylistVideos(playlistId);
@@ -349,6 +367,26 @@
         initialisationAbortController = controller;
         isInitialisingBackend = true;
         try {
+            if (isTikTokOriginal) {
+                // TikTok flow: embed iframe, no YouTube API needed
+                const mountReady = await waitForPlayerMountpoint(controller.signal);
+                if (!mountReady || controller.signal.aborted) {
+                    return;
+                }
+                loadTikTokPlayer(videoId);
+                // TikTok metadata is not available via YouTube oEmbed
+                originalVideoTitle = `TikTok video ${videoId}`;
+                originalVideoAuthor = '';
+                if (sharedSessionId) {
+                    shareUrl = generateShareUrl(sharedSessionId);
+                    subscribeToSession();
+                }
+                hasInitialisedBackend = true;
+                lastInitialisedVideoId = videoId;
+                return;
+            }
+
+            // YouTube flow
             injectYoutubeIframeApiScript();
             await waitForYoutubeIframeApiReady();
             if (controller.signal.aborted) {
@@ -752,6 +790,23 @@
     }
 
     function startOriginalVideo() {
+        if (isTikTokOriginal) {
+            // TikTok player is controlled manually by the user; just advance recording state
+            isPlayerOriginalReady = true;
+            isPlaying = true;
+            currentButtonGroupState = BUTTON_GROUP_STATES.RECORDING;
+            if (sharedSessionId) {
+                // Note: TikTok does not expose a JS playback API, so currentTime is
+                // always reported as 0. Shared-session viewers will see the TikTok
+                // embed but cannot sync to the host's playback position.
+                updateSessionState(sharedSessionId, {
+                    state: SESSION_STATES.PLAYING,
+                    currentTime: 0,
+                    playbackRate: 1,
+                });
+            }
+            return true;
+        }
         applyPlaybackRate(playbackRate, {
             shouldLog: false,
             syncSession: false,
@@ -780,6 +835,18 @@
         return true;
     }
     function pauseOriginalVideo() {
+        if (isTikTokOriginal) {
+            // TikTok player is controlled manually; just update recording state.
+            // currentTime is 0 because TikTok does not expose a JS playback API.
+            if (sharedSessionId) {
+                updateSessionState(sharedSessionId, {
+                    state: SESSION_STATES.PAUSED,
+                    currentTime: 0,
+                    playbackRate: 1,
+                });
+            }
+            return;
+        }
         if (
             !playerOriginal ||
             typeof playerOriginal.pauseVideo !== "function"
