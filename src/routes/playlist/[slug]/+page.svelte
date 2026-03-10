@@ -292,6 +292,7 @@
             currentlyViewed={$state.originalVideoId}
             playlistId={$state.youtubePlaylistId}
             playlistDocumentId={playlistSlug}
+            currentIndex={$state.currentIndexInPlaylist}
             isCreation={false}
             onSelect={handlePlaylistSelect}
           />

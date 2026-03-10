@@ -41,6 +41,16 @@ export const buildYouTubeVideoUrl = (videoId) => {
     : undefined;
 };
 
+export const buildYouTubeThumbnailUrl = (
+  videoId,
+  { variant = 'hqdefault', format = 'jpg' } = {},
+) => {
+  const normalizedVideoId = trimString(videoId);
+  return normalizedVideoId
+    ? `https://i.ytimg.com/vi/${encodeURIComponent(normalizedVideoId)}/${variant}.${format}`
+    : undefined;
+};
+
 export const buildYouTubeAuthorUrl = (author) => {
   const normalizedAuthor = trimString(author);
   if (!normalizedAuthor) {

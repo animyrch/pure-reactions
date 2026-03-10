@@ -291,6 +291,7 @@
             currentlyViewed={$state.originalVideoId}
             playlistId={$state.youtubePlaylistId}
             playlistDocumentId={$state.playlistDocumentId}
+            currentIndex={$state.currentIndexInPlaylist}
             isCreation={false}
           />
         </div>

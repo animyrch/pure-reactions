@@ -74,3 +74,73 @@ export async function fetchFirstPlaylistVideos(playlistId) {
 
   return await res.json();
 }
+
+export async function fetchPlaylistPreviewMetadata(playlistId) {
+  const params = new URLSearchParams({
+    includePlaylistTitle: '1',
+    maxResults: '1',
+  });
+  const res = await fetch(`/api/youtube/playlist/${playlistId}?${params.toString()}`);
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `Failed to load playlist preview (HTTP ${res.status})`);
+  }
+
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    const text = await res.text();
+    throw new Error(`Expected JSON, got ${contentType}: ${text}`);
+  }
+
+  const payload = await res.json();
+  if (Array.isArray(payload)) {
+    return {
+      items: payload,
+      playlistTitle: '',
+    };
+  }
+
+  if (!Array.isArray(payload?.items)) {
+    throw new Error('Unexpected playlist preview response.');
+  }
+
+  return {
+    items: payload.items,
+    playlistTitle: payload?.playlistTitle || '',
+  };
+}
+
+export async function fetchAllPlaylistVideos(playlistId) {
+  const items = [];
+  let nextPageToken = '';
+
+  do {
+    const params = new URLSearchParams();
+    if (nextPageToken) {
+      params.set('pageToken', nextPageToken);
+    }
+
+    const querySuffix = params.toString() ? `?${params.toString()}` : '';
+    const res = await fetch(`/api/youtube/playlist/${playlistId}${querySuffix}`);
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || `Failed to load playlist (HTTP ${res.status})`);
+    }
+
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      const text = await res.text();
+      throw new Error(`Expected JSON, got ${contentType}: ${text}`);
+    }
+
+    const pageItems = await res.json();
+    if (Array.isArray(pageItems)) {
+      items.push(...pageItems);
+    }
+    nextPageToken = res.headers.get('x-next-page-token') || '';
+  } while (nextPageToken);
+
+  return items;
+}

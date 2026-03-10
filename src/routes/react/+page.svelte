@@ -3,17 +3,23 @@
     import { ArrowLeftOutline } from 'flowbite-svelte-icons';
     import { fade } from 'svelte/transition';
     import { onMount } from 'svelte';
+    import { createPlaylistDocument, auth } from '$lib/helpers/firebase';
+    import { fetchOriginalVideoMetadata } from '$lib/helpers/originalVideo';
     import { goToRoute, handlePrivateRoute } from '$lib/helpers/routing';
-    import { extractYouTubeVideoId, extractYoutubePlaylistId } from '$lib/helpers/youtube';
-    import { extractTikTokVideoId } from '$lib/helpers/platform';
-    import { auth } from '$lib/helpers/firebase';
+    import { fetchAllPlaylistVideos, fetchPlaylistPreviewMetadata } from '$lib/helpers/youtube';
+    import {
+        REACTION_SOURCE_TYPES,
+        buildSequenceItemsFromSources,
+        parseReactionSourceInput,
+        shouldCreatePlaylistDocumentForSequence,
+    } from '$lib/helpers/reactionSequence';
 
     const steps = [
         {
             id: 'original-video',
             title: 'Original video',
             prompt: 'What are you reacting to?',
-            helper: 'Paste a YouTube or TikTok URL. We will load it instantly and keep playback locked to your session.'
+            helper: 'Paste a YouTube or TikTok URL. We will load it instantly and record your controls.'
         }
     ];
 
@@ -28,6 +34,9 @@
     let activeStep = steps[0];
     let originalVideoInput;
     let isSubmitting = false;
+    let isSequenceModeVisible = false;
+    let sourceItems = [];
+    let nextSourceItemClientId = 1;
 
     $: activeStep = steps[createReactForm.currentStep - 1] ?? steps[0];
 
@@ -36,6 +45,89 @@
             createReactForm.errors.originalVideoId = '';
         }
     };
+
+    const getSourceItemTypeLabel = (sourceItem) => {
+        if (sourceItem?.type === REACTION_SOURCE_TYPES.YOUTUBE_PLAYLIST) {
+            return 'YouTube playlist';
+        }
+        if (sourceItem?.type === REACTION_SOURCE_TYPES.TIKTOK_VIDEO) {
+            return 'TikTok video';
+        }
+        return 'YouTube video';
+    };
+
+    const getSourceItemSummary = (sourceItem) => {
+        if (sourceItem?.type === REACTION_SOURCE_TYPES.YOUTUBE_PLAYLIST) {
+            return sourceItem.playlistTitle || sourceItem.title || sourceItem.youtubePlaylistId;
+        }
+        return sourceItem.title || sourceItem.originalVideoId;
+    };
+
+    const updateSourceItem = (clientId, updates) => {
+        sourceItems = sourceItems.map((sourceItem) =>
+            sourceItem.clientId === clientId ? { ...sourceItem, ...updates } : sourceItem,
+        );
+    };
+
+    const enrichSourceItemMetadata = async (sourceItem) => {
+        if (!sourceItem?.clientId) {
+            return;
+        }
+
+        try {
+            if (sourceItem.type === REACTION_SOURCE_TYPES.YOUTUBE_PLAYLIST) {
+                const preview = await fetchPlaylistPreviewMetadata(sourceItem.youtubePlaylistId);
+                const firstEntry = preview.items?.[0];
+                updateSourceItem(sourceItem.clientId, {
+                    isResolvingMetadata: false,
+                    playlistTitle: preview.playlistTitle,
+                    title: firstEntry?.title ?? firstEntry?.snippet?.title ?? sourceItem.title,
+                    channelTitle:
+                        firstEntry?.channelTitle ??
+                        firstEntry?.snippet?.channelTitle ??
+                        sourceItem.channelTitle,
+                    thumbnailUrl:
+                        firstEntry?.thumbnailUrl ??
+                        firstEntry?.snippet?.thumbnails?.maxres?.url ??
+                        firstEntry?.snippet?.thumbnails?.standard?.url ??
+                        firstEntry?.snippet?.thumbnails?.high?.url ??
+                        firstEntry?.snippet?.thumbnails?.medium?.url ??
+                        firstEntry?.snippet?.thumbnails?.default?.url ??
+                        sourceItem.thumbnailUrl,
+                });
+                return;
+            }
+
+            if (!sourceItem.originalVideoId) {
+                updateSourceItem(sourceItem.clientId, {
+                    isResolvingMetadata: false,
+                });
+                return;
+            }
+
+            const metadata = await fetchOriginalVideoMetadata({
+                platform: sourceItem.originalVideoPlatform,
+                videoId: sourceItem.originalVideoId,
+                videoUrl: sourceItem.originalVideoUrl || sourceItem.rawValue,
+            });
+
+            updateSourceItem(sourceItem.clientId, {
+                isResolvingMetadata: false,
+                title: metadata.title || sourceItem.title,
+                channelTitle: metadata.author || sourceItem.channelTitle,
+                thumbnailUrl: metadata.thumbnailUrl || sourceItem.thumbnailUrl,
+            });
+        } catch (error) {
+            console.warn('Failed to enrich source item metadata', error);
+            updateSourceItem(sourceItem.clientId, {
+                isResolvingMetadata: false,
+            });
+        }
+    };
+
+    $: if (sourceItems.length > 0) {
+        isSequenceModeVisible = true;
+    }
 
     const handleBackNavigation = () => {
         if (createReactForm.currentStep > 1) {
@@ -46,59 +138,118 @@
         goToRoute('/');
     };
 
-    const proceedToRecorder = async (videoId, originalValue, platform = 'youtube') => {
-        if (platform === 'tiktok') {
-            await goToRoute(`/backend?id=${encodeURIComponent(videoId)}&platform=tiktok&originalUrl=${encodeURIComponent(originalValue)}`);
+    const buildBackendRoute = ({ playlistDocumentId, sequenceIndex, sequenceItem }) => {
+        const params = new URLSearchParams();
+        params.set('id', sequenceItem.originalVideoId);
+        params.set('platform', sequenceItem.originalVideoPlatform);
+        if (playlistDocumentId) {
+            params.set('playlistDocumentId', playlistDocumentId);
+            params.set('sequenceIndex', String(sequenceIndex));
+        }
+        if (sequenceItem.originalVideoUrl) {
+            params.set('originalUrl', sequenceItem.originalVideoUrl);
+        }
+        return `/backend?${params.toString()}`;
+    };
+
+    const resetInput = () => {
+        createReactForm.originalVideoId = '';
+    };
+
+    const addSourceItem = () => {
+        const parsed = parseReactionSourceInput(createReactForm.originalVideoId);
+        if (!parsed.ok) {
+            createReactForm.errors.originalVideoId = parsed.error;
+            return false;
+        }
+
+        const nextSourceItem = {
+            ...parsed.sourceItem,
+            clientId: nextSourceItemClientId,
+            isResolvingMetadata: true,
+        };
+        nextSourceItemClientId += 1;
+
+        isSequenceModeVisible = true;
+        sourceItems = [...sourceItems, nextSourceItem];
+        createReactForm.errors.originalVideoId = '';
+        resetInput();
+        originalVideoInput?.focus();
+        void enrichSourceItemMetadata(nextSourceItem);
+        return true;
+    };
+
+    const removeSourceItem = (indexToRemove) => {
+        sourceItems = sourceItems.filter((_, index) => index !== indexToRemove);
+    };
+
+    const moveSourceItem = (indexToMove, direction) => {
+        const targetIndex = indexToMove + direction;
+        if (targetIndex < 0 || targetIndex >= sourceItems.length) {
             return;
         }
-        const playlistId = extractYoutubePlaylistId(originalValue);
-        const redirectUrl = playlistId
-            ? `/backend?id=${videoId}&playlist=${playlistId}`
-            : `/backend?id=${videoId}`;
-        await goToRoute(redirectUrl);
+
+        const nextItems = [...sourceItems];
+        const [movedItem] = nextItems.splice(indexToMove, 1);
+        nextItems.splice(targetIndex, 0, movedItem);
+        sourceItems = nextItems;
     };
 
     const onConfirmStep1 = async () => {
         if (isSubmitting) {
             return;
         }
-        const rawValue = createReactForm.originalVideoId?.trim();
-        if (!rawValue) {
-            createReactForm.errors.originalVideoId = 'Paste a YouTube or TikTok link or video ID to continue.';
-            return;
-        }
 
-        // Try YouTube first
-        const youtubeVideoId = extractYouTubeVideoId(rawValue);
-        if (youtubeVideoId) {
-            isSubmitting = true;
-            createReactForm.errors.originalVideoId = '';
-            try {
-                await proceedToRecorder(youtubeVideoId, rawValue, 'youtube');
-            } catch (error) {
-                console.error('Failed to navigate to recorder:', error);
-                isSubmitting = false;
-                createReactForm.errors.originalVideoId = 'Something went wrong. Please try again.';
+        if (createReactForm.originalVideoId?.trim()) {
+            const added = addSourceItem();
+            if (!added) {
+                return;
             }
+        }
+
+        if (!sourceItems.length) {
+            createReactForm.errors.originalVideoId = 'Add at least one YouTube playlist, YouTube video, or TikTok video before continuing.';
             return;
         }
 
-        // Try TikTok
-        const tiktokVideoId = extractTikTokVideoId(rawValue);
-        if (tiktokVideoId) {
-            isSubmitting = true;
-            createReactForm.errors.originalVideoId = '';
-            try {
-                await proceedToRecorder(tiktokVideoId, rawValue, 'tiktok');
-            } catch (error) {
-                console.error('Failed to navigate to recorder:', error);
-                isSubmitting = false;
-                createReactForm.errors.originalVideoId = 'Something went wrong. Please try again.';
+        isSubmitting = true;
+        createReactForm.errors.originalVideoId = '';
+
+        try {
+            const sequenceItems = await buildSequenceItemsFromSources(sourceItems, {
+                resolveYouTubePlaylist: fetchAllPlaylistVideos,
+            });
+
+            if (!sequenceItems.length) {
+                throw new Error('No playable videos were found in the entered sources.');
             }
-            return;
-        }
 
-        createReactForm.errors.originalVideoId = 'We couldn’t read that link. Make sure it is a valid YouTube or TikTok URL.';
+            const firstSequenceItem = sequenceItems[0];
+            const shouldCreatePlaylistDocument = shouldCreatePlaylistDocumentForSequence({
+                sourceItems,
+                sequenceItems,
+            });
+
+            let playlistDocumentId = '';
+            if (shouldCreatePlaylistDocument) {
+                playlistDocumentId = await createPlaylistDocument({
+                    userId: auth.currentUser?.uid,
+                    sequenceItems,
+                });
+            }
+
+            await goToRoute(
+                buildBackendRoute({
+                    playlistDocumentId,
+                    sequenceIndex: 0,
+                    sequenceItem: firstSequenceItem,
+                })
+            );
+        } catch (error) {
+            console.error('Failed to build reaction sequence:', error);
+            isSubmitting = false;
+            createReactForm.errors.originalVideoId = error?.message || 'Something went wrong while building the sequence. Please try again.';
+        }
     };
 
     onMount(async () => {
@@ -160,7 +311,7 @@
 
                         <div class="space-y-2">
                             <label class="text-sm font-medium text-slate-200" for="original-video-id">
-                                YouTube or TikTok link
+                                Original video URL
                             </label>
                             <input
                                 id="original-video-id"
@@ -183,6 +334,73 @@
                             {/if}
                         </div>
 
+                        {#if isSequenceModeVisible}
+                            <div class="space-y-4 rounded-2xl border border-slate-800/80 bg-slate-950/30 p-4">
+                                <div class="space-y-1">
+                                    <div class="flex items-center justify-between gap-4">
+                                        <p class="text-sm font-medium text-slate-200">Sequence tools</p>
+                                        <p class="text-xs uppercase tracking-[0.2em] text-slate-500">{sourceItems.length} saved item{sourceItems.length === 1 ? '' : 's'}</p>
+                                    </div>
+                                    <p class="text-sm text-slate-400">
+                                        Use this only when the reaction should move through several originals.
+                                    </p>
+                                </div>
+
+                                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <button
+                                        type="button"
+                                        class="inline-flex items-center justify-center rounded-2xl border border-slate-700 px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-blue-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                                        on:click={addSourceItem}
+                                    >
+                                        Add current link to sequence
+                                    </button>
+                                    <p class="text-xs text-slate-500">
+                                    </p>
+                                </div>
+
+                                {#if sourceItems.length}
+                                    <div class="space-y-3">
+                                        {#each sourceItems as sourceItem, index (sourceItem.clientId)}
+                                            <div class="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-4">
+                                                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                                    <div class="space-y-1">
+                                                        <p class="text-xs uppercase tracking-[0.2em] text-slate-500">{getSourceItemTypeLabel(sourceItem)}</p>
+                                                        <p class="text-sm text-slate-100">{getSourceItemSummary(sourceItem)}</p>
+                                                        <p class="break-all text-xs text-slate-500">{sourceItem.rawValue}</p>
+                                                    </div>
+                                                    <div class="flex flex-wrap gap-2">
+                                                        <button
+                                                            type="button"
+                                                            class="rounded-xl border border-slate-700 px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-blue-400 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                                                            on:click={() => moveSourceItem(index, -1)}
+                                                            disabled={index === 0}
+                                                        >
+                                                            Move up
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            class="rounded-xl border border-slate-700 px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-blue-400 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                                                            on:click={() => moveSourceItem(index, 1)}
+                                                            disabled={index === sourceItems.length - 1}
+                                                        >
+                                                            Move down
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            class="rounded-xl border border-rose-500/50 px-3 py-2 text-xs font-medium text-rose-300 transition hover:border-rose-400 hover:text-rose-200"
+                                                            on:click={() => removeSourceItem(index)}
+                                                        >
+                                                            Remove
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        {/each}
+                                    </div>
+                                {/if}
+                            </div>
+                        {/if}
+
                         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <button
                                 type="button"
@@ -193,14 +411,26 @@
                                 <span>Back</span>
                             </button>
 
-                            <GradientButton
-                                type="submit"
-                                color="pinkToOrange"
-                                class={`w-full sm:w-auto sm:px-8 sm:py-3 ${isSubmitting ? 'pointer-events-none opacity-80' : ''}`}
-                                disabled={isSubmitting}
-                            >
-                                {isSubmitting ? 'Loading…' : 'Continue'}
-                            </GradientButton>
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                                <button
+                                    type="button"
+                                    class="inline-flex items-center justify-center rounded-full px-3 py-1.5 text-sm font-medium text-slate-400 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                                    on:click={() => {
+                                        isSequenceModeVisible = !isSequenceModeVisible;
+                                    }}
+                                >
+                                    {isSequenceModeVisible ? 'Hide sequence tools' : 'Show sequence tools'}
+                                </button>
+
+                                <GradientButton
+                                    type="submit"
+                                    color="pinkToOrange"
+                                    class={`w-full sm:w-auto sm:px-8 sm:py-3 ${isSubmitting ? 'pointer-events-none opacity-80' : ''}`}
+                                    disabled={isSubmitting}
+                                >
+                                    {isSubmitting ? 'Loading…' : 'Continue'}
+                                </GradientButton>
+                            </div>
                         </div>
                     </form>
                 </div>

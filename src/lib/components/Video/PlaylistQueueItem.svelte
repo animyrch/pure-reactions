@@ -1,5 +1,6 @@
 <script>
     import { goto } from '$app/navigation'
+    import { buildYouTubeThumbnailUrl } from '$lib/helpers/originalVideo';
     import { getCompensatedReactionTime } from '$lib/helpers/reaction';
 
     export let index = 0;
@@ -20,22 +21,43 @@
         }
         if (isCreation) {
             const reactionVideoTime = getCompensatedReactionTime(startTime, playlistBufferTime || 0);
-            await goto(`/backend?id=${playlistItem?.snippet?.resourceId?.videoId}&playlist=${playlistId}&playlistDocumentId=${playlistDocumentId}&playlistBufferTime=${reactionVideoTime}`);
+            const originalVideoId = playlistItem?.originalVideoId || playlistItem?.snippet?.resourceId?.videoId;
+            const originalVideoPlatform = playlistItem?.originalVideoPlatform || 'youtube';
+            const originalVideoUrl = playlistItem?.originalVideoUrl || '';
+            const params = new URLSearchParams();
+            params.set('id', originalVideoId);
+            params.set('playlistDocumentId', playlistDocumentId);
+            params.set('sequenceIndex', String(index));
+            params.set('platform', originalVideoPlatform);
+            params.set('playlistBufferTime', String(reactionVideoTime));
+            if (playlistId) {
+                params.set('playlist', playlistId);
+            }
+            if (originalVideoUrl) {
+                params.set('originalUrl', originalVideoUrl);
+            }
+            await goto(`/backend?${params.toString()}`);
         } else {
             await goto(`/reaction/${targetReactionDocumentId}?playlistId=${playlistDocumentId}`);
         }
         location.reload();
     };
 
-    $: isActive = currentlyViewed === playlistItem?.snippet?.resourceId?.videoId;
-    $: title = playlistItem?.snippet?.title ?? 'Untitled video';
-    $: channelTitle = playlistItem?.snippet?.channelTitle;
+    $: isActive = currentlyViewed === (playlistItem?.originalVideoId || playlistItem?.snippet?.resourceId?.videoId);
+    $: title = playlistItem?.title ?? playlistItem?.snippet?.title ?? 'Untitled video';
+    $: channelTitle = playlistItem?.channelTitle ?? playlistItem?.snippet?.channelTitle;
     $: thumbnailUrl =
+        playlistItem?.thumbnailUrl ??
         playlistItem?.snippet?.thumbnails?.maxres?.url ??
         playlistItem?.snippet?.thumbnails?.standard?.url ??
         playlistItem?.snippet?.thumbnails?.high?.url ??
         playlistItem?.snippet?.thumbnails?.medium?.url ??
         playlistItem?.snippet?.thumbnails?.default?.url ??
+        buildYouTubeThumbnailUrl(
+            playlistItem?.originalVideoPlatform === 'tiktok'
+                ? ''
+                : playlistItem?.originalVideoId || playlistItem?.snippet?.resourceId?.videoId,
+        ) ??
         '';
 
     const baseButtonClasses = 'group relative flex w-full items-center gap-sm rounded-md px-sm py-xs text-left transition duration-subtle ease-cinematic focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background';
