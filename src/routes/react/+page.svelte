@@ -19,7 +19,7 @@
             id: 'original-video',
             title: 'Original video',
             prompt: 'What are you reacting to?',
-            helper: 'Paste a YouTube or TikTok URL. We will load it instantly and record your controls.'
+            helper: 'Paste a YouTube or TikTok URL. We will load it instantly and record your controls.',
         }
     ];
 
