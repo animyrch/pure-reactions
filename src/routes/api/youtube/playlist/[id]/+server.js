@@ -2,16 +2,28 @@
 import { json } from '@sveltejs/kit';
 import { YOUTUBE_API_KEY } from '$env/static/private';
 
-export const GET = async ({ params }) => {
+export const GET = async ({ params, url }) => {
   const playlistId = params.id;
+  const pageToken = url.searchParams.get('pageToken') || '';
+  const includePlaylistTitle = url.searchParams.get('includePlaylistTitle') === '1';
+  const maxResults = Math.min(
+    Math.max(Number(url.searchParams.get('maxResults')) || 50, 1),
+    50,
+  );
 
-  const url =
+  const requestUrl =
     `https://www.googleapis.com/youtube/v3/playlistItems` +
     `?part=snippet&playlistId=${encodeURIComponent(playlistId)}` +
-    `&maxResults=50&key=${encodeURIComponent(YOUTUBE_API_KEY)}`;
+    (pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : '') +
+    `&maxResults=${encodeURIComponent(String(maxResults))}&key=${encodeURIComponent(YOUTUBE_API_KEY)}`;
+
+  const playlistMetadataUrl =
+    `https://www.googleapis.com/youtube/v3/playlists` +
+    `?part=snippet&id=${encodeURIComponent(playlistId)}` +
+    `&maxResults=1&key=${encodeURIComponent(YOUTUBE_API_KEY)}`;
 
   try {
-    const res = await fetch(url);
+    const res = await fetch(requestUrl);
     const bodyText = await res.text(); // read once, then parse if possible
 
     if (!res.ok) {
@@ -48,8 +60,34 @@ export const GET = async ({ params }) => {
       );
     }
 
-    // ✅ Proper JSON response + content-type
-    return json(data.items);
+    let playlistTitle = '';
+    if (includePlaylistTitle) {
+      try {
+        const metadataResponse = await fetch(playlistMetadataUrl);
+        const metadataBody = await metadataResponse.text();
+        if (metadataResponse.ok && metadataBody) {
+          const metadata = JSON.parse(metadataBody);
+          playlistTitle = metadata?.items?.[0]?.snippet?.title || '';
+        }
+      } catch (error) {
+        console.error('Failed to fetch playlist metadata', error);
+      }
+    }
+
+    const responsePayload = includePlaylistTitle
+      ? {
+          items: data.items,
+          playlistTitle,
+        }
+      : data.items;
+
+    return json(responsePayload, {
+      headers: data.nextPageToken
+        ? {
+            'x-next-page-token': data.nextPageToken,
+          }
+        : undefined,
+    });
   } catch (err) {
     return json(
       { error: 'Error fetching playlist videos', details: String(err) },

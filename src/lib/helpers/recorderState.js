@@ -1,0 +1,32 @@
+export const RECORDER_PLAYER_STATES = Object.freeze({
+    UNSTARTED: -1,
+    ENDED: 0,
+    PLAYING: 1,
+    PAUSED: 2,
+    BUFFERING: 3,
+    CUED: 5,
+});
+
+export const buildRecorderStateConfigs = ({
+    existingConfigs,
+    reactionVideoTime,
+    originalVideoTime,
+    stateCode,
+}) => {
+    const nextConfigs = new Map(existingConfigs instanceof Map ? existingConfigs : []);
+    const normalizedStateCode =
+        stateCode === RECORDER_PLAYER_STATES.BUFFERING
+            ? RECORDER_PLAYER_STATES.PAUSED
+            : stateCode;
+
+    nextConfigs.set(reactionVideoTime, {
+        time: String(originalVideoTime),
+        state: normalizedStateCode,
+    });
+
+    return {
+        map: nextConfigs,
+        entries: Array.from(nextConfigs.entries()),
+        object: Object.fromEntries(nextConfigs),
+    };
+};

@@ -22,6 +22,11 @@ import {
   fetchFirstPlaylistVideos
 } from '$lib/helpers/youtube';
 import {
+  findPlaylistCurrentIndex,
+  getPlaylistSequenceItems,
+  toPlaylistQueueItem,
+} from '$lib/helpers/reactionSequence';
+import {
   fetchOriginalVideoMetadata,
   normalizeOriginalVideoMetadata,
   originalVideoMetadataToFirestoreFields,
@@ -1937,17 +1942,45 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     return youtubeApiReadyPromise;
   };
 
-  const setPlaylistData = async (playlistId: string | null | undefined, youtubePlaylistId?: string) => {
-    if (!playlistId || !youtubePlaylistId) {
+  const setPlaylistData = async (
+    playlistId: string | null | undefined,
+    youtubePlaylistId?: string,
+    currentReactionDocumentId?: string,
+    currentOriginalVideoId?: string,
+  ) => {
+    if (!playlistId) {
       updateState({ playlistItems: [], playlistDocument: undefined, hasNextIndexInPlaylist: false });
       return;
     }
     playlistFetchPromise = (async () => {
-      const playlistItems = await fetchFirstPlaylistVideos(youtubePlaylistId);
       const playlistDocument = await getPlaylist(playlistId);
-      const filteredItems = playlistItems.filter((item: any) => playlistDocument.originalVideoIds.includes(item.snippet.resourceId.videoId));
       const snapshot = get(state);
-      const currentIndex = filteredItems.findIndex((item: any) => item.snippet.resourceId.videoId === snapshot.originalVideoId);
+      const sequenceItems = getPlaylistSequenceItems(playlistDocument);
+      if (sequenceItems.length) {
+        const playlistItems = sequenceItems.map((item: any, index: number) =>
+          toPlaylistQueueItem(item, index),
+        );
+        const currentIndex = findPlaylistCurrentIndex({
+          playlistDocument,
+          reactionDocumentId: currentReactionDocumentId ?? snapshot.pageSlug,
+          originalVideoId: currentOriginalVideoId ?? snapshot.originalVideoId,
+        });
+        updateState({
+          playlistItems,
+          playlistDocument,
+          hasNextIndexInPlaylist: currentIndex >= 0 && currentIndex < playlistItems.length - 1,
+          currentIndexInPlaylist: currentIndex >= 0 ? currentIndex : 0
+        });
+        return;
+      }
+      if (!youtubePlaylistId) {
+        updateState({ playlistItems: [], playlistDocument, hasNextIndexInPlaylist: false, currentIndexInPlaylist: 0 });
+        return;
+      }
+      const playlistItems = await fetchFirstPlaylistVideos(youtubePlaylistId);
+      const filteredItems = playlistItems.filter((item: any) => playlistDocument.originalVideoIds.includes(item.snippet.resourceId.videoId));
+      const targetOriginalVideoId = currentOriginalVideoId ?? snapshot.originalVideoId;
+      const currentIndex = filteredItems.findIndex((item: any) => item.snippet.resourceId.videoId === targetOriginalVideoId);
       updateState({
         playlistItems: filteredItems,
         playlistDocument,
@@ -1961,7 +1994,12 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   const setPlaylistDocumentId = async (playlistDocumentId: string | null) => {
     updateState({ playlistDocumentId });
     const snapshot = get(state);
-    await setPlaylistData(playlistDocumentId, snapshot.youtubePlaylistId);
+    await setPlaylistData(
+      playlistDocumentId,
+      snapshot.youtubePlaylistId,
+      snapshot.pageSlug,
+      snapshot.originalVideoId,
+    );
   };
 
   const updateUIElements = (slugValue: string) => {
@@ -1985,6 +2023,19 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       tiktokOriginalIframe = null;
     }
     tiktokOriginalPlayerState = -1;
+  };
+
+  const restorePlayerContainer = (containerId: string) => {
+    const container = document.getElementById(containerId);
+    if (container && container.tagName === 'IFRAME') {
+      const parent = container.parentElement;
+      if (parent) {
+        const newDiv = document.createElement('div');
+        newDiv.id = containerId;
+        newDiv.className = container.className;
+        parent.replaceChild(newDiv, container);
+      }
+    }
   };
 
   /**
@@ -2243,22 +2294,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
     // Clean up any orphaned iframes that YouTube may have left behind
     // This can happen during client-side navigation if the player wasn't properly destroyed
-    const cleanupOrphanedIframe = (containerId: string) => {
-      const container = document.getElementById(containerId);
-      if (container && container.tagName === 'IFRAME') {
-        // YouTube replaced the div with an iframe - we need to restore the div
-        const parent = container.parentElement;
-        if (parent) {
-          const newDiv = document.createElement('div');
-          newDiv.id = containerId;
-          newDiv.className = container.className;
-          parent.replaceChild(newDiv, container);
-        }
-      }
-    };
-
-    cleanupOrphanedIframe('player-original');
-    cleanupOrphanedIframe('player-reaction');
+    restorePlayerContainer('player-original');
+    restorePlayerContainer('player-reaction');
 
     // Reset the click-to-start gate whenever we recreate players.
     originalVideoClicked = false;
@@ -2445,7 +2482,12 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
     enforceReactionMuteMode();
 
-    await setPlaylistData(get(state).playlistDocumentId, youtubePlaylistId);
+    await setPlaylistData(
+      get(state).playlistDocumentId,
+      youtubePlaylistId,
+      typeof reactionData?.id === 'string' ? reactionData.id : undefined,
+      originalVideoId,
+    );
 
     await verifyAndSyncMetadata({
       documentId: typeof reactionData?.id === 'string' ? reactionData.id : undefined,
@@ -2563,6 +2605,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       const reactionVideoId = reactionData['reactionVideoId'] ?? '';
       const originalVideoId = reactionData['originalVideoId'];
       const youtubePlaylistId = reactionData['youtubePlaylistId'];
+      const nextOriginalVideoPlatform = normalizeOriginalVideoPlatform(reactionData?.originalVideoPlatform);
+      const normalizedOriginalMetadata = normalizeOriginalVideoMetadata(reactionData);
 
       const isSameReactionVideo = reactionVideoId === previousReactionVideoId;
 
@@ -2595,6 +2639,13 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         Boolean(reactionVideoId) &&
         isSameReactionVideo &&
         Boolean(document.getElementById('player-reaction'));
+      const canReuseOriginalPlayer =
+        Boolean(snapshotBefore.playerOriginal) &&
+        Boolean(originalVideoId) &&
+        snapshotBefore.originalVideoPlatform === 'youtube' &&
+        nextOriginalVideoPlatform === 'youtube' &&
+        Boolean(document.getElementById('player-original')) &&
+        typeof snapshotBefore.playerOriginal?.loadVideoById === 'function';
 
       // If resetting to a different video, we MUST reset bothVideosStarted so the gate
       // can be re-evaluated (or auto-satisfied) for the new pair.
@@ -2619,10 +2670,24 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         snapshotBefore.playerReaction.destroy();
       }
 
+      if (!canReuseOriginalPlayer) {
+        try {
+          snapshotBefore.playerOriginal?.pauseVideo?.();
+        } catch {
+          // ignore
+        }
+        snapshotBefore.playerOriginal?.destroy?.();
+        destroyTikTokOriginalPlayer();
+      }
+
       const shouldCreateReactionPlayer = Boolean(reactionVideoId) && !canReuseReactionPlayer;
-      setExpectedPlayerReadyCount(shouldCreateReactionPlayer ? 1 : 0);
+      const shouldCreateOriginalPlayer = Boolean(originalVideoId) && !canReuseOriginalPlayer;
+      setExpectedPlayerReadyCount(
+        (shouldCreateReactionPlayer ? 1 : 0) + (shouldCreateOriginalPlayer ? 1 : 0)
+      );
 
       let nextPlayerReaction: any = snapshotBefore.playerReaction;
+      let nextPlayerOriginal: any = snapshotBefore.playerOriginal;
       if (shouldCreateReactionPlayer) {
         try {
           nextPlayerReaction = new YT.Player('player-reaction', {
@@ -2640,11 +2705,38 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         } catch (error) {
           console.error('Failed to initialise reaction YouTube player', error);
           nextPlayerReaction = null;
-          setExpectedPlayerReadyCount(0);
+          setExpectedPlayerReadyCount(shouldCreateOriginalPlayer ? 1 : 0);
         }
       }
 
-      if (originalVideoId && typeof snapshotBefore.playerOriginal?.loadVideoById === 'function') {
+      if (shouldCreateOriginalPlayer) {
+        updateState({ originalVideoPlatform: nextOriginalVideoPlatform, playerOriginal: null });
+        await tick();
+        restorePlayerContainer('player-original');
+
+        try {
+          if (nextOriginalVideoPlatform === 'tiktok') {
+            nextPlayerOriginal = createTikTokOriginalPlayer(originalVideoId);
+          } else {
+            nextPlayerOriginal = new YT.Player('player-original', {
+              videoId: originalVideoId,
+              playerVars: {
+                ...playerOptions,
+                start: Math.round(initialTargetTime)
+              },
+              ...iframeOptionDefault,
+              events: {
+                onReady: onPlayerReady,
+                onStateChange: onStateChangeOriginal
+              }
+            });
+          }
+        } catch (error) {
+          console.error('Failed to initialise original player during in-place transition', error);
+          nextPlayerOriginal = null;
+          setExpectedPlayerReadyCount(shouldCreateReactionPlayer ? 1 : 0);
+        }
+      } else if (originalVideoId && typeof snapshotBefore.playerOriginal?.loadVideoById === 'function') {
         try {
           // When switching to a different reaction video, cue (don't play) the original video
           // so it waits for the reaction video to be started by the user
@@ -2708,8 +2800,6 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         reactionVideoAuthor: reactionData?.reactionVideoAuthor,
         reactorDisplayName: resolvedReactorDisplayName || undefined,
         reactionVideoTitle: reactionData?.reactionVideoTitle,
-        originalVideoAuthor: reactionData?.originalVideoAuthor,
-        originalVideoTitle: reactionData?.originalVideoTitle,
         youtubePlaylistId,
         offsetStartTime,
         reactionFinishTime,
@@ -2723,7 +2813,12 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         fullscreenOverlayWidthPercent,
         fullscreenOverlayCorner,
         currentPlaybackRate,
-        playerOriginal: snapshotBefore.playerOriginal,
+        originalVideoAuthor: normalizedOriginalMetadata.author,
+        originalVideoAuthorUrl: normalizedOriginalMetadata.authorUrl,
+        originalVideoTitle: normalizedOriginalMetadata.title,
+        originalVideoDescription: normalizedOriginalMetadata.description,
+        originalVideoPlatform: nextOriginalVideoPlatform,
+        playerOriginal: nextPlayerOriginal,
         playerReaction: nextPlayerReaction,
         currentStateOriginalVideo: -1,
         currentVolumeOriginalVideo: initialOriginalVolume,
@@ -2767,12 +2862,17 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       });
 
       enforceReactionMuteMode();
-      await setPlaylistData(get(state).playlistDocumentId, youtubePlaylistId);
+      await setPlaylistData(
+        get(state).playlistDocumentId,
+        youtubePlaylistId,
+        nextReactionDocumentId,
+        originalVideoId,
+      );
 
       // Explicitly apply the computed volumes to the players
-      if (typeof snapshotBefore.playerOriginal?.setVolume === 'function') {
+      if (typeof nextPlayerOriginal?.setVolume === 'function') {
         try {
-          snapshotBefore.playerOriginal.setVolume(initialOriginalVolume);
+          nextPlayerOriginal.setVolume(initialOriginalVolume);
           console.debug('[TwinPlayers] Applied original volume after transition', { initialOriginalVolume });
         } catch (error) {
           console.error('[TwinPlayers] Failed to set original volume', error);
@@ -2789,10 +2889,10 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
       // When switching to a different reaction video, explicitly stop the original video
       // AFTER all volume and state operations to prevent it from auto-playing
-      if (!isSameReactionVideo && typeof snapshotBefore.playerOriginal?.stopVideo === 'function') {
+      if (!isSameReactionVideo && typeof nextPlayerOriginal?.stopVideo === 'function') {
         try {
           await tick(); // Let all previous operations complete
-          snapshotBefore.playerOriginal.stopVideo();
+          nextPlayerOriginal.stopVideo();
           console.debug('[TwinPlayers] Stopped original video after volume application (different reaction)');
         } catch (error) {
           console.error('[TwinPlayers] Failed to stop original video', error);
@@ -2855,8 +2955,6 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
       updateUIElements(nextReactionDocumentId);
 
-      const normalizedOriginalMetadata = normalizeOriginalVideoMetadata(reactionData);
-
       await verifyAndSyncMetadata({
         documentId: typeof reactionData?.id === 'string' ? reactionData.id : undefined,
         originalVideoId,
@@ -2907,9 +3005,18 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     }
 
     const isPlaylistPage = typeof window !== 'undefined' && window.location?.pathname?.startsWith('/playlist/');
+    const sequenceItems = getPlaylistSequenceItems(playlistDocument);
+    const currentSequenceItem = sequenceItems[currentIndexInPlaylist];
+    const nextSequenceItem = sequenceItems[nextIndex];
+    const shouldPreserveReactionTime = Boolean(
+      currentSequenceItem &&
+      nextSequenceItem &&
+      currentSequenceItem.originalVideoId === nextSequenceItem.originalVideoId &&
+      currentSequenceItem.originalVideoPlatform === nextSequenceItem.originalVideoPlatform,
+    );
     if (isPlaylistPage) {
-      const nextOriginalVideoId = playlistDocument.originalVideoIds?.[nextIndex];
-      loadReactionInPlace(nextReactionDocumentId, { preserveReactionTime: true, autoPlay: true }).then(() => {
+      const nextOriginalVideoId = nextSequenceItem?.originalVideoId || playlistDocument.originalVideoIds?.[nextIndex];
+      loadReactionInPlace(nextReactionDocumentId, { preserveReactionTime: shouldPreserveReactionTime, autoPlay: true }).then(() => {
         const updatedIndex = nextIndex;
         const hasNext = updatedIndex < playlistItems.length - 1;
         updateState({

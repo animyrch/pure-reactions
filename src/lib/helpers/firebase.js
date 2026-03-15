@@ -42,6 +42,11 @@ export { app, db, auth, database };
 import { showToast } from '$lib/stores/toast';
 import { SORTINGS } from '$lib/constants/sortings';
 import { FILTERS } from '$lib/constants/filters';
+import {
+    assignReactionToSequenceIndex,
+    createPlaylistDocumentPayload,
+    getPlaylistSequenceItems,
+} from '$lib/helpers/reactionSequence';
 
 const createCollection = (db, params, caller) => {
     return collection(db, params);
@@ -177,14 +182,25 @@ export const createReactionDocument = async ({
     }
 };
 
-export const createPlaylistDocument = async ({ reactionDocumentId, originalVideoId, userId }) => {
+export const createPlaylistDocument = async ({
+    reactionDocumentId,
+    originalVideoId,
+    userId,
+    playlistYoutubeId,
+    sequenceItems,
+}) => {
     try {
         const playlistsCollection = createCollection(db, COLLECTION_PLAYLISTS, 'createPlaylistDocument');
-        const dataToAdd = {
-            reactionBinomeIds: [reactionDocumentId],
-            originalVideoIds: [originalVideoId],
+        const payload = createPlaylistDocumentPayload({
+            reactionDocumentId,
+            originalVideoId,
             userId,
-            createdAt: serverTimestamp()
+            playlistYoutubeId,
+            sequenceItems,
+        });
+        const dataToAdd = {
+            ...payload,
+            createdAt: serverTimestamp(),
         };
 
         const documentRef = await addDoc(playlistsCollection, dataToAdd);
@@ -373,7 +389,13 @@ export const createYoutubeChannelClaim = async ({
     }
 };
 
-export const addToPlaylistDocument = async ({ reactionDocumentId, originalVideoId, playlistDocumentId }) => {
+export const addToPlaylistDocument = async ({
+    reactionDocumentId,
+    originalVideoId,
+    playlistDocumentId,
+    sequenceIndex,
+    sequenceItem,
+}) => {
     try {
         const playlistsCollection = createCollection(db, COLLECTION_PLAYLISTS, 'addToPlaylistDocument');
         const playlistDocumentRef = doc(playlistsCollection, playlistDocumentId);
@@ -385,16 +407,24 @@ export const addToPlaylistDocument = async ({ reactionDocumentId, originalVideoI
         }
 
         const playlistData = playlistDocSnap.data();
-        const existingReactions = playlistData.reactionBinomeIds || [];
-        const existingOriginalVideos = playlistData.originalVideoIds || [];
-        // doc is updated by adding the new reactionDocumentId to the existing array
-        const updatedReactions = [...new Set([...existingReactions, reactionDocumentId])]; // Prevent duplicates
-        const updatedOriginalVideos = [...new Set([...existingOriginalVideos, originalVideoId])]; // Prevent duplicates
-        await setDoc(playlistDocumentRef, {
-            ...playlistData,
-            reactionBinomeIds: updatedReactions,
-            originalVideoIds: updatedOriginalVideos
+        const normalizedSequenceItems = getPlaylistSequenceItems(playlistData);
+        const fallbackIndex =
+            Number.isFinite(Number(sequenceIndex))
+                ? Number(sequenceIndex)
+                : normalizedSequenceItems.length;
+        const updatedPlaylist = assignReactionToSequenceIndex({
+            playlistDocument: playlistData,
+            reactionDocumentId,
+            sequenceIndex: fallbackIndex,
+            sequenceItem:
+                sequenceItem ||
+                (originalVideoId
+                    ? {
+                          originalVideoId,
+                      }
+                    : undefined),
         });
+        await setDoc(playlistDocumentRef, updatedPlaylist, { merge: false });
     } catch (error) {
         console.error('Error updating document: ', error);
     }
@@ -538,6 +568,7 @@ export const getUserReactions = async (userId, filter = FILTERS.ALL) => {
         return reactions;
     } catch (error) {
         console.error('Error getting documents filtered by user: ', error);
+        return reactions;
     }
 };
 
@@ -724,12 +755,25 @@ export const getUserPlaylists = async (userId, filter = FILTERS.ALL) => {
             if (playlistData.reactionBinomeIds && playlistData.reactionBinomeIds.length > 0) {
                 // Firestore 'in' queries are limited to 10 items, so we batch if needed
                 const batchSize = 10;
-                const reactionIds = playlistData.reactionBinomeIds;
+                const reactionIds = playlistData.reactionBinomeIds.filter(
+                    (reactionId) => typeof reactionId === 'string' && reactionId.trim().length > 0
+                );
                 const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'getUserPlaylists_reactions');
+
+                if (!reactionIds.length) {
+                    return {
+                        id: docSnapshot.id,
+                        data: playlistData,
+                        firstReactionBinomeData: null
+                    };
+                }
 
                 // Process reactions in batches of 10
                 for (let i = 0; i < reactionIds.length; i += batchSize) {
                     const batchIds = reactionIds.slice(i, i + batchSize);
+                    if (!batchIds.length) {
+                        continue;
+                    }
                     const reactionsQuery = query(
                         reactionsCollection,
                         where('__name__', 'in', batchIds)
@@ -776,6 +820,7 @@ export const getUserPlaylists = async (userId, filter = FILTERS.ALL) => {
         return playlists.filter(p => p !== null);
     } catch (error) {
         console.error('Error getting documents filtered by user: ', error);
+        return playlists;
     }
 };
 

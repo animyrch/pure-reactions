@@ -134,8 +134,21 @@ User-created playlists of reactions.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `reactionBinomeIds` | array[string] | Yes | Array of reaction document IDs in playlist |
-| `originalVideoIds` | array[string] | Yes | Array of original YouTube IDs aligned with `reactionBinomeIds` |
+| `originalVideoIds` | array[string] | Yes | Legacy aligned array of original video IDs. New playlist docs keep it in sync with `sequenceItems` for backward compatibility. |
+| `sequenceItems` | array[object] | No | Canonical ordered snapshot for playlist playback/recording. Preserves duplicates and mixed YouTube/TikTok sources. |
+| `sequenceItems[].id` | string | No | Deterministic local item identifier for rendering and ordering |
+| `sequenceItems[].sourceType` | string | No | Source descriptor: `youtube-video`, `youtube-playlist`, or `tiktok-video` |
+| `sequenceItems[].sourceIndex` | number | No | Index of the user-entered source element that produced this item |
+| `sequenceItems[].playlistItemIndex` | number/null | No | Index inside the expanded YouTube playlist source when applicable |
+| `sequenceItems[].originalVideoId` | string | No | Platform-native original video ID for the sequence slot |
+| `sequenceItems[].originalVideoPlatform` | string | No | `youtube` or `tiktok` |
+| `sequenceItems[].originalVideoUrl` | string | No | Canonical original URL used by recorder/playback |
+| `sequenceItems[].youtubePlaylistId` | string | No | Source YouTube playlist ID when the item came from an expanded playlist |
+| `sequenceItems[].title` | string | No | Optional snapshot title for playlist UI |
+| `sequenceItems[].channelTitle` | string | No | Optional snapshot creator/channel label for playlist UI |
+| `sequenceItems[].thumbnailUrl` | string | No | Optional snapshot thumbnail for playlist UI |
 | `userId` | string | Yes | Creator's user ID |
+| `youtubePlaylistId` | string | No | Legacy reference to a source YouTube playlist when applicable |
 | `title` | string | No | Optional playlist title (legacy) |
 | `description` | string | No | Optional playlist description (legacy) |
 | `slug` | string | No | URL-friendly identifier |
@@ -143,7 +156,7 @@ User-created playlists of reactions.
 | `updatedAt` | Timestamp | No | Last update timestamp |
 
 **Note**: Playlists do NOT have an `isPublished` field.
-**Legacy**: Older playlists may store `reactions` instead of `reactionBinomeIds`.
+**Legacy**: Older playlists may store `reactions` instead of `reactionBinomeIds` and may omit `sequenceItems` entirely. New code should prefer `sequenceItems` when present and fall back to `originalVideoIds` only for legacy reads.
 
 ---
 
@@ -435,6 +448,7 @@ const docRef = await addDoc(collection(db, 'reactions'), {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.4 | 2026-03-07 | Added ordered playlist `sequenceItems` snapshot schema for duplicate-safe mixed YouTube/TikTok recording and playback, plus legacy compatibility notes for `originalVideoIds` |
 | 1.3 | 2026-03-07 | Added normalized original-video author/description/thumbnail/url fields, documented `originalTikTok` enrichment metadata, and extended shared-session schema with original platform/url |
 | 1.2 | 2026-03-07 | Documented `originalVideoPlatform`, clarified cross-platform original IDs, and added optional `originalYoutube`/`youtube` enrichment metadata for reaction docs |
 | 1.1 | 2026-01-30 | Updated user data, playlist, and queue fields; documented export timestamp |

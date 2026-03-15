@@ -7,6 +7,7 @@
         updateFirebaseDocument,
         createPlaylistDocument,
         addToPlaylistDocument,
+        getPlaylist,
         firestoreDeleteField,
     } from "$lib/helpers/firebase";
     import { handlePrivateRoute, goToRoute } from "$lib/helpers/routing";
@@ -14,6 +15,10 @@
     import { getCompensatedReactionTime } from "$lib/helpers/reaction";
     import { getTikTokEmbedUrl } from "$lib/helpers/platform";
     import { fetchOriginalVideoMetadata } from "$lib/helpers/originalVideo";
+    import {
+        buildRecorderStateConfigs,
+        RECORDER_PLAYER_STATES,
+    } from "$lib/helpers/recorderState";
     import PlaylistQueue from "$lib/components/Video/PlaylistQueue.svelte";
     import { isLoggedIn } from "$lib/stores/user";
     import { page } from "$app/stores";
@@ -30,6 +35,10 @@
     } from "flowbite-svelte-icons";
     import { sineOut } from "svelte/easing";
     import { fetchFirstPlaylistVideos } from "$lib/helpers/youtube";
+    import {
+        getPlaylistSequenceItems,
+        toPlaylistQueueItem,
+    } from "$lib/helpers/reactionSequence";
     import {
         createSharedSession,
         updateSessionState,
@@ -51,6 +60,9 @@
     let originalVideoUrl = "";
     let showRecorder = false;
     let currentPlaylistDocumentId = "";
+    let currentSequenceIndex = 0;
+    let playlistDocument = null;
+    let playlistSequenceItems = [];
     let playlistElements;
     let sharedSessionId = "";
 
@@ -165,12 +177,13 @@
                 originalVideoUrl = nextOriginalVideoUrl;
             }
             showRecorder = params.has("record");
+            const nextSequenceIndex = Number(params.get("sequenceIndex") || 0);
+            if (nextSequenceIndex !== currentSequenceIndex) {
+                currentSequenceIndex = nextSequenceIndex;
+            }
             const nextPlaylistDocumentId =
                 params.get("playlistDocumentId") || "";
-            if (
-                !currentPlaylistDocumentId &&
-                nextPlaylistDocumentId !== currentPlaylistDocumentId
-            ) {
+            if (nextPlaylistDocumentId !== currentPlaylistDocumentId) {
                 console.log(
                     "setting playlist document id",
                     nextPlaylistDocumentId,
@@ -202,8 +215,8 @@
     const YOUTUBE_IFRAME_API_SRC = "https://www.youtube.com/iframe_api";
     const TIKTOK_ORIGIN = "https://www.tiktok.com";
     // TikTok player/v1 state codes (mirrors YouTube PlayerState values)
-    const TIKTOK_STATE_PLAYING = 1;
-    const TIKTOK_STATE_PAUSED = 2;
+    const TIKTOK_STATE_PLAYING = RECORDER_PLAYER_STATES.PLAYING;
+    const TIKTOK_STATE_PAUSED = RECORDER_PLAYER_STATES.PAUSED;
     // Delay before retrying unMute — gives the player time to process the first command
     const TIKTOK_UNMUTE_RETRY_DELAY_MS = 250;
     let playerContainerNode;
@@ -364,6 +377,28 @@
     }
 
     async function loadPlaylist() {
+        if (currentPlaylistDocumentId) {
+            playlistDocument = await getPlaylist(currentPlaylistDocumentId);
+            playlistSequenceItems = getPlaylistSequenceItems(playlistDocument);
+            if (playlistSequenceItems.length) {
+                playlistItems = playlistSequenceItems.map((item, index) =>
+                    toPlaylistQueueItem(item, index),
+                );
+                playlistElements = playlistSequenceItems.map((item) => item.id);
+
+                const currentSequenceItem =
+                    playlistSequenceItems[currentSequenceIndex] || null;
+                if (currentSequenceItem) {
+                    originalVideoId = currentSequenceItem.originalVideoId;
+                    originalVideoUrl =
+                        currentSequenceItem.originalVideoUrl || originalVideoUrl;
+                    isTikTokOriginal =
+                        currentSequenceItem.originalVideoPlatform === "tiktok";
+                }
+                return;
+            }
+        }
+
         if (playlistId) {
             playlistItems = await fetchFirstPlaylistVideos(playlistId);
             playlistElements = playlistItems.map(
@@ -433,6 +468,10 @@
                     return;
                 }
                 loadTikTokPlayer(videoId);
+                await loadPlaylist();
+                if (controller.signal.aborted) {
+                    return;
+                }
                 await getBasicDetailsOriginal();
                 if (sharedSessionId) {
                     shareUrl = generateShareUrl(sharedSessionId);
@@ -713,22 +752,24 @@
     };
     function logStateChange(originalVideoTime, stateCode) {
         if (startTime) {
-            if (stateCode === YT.PlayerState.BUFFERING) {
-                stateCode = YT.PlayerState.PAUSED;
-            }
             const reactionVideoTime = getCompensatedReactionTime(
                 startTime,
                 playlistBufferTime || 0,
             );
-            reactionConfigs.set(reactionVideoTime, {
-                time: originalVideoTime,
-                state: stateCode,
+            const nextStateConfigs = buildRecorderStateConfigs({
+                existingConfigs: reactionConfigs,
+                reactionVideoTime,
+                originalVideoTime,
+                stateCode,
             });
-            reactionConfigsArray = Array.from(reactionConfigs.entries());
+            reactionConfigs.clear();
+            nextStateConfigs.map.forEach((value, key) => {
+                reactionConfigs.set(key, value);
+            });
+            reactionConfigsArray = nextStateConfigs.entries;
 
-            const reactionConfigsObject = Object.fromEntries(reactionConfigs); // Convert the Map to an object
             updateFirebaseDocument({
-                reactionConfigs: reactionConfigsObject,
+                reactionConfigs: nextStateConfigs.object,
             });
         }
     }
@@ -851,6 +892,7 @@
             // Send play + unMute commands to the TikTok player via postMessage
             postToTikTokPlayer('unMute');
             postToTikTokPlayer('play');
+            logStateChange('0.00', RECORDER_PLAYER_STATES.PLAYING);
             isPlayerOriginalReady = true;
             isPlaying = true;
             currentButtonGroupState = BUTTON_GROUP_STATES.RECORDING;
@@ -898,6 +940,7 @@
             // Send pause command to the TikTok player via postMessage.
             // currentTime is 0 because TikTok does not expose a JS playback API.
             postToTikTokPlayer('pause');
+            logStateChange('0.00', RECORDER_PLAYER_STATES.PAUSED);
             if (sharedSessionId) {
                 updateSessionState(sharedSessionId, {
                     state: SESSION_STATES.PAUSED,
@@ -1047,7 +1090,25 @@
             console.error("Failed to initialise shared session:", error);
         }
 
-        if (playlistId) {
+        if (currentPlaylistDocumentId) {
+            if (currentPlaylistDocumentId) {
+                const updateData = {
+                    reactionDocumentId: currentReactionDocumentId,
+                    playlistDocumentId: currentPlaylistDocumentId,
+                    originalVideoId,
+                    sequenceIndex: currentSequenceIndex,
+                    sequenceItem: playlistSequenceItems[currentSequenceIndex],
+                };
+                await addToPlaylistDocument(updateData);
+            } else {
+                currentPlaylistDocumentId = await createPlaylistDocument({
+                    playlistYoutubeId: playlistId,
+                    userId: data.userId,
+                    reactionDocumentId: currentReactionDocumentId,
+                    originalVideoId,
+                });
+            }
+        } else if (playlistId) {
             if (currentPlaylistDocumentId) {
                 const updateData = {
                     reactionDocumentId: currentReactionDocumentId,
@@ -1111,14 +1172,18 @@
         );
         // console.log("finish reaction", reactionVideoTime);
 
-        const isPlaylistFlow = Boolean(playlistId);
-        const playlistHasItems =
-            Array.isArray(playlistElements) && playlistElements.length > 0;
+        const hasSequenceItems = Array.isArray(playlistSequenceItems) && playlistSequenceItems.length > 0;
+        const nextSequenceItem = hasSequenceItems
+            ? playlistSequenceItems[currentSequenceIndex + 1]
+            : undefined;
+        const isPlaylistFlow = Boolean(currentPlaylistDocumentId || playlistId);
+        const playlistHasItems = Array.isArray(playlistElements) && playlistElements.length > 0;
         const currentPlaylistIndex =
-            isPlaylistFlow && playlistHasItems
+            !hasSequenceItems && isPlaylistFlow && playlistHasItems
                 ? playlistElements.findIndex((item) => item === originalVideoId)
                 : -1;
         const nextVideoId =
+            !hasSequenceItems &&
             currentPlaylistIndex !== -1 &&
             currentPlaylistIndex < playlistElements.length - 1
                 ? playlistElements[currentPlaylistIndex + 1]
@@ -1169,7 +1234,7 @@
         // Update shared session state
         if (sharedSessionId) {
             try {
-                if (nextVideoId) {
+                if (nextSequenceItem || nextVideoId) {
                     await updateSessionState(sharedSessionId, {
                         state: SESSION_STATES.WAITING,
                         currentTime: 0,
@@ -1190,6 +1255,23 @@
         }
 
         // If there's a next video, navigate to it (regardless of playlistDocumentId)
+        if (nextSequenceItem) {
+            const params = new URLSearchParams();
+            params.set("id", nextSequenceItem.originalVideoId);
+            params.set("platform", nextSequenceItem.originalVideoPlatform);
+            params.set("playlistDocumentId", currentPlaylistDocumentId);
+            params.set("sequenceIndex", String(currentSequenceIndex + 1));
+            params.set("playlistBufferTime", String(reactionVideoTime));
+            if (nextSequenceItem.originalVideoUrl) {
+                params.set("originalUrl", nextSequenceItem.originalVideoUrl);
+            }
+            if (sharedSessionId) {
+                params.set("sharedSessionId", sharedSessionId);
+            }
+            await goToRoute(`/backend?${params.toString()}`);
+            location.reload();
+            return;
+        }
         if (nextVideoId) {
             const nextRoute =
                 `/backend?id=${nextVideoId}&playlist=${playlistId}&playlistDocumentId=${currentPlaylistDocumentId}&playlistBufferTime=${reactionVideoTime}` +
@@ -1732,7 +1814,11 @@
                         <PlaylistQueue
                             currentlyViewed={originalVideoId}
                             {playlistId}
+                            {playlistItems}
+                            {playlistDocument}
                             playlistDocumentId={currentPlaylistDocumentId}
+                            currentIndex={currentSequenceIndex}
+                            hideCurrentItem={true}
                             {startTime}
                             {playlistBufferTime}
                         />
