@@ -25,6 +25,8 @@
     import { get } from "svelte/store";
     import { afterNavigate } from "$app/navigation";
     import { Progressbar, Modal } from "flowbite-svelte";
+    import { showToast } from "$lib/stores/toast";
+    import { TOASTS } from "$lib/constants/toasts";
     import {
         BullhornSolid,
         PauseSolid,
@@ -65,6 +67,7 @@
     let playlistSequenceItems = [];
     let playlistElements;
     let sharedSessionId = "";
+    let isStartingReaction = false;
 
     const playerOptions = {
         autoplay: 0,
@@ -1028,114 +1031,137 @@
     let currentTimeDisplay = "0:00 / 0:00";
     let isFocusReactOn = false;
 
-    const onClickStartReaction = async () => {
-        const currentReactionDocumentId = await createReactionDocument({
-            originalVideoId,
-            userId: data.userId,
-            originalVideoAuthor,
-            originalVideoAuthorHandle,
-            originalVideoAuthorUrl,
-            originalVideoTitle,
-            originalVideoDescription,
-            originalVideoThumbnailUrl,
-            originalVideoThumbnailWidth,
-            originalVideoThumbnailHeight,
-            originalVideoProviderName,
-            originalVideoProviderUrl,
-            originalVideoUrl,
-            offsetStartTime: playlistBufferTime || 0,
-            originalVideoPlatform: isTikTokOriginal ? "tiktok" : "youtube",
-        });
-
-        playbackRateConfigs.clear();
-        playbackRateConfigsArray = [];
-
-        // Create shared session
-        try {
-            if (!sharedSessionId) {
-                sharedSessionId = await createSharedSession(
-                    currentReactionDocumentId,
-                    originalVideoId,
-                    data.userId,
-                    isTikTokOriginal ? "tiktok" : "youtube",
-                    originalVideoUrl,
-                );
-                console.log("Shared session created:", sharedSessionId);
-            } else {
-                await updateSessionState(sharedSessionId, {
-                    originalVideoId,
-                    originalVideoPlatform: isTikTokOriginal ? "tiktok" : "youtube",
-                    originalVideoUrl,
-                    reactorId: data.userId,
-                    activeReactionDocumentId: currentReactionDocumentId,
-                    state: SESSION_STATES.WAITING,
-                    currentTime: 0,
-                    duration: 0,
-                    playbackRate,
-                });
-                console.log(
-                    "Shared session updated for new playlist video:",
-                    sharedSessionId,
-                );
-            }
-
-            shareUrl = generateShareUrl(sharedSessionId);
-            subscribeToSession();
-
-            applyPlaybackRate(playbackRate, {
-                shouldLog: false,
-                syncSession: true,
-            });
-        } catch (error) {
-            console.error("Failed to initialise shared session:", error);
-        }
-
+    const syncPlaylistReaction = async (currentReactionDocumentId) => {
         if (currentPlaylistDocumentId) {
-            if (currentPlaylistDocumentId) {
-                const updateData = {
-                    reactionDocumentId: currentReactionDocumentId,
-                    playlistDocumentId: currentPlaylistDocumentId,
-                    originalVideoId,
-                    sequenceIndex: currentSequenceIndex,
-                    sequenceItem: playlistSequenceItems[currentSequenceIndex],
-                };
-                await addToPlaylistDocument(updateData);
-            } else {
-                currentPlaylistDocumentId = await createPlaylistDocument({
-                    playlistYoutubeId: playlistId,
-                    userId: data.userId,
-                    reactionDocumentId: currentReactionDocumentId,
-                    originalVideoId,
-                });
-            }
-        } else if (playlistId) {
-            if (currentPlaylistDocumentId) {
-                const updateData = {
-                    reactionDocumentId: currentReactionDocumentId,
-                    playlistDocumentId: currentPlaylistDocumentId,
-                    originalVideoId,
-                };
-                await addToPlaylistDocument(updateData);
-            } else {
-                currentPlaylistDocumentId = await createPlaylistDocument({
-                    playlistYoutubeId: playlistId,
-                    userId: data.userId,
-                    reactionDocumentId: currentReactionDocumentId,
-                    originalVideoId,
-                });
-            }
+            const updateData = {
+                reactionDocumentId: currentReactionDocumentId,
+                playlistDocumentId: currentPlaylistDocumentId,
+                originalVideoId,
+                sequenceIndex: currentSequenceIndex,
+                sequenceItem: playlistSequenceItems[currentSequenceIndex],
+            };
+            await addToPlaylistDocument(updateData);
+            return;
         }
-        if (showRecorder) {
-            startRecording = true;
-        }
-        updateFirebaseDocument({
-            playlistId: currentPlaylistDocumentId,
-            youtubePlaylistId: playlistId,
-        });
-        currentButtonGroupState = BUTTON_GROUP_STATES.READY;
 
-        startTime = new Date().getTime();
-        logPlaybackRateChange(playbackRate);
+        if (!playlistId) {
+            return;
+        }
+
+        currentPlaylistDocumentId = await createPlaylistDocument({
+            playlistYoutubeId: playlistId,
+            userId: data.userId,
+            reactionDocumentId: currentReactionDocumentId,
+            originalVideoId,
+        });
+    };
+
+    const initialiseSharedSessionForReaction = async (
+        currentReactionDocumentId,
+    ) => {
+        if (!sharedSessionId) {
+            sharedSessionId = await createSharedSession(
+                currentReactionDocumentId,
+                originalVideoId,
+                data.userId,
+                isTikTokOriginal ? "tiktok" : "youtube",
+                originalVideoUrl,
+            );
+            console.log("Shared session created:", sharedSessionId);
+        } else {
+            await updateSessionState(sharedSessionId, {
+                originalVideoId,
+                originalVideoPlatform: isTikTokOriginal ? "tiktok" : "youtube",
+                originalVideoUrl,
+                reactorId: data.userId,
+                activeReactionDocumentId: currentReactionDocumentId,
+                state: SESSION_STATES.WAITING,
+                currentTime: 0,
+                duration: 0,
+                playbackRate,
+            });
+            console.log(
+                "Shared session updated for new playlist video:",
+                sharedSessionId,
+            );
+        }
+
+        shareUrl = generateShareUrl(sharedSessionId);
+        subscribeToSession();
+
+        applyPlaybackRate(playbackRate, {
+            shouldLog: false,
+            syncSession: true,
+        });
+    };
+
+    const onClickStartReaction = async () => {
+        if (
+            isStartingReaction ||
+            currentButtonGroupState !== BUTTON_GROUP_STATES.INITIAL
+        ) {
+            return;
+        }
+
+        isStartingReaction = true;
+
+        try {
+            const currentReactionDocumentId = await createReactionDocument({
+                originalVideoId,
+                userId: data.userId,
+                originalVideoAuthor,
+                originalVideoAuthorHandle,
+                originalVideoAuthorUrl,
+                originalVideoTitle,
+                originalVideoDescription,
+                originalVideoThumbnailUrl,
+                originalVideoThumbnailWidth,
+                originalVideoThumbnailHeight,
+                originalVideoProviderName,
+                originalVideoProviderUrl,
+                originalVideoUrl,
+                offsetStartTime: playlistBufferTime || 0,
+                originalVideoPlatform: isTikTokOriginal ? "tiktok" : "youtube",
+            });
+
+            playbackRateConfigs.clear();
+            playbackRateConfigsArray = [];
+
+            const sharedSessionPromise = initialiseSharedSessionForReaction(
+                currentReactionDocumentId,
+            ).catch((error) => {
+                console.error("Failed to initialise shared session:", error);
+                showToast(
+                    "Session sharing is unavailable right now. You can still record.",
+                    TOASTS.WARNING,
+                );
+            });
+
+            await Promise.all([
+                sharedSessionPromise,
+                syncPlaylistReaction(currentReactionDocumentId),
+            ]);
+
+            if (showRecorder) {
+                startRecording = true;
+            }
+            updateFirebaseDocument({
+                playlistId: currentPlaylistDocumentId,
+                youtubePlaylistId: playlistId,
+            });
+            currentButtonGroupState = BUTTON_GROUP_STATES.READY;
+
+            startTime = new Date().getTime();
+            logPlaybackRateChange(playbackRate);
+        } catch (error) {
+            console.error("Failed to start reaction:", error);
+            showToast(
+                "We couldn't prepare this reaction. Please try again.",
+                TOASTS.ERROR,
+            );
+        } finally {
+            isStartingReaction = false;
+        }
     };
 
     const onClickStartVideo = () => {
@@ -1333,11 +1359,15 @@
     $: stageActions = [
         {
             id: "start-reaction",
-            label: "Start Reaction",
-            description: "Create your synced session and prep the recorder.",
+            label: isStartingReaction ? "Preparing Session..." : "Start Reaction",
+            description: isStartingReaction
+                ? "Setting up the reaction document and session."
+                : "Create your synced session and prep the recorder.",
             icon: VideoSolid,
             onClick: onClickStartReaction,
-            disabled: currentButtonGroupState !== BUTTON_GROUP_STATES.INITIAL,
+            disabled:
+                isStartingReaction ||
+                currentButtonGroupState !== BUTTON_GROUP_STATES.INITIAL,
             tone: "accent",
         },
         {
@@ -1687,6 +1717,9 @@
                                 } disabled:cursor-not-allowed disabled:border-slate-800 disabled:bg-slate-900/20 disabled:text-slate-500`}
                                 on:click={action.onClick}
                                 disabled={action.disabled}
+                                aria-busy={action.id === "start-reaction"
+                                    ? isStartingReaction
+                                    : undefined}
                             >
                                 <div
                                     class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-950/60"
