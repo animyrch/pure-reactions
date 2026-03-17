@@ -173,8 +173,10 @@ export const createReactionDocument = async ({
         }
 
         const documentRef = await addDoc(reactionsCollection, dataToAdd);
-        await requestReactionEnrichment(documentRef.id);
         window.currentReactionDocumentId = documentRef.id;
+        requestReactionEnrichment(documentRef.id).catch((error) => {
+            console.error('Failed to enqueue reaction enrichment', error);
+        });
         return documentRef.id; // Return the document ID if needed
     } catch (error) {
         console.error("Error adding document:", error);
