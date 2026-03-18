@@ -2663,6 +2663,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         stateTimeline,
         timeOffset
       );
+      const rawInitialState = Number(initialConfig.state);
+      const initialState = Number.isFinite(rawInitialState) ? rawInitialState : -1;
       const initialTargetTime = Number(initialConfig.time ?? 0);
 
       const globalGainValue = reactionData['globalGain'];
@@ -2777,6 +2779,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         }
       } else if (originalVideoId && typeof snapshotBefore.playerOriginal?.loadVideoById === 'function') {
         try {
+          const shouldCueOriginalAtLoad = initialState !== YT.PlayerState.PLAYING;
+
           // When switching to a different reaction video, cue (don't play) the original video
           // so it waits for the reaction video to be started by the user
           if (!isSameReactionVideo) {
@@ -2796,10 +2800,22 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
               });
             }
           } else {
-            snapshotBefore.playerOriginal.loadVideoById({
-              videoId: originalVideoId,
-              startSeconds: initialTargetTime
-            });
+            if (shouldCueOriginalAtLoad && typeof snapshotBefore.playerOriginal.cueVideoById === 'function') {
+              snapshotBefore.playerOriginal.cueVideoById({
+                videoId: originalVideoId,
+                startSeconds: initialTargetTime
+              });
+              console.debug('[TwinPlayers] Cued original video (same reaction video, timeline paused at entry)', {
+                originalVideoId,
+                initialTargetTime,
+                initialState
+              });
+            } else {
+              snapshotBefore.playerOriginal.loadVideoById({
+                videoId: originalVideoId,
+                startSeconds: initialTargetTime
+              });
+            }
           }
         } catch (error) {
           console.error('Failed to load original video by id', error);
