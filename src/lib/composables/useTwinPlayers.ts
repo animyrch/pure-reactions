@@ -1035,6 +1035,75 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     syncTimeout = setTimeout(run, normalized);
   };
 
+  const getDesiredOriginalPlaybackAtReactionTime = (
+    reactionTime: number,
+    snapshot = get(state)
+  ) => {
+    const normalizedReactionTime = Number.isFinite(reactionTime)
+      ? reactionTime
+      : Number(snapshot.reactionCurrentTime);
+
+    const config = getCurrentStateFromStateConfigs(
+      Number.isFinite(normalizedReactionTime) ? normalizedReactionTime : 0,
+      snapshot.playerConfigs,
+      snapshot.timeOffset
+    );
+
+    const rawDesiredState = Number(config.state);
+    const desiredState = Number.isFinite(rawDesiredState) ? rawDesiredState : -1;
+    const baseTargetTime = Number(config.time ?? 0);
+    const anchorTime = Number(config.closestSmallerTimeCode ?? normalizedReactionTime);
+
+    let targetTime = Number.isFinite(baseTargetTime) ? baseTargetTime : 0;
+
+    if (
+      desiredState === YT.PlayerState.PLAYING
+      && Number.isFinite(anchorTime)
+      && Number.isFinite(normalizedReactionTime)
+    ) {
+      targetTime += Math.max(normalizedReactionTime - anchorTime, 0);
+    }
+
+    return {
+      desiredState,
+      targetTime,
+      reactionTime: Number.isFinite(normalizedReactionTime) ? normalizedReactionTime : 0
+    };
+  };
+
+  const applyOriginalPlaybackForReactionTime = (
+    reactionTime: number,
+    snapshot = get(state),
+    options: {
+      syncTargetTime?: boolean;
+      allowSeekAhead?: boolean;
+      throttleMs?: number;
+      forceSeek?: boolean;
+    } = {}
+  ) => {
+    const { desiredState, targetTime } = getDesiredOriginalPlaybackAtReactionTime(reactionTime, snapshot);
+
+    if (options.syncTargetTime === false) {
+      if (desiredState === YT.PlayerState.PLAYING) {
+        startOriginalVideo();
+      } else {
+        pauseOriginalVideo();
+      }
+    } else {
+      handleStateChangeInOriginalVideo(snapshot.currentStateOriginalVideo, desiredState, targetTime, {
+        allowSeekAhead: options.allowSeekAhead,
+        throttleMs: options.throttleMs,
+        forceSeek: options.forceSeek
+      });
+    }
+
+    if (snapshot.currentStateOriginalVideo !== desiredState) {
+      updateState({ currentStateOriginalVideo: desiredState });
+    }
+
+    return { desiredState, targetTime };
+  };
+
   const handleStateChangeInOriginalVideo = (
     previousState: number,
     nextState: number,
@@ -1432,6 +1501,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     // PAUSED/CUED -> PLAYING transitions and lead to multi-second desync.
     if (nextState === YT.PlayerState.PLAYING && previousState !== YT.PlayerState.PLAYING) {
       const snapshot = get(state);
+      const reactionNow = typeof snapshot.playerReaction?.getCurrentTime === 'function'
+        ? Number(snapshot.playerReaction.getCurrentTime())
+        : Number(snapshot.reactionCurrentTime);
 
       // Fast-resume path: seeking the original immediately on resume can trigger buffering that
       // makes it start noticeably later than the reaction. Start it ASAP, then let the polling
@@ -1450,46 +1522,13 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
           // ignore
         }
 
-        const reactionNow = typeof snapshot.playerReaction?.getCurrentTime === 'function'
-          ? Number(snapshot.playerReaction.getCurrentTime())
-          : Number(snapshot.reactionCurrentTime);
-
-        const cfg = getCurrentStateFromStateConfigs(
-          Number.isFinite(reactionNow) ? reactionNow : 0,
-          snapshot.playerConfigs,
-          snapshot.timeOffset
-        );
-        const rawCfgState = Number(cfg.state);
-        const desiredOriginalState = Number.isFinite(rawCfgState)
-          ? rawCfgState
-          : YT.PlayerState.PLAYING;
-
-        if (desiredOriginalState === YT.PlayerState.PLAYING) {
-          startOriginalVideo();
-        } else {
-          pauseOriginalVideo();
-          if (snapshot.currentStateOriginalVideo !== desiredOriginalState) {
-            updateState({ currentStateOriginalVideo: desiredOriginalState });
-          }
-        }
+        applyOriginalPlaybackForReactionTime(reactionNow, snapshot, {
+          syncTargetTime: false
+        });
         return;
       }
 
-      const reactionCurrentTime = Number(snapshot.playerReaction?.getCurrentTime().toFixed(1));
-      const closestConfig = getCurrentStateFromStateConfigs(
-        reactionCurrentTime,
-        snapshot.playerConfigs,
-        snapshot.timeOffset
-      );
-      const rawDesiredState = Number(closestConfig.state);
-      const desiredState = Number.isFinite(rawDesiredState)
-        ? rawDesiredState
-        : -1;
-      const calculatedTimeForOriginalVideo = (reactionCurrentTime - closestConfig.closestSmallerTimeCode) + parseFloat(String(closestConfig.time ?? 0));
-      handleStateChangeInOriginalVideo(snapshot.currentStateOriginalVideo, desiredState, calculatedTimeForOriginalVideo);
-      if (snapshot.currentStateOriginalVideo !== desiredState) {
-        updateState({ currentStateOriginalVideo: desiredState });
-      }
+      applyOriginalPlaybackForReactionTime(reactionNow, snapshot);
     }
   };
 
@@ -4245,35 +4284,14 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       if (wasUserPaused) {
         lastUserResumeAt = Date.now();
       }
-
-      // If the current timeline config wants the original paused (e.g. pause at 5s),
-      // do NOT resume the original when the user resumes playback.
       const reactionNow = typeof snapshot.playerReaction?.getCurrentTime === 'function'
         ? Number(snapshot.playerReaction.getCurrentTime())
         : Number(snapshot.reactionCurrentTime);
 
-      const cfg = getCurrentStateFromStateConfigs(
-        Number.isFinite(reactionNow) ? reactionNow : 0,
-        snapshot.playerConfigs,
-        snapshot.timeOffset
-      );
-      const rawCfgState = Number(cfg.state);
-      const desiredOriginalState = Number.isFinite(rawCfgState)
-        ? rawCfgState
-        : YT.PlayerState.PLAYING;
-
-      if (desiredOriginalState === YT.PlayerState.PLAYING) {
-        // Preserve the previous behavior of starting the original promptly on user resume
-        // (helps keep start deltas tight) when the timeline indicates it should be playing.
-        startOriginalVideo();
-        startReactionVideo();
-      } else {
-        startReactionVideo();
-        pauseOriginalVideo();
-        if (snapshot.currentStateOriginalVideo !== desiredOriginalState) {
-          updateState({ currentStateOriginalVideo: desiredOriginalState });
-        }
-      }
+      applyOriginalPlaybackForReactionTime(reactionNow, snapshot, {
+        syncTargetTime: false
+      });
+      startReactionVideo();
       return;
     }
 
@@ -4305,8 +4323,11 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     pauseOriginalVideo();
     pauseReactionVideo();
 
-    // Re-sync should resume both promptly; the reaction timeline will correct drift.
-    startOriginalVideo();
+    const reactionNow = typeof snapshot.playerReaction?.getCurrentTime === 'function'
+      ? Number(snapshot.playerReaction.getCurrentTime())
+      : Number(snapshot.reactionCurrentTime);
+
+    applyOriginalPlaybackForReactionTime(reactionNow, snapshot);
     startReactionVideo();
   };
 
