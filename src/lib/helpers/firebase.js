@@ -784,7 +784,9 @@ export const getUserPlaylists = async (userId, filter = FILTERS.ALL) => {
 
                     reactionsSnapshot.docs.forEach(doc => {
                         const reactionData = doc.data();
-                        if (!firstReactionBinomeData) {
+                        if (doc.id === reactionIds[0]) {
+                            firstReactionBinomeData = reactionData;
+                        } else if (!firstReactionBinomeData) {
                             firstReactionBinomeData = reactionData;
                         }
                         if (reactionData.isPublished) {
