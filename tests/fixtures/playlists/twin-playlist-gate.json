@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "description": "Playlist fixture: Click-gate carry-over test (two reactions, different originals)",
+  "docs": [
+    {
+      "id": "playlistGateTestPL001",
+      "data": {
+        "reactionBinomeIds": ["playlistGateReactionA001", "playlistGateReactionB002"],
+        "originalVideoIds": ["8-3PahRtgF4", "qg6b4b0FAB4"],
+        "sequenceItems": [
+          {
+            "id": "seq-gate-0",
+            "sourceType": "youtube-video",
+            "sourceIndex": 0,
+            "originalVideoId": "8-3PahRtgF4",
+            "originalVideoPlatform": "youtube",
+            "originalVideoUrl": "https://www.youtube.com/watch?v=8-3PahRtgF4",
+            "title": "Playlist Gate Test - Original A",
+            "channelTitle": "@testCreatorA"
+          },
+          {
+            "id": "seq-gate-1",
+            "sourceType": "youtube-video",
+            "sourceIndex": 1,
+            "originalVideoId": "qg6b4b0FAB4",
+            "originalVideoPlatform": "youtube",
+            "originalVideoUrl": "https://www.youtube.com/watch?v=qg6b4b0FAB4",
+            "title": "Playlist Gate Test - Original B",
+            "channelTitle": "@testCreatorB"
+          }
+        ],
+        "userId": "gateTestUserId001"
+      }
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "description": "Twin-player fixture: Playlist click-gate carry-over test (two reactions with different original videos)",
+  "docs": [
+    {
+      "id": "playlistGateReactionA001",
+      "data": {
+        "isPublished": true,
+        "offsetStartTime": 0,
+        "originalVideoAuthor": "@testCreatorA",
+        "originalVideoId": "8-3PahRtgF4",
+        "originalVideoTitle": "Playlist Gate Test - Original A",
+        "playbackTimeline": [
+          { "rate": 1, "t": 0 }
+        ],
+        "playlistId": "playlistGateTestPL001",
+        "reactionVideoAuthor": "@testReactor",
+        "reactionVideoId": "8-3PahRtgF4",
+        "reactionVideoTitle": "Playlist Gate Test - Reaction A",
+        "reactionVolumeTimeline": [],
+        "reactorId": "gateTestUserId001",
+        "stateTimeline": [
+          { "state": 1, "t": 0, "targetTime": 0 }
+        ],
+        "volumeTimeline": [],
+        "youtubePlaylistId": "",
+        "updatedAt": "2026-03-01T10:00:00Z"
+      }
+    },
+    {
+      "id": "playlistGateReactionB002",
+      "data": {
+        "isPublished": true,
+        "offsetStartTime": 0,
+        "originalVideoAuthor": "@testCreatorB",
+        "originalVideoId": "qg6b4b0FAB4",
+        "originalVideoTitle": "Playlist Gate Test - Original B",
+        "playbackTimeline": [
+          { "rate": 1, "t": 0 }
+        ],
+        "playlistId": "playlistGateTestPL001",
+        "reactionVideoAuthor": "@testReactor",
+        "reactionVideoId": "qg6b4b0FAB4",
+        "reactionVideoTitle": "Playlist Gate Test - Reaction B",
+        "reactionVolumeTimeline": [],
+        "reactorId": "gateTestUserId001",
+        "stateTimeline": [
+          { "state": 1, "t": 0, "targetTime": 0 }
+        ],
+        "volumeTimeline": [],
+        "youtubePlaylistId": "",
+        "updatedAt": "2026-03-01T10:00:00Z"
+      }
+    }
+  ]
+}
