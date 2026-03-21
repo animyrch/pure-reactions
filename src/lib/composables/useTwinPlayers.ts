@@ -2647,6 +2647,15 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       const nextOriginalVideoPlatform = normalizeOriginalVideoPlatform(reactionData?.originalVideoPlatform);
       const normalizedOriginalMetadata = normalizeOriginalVideoMetadata(reactionData);
 
+      const isPlaylistPage = typeof window !== 'undefined' && window.location?.pathname?.startsWith('/playlist/');
+      const platformChanged = snapshotBefore.originalVideoPlatform !== nextOriginalVideoPlatform;
+      if (isPlaylistPage && platformChanged) {
+        // Mixed original platforms (YouTube <-> TikTok) can leave stale player DOM/state.
+        // Force a full document reload for a clean player bootstrap.
+        window.location.assign(window.location.href);
+        return;
+      }
+
       const isSameReactionVideo = reactionVideoId === previousReactionVideoId;
 
       const rawOffsetStartTime = Number(reactionData['offsetStartTime'] ?? 0);
@@ -2968,15 +2977,10 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         } catch {
           // ignore
         }
-      } else if (!isSameReactionVideo && typeof nextPlayerReaction?.seekTo === 'function') {
-        // Different video: ensure we seek to its offsetStartTime even if reusing player (though unusual)
-        // or for the new player we just created.
-        try {
-          nextPlayerReaction.seekTo(offsetStartTime || 0, true);
-        } catch {
-          // ignore
-        }
       }
+      // Note: for new players with a different video, the `start` playerVar in playerVars
+      // already handles the initial seek position. An explicit seekTo here would cause the
+      // player to load video frames early (visible "cuing") before the user has clicked.
 
       try {
         await tick();
@@ -2994,11 +2998,12 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         if (preserveReactionTime && get(state).bothVideosStarted) {
           handleStateChangeInReactionVideo(YT.PlayerState.BUFFERING, YT.PlayerState.PLAYING);
           pollVideoCurrentTime();
-        } else if (isSameReactionVideo || Boolean(options.autoPlay)) {
+        } else if ((isSameReactionVideo && snapshotBefore.bothVideosStarted) || Boolean(options.autoPlay)) {
           // Only sync/start videos if:
-          // 1. Same reaction video (reusing player), OR
-          // 2. AutoPlay is explicitly enabled
-          // Otherwise, wait for user to start the new reaction video
+          // 1. Same reaction video AND the user had already satisfied the gate before
+          //    this transition (i.e. they were actively watching). Do NOT auto-start if
+          //    the gate was still closed — the user must click to begin the new pair.
+          // 2. AutoPlay is explicitly enabled (e.g. queue/playlist auto-advance).
           syncVideos();
           if (get(state).bothVideosStarted) {
             pollVideoCurrentTime();
@@ -3071,6 +3076,12 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     );
     if (isPlaylistPage) {
       const nextOriginalVideoId = nextSequenceItem?.originalVideoId || playlistDocument.originalVideoIds?.[nextIndex];
+      if (typeof nextOriginalVideoId === 'string' && typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        url.searchParams.set('item', nextOriginalVideoId);
+        window.history.pushState(window.history.state, '', url.toString());
+      }
+
       loadReactionInPlace(nextReactionDocumentId, { preserveReactionTime: shouldPreserveReactionTime, autoPlay: true }).then(() => {
         const updatedIndex = nextIndex;
         const hasNext = updatedIndex < playlistItems.length - 1;
@@ -3078,13 +3089,6 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
           currentIndexInPlaylist: updatedIndex,
           hasNextIndexInPlaylist: hasNext
         });
-
-        if (typeof nextOriginalVideoId === 'string' && typeof window !== 'undefined') {
-          const url = new URL(window.location.href);
-          url.searchParams.set('item', nextOriginalVideoId);
-          window.history.pushState(window.history.state, '', url.toString());
-        }
-
       });
       return;
     }

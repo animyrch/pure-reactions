@@ -133,7 +133,6 @@
 
     await actions.loadReactionInPlace(reactionDocumentId, {
       preserveReactionTime: false,
-      autoPlay: true,
     });
   };
 
