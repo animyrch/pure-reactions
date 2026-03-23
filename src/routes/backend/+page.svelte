@@ -1033,12 +1033,17 @@
 
     const syncPlaylistReaction = async (currentReactionDocumentId) => {
         if (currentPlaylistDocumentId) {
+            const baseSequenceItem = playlistSequenceItems[currentSequenceIndex];
+            const sequenceItem =
+                baseSequenceItem && !baseSequenceItem.thumbnailUrl && originalVideoThumbnailUrl
+                    ? { ...baseSequenceItem, thumbnailUrl: originalVideoThumbnailUrl }
+                    : baseSequenceItem;
             const updateData = {
                 reactionDocumentId: currentReactionDocumentId,
                 playlistDocumentId: currentPlaylistDocumentId,
                 originalVideoId,
                 sequenceIndex: currentSequenceIndex,
-                sequenceItem: playlistSequenceItems[currentSequenceIndex],
+                sequenceItem,
             };
             await addToPlaylistDocument(updateData);
             return;
