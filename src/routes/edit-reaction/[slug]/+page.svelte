@@ -410,6 +410,7 @@
         originalVideoAuthorUrl={$state.originalVideoAuthorUrl}
         originalVideoTitle={$state.originalVideoTitle}
         originalVideoId={$state.originalVideoId}
+        originalVideoUrl={$state.originalVideoUrl}
         originalVideoPlatform={$state.originalVideoPlatform}
         reactionVideoAuthor={$state.reactionVideoAuthor}
         reactionVideoTitle={$state.reactionVideoTitle}

@@ -16,6 +16,7 @@
     export let isUsersOwnVideo;
     export let reactionVideoId;
     export let originalVideoId;
+    export let originalVideoUrl = '';
     export let originalVideoDescription;
     export let reactionVideoDescription;
 
@@ -51,7 +52,7 @@
         {#if showOriginalActions}
             <div class="header-actions">
                 {#if originalVideoId}
-                    <RateVideo videoId={originalVideoId} />
+                    <RateVideo videoId={originalVideoId} platform={originalVideoPlatform} originalVideoUrl={originalVideoUrl} />
                 {/if}
             </div>
         {/if}
