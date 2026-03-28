@@ -5,6 +5,9 @@ import {
   getCurrentOverlayVisibilityFromConfigs
 } from '$lib/helpers/reaction';
 import {
+  type OriginalTransportEvent
+} from '$lib/helpers/originalTransportTimeline';
+import {
   decideSyncMode,
   isSoftSyncAllowed,
   computePlaybackRate,
@@ -63,6 +66,11 @@ export type TwinPlayersSyncTickInput = {
   playbackRateConfigs: any;
   overlayVisibilityTimeline: any[];
   stateTimeline: any[];
+  /** Optional: unified Transport Track for the original video.  When present and
+   *  non-empty, the event-driven play/pause loop uses this instead of filtering
+   *  stateTimeline entries.  Legacy documents without this field continue to use
+   *  stateTimeline unchanged. */
+  originalTransportTimeline?: OriginalTransportEvent[];
 
   reactionPlayerState?: number;
   originalPlayerState?: number;
@@ -316,7 +324,21 @@ export function computeTwinPlayersSyncTick(
   const isReactionPlaying = reactionPlayerState === yt.PLAYING;
   const shouldHoldOriginalWhilePaused = input.isFineTuneModeOn && !isReactionPlaying;
 
+  // Prefer the unified Transport Track when it is available and populated.
+  // Fall back to the legacy stateTimeline so documents without the field continue
+  // to work identically to before.
+  // Named `resolvedTransportTimeline` to avoid shadowing `input.originalTransportTimeline`.
+  const resolvedTransportTimeline: OriginalTransportEvent[] | null =
+    Array.isArray(input.originalTransportTimeline) && input.originalTransportTimeline.length > 0
+      ? input.originalTransportTimeline
+      : null;
+
   const timeline = Array.isArray(input.stateTimeline) ? input.stateTimeline : [];
+
+  // The effective event timeline to walk in the event-driven loop.
+  // Union type: either OriginalTransportEvent[] (new) or legacy stateTimeline entries.
+  const activeTimeline: OriginalTransportEvent[] | typeof timeline =
+    resolvedTransportTimeline ?? timeline;
 
   const previousEffective = Number(previousReactionTime) - timeOffset;
   const currentEffective = Number(reactionCurrentTime) - timeOffset;
@@ -324,20 +346,20 @@ export function computeTwinPlayersSyncTick(
 
   let workingState = input.currentStateOriginalVideo;
 
-  if (movingForward && timeline.length) {
+  if (movingForward && activeTimeline.length) {
     let idx = Number.isFinite(nextTracking.stateTimelineIndex) ? Number(nextTracking.stateTimelineIndex) : 0;
-    if (idx < 0 || idx > timeline.length) {
+    if (idx < 0 || idx > activeTimeline.length) {
       idx = 0;
     }
 
     // If we jumped backwards or the cursor is stale, re-seek it.
-    const cursorTime = Number(timeline[Math.max(0, Math.min(idx, timeline.length - 1))]?.t);
+    const cursorTime = Number(activeTimeline[Math.max(0, Math.min(idx, activeTimeline.length - 1))]?.t);
     if (!Number.isFinite(cursorTime) || cursorTime > currentEffective + 0.0001) {
-      idx = upperBoundByT(timeline, previousEffective);
+      idx = upperBoundByT(activeTimeline, previousEffective);
     }
 
-    while (idx < timeline.length) {
-      const entry = timeline[idx];
+    while (idx < activeTimeline.length) {
+      const entry = activeTimeline[idx];
       const eventTime = Number(entry?.t);
       if (!Number.isFinite(eventTime)) {
         idx += 1;
@@ -348,12 +370,30 @@ export function computeTwinPlayersSyncTick(
       }
 
       if (eventTime > previousEffective && eventTime <= currentEffective) {
-        const rawState = Number(entry?.state);
-        let desiredState = Number.isFinite(rawState) ? rawState : -1;
+        let desiredState: number;
+        let desiredTarget: number;
+
+        if (resolvedTransportTimeline) {
+          // Transport Track: state is already numeric (1=playing, 2=paused).
+          // targetTime is not stored in the Transport Track; derive it from
+          // playerConfigs (which still carries the original-video position data).
+          desiredState = Number(entry.state);
+          const cfg = getCurrentStateFromStateConfigs(
+            eventTime + timeOffset,
+            input.playerConfigs,
+            timeOffset
+          );
+          desiredTarget = Number(cfg?.time ?? 0);
+        } else {
+          // Legacy stateTimeline: numeric state + inline targetTime.
+          const rawState = Number(entry?.state);
+          desiredState = Number.isFinite(rawState) ? rawState : -1;
+          desiredTarget = Number(entry?.targetTime ?? entry?.time ?? 0);
+        }
+
         if (shouldHoldOriginalWhilePaused && desiredState === yt.PLAYING) {
           desiredState = yt.PAUSED;
         }
-        const desiredTarget = Number(entry?.targetTime ?? entry?.time ?? 0);
         actions.push({
           type: 'applyOriginalStateChange',
           nextState: desiredState,
@@ -542,11 +582,11 @@ export function computeTwinPlayersSyncTick(
   }
 
   const nextBoundaryReactionTime = (() => {
-    if (!timeline.length) {
+    if (!activeTimeline.length) {
       return undefined;
     }
     const idx = Number.isFinite(nextTracking.stateTimelineIndex) ? Number(nextTracking.stateTimelineIndex) : 0;
-    const next = timeline[Math.max(0, Math.min(idx, timeline.length - 1))];
+    const next = activeTimeline[Math.max(0, Math.min(idx, activeTimeline.length - 1))];
     const nextEffective = Number(next?.t);
     if (!Number.isFinite(nextEffective)) {
       return undefined;

@@ -19,6 +19,7 @@
         buildRecorderStateConfigs,
         RECORDER_PLAYER_STATES,
     } from "$lib/helpers/recorderState";
+    import { buildOriginalTransportTimeline } from "$lib/helpers/originalTransportTimeline";
     import PlaylistQueue from "$lib/components/Video/PlaylistQueue.svelte";
     import { isLoggedIn } from "$lib/stores/user";
     import { page } from "$app/stores";
@@ -1236,6 +1237,7 @@
                     targetTime: parseFloat(v.time),
                 }))
                 .sort((a, b) => a.t - b.t);
+            const originalTransportTimeline = buildOriginalTransportTimeline(stateTimeline);
             const volumeTimeline = Array.from(volumeConfigs.entries())
                 .map(([t, v]) => ({ t: parseFloat(t), volume: v.volume }))
                 .sort((a, b) => a.t - b.t);
@@ -1247,6 +1249,7 @@
                 .sort((a, b) => a.t - b.t);
             await updateFirebaseDocument({
                 stateTimeline,
+                originalTransportTimeline,
                 volumeTimeline,
                 playbackTimeline,
                 // Remove legacy object-map formats now that arrays are saved

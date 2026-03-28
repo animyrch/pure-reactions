@@ -1,3 +1,5 @@
+import { buildOriginalTransportTimeline, type OriginalTransportEvent } from './originalTransportTimeline';
+
 export const FULLSCREEN_BODY_CLASS = 'reaction-fullscreen';
 
 type TimelineEvent = Record<string, number | string>;
@@ -71,6 +73,7 @@ export function deriveTimelines(obtainedData: ReactionDocument) {
   const rawReactionVolumeTimeline = obtainedData?.['reactionVolumeTimeline'];
   const rawPlaybackTimeline = obtainedData?.['playbackTimeline'];
   const rawOverlayVisibilityTimeline = obtainedData?.['overlayVisibilityTimeline'];
+  const rawOriginalTransportTimeline = obtainedData?.['originalTransportTimeline'];
 
   const reactionConfigs = obtainedData?.['reactionConfigs'];
   const volumeConfigsRaw = obtainedData?.['volumeConfigs'];
@@ -163,6 +166,14 @@ export function deriveTimelines(obtainedData: ReactionDocument) {
     ? rawOverlayVisibilityTimeline
     : [];
 
+  // Derive originalTransportTimeline: use the stored field if present and non-empty
+  // (already-migrated documents), otherwise build it from stateTimeline so that
+  // legacy documents produce identical playback behaviour.
+  const originalTransportTimeline: OriginalTransportEvent[] =
+    Array.isArray(rawOriginalTransportTimeline) && rawOriginalTransportTimeline.length > 0
+      ? (rawOriginalTransportTimeline as OriginalTransportEvent[])
+      : buildOriginalTransportTimeline(stateTimeline);
+
   return {
     playerConfigs,
     volumeConfigs,
@@ -172,7 +183,8 @@ export function deriveTimelines(obtainedData: ReactionDocument) {
     volumeTimeline,
     reactionVolumeTimeline,
     playbackRateTimeline,
-    overlayVisibilityTimeline
+    overlayVisibilityTimeline,
+    originalTransportTimeline
   };
 }
 

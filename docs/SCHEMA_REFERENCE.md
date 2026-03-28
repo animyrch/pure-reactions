@@ -42,6 +42,8 @@ The main collection for reaction videos.
 | `timelines` | object/array | No | Synchronization timeline data (supports legacy object and new array formats) |
 | `configs` | object | No | Playback configuration (volume, speed, pause points) |
 | `state` | string | No | Playback state for recording sessions |
+| `stateTimeline` | array | No | Play/pause + target-time events: `[{ t, state, targetTime }]` |
+| `originalTransportTimeline` | array | No | Unified Transport Track for the original video: `[{ t, state }]` where state 1=playing, 2=paused. Derived from `stateTimeline` for legacy docs. |
 
 #### Metadata Fields
 
@@ -448,6 +450,7 @@ const docRef = await addDoc(collection(db, 'reactions'), {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.5 | 2026-03-28 | Added `originalTransportTimeline` field to reactions — unified Transport Track for original-video play/pause cues, derived from `stateTimeline` for legacy documents |
 | 1.4 | 2026-03-07 | Added ordered playlist `sequenceItems` snapshot schema for duplicate-safe mixed YouTube/TikTok recording and playback, plus legacy compatibility notes for `originalVideoIds` |
 | 1.3 | 2026-03-07 | Added normalized original-video author/description/thumbnail/url fields, documented `originalTikTok` enrichment metadata, and extended shared-session schema with original platform/url |
 | 1.2 | 2026-03-07 | Documented `originalVideoPlatform`, clarified cross-platform original IDs, and added optional `originalYoutube`/`youtube` enrichment metadata for reaction docs |
