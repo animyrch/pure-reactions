@@ -171,6 +171,36 @@ describe('computeTwinPlayersSyncTick — reaction transport track', () => {
         expect(reactionAction).toBeUndefined();
     });
 
+    it('does NOT emit applyOriginalStateChange(PAUSED) when transport track pauses the reaction and isFineTuneModeOn is true', () => {
+        // Regression: previously isFineTuneModeOn + reaction paused → shouldHoldOriginalWhilePaused=true
+        // → effectiveConfigState=PAUSED even though original's config says PLAYING.
+        const input = makeBaseInput({
+            isFineTuneModeOn: true,
+            // Transport track intends reaction to be PAUSED at this point
+            reactionTransportTrack: [
+                { t: 0, state: YT_STATES.PLAYING },
+                { t: 115, state: YT_STATES.PAUSED },
+            ],
+            // Reaction is currently paused (as commanded by transport track)
+            reactionPlayerState: YT_STATES.PAUSED,
+            reactionCurrentTime: 115.8,
+            previousReactionTime: 115.7,
+            // Original's config says PLAYING — use array format so getCurrentStateFromStateConfigs
+            // correctly returns state PLAYING for the current time.
+            playerConfigs: [{ t: 0, state: YT_STATES.PLAYING, targetTime: 0 }],
+            currentStateOriginalVideo: YT_STATES.PLAYING,
+            originalPlayerState: YT_STATES.PLAYING,
+            originalCurrentTime: 50,
+        });
+
+        const { actions } = computeTwinPlayersSyncTick(input, makeTracking());
+        const pauseActions = actions.filter(
+            a => a.type === 'pauseOriginal' ||
+                (a.type === 'applyOriginalStateChange' && a.nextState !== YT_STATES.PLAYING)
+        );
+        expect(pauseActions).toHaveLength(0);
+    });
+
     it('advances the reactionTransportTrackIndex in tracking', () => {
         const input = makeBaseInput({
             reactionTransportTrack: [

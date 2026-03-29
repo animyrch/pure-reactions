@@ -318,7 +318,24 @@ export function computeTwinPlayersSyncTick(
   // 3) State/time sync (original)
   const reactionPlayerState = input.reactionPlayerState;
   const isReactionPlaying = reactionPlayerState === yt.PLAYING;
-  const shouldHoldOriginalWhilePaused = input.isFineTuneModeOn && !isReactionPlaying;
+
+  // When the reactionTransportTrack is responsible for the reaction pause, the original
+  // should follow its own configured state — don't hold it just because isFineTuneModeOn.
+  const rtTrackForHoldCheck = Array.isArray(input.reactionTransportTrack) ? input.reactionTransportTrack : [];
+  let transportTrackIntendsPause = false;
+  if (rtTrackForHoldCheck.length > 0 && Number.isFinite(reactionCurrentTime)) {
+    for (let i = rtTrackForHoldCheck.length - 1; i >= 0; i--) {
+      const entryTime = Number(rtTrackForHoldCheck[i]?.t);
+      if (Number.isFinite(entryTime) && entryTime <= reactionCurrentTime + 0.5) {
+        transportTrackIntendsPause = Number(rtTrackForHoldCheck[i]?.state) === yt.PAUSED;
+        break;
+      }
+    }
+  }
+
+  // shouldHoldOriginalWhilePaused: hold the original only when in fine-tune mode AND the reaction
+  // is paused by the user (not by the transport track, which allows the original to play freely).
+  const shouldHoldOriginalWhilePaused = input.isFineTuneModeOn && !isReactionPlaying && !transportTrackIntendsPause;
 
   const timeline = Array.isArray(input.stateTimeline) ? input.stateTimeline : [];
 
