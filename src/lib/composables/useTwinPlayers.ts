@@ -51,7 +51,6 @@ import {
 } from '$lib/helpers/twinPlayersTimeline';
 import {
   computeTwinPlayersSyncTick,
-  type TwinPlayersSyncAction,
   type TwinPlayersPlayerState,
   type TwinPlayersSyncTracking
 } from '$lib/helpers/twinPlayersSyncTick';
@@ -523,10 +522,6 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   let changingVolume = false;
   let changingReactionVolume = false;
   let changingSpeed = false;
-  // Set to true after the sync loop programmatically pauses the reaction video via
-  // reactionTransportTrack, so handleStateChangeInReactionVideo can skip the cascade
-  // that would also pause the original (which should keep playing).
-  let lastReactionControlWasProgrammatic = false;
   const syncTracking: TwinPlayersSyncTracking = {
     lastOriginalTargetTime: undefined,
     lastOriginalSeekAt: 0,
@@ -703,6 +698,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   };
 
   const pauseOriginalVideo = () => {
+    console.debug('[TwinPlayers] pauseOriginalVideo called', new Error().stack?.split('\n').slice(1, 4).join(' | '));
     pausePlayerWithTrace('original', get(state).playerOriginal, 'pauseOriginalVideo');
   };
 
@@ -1321,6 +1317,21 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
       Object.assign(syncTracking, result.nextTracking);
 
+      // Debug: log any actions that affect the original's state
+      const pausingOriginalActions = result.actions.filter(
+        (a: any) => (a.type === 'pauseOriginal') ||
+          (a.type === 'applyOriginalStateChange' && Number(a.nextState) !== (typeof YT?.PlayerState?.PLAYING === 'number' ? YT.PlayerState.PLAYING : 1))
+      );
+      if (pausingOriginalActions.length > 0) {
+        console.debug('[TwinPlayers] sync tick emitting actions that may pause original', {
+          actions: pausingOriginalActions,
+          reactionPlayerState,
+          isFineTuneModeOn: snapshot.isFineTuneModeOn,
+          reactionCurrentTime,
+          currentStateOriginalVideo: snapshot.currentStateOriginalVideo
+        });
+      }
+
       // Handle soft-sync actions separately
       const softSyncAction = result.actions.find((a: any) => a.type === 'applySoftSync');
       
@@ -1358,12 +1369,6 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       changingVolume = nextGuards.changingVolume;
       changingReactionVolume = nextGuards.changingReactionVolume;
       changingSpeed = nextGuards.changingSpeed;
-
-      // If the sync loop just programmatically paused the reaction via reactionTransportTrack,
-      // mark the flag so handleStateChangeInReactionVideo skips cascading pauseOriginalVideo().
-      if (filteredActions.some((a: TwinPlayersSyncAction) => a.type === 'applyReactionStateChange' && Number(a.nextState) === ytStates.PAUSED)) {
-        lastReactionControlWasProgrammatic = true;
-      }
 
       // Apply soft-sync action if present
       if (softSyncAction && 'rate' in softSyncAction && 'durationMs' in softSyncAction) {
@@ -1525,12 +1530,43 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       previousState !== YT.PlayerState.BUFFERING &&
       (nextState === YT.PlayerState.PAUSED || nextState === YT.PlayerState.BUFFERING)
     ) {
-      // If the reaction was paused programmatically by the reactionTransportTrack, the original
-      // should keep playing — that's the whole purpose of the track. Only cascade to the original
-      // when this is a genuine user-initiated pause.
-      if (lastReactionControlWasProgrammatic) {
-        lastReactionControlWasProgrammatic = false;
+      // If the reactionTransportTrack intends the reaction to be paused at the current
+      // reaction time, the original should keep playing independently — that's the whole
+      // purpose of the transport track. Only cascade the pause to the original when the
+      // transport track does NOT account for this pause (i.e., it's user-initiated).
+      const snapshot = get(state);
+      const ytPaused = typeof YT?.PlayerState?.PAUSED === 'number' ? YT.PlayerState.PAUSED : 2;
+      const rtTrack = Array.isArray(snapshot.reactionTransportTrack) ? snapshot.reactionTransportTrack : [];
+      const reactionTime = typeof snapshot.playerReaction?.getCurrentTime === 'function'
+        ? Number(snapshot.playerReaction.getCurrentTime())
+        : Number(snapshot.reactionCurrentTime);
+
+      // Find the last transport track entry at or before the current reaction time.
+      let transportTrackIntendsPause = false;
+      if (rtTrack.length > 0 && Number.isFinite(reactionTime)) {
+        for (let i = rtTrack.length - 1; i >= 0; i--) {
+          const entryTime = Number(rtTrack[i]?.t);
+          // Allow a small window (0.5s) so that detection-lag doesn't cause false negatives.
+          if (Number.isFinite(entryTime) && entryTime <= reactionTime + 0.5) {
+            transportTrackIntendsPause = Number(rtTrack[i]?.state) === ytPaused;
+            console.debug('[TwinPlayers] handleStateChangeInReactionVideo — transport track check', {
+              reactionTime,
+              entryTime,
+              entryState: rtTrack[i]?.state,
+              transportTrackIntendsPause,
+              previousState,
+              nextState
+            });
+            break;
+          }
+        }
+      }
+
+      if (transportTrackIntendsPause) {
+        // Programmatic pause — let the original keep playing.
+        console.debug('[TwinPlayers] handleStateChangeInReactionVideo — skipping pauseOriginal (transport track)');
       } else {
+        console.debug('[TwinPlayers] handleStateChangeInReactionVideo — cascading pauseOriginal (user pause)');
         pauseOriginalVideo();
       }
     }
