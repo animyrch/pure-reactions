@@ -127,6 +127,7 @@ type TwinPlayersState = {
   reactionVolumeTimeline: any[];
   playbackRateTimeline: any[];
   overlayVisibilityTimeline: any[];
+  reactionTransportTrack: any[];
   playerEventTimeline: any[];
   currentPlaybackRate: number;
   currentStateOriginalVideo: number;
@@ -392,6 +393,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     reactionVolumeTimeline: [],
     playbackRateTimeline: [],
     overlayVisibilityTimeline: [],
+    reactionTransportTrack: [],
     playerEventTimeline: [],
     currentPlaybackRate: 1,
     currentStateOriginalVideo: -1,
@@ -701,6 +703,16 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
   const pauseReactionVideo = () => {
     pausePlayerWithTrace('reaction', get(state).playerReaction, 'pauseReactionVideo');
+  };
+
+  const controlReactionVideo = (nextState: number) => {
+    const ytPlaying = typeof YT?.PlayerState?.PLAYING === 'number' ? YT.PlayerState.PLAYING : 1;
+    const ytPaused = typeof YT?.PlayerState?.PAUSED === 'number' ? YT.PlayerState.PAUSED : 2;
+    if (nextState === ytPlaying) {
+      startReactionVideo();
+    } else if (nextState === ytPaused) {
+      pauseReactionVideo();
+    }
   };
 
   const stateName = (value: number | undefined) => {
@@ -1289,6 +1301,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
           playbackRateConfigs: snapshot.playbackRateConfigs,
           overlayVisibilityTimeline: snapshot.overlayVisibilityTimeline,
           stateTimeline: snapshot.stateTimeline,
+          reactionTransportTrack: snapshot.reactionTransportTrack,
           reactionPlayerState,
           originalPlayerState,
           originalCurrentTime,
@@ -1327,6 +1340,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
           setPlaybackRateForOriginalVideo,
           pauseOriginalVideo,
           handleStateChangeInOriginalVideo,
+          controlReactionVideo,
           muteReactionAudio,
           unmuteReactionAudio,
           updateState
@@ -1442,6 +1456,13 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         getNextTimelineEventReactionTime(snapshot.stateTimeline, {
           reactionCurrentTime,
           timeOffset: snapshot.timeOffset,
+          seekMin: snapshot.seekMin,
+          seekMax: snapshot.seekMax
+        }),
+        // Reaction transport track uses raw reaction time (no offset)
+        getNextTimelineEventReactionTime(snapshot.reactionTransportTrack, {
+          reactionCurrentTime,
+          timeOffset: 0,
           seekMin: snapshot.seekMin,
           seekMax: snapshot.seekMax
         })
@@ -1653,6 +1674,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         playbackRateConfigs: snapshot.playbackRateConfigs,
         overlayVisibilityTimeline: snapshot.overlayVisibilityTimeline,
         stateTimeline: snapshot.stateTimeline,
+        reactionTransportTrack: snapshot.reactionTransportTrack,
         reactionPlayerState: typeof snapshot.playerReaction?.getPlayerState === 'function'
           ? Number(snapshot.playerReaction.getPlayerState())
           : undefined,
@@ -1690,6 +1712,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         setPlaybackRateForOriginalVideo,
         pauseOriginalVideo,
         handleStateChangeInOriginalVideo,
+        controlReactionVideo,
         muteReactionAudio,
         unmuteReactionAudio,
         updateState
@@ -2277,7 +2300,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       volumeTimeline,
       reactionVolumeTimeline,
       playbackRateTimeline,
-      overlayVisibilityTimeline
+      overlayVisibilityTimeline,
+      reactionTransportTrack
     } = deriveTimelines(reactionData);
 
     window.playerConfigs = reactionData['stateTimeline'] || reactionData['reactionConfigs'];
@@ -2391,6 +2415,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       reactionVolumeTimeline,
       playbackRateTimeline,
       overlayVisibilityTimeline,
+      reactionTransportTrack,
       playerEventTimeline: normalizedPlayerEvents,
       reactionVideoId,
       originalVideoId,
@@ -2631,7 +2656,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         volumeTimeline,
         reactionVolumeTimeline,
         playbackRateTimeline,
-        overlayVisibilityTimeline
+        overlayVisibilityTimeline,
+        reactionTransportTrack
       } = deriveTimelines(reactionData);
 
       window.playerConfigs = reactionData['stateTimeline'] || reactionData['reactionConfigs'];
@@ -2858,6 +2884,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         reactionVolumeTimeline,
         playbackRateTimeline,
         overlayVisibilityTimeline,
+        reactionTransportTrack,
         playerEventTimeline: normalizedPlayerEvents,
         reactionVideoId,
         originalVideoId,

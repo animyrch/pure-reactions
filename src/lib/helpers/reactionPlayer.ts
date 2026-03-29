@@ -71,6 +71,7 @@ export function deriveTimelines(obtainedData: ReactionDocument) {
   const rawReactionVolumeTimeline = obtainedData?.['reactionVolumeTimeline'];
   const rawPlaybackTimeline = obtainedData?.['playbackTimeline'];
   const rawOverlayVisibilityTimeline = obtainedData?.['overlayVisibilityTimeline'];
+  const rawReactionTransportTrack = obtainedData?.['reactionTransportTrack'];
 
   const reactionConfigs = obtainedData?.['reactionConfigs'];
   const volumeConfigsRaw = obtainedData?.['volumeConfigs'];
@@ -163,6 +164,11 @@ export function deriveTimelines(obtainedData: ReactionDocument) {
     ? rawOverlayVisibilityTimeline
     : [];
 
+  // Migration: if no reactionTransportTrack exists, default to playing from the start.
+  const reactionTransportTrack = Array.isArray(rawReactionTransportTrack) && rawReactionTransportTrack.length
+    ? rawReactionTransportTrack
+    : [{ t: 0, state: 1 }];
+
   return {
     playerConfigs,
     volumeConfigs,
@@ -172,7 +178,8 @@ export function deriveTimelines(obtainedData: ReactionDocument) {
     volumeTimeline,
     reactionVolumeTimeline,
     playbackRateTimeline,
-    overlayVisibilityTimeline
+    overlayVisibilityTimeline,
+    reactionTransportTrack
   };
 }
 

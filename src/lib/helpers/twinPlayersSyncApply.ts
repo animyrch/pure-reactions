@@ -27,6 +27,8 @@ export type TwinPlayersSyncApplyDeps = {
     options?: { allowSeekAhead?: boolean; throttleMs?: number; forceSeek?: boolean }
   ) => void;
 
+  controlReactionVideo: (nextState: number) => void;
+
   muteReactionAudio: (player?: any) => boolean;
   unmuteReactionAudio: (player?: any) => boolean;
 
@@ -143,6 +145,13 @@ export function applyTwinPlayersSyncActions(
           action.options
         );
         nextWorkingState = action.nextState;
+        break;
+      }
+      case 'applyReactionStateChange': {
+        if (!allowStateActions) {
+          break;
+        }
+        deps.controlReactionVideo(action.nextState);
         break;
       }
     }

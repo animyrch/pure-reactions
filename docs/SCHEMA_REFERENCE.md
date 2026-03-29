@@ -42,6 +42,16 @@ The main collection for reaction videos.
 | `timelines` | object/array | No | Synchronization timeline data (supports legacy object and new array formats) |
 | `configs` | object | No | Playback configuration (volume, speed, pause points) |
 | `state` | string | No | Playback state for recording sessions |
+| `stateTimeline` | array[object] | No | Array-format original video state timeline. Each entry: `{ t: number, state: number, targetTime: number }`. `t` = reaction video time, `state` = YT player state, `targetTime` = original video seek target. Supersedes legacy `reactionConfigs`. |
+| `volumeTimeline` | array[object] | No | Array-format original video volume timeline. Each entry: `{ t: number, volume: number }`. Supersedes legacy `volumeConfigs`. |
+| `reactionVolumeTimeline` | array[object] | No | Array-format reaction video volume timeline. Each entry: `{ t: number, volume: number }`. Supersedes legacy `reactionVolumeConfigs`. |
+| `playbackTimeline` | array[object] | No | Array-format playback rate timeline. Each entry: `{ t: number, rate: number }`. Supersedes legacy `playbackRateConfigs`. |
+| `overlayVisibilityTimeline` | array[object] | No | Overlay (pip) visibility timeline. Each entry: `{ t: number, visible: boolean }`. |
+| `reactionTransportTrack` | array[object] | No | Reaction video play/pause transport track. Each entry: `{ t: number, state: number }` where `t` = reaction video time (seconds), `state` = 1 (PLAYING) or 2 (PAUSED). Written at reaction creation (`state=1` at `t=0`) and finish (`state=2` at finish time). If absent, playback engine defaults to `[{ t: 0, state: 1 }]` (always playing). |
+| `offsetStartTime` | number | No | Playlist buffer offset in seconds. Reaction video starts at this time in the player. |
+| `reactionFinishTime` | number | No | Reaction video finish time in seconds (used in playlist flows). |
+| `timeOffset` | number | No | Time difference between reaction video time and original video time. |
+| `globalGain` | number | No | Volume multiplier for the original video (default: 1.0). |
 
 #### Metadata Fields
 
@@ -448,6 +458,7 @@ const docRef = await addDoc(collection(db, 'reactions'), {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.5 | 2026-03-29 | Added `reactionTransportTrack` field for reaction video play/pause state timeline; documented all array-format timeline fields (`stateTimeline`, `volumeTimeline`, `reactionVolumeTimeline`, `playbackTimeline`, `overlayVisibilityTimeline`) and supporting playback fields |
 | 1.4 | 2026-03-07 | Added ordered playlist `sequenceItems` snapshot schema for duplicate-safe mixed YouTube/TikTok recording and playback, plus legacy compatibility notes for `originalVideoIds` |
 | 1.3 | 2026-03-07 | Added normalized original-video author/description/thumbnail/url fields, documented `originalTikTok` enrichment metadata, and extended shared-session schema with original platform/url |
 | 1.2 | 2026-03-07 | Documented `originalVideoPlatform`, clarified cross-platform original IDs, and added optional `originalYoutube`/`youtube` enrichment metadata for reaction docs |

@@ -17,6 +17,7 @@
     import { fetchOriginalVideoMetadata } from "$lib/helpers/originalVideo";
     import {
         buildRecorderStateConfigs,
+        buildReactionTransportConfigs,
         RECORDER_PLAYER_STATES,
     } from "$lib/helpers/recorderState";
     import PlaylistQueue from "$lib/components/Video/PlaylistQueue.svelte";
@@ -55,6 +56,7 @@
     const reactionConfigs = new Map();
     const volumeConfigs = new Map();
     const playbackRateConfigs = new Map();
+    const reactionTransportConfigs = new Map();
     let originalVideoId = "";
     let playlistId = "";
     let playlistBufferTime = "";
@@ -820,6 +822,31 @@
         }
     }
 
+    function buildReactionTransportArray() {
+        return Array.from(reactionTransportConfigs.entries())
+            .map(([t, v]) => ({
+                t: parseFloat(t),
+                state: v.state,
+            }))
+            .sort((a, b) => a.t - b.t);
+    }
+
+    function logReactionTransportChange(reactionVideoTime, stateCode, fromConfigs = reactionTransportConfigs) {
+        const nextTransportConfigs = buildReactionTransportConfigs({
+            existingConfigs: fromConfigs,
+            reactionVideoTime,
+            stateCode,
+        });
+        reactionTransportConfigs.clear();
+        nextTransportConfigs.map.forEach((value, key) => {
+            reactionTransportConfigs.set(key, value);
+        });
+
+        updateFirebaseDocument({
+            reactionTransportTrack: buildReactionTransportArray(),
+        });
+    }
+
     function applyPlaybackRate(
         rate,
         { shouldLog = false, syncSession = true } = {},
@@ -1158,6 +1185,10 @@
 
             startTime = new Date().getTime();
             logPlaybackRateChange(playbackRate);
+
+            // Log reaction transport track: PLAYING at t=0 (start of reaction)
+            // Pass new Map() to start a fresh track for this recording session.
+            logReactionTransportChange('0.0', RECORDER_PLAYER_STATES.PLAYING, new Map());
         } catch (error) {
             console.error("Failed to start reaction:", error);
             showToast(
@@ -1245,10 +1276,16 @@
                     rate: Number(v.rate) || 1,
                 }))
                 .sort((a, b) => a.t - b.t);
+
+            // Add PAUSED at finish time to the reaction transport track
+            logReactionTransportChange(reactionVideoTime, RECORDER_PLAYER_STATES.PAUSED);
+            const reactionTransportTrack = buildReactionTransportArray();
+
             await updateFirebaseDocument({
                 stateTimeline,
                 volumeTimeline,
                 playbackTimeline,
+                reactionTransportTrack,
                 // Remove legacy object-map formats now that arrays are saved
                 reactionConfigs: firestoreDeleteField(),
                 volumeConfigs: firestoreDeleteField(),

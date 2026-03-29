@@ -18,6 +18,7 @@ export type TwinPlayersSyncTracking = {
   lastOriginalSeekTarget?: number;
   mobileAudioWinner: 'original' | 'reaction' | null;
   stateTimelineIndex?: number;
+  reactionTransportTrackIndex?: number;
   lastSoftSyncAt: number;
   softSyncIsActive: boolean;
   softSyncResetTimeoutId?: number;
@@ -63,6 +64,7 @@ export type TwinPlayersSyncTickInput = {
   playbackRateConfigs: any;
   overlayVisibilityTimeline: any[];
   stateTimeline: any[];
+  reactionTransportTrack: any[];
 
   reactionPlayerState?: number;
   originalPlayerState?: number;
@@ -90,7 +92,8 @@ export type TwinPlayersSyncAction =
       targetTime: number;
       options?: { allowSeekAhead?: boolean; throttleMs?: number; forceSeek?: boolean };
     }
-  | { type: 'pauseOriginal' };
+  | { type: 'pauseOriginal' }
+  | { type: 'applyReactionStateChange'; nextState: number };
 
 export type TwinPlayersSyncTickResult = {
   actions: TwinPlayersSyncAction[];
@@ -151,6 +154,7 @@ export function computeTwinPlayersSyncTick(
     lastOriginalSeekAt: Number.isFinite(tracking.lastOriginalSeekAt) ? tracking.lastOriginalSeekAt : 0,
     mobileAudioWinner: tracking.mobileAudioWinner ?? null,
     stateTimelineIndex: Number.isFinite(tracking.stateTimelineIndex) ? tracking.stateTimelineIndex : 0,
+    reactionTransportTrackIndex: Number.isFinite(tracking.reactionTransportTrackIndex) ? tracking.reactionTransportTrackIndex : 0,
     lastSoftSyncAt: Number.isFinite(tracking.lastSoftSyncAt) ? tracking.lastSoftSyncAt : 0,
     softSyncIsActive: Boolean(tracking.softSyncIsActive),
     softSyncResetTimeoutId: tracking.softSyncResetTimeoutId
@@ -541,18 +545,86 @@ export function computeTwinPlayersSyncTick(
     };
   }
 
+  // 3.5) Reaction transport track: control reaction video play/pause state
+  const reactionTransportTimeline = Array.isArray(input.reactionTransportTrack) ? input.reactionTransportTrack : [];
+  const movingForwardRT = reactionCurrentTime >= previousReactionTime - 0.0001;
+
+  if (reactionTransportTimeline.length) {
+    let rtIdx = Number.isFinite(nextTracking.reactionTransportTrackIndex)
+      ? Number(nextTracking.reactionTransportTrackIndex)
+      : 0;
+
+    // Determine if the cursor is stale: index past end, or entry at cursor is ahead of current time.
+    const clampedForCheck = Math.max(0, Math.min(rtIdx, reactionTransportTimeline.length - 1));
+    const cursorRTTime = Number(reactionTransportTimeline[clampedForCheck]?.t);
+    const cursorIsStale = rtIdx >= reactionTransportTimeline.length
+      || !Number.isFinite(cursorRTTime)
+      || cursorRTTime > reactionCurrentTime + 0.0001;
+
+    if (cursorIsStale) {
+      // Re-position cursor to upperBound of previousReactionTime, then enforce state.
+      rtIdx = upperBoundByT(reactionTransportTimeline, previousReactionTime);
+      const lastEntry = reactionTransportTimeline[Math.max(0, rtIdx - 1)];
+      if (lastEntry && Number.isFinite(Number(lastEntry?.t)) && Number(lastEntry.t) <= reactionCurrentTime) {
+        const rawRTState = Number(lastEntry?.state);
+        const desiredRTState = Number.isFinite(rawRTState) ? rawRTState : -1;
+        const currentRTState = input.reactionPlayerState;
+        if (
+          desiredRTState !== -1
+          && typeof currentRTState === 'number'
+          && currentRTState !== desiredRTState
+          && currentRTState !== yt.BUFFERING
+        ) {
+          actions.push({ type: 'applyReactionStateChange', nextState: desiredRTState });
+        }
+      }
+    }
+
+    if (movingForwardRT) {
+      while (rtIdx < reactionTransportTimeline.length) {
+        const entry = reactionTransportTimeline[rtIdx];
+        const eventTime = Number(entry?.t);
+        if (!Number.isFinite(eventTime)) {
+          rtIdx += 1;
+          continue;
+        }
+        if (eventTime > reactionCurrentTime) {
+          break;
+        }
+
+        if (eventTime > previousReactionTime && eventTime <= reactionCurrentTime) {
+          const rawRTState = Number(entry?.state);
+          const desiredRTState = Number.isFinite(rawRTState) ? rawRTState : -1;
+          if (desiredRTState !== -1) {
+            actions.push({ type: 'applyReactionStateChange', nextState: desiredRTState });
+          }
+        }
+
+        rtIdx += 1;
+      }
+    }
+
+    nextTracking = {
+      ...nextTracking,
+      reactionTransportTrackIndex: rtIdx
+    };
+  }
+
   const nextBoundaryReactionTime = (() => {
-    if (!timeline.length) {
-      return undefined;
-    }
-    const idx = Number.isFinite(nextTracking.stateTimelineIndex) ? Number(nextTracking.stateTimelineIndex) : 0;
-    const next = timeline[Math.max(0, Math.min(idx, timeline.length - 1))];
-    const nextEffective = Number(next?.t);
-    if (!Number.isFinite(nextEffective)) {
-      return undefined;
-    }
-    const nextReaction = nextEffective + timeOffset;
-    return Number.isFinite(nextReaction) ? nextReaction : undefined;
+    const stateIdx = Number.isFinite(nextTracking.stateTimelineIndex) ? Number(nextTracking.stateTimelineIndex) : 0;
+    const stateNext = timeline[Math.max(0, Math.min(stateIdx, timeline.length - 1))];
+    const stateNextEffective = Number(stateNext?.t);
+    const stateNextReaction = Number.isFinite(stateNextEffective) ? stateNextEffective + timeOffset : undefined;
+
+    const rtIdx2 = Number.isFinite(nextTracking.reactionTransportTrackIndex) ? Number(nextTracking.reactionTransportTrackIndex) : 0;
+    const rtNext = reactionTransportTimeline[Math.max(0, Math.min(rtIdx2, reactionTransportTimeline.length - 1))];
+    const rtNextTime = Number(rtNext?.t);
+    const rtNextReaction = Number.isFinite(rtNextTime) ? rtNextTime : undefined;
+
+    const candidates = [stateNextReaction, rtNextReaction].filter(
+      (t): t is number => typeof t === 'number' && Number.isFinite(t)
+    );
+    return candidates.length ? Math.min(...candidates) : undefined;
   })();
 
   return {
