@@ -8,6 +8,7 @@
   export let playerEvents = [];
   export let volumeEvents = [];
   export let reactionVolumeEvents = [];
+  export let reactionTransportEvents = [];
   export let playbackRateEvents = [];
   export let overlayVisibilityEvents = [];
   export let seekMin = 0;
@@ -64,6 +65,11 @@
   const STATE_MARKERS = {
     1: { label: "Resumed original", tone: "resume", icon: PlaySolid },
     2: { label: "Stopped original", tone: "stop", icon: PauseSolid },
+  };
+
+  const REACTION_TRANSPORT_MARKERS = {
+    1: { label: "Reaction plays", tone: "resume", icon: PlaySolid },
+    2: { label: "Reaction pauses", tone: "stop", icon: PauseSolid },
   };
 
   const MARKER_STYLES = {
@@ -294,6 +300,16 @@
         .filter((event) => Number.isFinite(event.timeInReaction))
         .sort((a, b) => a.timeInReaction - b.timeInReaction)
     : [];
+  $: reactionTransportEventsSorted = Array.isArray(reactionTransportEvents)
+    ? [...reactionTransportEvents]
+        .map((event) => ({
+          ...event,
+          timeInReaction: sanitizeNumber(event?.timeInReaction ?? event?.t),
+          state: Number.parseFloat(event?.state),
+        }))
+        .filter((event) => Number.isFinite(event.timeInReaction) && Number.isFinite(event.state))
+        .sort((a, b) => a.timeInReaction - b.timeInReaction)
+    : [];
   $: playerMarkers = playerEventsSorted
     .map((event, index) => {
       if (!Number.isFinite(event?.timeInReaction)) return null;
@@ -427,6 +443,30 @@
       };
     })
     .filter(Boolean);
+  $: reactionTransportMarkers = reactionTransportEventsSorted
+    .map((event, index) => {
+      if (!Number.isFinite(event?.timeInReaction)) return null;
+      const markerMeta = REACTION_TRANSPORT_MARKERS[event?.state];
+      if (!markerMeta?.icon) return null;
+      const normalized =
+        effectiveDuration <= 0
+          ? 0
+          : clamp01(event.timeInReaction / effectiveDuration);
+      return {
+        id: event?.id ?? `reaction-transport-marker-${index}`,
+        trackId: "reactionTransport",
+        label: markerMeta.label,
+        tone: markerMeta.tone,
+        position: `${(normalized * 100).toFixed(3)}%`,
+        ratio: normalized,
+        timeLabel: formatTimecode(event.timeInReaction),
+        timeInReaction: event.timeInReaction,
+        state: Number(event.state),
+        icon: markerMeta.icon,
+        editable: true,
+      };
+    })
+    .filter(Boolean);
   $: if (effectiveDuration <= 0) {
     hoverViewportRatio = null;
     hoverTimeLabel = null;
@@ -453,12 +493,16 @@
     ? overlayVisibilityEventsSorted[overlayVisibilityEventsSorted.length - 1]
         .timeInReaction
     : 0;
+  $: maxReactionTransportEventTime = reactionTransportEventsSorted.length
+    ? reactionTransportEventsSorted[reactionTransportEventsSorted.length - 1].timeInReaction
+    : 0;
   $: maxEventTime = Math.max(
     maxPlayerEventTime,
     maxVolumeEventTime,
     maxReactionVolumeEventTime,
     maxPlaybackRateEventTime,
     maxOverlayVisibilityEventTime,
+    maxReactionTransportEventTime,
   );
   $: effectiveDuration =
     safeDuration > 0 ? safeDuration : Math.max(maxEventTime, safeCurrentTime);
@@ -507,6 +551,13 @@
       markers: overlayVisibilityMarkers,
       showProgress: false,
       interactive: false,
+    },
+    {
+      id: "reactionTransport",
+      label: "Reaction Play/Pause",
+      markers: reactionTransportMarkers,
+      showProgress: false,
+      interactive: true,
     },
   ];
   $: {
@@ -655,7 +706,9 @@
             ? playbackRateMarkers
             : activeMarker.trackId === "overlayVisibility"
               ? overlayVisibilityMarkers
-            : playerMarkers;
+              : activeMarker.trackId === "reactionTransport"
+                ? reactionTransportMarkers
+              : playerMarkers;
     const exists = markerList.some(
       (marker) =>
         Math.abs(marker.timeInReaction - activeMarker.initialTimeInReaction) <
@@ -1260,6 +1313,18 @@
     closeConfigPopup();
   };
 
+  const normalizeReactionTransportState = (rawState) => rawState === 1 ? 1 : 2;
+
+  const confirmReactionTransportCreation = (rawState) => {
+    if (!pendingConfig) return;
+    const state = normalizeReactionTransportState(rawState);
+    dispatch("createReactionTransportConfig", {
+      timeInReaction: pendingConfig.reactionTime,
+      state,
+    });
+    closeConfigPopup();
+  };
+
   const openMarkerEditor = (marker) => {
     if (!marker) return;
     pendingConfig = null;
@@ -1377,6 +1442,17 @@
     closeMarkerEditor();
   };
 
+  const confirmReactionTransportUpdate = (rawState) => {
+    if (!activeMarker) return;
+    const state = normalizeReactionTransportState(rawState);
+    dispatch("updateReactionTransportConfig", {
+      timeInReaction: activeMarker.timeInReaction,
+      state,
+      previousTimeInReaction: activeMarker.initialTimeInReaction,
+    });
+    closeMarkerEditor();
+  };
+
   const handleActiveMarkerDelete = () => {
     if (!activeMarker) return;
     if (activeMarker.trackId === "volume") {
@@ -1393,6 +1469,10 @@
       });
     } else if (activeMarker.trackId === "overlayVisibility") {
       dispatch("deleteOverlayVisibilityConfig", {
+        timeInReaction: activeMarker.initialTimeInReaction,
+      });
+    } else if (activeMarker.trackId === "reactionTransport") {
+      dispatch("deleteReactionTransportConfig", {
         timeInReaction: activeMarker.initialTimeInReaction,
       });
     } else {
@@ -1876,6 +1956,28 @@
                 : "Overlay will be hidden at this timestamp until another config changes it."}
             </p>
           </div>
+        {:else if pendingConfig.trackId === "reactionTransport"}
+          <div class="flex flex-col gap-2">
+            <p class="text-[11px] font-semibold uppercase tracking-wide text-text-muted">
+              Reaction play/pause
+            </p>
+            <div class="flex gap-2">
+              <button
+                type="button"
+                class="flex-1 rounded-md border border-border-strong/70 bg-surface/90 px-3 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                on:click|stopPropagation={() => confirmReactionTransportCreation(1)}
+              >
+                Play reaction
+              </button>
+              <button
+                type="button"
+                class="flex-1 rounded-md border border-border-strong/70 bg-surface/90 px-3 py-1 font-semibold text-text-primary transition hover:border-border-strong/60 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                on:click|stopPropagation={() => confirmReactionTransportCreation(2)}
+              >
+                Pause reaction
+              </button>
+            </div>
+          </div>
         {/if}
         <button
           type="button"
@@ -1898,7 +2000,9 @@
           ? "Edit volume cue"
           : activeMarker.trackId === "speed"
             ? "Edit playback speed cue"
-            : "Edit playback cue"}
+            : activeMarker.trackId === "reactionTransport"
+              ? "Edit reaction play/pause cue"
+              : "Edit playback cue"}
         on:click|stopPropagation
         on:keydown|stopPropagation
         tabindex="-1"
@@ -2134,6 +2238,31 @@
                 ? "Overlay will be shown at this timestamp when in fullscreen."
                 : "Overlay will be hidden at this timestamp until another config changes it."}
             </p>
+          </div>
+        {:else if activeMarker.trackId === "reactionTransport"}
+          <div class="flex flex-col gap-2">
+            <p class="text-[11px] font-semibold uppercase tracking-wide text-text-muted">
+              Reaction play/pause
+            </p>
+            <p class="text-xs text-text-muted">
+              Current: <span class="font-semibold text-text-primary">{activeMarker.state === 1 ? "Play" : "Pause"}</span>
+            </p>
+            <div class="flex gap-2">
+              <button
+                type="button"
+                class="flex-1 rounded-md border px-3 py-1 font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 {activeMarker.state === 1 ? 'border-accent-primary/60 bg-accent-primary/10 text-accent-primary' : 'border-border-strong/70 bg-surface/90 text-text-primary hover:border-accent-primary/50 hover:text-accent-primary'}"
+                on:click|stopPropagation={() => confirmReactionTransportUpdate(1)}
+              >
+                Play reaction
+              </button>
+              <button
+                type="button"
+                class="flex-1 rounded-md border px-3 py-1 font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 {activeMarker.state === 2 ? 'border-border-strong bg-background/90 text-text-primary' : 'border-border-strong/70 bg-surface/90 text-text-muted hover:border-border-strong/60 hover:text-text-primary'}"
+                on:click|stopPropagation={() => confirmReactionTransportUpdate(2)}
+              >
+                Pause reaction
+              </button>
+            </div>
           </div>
         {/if}
         <div class="flex items-center justify-between gap-2">

@@ -14,6 +14,7 @@
   export let playbackRateConfigs = {};
   export let playbackRateTimeline = [];
   export let overlayVisibilityTimeline = [];
+  export let reactionTransportTrack = [];
   export let reactionCurrentTime = 0;
   export let reactionDuration = 0;
   export let seekMin = 0;
@@ -206,6 +207,26 @@
     return [];
   };
 
+  const normalizeReactionTransportEvents = (timeline) => {
+    if (Array.isArray(timeline) && timeline.length) {
+      return timeline
+        .map((event, index) => {
+          const timeInReaction = parseSeconds(event?.t);
+          const state = Number.parseFloat(event?.state);
+          if (!Number.isFinite(timeInReaction) || Number.isNaN(state)) return null;
+          return {
+            id: `reaction-transport-array-${index}-${timeInReaction}`,
+            type: "reactionTransport",
+            trackId: "reactionTransport",
+            timeInReaction,
+            state,
+          };
+        })
+        .filter(Boolean);
+    }
+    return [];
+  };
+
   $: volumeEvents = normalizeVolumeEvents(
     volumeTimeline,
     volumeConfigs,
@@ -231,6 +252,9 @@
   $: overlayVisibilityEvents = normalizeOverlayVisibilityEvents(
     overlayVisibilityTimeline,
   );
+  $: reactionTransportEvents = normalizeReactionTransportEvents(
+    reactionTransportTrack,
+  );
 
   $: timelineEntries = [
     ...volumeEvents,
@@ -238,6 +262,7 @@
     ...playerEvents,
     ...playbackEvents,
     ...overlayVisibilityEvents,
+    ...reactionTransportEvents,
   ].sort((a, b) => a.timeInReaction - b.timeInReaction);
 
   $: summary = {
@@ -247,6 +272,7 @@
     player: playerEvents.length,
     speed: playbackEvents.length,
     overlayVisibility: overlayVisibilityEvents.length,
+    reactionTransport: reactionTransportEvents.length,
     spanStart: timelineEntries[0]?.timeInReaction ?? null,
     spanEnd:
       timelineEntries[timelineEntries.length - 1]?.timeInReaction ?? null,
@@ -370,6 +396,7 @@
       {reactionVolumeEvents}
       playbackRateEvents={playbackEvents}
       overlayVisibilityEvents={overlayVisibilityEvents}
+      reactionTransportEvents={reactionTransportEvents}
       {allowPlaybackRate}
       on:createPlayerConfig={(event) =>
         dispatch("createPlayerConfig", event.detail)}
@@ -381,6 +408,8 @@
         dispatch("createPlaybackRateConfig", event.detail)}
       on:createOverlayVisibilityConfig={(event) =>
         dispatch("createOverlayVisibilityConfig", event.detail)}
+      on:createReactionTransportConfig={(event) =>
+        dispatch("createReactionTransportConfig", event.detail)}
       on:updatePlayerConfig={(event) =>
         dispatch("updatePlayerConfig", event.detail)}
       on:deletePlayerConfig={(event) =>
@@ -401,6 +430,10 @@
         dispatch("updateOverlayVisibilityConfig", event.detail)}
       on:deleteOverlayVisibilityConfig={(event) =>
         dispatch("deleteOverlayVisibilityConfig", event.detail)}
+      on:updateReactionTransportConfig={(event) =>
+        dispatch("updateReactionTransportConfig", event.detail)}
+      on:deleteReactionTransportConfig={(event) =>
+        dispatch("deleteReactionTransportConfig", event.detail)}
       on:seek={(event) => dispatch("seek", event.detail)}
     />
   </div>

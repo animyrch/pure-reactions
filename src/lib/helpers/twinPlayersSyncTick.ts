@@ -562,8 +562,8 @@ export function computeTwinPlayersSyncTick(
       || cursorRTTime > reactionCurrentTime + 0.0001;
 
     if (cursorIsStale) {
-      // Re-position cursor to upperBound of previousReactionTime, then enforce state.
-      rtIdx = upperBoundByT(reactionTransportTimeline, previousReactionTime);
+      // Re-position cursor to upperBound of reactionCurrentTime, then enforce state.
+      rtIdx = upperBoundByT(reactionTransportTimeline, reactionCurrentTime);
       const lastEntry = reactionTransportTimeline[Math.max(0, rtIdx - 1)];
       if (lastEntry && Number.isFinite(Number(lastEntry?.t)) && Number(lastEntry.t) <= reactionCurrentTime) {
         const rawRTState = Number(lastEntry?.state);
@@ -616,8 +616,8 @@ export function computeTwinPlayersSyncTick(
     const stateNextEffective = Number(stateNext?.t);
     const stateNextReaction = Number.isFinite(stateNextEffective) ? stateNextEffective + timeOffset : undefined;
 
-    const rtIdx2 = Number.isFinite(nextTracking.reactionTransportTrackIndex) ? Number(nextTracking.reactionTransportTrackIndex) : 0;
-    const rtNext = reactionTransportTimeline[Math.max(0, Math.min(rtIdx2, reactionTransportTimeline.length - 1))];
+    const rtIdxForBoundary = Number.isFinite(nextTracking.reactionTransportTrackIndex) ? Number(nextTracking.reactionTransportTrackIndex) : 0;
+    const rtNext = reactionTransportTimeline[Math.max(0, Math.min(rtIdxForBoundary, reactionTransportTimeline.length - 1))];
     const rtNextTime = Number(rtNext?.t);
     const rtNextReaction = Number.isFinite(rtNextTime) ? rtNextTime : undefined;
 

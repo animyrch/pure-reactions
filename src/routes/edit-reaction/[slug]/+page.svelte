@@ -254,6 +254,7 @@
           playbackRateConfigs={$state.playbackRateConfigs}
           playbackRateTimeline={$state.playbackRateTimeline}
           overlayVisibilityTimeline={$state.overlayVisibilityTimeline}
+          reactionTransportTrack={$state.reactionTransportTrack}
           reactionCurrentTime={$state.reactionCurrentTime}
           reactionDuration={$state.reactionDuration}
           playerEventTimeline={$state.playerEventTimeline}
@@ -276,6 +277,9 @@
           onDeletePlaybackRateConfig={actions.deletePlaybackRateConfig}
           onUpdateOverlayVisibilityConfig={actions.updateOverlayVisibilityConfig}
           onDeleteOverlayVisibilityConfig={actions.deleteOverlayVisibilityConfig}
+          onCreateReactionTransportConfig={actions.createReactionTransportConfig}
+          onUpdateReactionTransportConfig={actions.updateReactionTransportConfig}
+          onDeleteReactionTransportConfig={actions.deleteReactionTransportConfig}
           onSetReactionVideoId={handleSetReactionVideoId}
           onSetOffsetStartTime={handleSetOffsetStartTime}
           onSetIntroBufferTime={handleSetIntroBufferTime}

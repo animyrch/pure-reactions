@@ -3787,6 +3787,23 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     performPostSaveRewind(referenceTime);
   };
 
+  const persistReactionTransportTrackMap = async (map: Map<string, { t: number; state: number }>, referenceTime: number) => {
+    const normalizedTimeline = Array.from(map.values()).sort((a, b) => a.t - b.t);
+
+    await updateFirebaseDocument({
+      reactionTransportTrack: normalizedTimeline.map((entry) => ({
+        t: Number(entry.t),
+        state: Number(entry.state)
+      }))
+    });
+
+    updateState({
+      reactionTransportTrack: normalizedTimeline
+    });
+
+    performPostSaveRewind(referenceTime);
+  };
+
   const createPlayerConfig = async ({ timeInReaction, targetTime, state: rawState }: CreatePlayerConfigParams) => {
     const snapshot = get(state);
     const sanitizedReactionTime = Number.isFinite(timeInReaction) ? Math.max(0, timeInReaction) : 0;
@@ -4264,6 +4281,98 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       await persistOverlayVisibilityTimelineMap(timelineMap, sanitizedReactionTime);
     } catch (error) {
       console.error('Failed to delete overlay visibility config', error);
+      throw error;
+    }
+  };
+
+  const createReactionTransportConfig = async ({ timeInReaction, state: rawState }: { timeInReaction: number; state: number }) => {
+    const snapshot = get(state);
+    const sanitizedReactionTime = Number.isFinite(timeInReaction) ? Math.max(0, timeInReaction) : 0;
+    const roundedReactionTime = roundReactionTime(sanitizedReactionTime);
+    const sanitizedState = rawState === 1 ? 1 : 2;
+
+    const existingTimeline = Array.isArray(snapshot.reactionTransportTrack) ? snapshot.reactionTransportTrack : [];
+    const timelineMap = new Map<string, { t: number; state: number }>();
+    existingTimeline.forEach((entry) => {
+      if (entry && Number.isFinite(entry.t)) {
+        timelineMap.set(Number(entry.t).toFixed(3), { t: Number(entry.t), state: Number(entry.state) });
+      }
+    });
+    timelineMap.set(roundedReactionTime.toFixed(3), { t: roundedReactionTime, state: sanitizedState });
+
+    try {
+      await persistReactionTransportTrackMap(timelineMap, roundedReactionTime);
+    } catch (error) {
+      console.error('Failed to create reaction transport config', error);
+      throw error;
+    }
+  };
+
+  const updateReactionTransportConfig = async ({ timeInReaction, state: rawState, previousTimeInReaction }: { timeInReaction: number; state: number; previousTimeInReaction?: number }) => {
+    const snapshot = get(state);
+    const existingTimeline = Array.isArray(snapshot.reactionTransportTrack) ? snapshot.reactionTransportTrack : [];
+    const timelineMap = new Map<string, { t: number; state: number }>();
+    existingTimeline.forEach((entry) => {
+      if (entry && Number.isFinite(entry.t)) {
+        timelineMap.set(Number(entry.t).toFixed(3), { t: Number(entry.t), state: Number(entry.state) });
+      }
+    });
+
+    const sanitizedReactionTime = Number.isFinite(timeInReaction) ? Math.max(0, timeInReaction) : 0;
+    const roundedReactionTime = roundReactionTime(sanitizedReactionTime);
+    const sanitizedPreviousTime =
+      typeof previousTimeInReaction === 'number' && Number.isFinite(previousTimeInReaction)
+        ? Math.max(0, previousTimeInReaction)
+        : sanitizedReactionTime;
+    const roundedPreviousTime = roundReactionTime(sanitizedPreviousTime);
+    const previousKey = roundedPreviousTime.toFixed(3);
+    const nextKey = roundedReactionTime.toFixed(3);
+    const sanitizedState = rawState === 1 ? 1 : 2;
+
+    const currentEntry = timelineMap.get(previousKey);
+    if (!currentEntry) {
+      console.warn('updateReactionTransportConfig: entry not found at', previousKey);
+      return;
+    }
+
+    const resolvedState = Number.isFinite(rawState) ? sanitizedState : (currentEntry?.state ?? 1);
+
+    if (nextKey !== previousKey) {
+      timelineMap.delete(previousKey);
+    }
+    timelineMap.set(nextKey, { t: roundedReactionTime, state: resolvedState });
+
+    try {
+      await persistReactionTransportTrackMap(timelineMap, roundedReactionTime);
+    } catch (error) {
+      console.error('Failed to update reaction transport config', error);
+      throw error;
+    }
+  };
+
+  const deleteReactionTransportConfig = async ({ timeInReaction }: { timeInReaction: number }) => {
+    const snapshot = get(state);
+    const existingTimeline = Array.isArray(snapshot.reactionTransportTrack) ? snapshot.reactionTransportTrack : [];
+    const timelineMap = new Map<string, { t: number; state: number }>();
+    existingTimeline.forEach((entry) => {
+      if (entry && Number.isFinite(entry.t)) {
+        timelineMap.set(Number(entry.t).toFixed(3), { t: Number(entry.t), state: Number(entry.state) });
+      }
+    });
+
+    const sanitizedReactionTime = Number.isFinite(timeInReaction) ? Math.max(0, timeInReaction) : 0;
+    const key = roundReactionTime(sanitizedReactionTime).toFixed(3);
+
+    if (!timelineMap.has(key)) {
+      console.warn('deleteReactionTransportConfig: entry not found at', key);
+      return;
+    }
+    timelineMap.delete(key);
+
+    try {
+      await persistReactionTransportTrackMap(timelineMap, sanitizedReactionTime);
+    } catch (error) {
+      console.error('Failed to delete reaction transport config', error);
       throw error;
     }
   };
@@ -4788,6 +4897,9 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       deletePlaybackRateConfig,
       updateOverlayVisibilityConfig,
       deleteOverlayVisibilityConfig,
+      createReactionTransportConfig,
+      updateReactionTransportConfig,
+      deleteReactionTransportConfig,
       setIsPublished,
       setIsUnpublished,
       openWithFullscreen,

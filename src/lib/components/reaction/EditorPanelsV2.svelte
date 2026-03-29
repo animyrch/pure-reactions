@@ -27,6 +27,7 @@
   export let playbackRateConfigs = {};
   export let playbackRateTimeline = [];
   export let overlayVisibilityTimeline = [];
+  export let reactionTransportTrack = [];
   export let reactionCurrentTime = 0;
   export let reactionDuration = 0;
   export let playerEventTimeline = [];
@@ -50,6 +51,9 @@
   export let onDeletePlaybackRateConfig = async () => {};
   export let onUpdateOverlayVisibilityConfig = async () => {};
   export let onDeleteOverlayVisibilityConfig = async () => {};
+  export let onCreateReactionTransportConfig = async () => {};
+  export let onUpdateReactionTransportConfig = async () => {};
+  export let onDeleteReactionTransportConfig = async () => {};
 
   export let onSetReactionVideoId = () => {};
   export let onSetOffsetStartTime = () => {};
@@ -435,6 +439,42 @@
     }
   };
 
+  const handleCreateReactionTransportConfig = async (event) => {
+    const detail = event?.detail;
+    if (!detail) return;
+    try {
+      await onCreateReactionTransportConfig(detail);
+      showToast("Reaction transport cue added.", TOASTS.SUCCESS);
+    } catch (error) {
+      console.error("Failed to add reaction transport config", error);
+      showToast("Unable to add that cue. Try again.", TOASTS.WARNING);
+    }
+  };
+
+  const handleUpdateReactionTransportConfig = async (event) => {
+    const detail = event?.detail;
+    if (!detail) return;
+    try {
+      await onUpdateReactionTransportConfig(detail);
+      showToast("Reaction transport cue updated.", TOASTS.SUCCESS);
+    } catch (error) {
+      console.error("Failed to update reaction transport config", error);
+      showToast("Unable to update that cue. Try again.", TOASTS.WARNING);
+    }
+  };
+
+  const handleDeleteReactionTransportConfig = async (event) => {
+    const detail = event?.detail;
+    if (!detail) return;
+    try {
+      await onDeleteReactionTransportConfig(detail);
+      showToast("Reaction transport cue removed.", TOASTS.SUCCESS);
+    } catch (error) {
+      console.error("Failed to delete reaction transport config", error);
+      showToast("Unable to remove that cue. Try again.", TOASTS.WARNING);
+    }
+  };
+
   const handleSeek = (event) => {
     const time = event?.detail?.time;
     if (Number.isFinite(time)) {
@@ -789,6 +829,7 @@
               {playbackRateConfigs}
               {playbackRateTimeline}
               {overlayVisibilityTimeline}
+              {reactionTransportTrack}
               {reactionCurrentTime}
               {reactionDuration}
               seekMin={offsetStartTime}
@@ -802,6 +843,7 @@
               on:createReactionVolumeConfig={handleCreateReactionVolumeConfig}
               on:createPlaybackRateConfig={handleCreatePlaybackRateConfig}
               on:createOverlayVisibilityConfig={handleCreateOverlayVisibilityConfig}
+              on:createReactionTransportConfig={handleCreateReactionTransportConfig}
               on:updatePlayerConfig={handleUpdatePlayerConfig}
               on:deletePlayerConfig={handleDeletePlayerConfig}
               on:updateVolumeConfig={handleUpdateVolumeConfig}
@@ -812,6 +854,8 @@
               on:deletePlaybackRateConfig={handleDeletePlaybackRateConfig}
               on:updateOverlayVisibilityConfig={handleUpdateOverlayVisibilityConfig}
               on:deleteOverlayVisibilityConfig={handleDeleteOverlayVisibilityConfig}
+              on:updateReactionTransportConfig={handleUpdateReactionTransportConfig}
+              on:deleteReactionTransportConfig={handleDeleteReactionTransportConfig}
               on:seek={handleSeek}
             />
           </div>
