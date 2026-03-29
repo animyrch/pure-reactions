@@ -51,6 +51,7 @@ import {
 } from '$lib/helpers/twinPlayersTimeline';
 import {
   computeTwinPlayersSyncTick,
+  type TwinPlayersSyncAction,
   type TwinPlayersPlayerState,
   type TwinPlayersSyncTracking
 } from '$lib/helpers/twinPlayersSyncTick';
@@ -522,6 +523,10 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
   let changingVolume = false;
   let changingReactionVolume = false;
   let changingSpeed = false;
+  // Set to true after the sync loop programmatically pauses the reaction video via
+  // reactionTransportTrack, so handleStateChangeInReactionVideo can skip the cascade
+  // that would also pause the original (which should keep playing).
+  let lastReactionControlWasProgrammatic = false;
   const syncTracking: TwinPlayersSyncTracking = {
     lastOriginalTargetTime: undefined,
     lastOriginalSeekAt: 0,
@@ -1354,6 +1359,12 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       changingReactionVolume = nextGuards.changingReactionVolume;
       changingSpeed = nextGuards.changingSpeed;
 
+      // If the sync loop just programmatically paused the reaction via reactionTransportTrack,
+      // mark the flag so handleStateChangeInReactionVideo skips cascading pauseOriginalVideo().
+      if (filteredActions.some((a: TwinPlayersSyncAction) => a.type === 'applyReactionStateChange' && Number(a.nextState) === ytStates.PAUSED)) {
+        lastReactionControlWasProgrammatic = true;
+      }
+
       // Apply soft-sync action if present
       if (softSyncAction && 'rate' in softSyncAction && 'durationMs' in softSyncAction) {
         // Clear any existing soft-sync timeout
@@ -1514,7 +1525,14 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       previousState !== YT.PlayerState.BUFFERING &&
       (nextState === YT.PlayerState.PAUSED || nextState === YT.PlayerState.BUFFERING)
     ) {
-      pauseOriginalVideo();
+      // If the reaction was paused programmatically by the reactionTransportTrack, the original
+      // should keep playing — that's the whole purpose of the track. Only cascade to the original
+      // when this is a genuine user-initiated pause.
+      if (lastReactionControlWasProgrammatic) {
+        lastReactionControlWasProgrammatic = false;
+      } else {
+        pauseOriginalVideo();
+      }
     }
 
     // When reaction playback begins (including resume), bring the original into the
