@@ -470,17 +470,10 @@
   }
   $: tracks = [
     {
-      id: "play",
-      label: "Play cues",
-      markers: playMarkers,
+      id: "originalVideo",
+      label: "Original video",
+      markers: playerMarkers,
       showProgress: true,
-      interactive: true,
-    },
-    {
-      id: "pause",
-      label: "Pause cues",
-      markers: pauseMarkers,
-      showProgress: false,
       interactive: true,
     },
     ...(allowPlaybackRate
@@ -1105,7 +1098,7 @@
       hoverTimeLabel = null;
       return;
     }
-    const trackId = timelineRegion?.dataset?.trackId ?? "play";
+    const trackId = timelineRegion?.dataset?.trackId ?? "originalVideo";
     const coordinates = getTimelineCoordinates(
       event,
       timelineRegion.getBoundingClientRect(),
@@ -1185,7 +1178,7 @@
       ratio,
       reactionTime,
       targetTime,
-      trackId: "play",
+      trackId: "originalVideo",
     };
     const reactionFormatted = formatSecondsForInput(reactionTime);
     pendingReactionMinutesInput = reactionFormatted.minutes;
@@ -1764,26 +1757,22 @@
             </div>
           </div>
         </div>
-        {#if pendingConfig.trackId === "play" || pendingConfig.trackId === "pause"}
+        {#if pendingConfig.trackId === "originalVideo"}
           <div class="flex flex-wrap gap-2">
-            {#if pendingConfig.trackId === "play"}
-              <button
-                type="button"
-                class="flex-1 rounded-md border border-border-strong/70 bg-surface/90 px-2 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
-                on:click|stopPropagation={() => confirmConfigCreation(1)}
-              >
-                Play original here
-              </button>
-            {/if}
-            {#if pendingConfig.trackId === "pause"}
-              <button
-                type="button"
-                class="flex-1 rounded-md border border-border-strong/70 bg-surface/90 px-2 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
-                on:click|stopPropagation={() => confirmConfigCreation(2)}
-              >
-                Pause original here
-              </button>
-            {/if}
+            <button
+              type="button"
+              class="flex-1 rounded-md border border-border-strong/70 bg-surface/90 px-2 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+              on:click|stopPropagation={() => confirmConfigCreation(1)}
+            >
+              Play original here
+            </button>
+            <button
+              type="button"
+              class="flex-1 rounded-md border border-border-strong/70 bg-surface/90 px-2 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+              on:click|stopPropagation={() => confirmConfigCreation(2)}
+            >
+              Pause original here
+            </button>
           </div>
         {:else if pendingConfig.trackId === "speed"}
           <div class="flex flex-col gap-2">
@@ -2197,15 +2186,9 @@
     Timeline position {formatTimecode(safeCurrentTime)} of {formatTimecode(
       safeDuration,
     )}.
-    {#if playMarkers.length}
-      Play cues: {#each playMarkers as marker, index}{marker.label} at {marker.timeLabel}{index <
-        playMarkers.length - 1
-          ? "; "
-          : "."}{/each}
-    {/if}
-    {#if pauseMarkers.length}
-      Pause cues: {#each pauseMarkers as marker, index}{marker.label} at {marker.timeLabel}{index <
-        pauseMarkers.length - 1
+    {#if playerMarkers.length}
+      Original video: {#each playerMarkers as marker, index}{marker.label} at {marker.timeLabel}{index <
+        playerMarkers.length - 1
           ? "; "
           : "."}{/each}
     {/if}
