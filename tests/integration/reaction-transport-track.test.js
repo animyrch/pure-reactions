@@ -201,6 +201,37 @@ describe('computeTwinPlayersSyncTick — reaction transport track', () => {
         expect(pauseActions).toHaveLength(0);
     });
 
+    it('does NOT emit seek corrections for the original when transport track pauses the reaction (anti-loop)', () => {
+        // Regression: while reaction is transport-paused, reactionCurrentTime is frozen so
+        // computedTargetTime never advances. Without the fix, drift grows → hard seek fires
+        // every ~3.5 s → original loops back a few seconds.
+        const frozenReactionTime = 115.8;
+        const input = makeBaseInput({
+            isFineTuneModeOn: true,
+            reactionTransportTrack: [
+                { t: 0, state: YT_STATES.PLAYING },
+                { t: 115, state: YT_STATES.PAUSED },
+            ],
+            reactionPlayerState: YT_STATES.PAUSED,
+            reactionCurrentTime: frozenReactionTime,
+            previousReactionTime: frozenReactionTime,
+            playerConfigs: [{ t: 0, state: YT_STATES.PLAYING, targetTime: 0 }],
+            currentStateOriginalVideo: YT_STATES.PLAYING,
+            originalPlayerState: YT_STATES.PLAYING,
+            // Original has drifted far ahead of the frozen target (simulates several seconds of free play)
+            originalCurrentTime: 125,
+            originalDuration: 300,
+            now: 1000,
+        });
+
+        const { actions } = computeTwinPlayersSyncTick(
+            input,
+            makeTracking({ lastOriginalSeekAt: 0 }) // cooldown expired → seek would normally fire
+        );
+        const seekActions = actions.filter(a => a.type === 'applyOriginalStateChange');
+        expect(seekActions).toHaveLength(0);
+    });
+
     it('advances the reactionTransportTrackIndex in tracking', () => {
         const input = makeBaseInput({
             reactionTransportTrack: [

@@ -515,8 +515,11 @@ export function computeTwinPlayersSyncTick(
     // If we're now in sync and soft-sync is active, we'll let the orchestrator reset it
     // No action needed here
   } else {
-    // Hard-sync: use existing seek logic for large drift or when soft-sync not applicable
-    const shouldApplySeek = targetMismatch && (
+    // Hard-sync: use existing seek logic for large drift or when soft-sync not applicable.
+    // When the transport track is pausing the reaction, reactionCurrentTime is frozen so
+    // computedTargetTime never advances — suppress seek corrections to let the original
+    // play freely without being looped back to a stale target every ~3.5 s.
+    const shouldApplySeek = !transportTrackIntendsPause && targetMismatch && (
       isMobileLazySyncEnabled
         ? (Number.isFinite(driftAbs)
             && driftAbs > 2.0
