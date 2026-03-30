@@ -232,6 +232,142 @@ describe('computeTwinPlayersSyncTick — reaction transport track', () => {
         expect(seekActions).toHaveLength(0);
     });
 
+    it('virtual-time: stop-original config fires during transport-pause window', () => {
+        // Regression: with frozen reactionCurrentTime, config events at later times never
+        // fired. With virtual reaction time (advancing via original clock), they do.
+        //
+        // Setup:
+        //   - Transport PAUSE at reaction t=100. Reaction frozen at 100.
+        //   - transportPauseStart saved: reactionTime=100, originalTime=50.
+        //   - Original has played 22s since pause start → originalCurrentTime=72.
+        //   - virtualReactionTime = 100 + (72-50) = 122.
+        //   - playerConfig says: PAUSED (stop original) at t=120 (effective=120, no timeOffset).
+        //   - Original is currently PLAYING → shouldApplyState=true → PAUSE action fires.
+        const input = makeBaseInput({
+            isFineTuneModeOn: true,
+            reactionTransportTrack: [
+                { t: 0, state: YT_STATES.PLAYING },
+                { t: 100, state: YT_STATES.PAUSED },
+            ],
+            reactionPlayerState: YT_STATES.PAUSED,
+            reactionCurrentTime: 100,
+            previousReactionTime: 100,
+            // Original config: play from 0, then stop at reaction-time 120
+            playerConfigs: [
+                { t: 0, state: YT_STATES.PLAYING, targetTime: 0 },
+                { t: 120, state: YT_STATES.PAUSED, targetTime: 70 },
+            ],
+            currentStateOriginalVideo: YT_STATES.PLAYING,
+            originalPlayerState: YT_STATES.PLAYING,
+            originalCurrentTime: 72,
+            originalDuration: 300,
+            now: 2000,
+        });
+
+        // Tracking with saved pause-start values (as would be set on the tick when PAUSE fired)
+        const tracking = makeTracking({
+            lastOriginalSeekAt: 0,
+            transportPauseStartReactionTime: 100,
+            transportPauseStartOriginalTime: 50,
+            lastVirtualReactionTime: 121, // previous virtual time
+        });
+
+        const { actions } = computeTwinPlayersSyncTick(input, tracking);
+        const pauseAction = actions.find(
+            a => a.type === 'applyOriginalStateChange' && a.nextState === YT_STATES.PAUSED
+        );
+        expect(pauseAction).toBeDefined();
+    });
+
+    it('virtual-time: resume-reaction transport config fires during transport-pause window', () => {
+        // Regression: with frozen reactionCurrentTime, transport PLAY entry at a later time
+        // never fires. With virtual reaction time it does.
+        //
+        // Setup:
+        //   - Transport PAUSE at t=100, PLAY at t=108.
+        //   - Reaction frozen at 100. virtualReactionTime = 100 + (58-50) = 108.
+        //   - previousVirtualReactionTime = 107 → the PLAY entry at 108 is in the window (107, 108].
+        //   - Reaction is currently PAUSED → applyReactionStateChange(PLAYING) fires.
+        const input = makeBaseInput({
+            isFineTuneModeOn: true,
+            reactionTransportTrack: [
+                { t: 0, state: YT_STATES.PLAYING },
+                { t: 100, state: YT_STATES.PAUSED },
+                { t: 108, state: YT_STATES.PLAYING },
+            ],
+            reactionPlayerState: YT_STATES.PAUSED,
+            reactionCurrentTime: 100,
+            previousReactionTime: 100,
+            playerConfigs: [{ t: 0, state: YT_STATES.PLAYING, targetTime: 0 }],
+            currentStateOriginalVideo: YT_STATES.PLAYING,
+            originalPlayerState: YT_STATES.PLAYING,
+            originalCurrentTime: 58,
+            originalDuration: 300,
+            now: 3000,
+        });
+
+        const tracking = makeTracking({
+            transportPauseStartReactionTime: 100,
+            transportPauseStartOriginalTime: 50,
+            lastVirtualReactionTime: 107, // previous virtual time (just before PLAY entry at 108)
+            reactionTransportTrackIndex: 2, // cursor pointing at PLAY entry at 108
+        });
+
+        const { actions } = computeTwinPlayersSyncTick(input, tracking);
+        const resumeAction = actions.find(
+            a => a.type === 'applyReactionStateChange' && a.nextState === YT_STATES.PLAYING
+        );
+        expect(resumeAction).toBeDefined();
+    });
+
+    it('virtual-time: saves transportPauseStart values when transport PAUSE fires', () => {
+        // When the transport PAUSE action fires, nextTracking must record the current
+        // reaction and original times so subsequent ticks can compute virtual time.
+        const input = makeBaseInput({
+            reactionTransportTrack: [
+                { t: 0, state: YT_STATES.PLAYING },
+                { t: 10, state: YT_STATES.PAUSED },
+            ],
+            reactionPlayerState: YT_STATES.PLAYING,
+            reactionCurrentTime: 10.5,
+            previousReactionTime: 9.5,
+            originalCurrentTime: 40,
+        });
+
+        const { nextTracking } = computeTwinPlayersSyncTick(input, makeTracking());
+        expect(nextTracking.transportPauseStartReactionTime).toBe(10.5);
+        expect(nextTracking.transportPauseStartOriginalTime).toBe(40);
+    });
+
+    it('virtual-time: clears transportPauseStart values when transport PLAY fires via virtual time', () => {
+        // When the transport PLAY entry fires (via the virtual-time cursor), the saved
+        // pause-start values must be cleared so the next tick uses real reaction time.
+        const input = makeBaseInput({
+            reactionTransportTrack: [
+                { t: 0, state: YT_STATES.PLAYING },
+                { t: 100, state: YT_STATES.PAUSED },
+                { t: 108, state: YT_STATES.PLAYING },
+            ],
+            reactionPlayerState: YT_STATES.PAUSED,
+            reactionCurrentTime: 100,
+            previousReactionTime: 100,
+            playerConfigs: [{ t: 0, state: YT_STATES.PLAYING, targetTime: 0 }],
+            originalCurrentTime: 58,
+            now: 3000,
+        });
+
+        const tracking = makeTracking({
+            transportPauseStartReactionTime: 100,
+            transportPauseStartOriginalTime: 50,
+            lastVirtualReactionTime: 107,
+            reactionTransportTrackIndex: 2,
+        });
+
+        const { nextTracking } = computeTwinPlayersSyncTick(input, tracking);
+        expect(nextTracking.transportPauseStartReactionTime).toBeUndefined();
+        expect(nextTracking.transportPauseStartOriginalTime).toBeUndefined();
+    });
+
     it('advances the reactionTransportTrackIndex in tracking', () => {
         const input = makeBaseInput({
             reactionTransportTrack: [

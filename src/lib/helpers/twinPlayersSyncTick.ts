@@ -22,6 +22,22 @@ export type TwinPlayersSyncTracking = {
   lastSoftSyncAt: number;
   softSyncIsActive: boolean;
   softSyncResetTimeoutId?: number;
+  /**
+   * Saved reaction time at the moment the transport track fired a PAUSE action.
+   * Together with transportPauseStartOriginalTime, enables a virtual reaction time
+   * that keeps advancing (via the original video clock) so config events continue
+   * firing even while the reaction player is frozen.
+   */
+  transportPauseStartReactionTime?: number;
+  /**
+   * Saved original video time at the moment the transport track fired a PAUSE action.
+   */
+  transportPauseStartOriginalTime?: number;
+  /**
+   * The virtual reaction time from the previous tick, used as the "previous" boundary
+   * for the next tick's event-window check.
+   */
+  lastVirtualReactionTime?: number;
 };
 
 export type TwinPlayersPlayerState = {
@@ -164,6 +180,31 @@ export function computeTwinPlayersSyncTick(
   const previousReactionTime = Number.isFinite(input.previousReactionTime)
     ? Number(input.previousReactionTime)
     : reactionCurrentTime;
+
+  // Compute actual original time early — needed for virtual reaction time below.
+  const actualOriginalTime = Number.isFinite(input.originalCurrentTime) ? Number(input.originalCurrentTime) : Number.NaN;
+
+  // Virtual reaction time: while the transport track has the reaction paused, the reaction
+  // player clock is frozen. All timeline/config lookups would stall because every entry
+  // "in the future" (e.g. stop-original at t=120, resume-reaction at t=122) would never
+  // fire. virtualReactionTime advances at the same rate as the original video clock during
+  // a transport-pause window, so those events still fire at the right moment.
+  //
+  // transportPauseStart* are saved in tracking when the transport-pause action fires; they
+  // are cleared when the transport-play action fires. Until then:
+  //   virtualReactionTime = pauseStartReactionTime + (originalNow - pauseStartOriginalTime)
+  const savedPauseReactionTime = nextTracking.transportPauseStartReactionTime;
+  const savedPauseOriginalTime = nextTracking.transportPauseStartOriginalTime;
+  const hasActiveTransportPause =
+    Number.isFinite(savedPauseReactionTime) &&
+    Number.isFinite(savedPauseOriginalTime) &&
+    Number.isFinite(actualOriginalTime);
+  const virtualReactionTime: number = hasActiveTransportPause
+    ? (savedPauseReactionTime as number) + (actualOriginalTime - (savedPauseOriginalTime as number))
+    : reactionCurrentTime;
+  const previousVirtualReactionTime: number = Number.isFinite(nextTracking.lastVirtualReactionTime)
+    ? (nextTracking.lastVirtualReactionTime as number)
+    : previousReactionTime;
 
   // 1) Volume + mobile arbitration
   if (input.isMobileAudioEnvironment) {
@@ -321,12 +362,14 @@ export function computeTwinPlayersSyncTick(
 
   // When the reactionTransportTrack is responsible for the reaction pause, the original
   // should follow its own configured state — don't hold it just because isFineTuneModeOn.
+  // Use virtualReactionTime so this check stays correct even as virtual time advances
+  // beyond the transport-pause point.
   const rtTrackForHoldCheck = Array.isArray(input.reactionTransportTrack) ? input.reactionTransportTrack : [];
   let transportTrackIntendsPause = false;
-  if (rtTrackForHoldCheck.length > 0 && Number.isFinite(reactionCurrentTime)) {
+  if (rtTrackForHoldCheck.length > 0 && Number.isFinite(virtualReactionTime)) {
     for (let i = rtTrackForHoldCheck.length - 1; i >= 0; i--) {
       const entryTime = Number(rtTrackForHoldCheck[i]?.t);
-      if (Number.isFinite(entryTime) && entryTime <= reactionCurrentTime + 0.5) {
+      if (Number.isFinite(entryTime) && entryTime <= virtualReactionTime + 0.5) {
         transportTrackIntendsPause = Number(rtTrackForHoldCheck[i]?.state) === yt.PAUSED;
         break;
       }
@@ -339,8 +382,10 @@ export function computeTwinPlayersSyncTick(
 
   const timeline = Array.isArray(input.stateTimeline) ? input.stateTimeline : [];
 
-  const previousEffective = Number(previousReactionTime) - timeOffset;
-  const currentEffective = Number(reactionCurrentTime) - timeOffset;
+  // Use virtualReactionTime as the config-lookup clock so that timeline events fire
+  // during transport-pause windows even though the reaction player clock is frozen.
+  const previousEffective = Number(previousVirtualReactionTime) - timeOffset;
+  const currentEffective = Number(virtualReactionTime) - timeOffset;
   const movingForward = currentEffective >= previousEffective - 0.0001;
 
   let workingState = input.currentStateOriginalVideo;
@@ -392,7 +437,7 @@ export function computeTwinPlayersSyncTick(
     };
   }
 
-  const config = getCurrentStateFromStateConfigs(reactionCurrentTime, input.playerConfigs, timeOffset);
+  const config = getCurrentStateFromStateConfigs(virtualReactionTime, input.playerConfigs, timeOffset);
   const rawConfigState = Number(config.state);
   const configState = Number.isFinite(rawConfigState) ? rawConfigState : -1;
   const effectiveConfigState =
@@ -400,7 +445,6 @@ export function computeTwinPlayersSyncTick(
 
   const baseTargetTime = Number(config.time ?? 0);
   const anchorTime = Number(config.closestSmallerTimeCode ?? currentEffective);
-  const actualOriginalTime = Number.isFinite(input.originalCurrentTime) ? Number(input.originalCurrentTime) : Number.NaN;
   const originalDuration = Number.isFinite(input.originalDuration) && Number(input.originalDuration) > 0
     ? Number(input.originalDuration)
     : Number.NaN;
@@ -516,9 +560,13 @@ export function computeTwinPlayersSyncTick(
     // No action needed here
   } else {
     // Hard-sync: use existing seek logic for large drift or when soft-sync not applicable.
-    // When the transport track is pausing the reaction, reactionCurrentTime is frozen so
-    // computedTargetTime never advances — suppress seek corrections to let the original
-    // play freely without being looped back to a stale target every ~3.5 s.
+    // With virtualReactionTime advancing during transport pauses, computedTargetTime also
+    // advances at the same rate as the original, so drift stays near zero and this guard
+    // rarely matters. It is kept as a safety net so that on the very first tick after
+    // transport-pause fires (before transportPauseStart* is populated), a large
+    // initial drift cannot trigger a spurious seek that would interrupt free playback.
+    // State-change actions (shouldApplyState path) are NOT gated by this guard, so
+    // config-driven stops and plays (e.g. "stop original at t=120") still fire correctly.
     const shouldApplySeek = !transportTrackIntendsPause && targetMismatch && (
       isMobileLazySyncEnabled
         ? (Number.isFinite(driftAbs)
@@ -565,27 +613,29 @@ export function computeTwinPlayersSyncTick(
     };
   }
 
-  // 3.5) Reaction transport track: control reaction video play/pause state
+  // 3.5) Reaction transport track: control reaction video play/pause state.
+  // All cursor operations use virtualReactionTime so that upcoming events (resume reaction,
+  // stop original, etc.) fire even while the reaction player clock is frozen.
   const reactionTransportTimeline = Array.isArray(input.reactionTransportTrack) ? input.reactionTransportTrack : [];
-  const movingForwardRT = reactionCurrentTime >= previousReactionTime - 0.0001;
+  const movingForwardRT = virtualReactionTime >= previousVirtualReactionTime - 0.0001;
 
   if (reactionTransportTimeline.length) {
     let rtIdx = Number.isFinite(nextTracking.reactionTransportTrackIndex)
       ? Number(nextTracking.reactionTransportTrackIndex)
       : 0;
 
-    // Determine if the cursor is stale: index past end, or entry at cursor is ahead of current time.
+    // Determine if the cursor is stale: index past end, or entry at cursor is ahead of virtual time.
     const clampedForCheck = Math.max(0, Math.min(rtIdx, reactionTransportTimeline.length - 1));
     const cursorRTTime = Number(reactionTransportTimeline[clampedForCheck]?.t);
     const cursorIsStale = rtIdx >= reactionTransportTimeline.length
       || !Number.isFinite(cursorRTTime)
-      || cursorRTTime > reactionCurrentTime + 0.0001;
+      || cursorRTTime > virtualReactionTime + 0.0001;
 
     if (cursorIsStale) {
-      // Re-position cursor to upperBound of reactionCurrentTime, then enforce state.
-      rtIdx = upperBoundByT(reactionTransportTimeline, reactionCurrentTime);
+      // Re-position cursor to upperBound of virtualReactionTime, then enforce state.
+      rtIdx = upperBoundByT(reactionTransportTimeline, virtualReactionTime);
       const lastEntry = reactionTransportTimeline[Math.max(0, rtIdx - 1)];
-      if (lastEntry && Number.isFinite(Number(lastEntry?.t)) && Number(lastEntry.t) <= reactionCurrentTime) {
+      if (lastEntry && Number.isFinite(Number(lastEntry?.t)) && Number(lastEntry.t) <= virtualReactionTime) {
         const rawRTState = Number(lastEntry?.state);
         const desiredRTState = Number.isFinite(rawRTState) ? rawRTState : -1;
         const currentRTState = input.reactionPlayerState;
@@ -596,6 +646,19 @@ export function computeTwinPlayersSyncTick(
           && currentRTState !== yt.BUFFERING
         ) {
           actions.push({ type: 'applyReactionStateChange', nextState: desiredRTState });
+          if (desiredRTState === yt.PAUSED) {
+            nextTracking = {
+              ...nextTracking,
+              transportPauseStartReactionTime: reactionCurrentTime,
+              transportPauseStartOriginalTime: Number.isFinite(actualOriginalTime) ? actualOriginalTime : nextTracking.transportPauseStartOriginalTime
+            };
+          } else {
+            nextTracking = {
+              ...nextTracking,
+              transportPauseStartReactionTime: undefined,
+              transportPauseStartOriginalTime: undefined
+            };
+          }
         }
       }
     }
@@ -608,15 +671,30 @@ export function computeTwinPlayersSyncTick(
           rtIdx += 1;
           continue;
         }
-        if (eventTime > reactionCurrentTime) {
+        if (eventTime > virtualReactionTime) {
           break;
         }
 
-        if (eventTime > previousReactionTime && eventTime <= reactionCurrentTime) {
+        if (eventTime > previousVirtualReactionTime && eventTime <= virtualReactionTime) {
           const rawRTState = Number(entry?.state);
           const desiredRTState = Number.isFinite(rawRTState) ? rawRTState : -1;
           if (desiredRTState !== -1) {
             actions.push({ type: 'applyReactionStateChange', nextState: desiredRTState });
+            // Save/clear transport-pause start values so virtualReactionTime can advance
+            // on subsequent ticks while the reaction player is frozen.
+            if (desiredRTState === yt.PAUSED) {
+              nextTracking = {
+                ...nextTracking,
+                transportPauseStartReactionTime: reactionCurrentTime,
+                transportPauseStartOriginalTime: Number.isFinite(actualOriginalTime) ? actualOriginalTime : nextTracking.transportPauseStartOriginalTime
+              };
+            } else {
+              nextTracking = {
+                ...nextTracking,
+                transportPauseStartReactionTime: undefined,
+                transportPauseStartOriginalTime: undefined
+              };
+            }
           }
         }
 
@@ -629,6 +707,12 @@ export function computeTwinPlayersSyncTick(
       reactionTransportTrackIndex: rtIdx
     };
   }
+
+  // Save the virtual reaction time so the next tick can use it as previousVirtualReactionTime.
+  nextTracking = {
+    ...nextTracking,
+    lastVirtualReactionTime: virtualReactionTime
+  };
 
   const nextBoundaryReactionTime = (() => {
     const stateIdx = Number.isFinite(nextTracking.stateTimelineIndex) ? Number(nextTracking.stateTimelineIndex) : 0;
