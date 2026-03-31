@@ -339,9 +339,11 @@ describe('computeTwinPlayersSyncTick — reaction transport track', () => {
         expect(nextTracking.transportPauseStartOriginalTime).toBe(40);
     });
 
-    it('virtual-time: clears transportPauseStart values when transport PLAY fires via virtual time', () => {
+    it('virtual-time: sets transportPausePlayEntryT (not clears transportPauseStart) when transport PLAY fires via virtual time', () => {
         // When the transport PLAY entry fires (via the virtual-time cursor), the saved
-        // pause-start values must be cleared so the next tick uses real reaction time.
+        // pause-start values must be KEPT (not cleared) so that virtualReactionTime stays
+        // elevated until the reaction's real clock catches up past the PLAY entry time.
+        // transportPausePlayEntryT is saved to record when PLAY fired.
         const input = makeBaseInput({
             reactionTransportTrack: [
                 { t: 0, state: YT_STATES.PLAYING },
@@ -364,8 +366,42 @@ describe('computeTwinPlayersSyncTick — reaction transport track', () => {
         });
 
         const { nextTracking } = computeTwinPlayersSyncTick(input, tracking);
+        // transportPauseStart* kept alive until reaction's real clock passes playEntryT + 0.5
+        expect(nextTracking.transportPauseStartReactionTime).toBe(100);
+        expect(nextTracking.transportPauseStartOriginalTime).toBe(50);
+        // transportPausePlayEntryT records the PLAY entry time (108)
+        expect(nextTracking.transportPausePlayEntryT).toBe(108);
+    });
+
+    it('virtual-time: clears all transport pause fields once reaction advances past playEntryT', () => {
+        // Once reactionCurrentTime > transportPausePlayEntryT + 0.5 AND reaction is PLAYING,
+        // all three transport pause fields are cleared and virtual time reverts to real time.
+        const input = makeBaseInput({
+            reactionTransportTrack: [
+                { t: 0, state: YT_STATES.PLAYING },
+                { t: 100, state: YT_STATES.PAUSED },
+                { t: 108, state: YT_STATES.PLAYING },
+            ],
+            reactionPlayerState: YT_STATES.PLAYING,
+            reactionCurrentTime: 109, // > 108 + 0.5 → reaction has resumed past the PLAY entry
+            previousReactionTime: 108,
+            playerConfigs: [{ t: 0, state: YT_STATES.PLAYING, targetTime: 0 }],
+            originalCurrentTime: 65,
+            now: 4000,
+        });
+
+        const tracking = makeTracking({
+            transportPauseStartReactionTime: 100,
+            transportPauseStartOriginalTime: 50,
+            transportPausePlayEntryT: 108,
+            lastVirtualReactionTime: 115,
+            reactionTransportTrackIndex: 3,
+        });
+
+        const { nextTracking } = computeTwinPlayersSyncTick(input, tracking);
         expect(nextTracking.transportPauseStartReactionTime).toBeUndefined();
         expect(nextTracking.transportPauseStartOriginalTime).toBeUndefined();
+        expect(nextTracking.transportPausePlayEntryT).toBeUndefined();
     });
 
     it('advances the reactionTransportTrackIndex in tracking', () => {
@@ -415,6 +451,296 @@ describe('computeTwinPlayersSyncTick — reaction transport track', () => {
         const { nextBoundaryReactionTime } = computeTwinPlayersSyncTick(input, makeTracking());
         // Next boundary should be t=30 (the PAUSED entry)
         expect(nextBoundaryReactionTime).toBe(30);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Multi-tick end-to-end simulation helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Run `n` ticks, threading tracking through each call.
+ *
+ * Each `tickInputs[i]` is merged with `baseInput` (earlier keys win).
+ * Returns the array of per-tick results plus the final tracking.
+ */
+function simulateTicks(baseInput, tickInputs) {
+    let tracking = makeTracking();
+    const results = [];
+    for (const overrides of tickInputs) {
+        const input = { ...baseInput, ...overrides };
+        const result = computeTwinPlayersSyncTick(input, tracking);
+        tracking = result.nextTracking;
+        results.push(result);
+    }
+    return { results, finalTracking: tracking };
+}
+
+describe('multi-tick end-to-end simulation', () => {
+    /**
+     * Scenario A — "pause reaction, let original finish a segment, resume reaction"
+     *
+     * Transport track : PLAY@0, PAUSE@50, PLAY@60
+     * Original config : PLAY from t=0 (targetTime=0), PAUSED at reaction-t=55 (original stops)
+     *
+     * Expected sequence:
+     *   t=0-49  : both playing normally
+     *   t=50    : transport PAUSE fires → reaction freezes at 50
+     *   virtual 50-55 : original keeps playing, virtual time advances via original clock
+     *   virtual 55  : stop-original config fires → original pauses
+     *   virtual 60  : transport PLAY fires → reaction resumes  *eventually*
+     *   real t=61   : reaction resumes past the PLAY entry → virtual time reverts to real
+     */
+    it('scenario A — reaction pause window: stop-original config fires, then reaction resumes without re-pausing', () => {
+        const YT = YT_STATES;
+        const baseInput = makeBaseInput({
+            isFineTuneModeOn: true,
+            reactionTransportTrack: [
+                { t: 0, state: YT.PLAYING },
+                { t: 50, state: YT.PAUSED },
+                { t: 60, state: YT.PLAYING },
+            ],
+            playerConfigs: [
+                { t: 0, state: YT.PLAYING, targetTime: 0 },
+                { t: 55, state: YT.PAUSED, targetTime: 55 },
+            ],
+            seekMin: 0,
+            seekMax: 100000,
+            originalDuration: 300,
+        });
+
+        // Tick 0: both playing normally at t=5
+        // Tick 1: reaction and original at t=10 — still normal
+        // Tick 2: transport PAUSE fires (window crosses t=50)
+        //         reactionCurrentTime=50, originalCurrentTime=50
+        // Tick 3: reaction frozen at 50, original advances to 52 → virtual=52
+        // Tick 4: original at 55.5 → virtual=55.5, original config changes to PAUSED
+        // Tick 5: original at 60.5 → virtual=60.5, transport PLAY fires
+        // Tick 6: reaction still frozen/resuming (50), original at 61.5 → virtual=61.5 (still active pause)
+        // Tick 7: reaction PLAYING at 60.6 (> 60 + 0.5) → transport pause cleared, real time resumes
+        // Tick 8: reaction PLAYING at 61 → normal forward scan, no spurious PAUSED action
+
+        const ticks = [
+            // Tick 0: normal play, before pause entry
+            {
+                reactionPlayerState: YT.PLAYING, reactionCurrentTime: 5, previousReactionTime: 0,
+                currentStateOriginalVideo: YT.PLAYING, originalPlayerState: YT.PLAYING,
+                originalCurrentTime: 5, now: 100,
+            },
+            // Tick 1: still normal
+            {
+                reactionPlayerState: YT.PLAYING, reactionCurrentTime: 10, previousReactionTime: 5,
+                currentStateOriginalVideo: YT.PLAYING, originalPlayerState: YT.PLAYING,
+                originalCurrentTime: 10, now: 200,
+            },
+            // Tick 2: transport PAUSE fires (window [10, 50.5] contains entry at 50)
+            {
+                reactionPlayerState: YT.PLAYING, reactionCurrentTime: 50.5, previousReactionTime: 10,
+                currentStateOriginalVideo: YT.PLAYING, originalPlayerState: YT.PLAYING,
+                originalCurrentTime: 50.5, now: 500,
+            },
+            // Tick 3: reaction now frozen at 50.5 (PAUSED), original at 52
+            {
+                reactionPlayerState: YT.PAUSED, reactionCurrentTime: 50.5, previousReactionTime: 50.5,
+                currentStateOriginalVideo: YT.PLAYING, originalPlayerState: YT.PLAYING,
+                originalCurrentTime: 52, now: 600,
+            },
+            // Tick 4: original at 55.5 → virtual=50.5+(55.5-50.5)=55.5; original config PAUSED fires
+            {
+                reactionPlayerState: YT.PAUSED, reactionCurrentTime: 50.5, previousReactionTime: 50.5,
+                currentStateOriginalVideo: YT.PLAYING, originalPlayerState: YT.PLAYING,
+                originalCurrentTime: 55.5, now: 700,
+            },
+            // Tick 5: original at 60.5 → virtual=60.5; transport PLAY fires
+            {
+                reactionPlayerState: YT.PAUSED, reactionCurrentTime: 50.5, previousReactionTime: 50.5,
+                currentStateOriginalVideo: YT.PAUSED, originalPlayerState: YT.PAUSED,
+                originalCurrentTime: 60.5, now: 800,
+            },
+            // Tick 6: reaction still paused (not resumed yet), original at 61.5 → virtual still active
+            {
+                reactionPlayerState: YT.PAUSED, reactionCurrentTime: 50.5, previousReactionTime: 50.5,
+                currentStateOriginalVideo: YT.PAUSED, originalPlayerState: YT.PAUSED,
+                originalCurrentTime: 61.5, now: 900,
+            },
+            // Tick 7: reaction now PLAYING and real time > 60 + 0.5 → transport pause clears
+            {
+                reactionPlayerState: YT.PLAYING, reactionCurrentTime: 61, previousReactionTime: 60,
+                currentStateOriginalVideo: YT.PAUSED, originalPlayerState: YT.PAUSED,
+                originalCurrentTime: 62, now: 1000,
+            },
+            // Tick 8: reaction advancing normally, no spurious PAUSED action should fire
+            {
+                reactionPlayerState: YT.PLAYING, reactionCurrentTime: 62, previousReactionTime: 61,
+                currentStateOriginalVideo: YT.PAUSED, originalPlayerState: YT.PAUSED,
+                originalCurrentTime: 63, now: 1100,
+            },
+        ];
+
+        const { results } = simulateTicks(baseInput, ticks);
+
+        // Tick 2: transport PAUSE fires
+        const tick2Actions = results[2].actions;
+        const pauseAction = tick2Actions.find(a => a.type === 'applyReactionStateChange' && a.nextState === YT.PAUSED);
+        expect(pauseAction, 'tick2: transport PAUSE should fire').toBeDefined();
+
+        // Tick 4: stop-original config fires
+        // Tick 4: stop-original config fires (virtual time crosses original-config entry at t=55)
+        const tick4Actions = results[4].actions;
+        const stopOriginalActionCorrect = tick4Actions.find(
+            a => a.type === 'applyOriginalStateChange' && a.nextState === YT.PAUSED
+        );
+        expect(stopOriginalActionCorrect, 'tick4: stop-original config should fire when virtual crosses t=55').toBeDefined();
+
+        // Tick 5: transport PLAY fires
+        const tick5Actions = results[5].actions;
+        const resumeAction = tick5Actions.find(
+            a => a.type === 'applyReactionStateChange' && a.nextState === YT.PLAYING
+        );
+        expect(resumeAction, 'tick5: transport PLAY should fire').toBeDefined();
+
+        // Ticks 7 & 8: NO spurious re-pause of reaction
+        for (const tickIdx of [6, 7, 8]) {
+            const spuriousPause = results[tickIdx]?.actions.find(
+                a => a.type === 'applyReactionStateChange' && a.nextState === YT.PAUSED
+            );
+            expect(spuriousPause, `tick${tickIdx}: no spurious PAUSED action`).toBeUndefined();
+        }
+    });
+
+    it('scenario B — two transport pauses in sequence: second pause fires correctly', () => {
+        const YT = YT_STATES;
+        const baseInput = makeBaseInput({
+            isFineTuneModeOn: true,
+            reactionTransportTrack: [
+                { t: 0, state: YT.PLAYING },
+                { t: 20, state: YT.PAUSED },
+                { t: 25, state: YT.PLAYING },
+                { t: 40, state: YT.PAUSED },
+                { t: 50, state: YT.PLAYING },
+            ],
+            playerConfigs: [{ t: 0, state: YT.PLAYING, targetTime: 0 }],
+            seekMin: 0,
+            seekMax: 100000,
+            originalDuration: 300,
+        });
+
+        const ticks = [
+            // Normal play until first PAUSE at t=20
+            {
+                reactionPlayerState: YT.PLAYING, reactionCurrentTime: 20.5, previousReactionTime: 0,
+                currentStateOriginalVideo: YT.PLAYING, originalPlayerState: YT.PLAYING,
+                originalCurrentTime: 20.5, now: 100,
+            },
+            // Reaction frozen, virtual advances: crosses PLAY@25
+            {
+                reactionPlayerState: YT.PAUSED, reactionCurrentTime: 20.5, previousReactionTime: 20.5,
+                currentStateOriginalVideo: YT.PLAYING, originalPlayerState: YT.PLAYING,
+                originalCurrentTime: 25.5, now: 200,
+            },
+            // Reaction resumes (PLAYING), real time 25.5 → real time advances past 25+0.5=25.5
+            {
+                reactionPlayerState: YT.PLAYING, reactionCurrentTime: 26, previousReactionTime: 25,
+                currentStateOriginalVideo: YT.PLAYING, originalPlayerState: YT.PLAYING,
+                originalCurrentTime: 26, now: 300,
+            },
+            // Reaction at 30, approaching second PAUSE at t=40
+            {
+                reactionPlayerState: YT.PLAYING, reactionCurrentTime: 30, previousReactionTime: 26,
+                currentStateOriginalVideo: YT.PLAYING, originalPlayerState: YT.PLAYING,
+                originalCurrentTime: 30, now: 400,
+            },
+            // Second PAUSE fires (t=40 in window)
+            {
+                reactionPlayerState: YT.PLAYING, reactionCurrentTime: 40.5, previousReactionTime: 30,
+                currentStateOriginalVideo: YT.PLAYING, originalPlayerState: YT.PLAYING,
+                originalCurrentTime: 40.5, now: 500,
+            },
+            // Virtual advances past second PLAY@50
+            {
+                reactionPlayerState: YT.PAUSED, reactionCurrentTime: 40.5, previousReactionTime: 40.5,
+                currentStateOriginalVideo: YT.PLAYING, originalPlayerState: YT.PLAYING,
+                originalCurrentTime: 50.5, now: 600,
+            },
+        ];
+
+        const { results } = simulateTicks(baseInput, ticks);
+
+        // First PAUSE (tick 0)
+        const firstPause = results[0].actions.find(a => a.type === 'applyReactionStateChange' && a.nextState === YT.PAUSED);
+        expect(firstPause, 'first PAUSE should fire').toBeDefined();
+
+        // First PLAY (tick 1)
+        const firstPlay = results[1].actions.find(a => a.type === 'applyReactionStateChange' && a.nextState === YT.PLAYING);
+        expect(firstPlay, 'first PLAY should fire').toBeDefined();
+
+        // Second PAUSE (tick 4)
+        const secondPause = results[4].actions.find(a => a.type === 'applyReactionStateChange' && a.nextState === YT.PAUSED);
+        expect(secondPause, 'second PAUSE should fire').toBeDefined();
+
+        // Second PLAY (tick 5)
+        const secondPlay = results[5].actions.find(a => a.type === 'applyReactionStateChange' && a.nextState === YT.PLAYING);
+        expect(secondPlay, 'second PLAY should fire').toBeDefined();
+    });
+
+    it('scenario C — no spurious re-pause on ticks after transport PLAY fires', () => {
+        // Specifically exercises the bug where, after transport PLAY fires and the virtual
+        // time is still elevated via the original clock, the stale cursor would find
+        // PAUSE@50 and re-fire PAUSED on subsequent ticks.
+        const YT = YT_STATES;
+        const baseInput = makeBaseInput({
+            isFineTuneModeOn: true,
+            reactionTransportTrack: [
+                { t: 0, state: YT.PLAYING },
+                { t: 50, state: YT.PAUSED },
+                { t: 60, state: YT.PLAYING },
+            ],
+            playerConfigs: [{ t: 0, state: YT.PLAYING, targetTime: 0 }],
+            seekMin: 0,
+            seekMax: 100000,
+            originalDuration: 300,
+        });
+
+        // Set up post-PLAY state manually: transportPauseStart* set, transportPausePlayEntryT=60
+        // Reaction just resumed (PLAYING) but real time is only 59 (not past 60.5 yet)
+        // Simulate 6 ticks from this state (real time 59→65, no re-pause should happen)
+        let tracking = makeTracking({
+            transportPauseStartReactionTime: 50.5,
+            transportPauseStartOriginalTime: 50.5,
+            transportPausePlayEntryT: 60,
+            lastVirtualReactionTime: 62,
+            reactionTransportTrackIndex: 3,
+            lastOriginalSeekAt: 0,
+        });
+
+        for (let i = 0; i < 6; i++) {
+            const reactionTime = 59 + i; // 59, 60, 61, 62, 63, 64
+            const originalTime = 60 + i;
+            const input = makeBaseInput({
+                isFineTuneModeOn: true,
+                reactionTransportTrack: [
+                    { t: 0, state: YT.PLAYING },
+                    { t: 50, state: YT.PAUSED },
+                    { t: 60, state: YT.PLAYING },
+                ],
+                playerConfigs: [{ t: 0, state: YT.PLAYING, targetTime: 0 }],
+                reactionPlayerState: YT.PLAYING,
+                reactionCurrentTime: reactionTime,
+                previousReactionTime: reactionTime - 1,
+                currentStateOriginalVideo: YT.PLAYING,
+                originalPlayerState: YT.PLAYING,
+                originalCurrentTime: originalTime,
+                seekMin: 0, seekMax: 100000, originalDuration: 300, now: 1000 + i * 100,
+            });
+
+            const result = computeTwinPlayersSyncTick(input, tracking);
+            tracking = result.nextTracking;
+
+            const spuriousPause = result.actions.find(
+                a => a.type === 'applyReactionStateChange' && a.nextState === YT.PAUSED
+            );
+            expect(spuriousPause, `tick${i} (reaction at ${reactionTime}): no spurious PAUSED`).toBeUndefined();
+        }
     });
 });
 
