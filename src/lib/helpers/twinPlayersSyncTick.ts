@@ -408,7 +408,14 @@ export function computeTwinPlayersSyncTick(
 
   // shouldHoldOriginalWhilePaused: hold the original only when in fine-tune mode AND the reaction
   // is paused by the user (not by the transport track, which allows the original to play freely).
-  const shouldHoldOriginalWhilePaused = input.isFineTuneModeOn && !isReactionPlaying && !transportTrackIntendsPause;
+  //
+  // IMPORTANT: also check !hasActiveTransportPause.  After transport PLAY fires (virtual time
+  // advances past the PLAY entry) but before the reaction player physically resumes, the reaction
+  // is still PAUSED and transportTrackIntendsPause is false (last entry is PLAY).  Without the
+  // hasActiveTransportPause guard, shouldHoldOriginalWhilePaused would become true, forcing any
+  // original PLAY config to PAUSED and preventing the original from resuming.
+  const shouldHoldOriginalWhilePaused =
+    input.isFineTuneModeOn && !isReactionPlaying && !hasActiveTransportPause && !transportTrackIntendsPause;
 
   const timeline = Array.isArray(input.stateTimeline) ? input.stateTimeline : [];
 
