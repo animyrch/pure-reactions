@@ -224,13 +224,52 @@ export function computeTwinPlayersSyncTick(
       transportPausePlayEntryT: undefined,
     };
   }
+
+  // Bootstrap transport pause tracking: when the reaction starts already in a transport-paused
+  // state (e.g., a PAUSE@0 entry with the reaction already PAUSED on the very first tick), the
+  // forward scan cannot fire for that entry — it uses a strict > window that excludes t=0 when
+  // previousVirtualRT=0. Without this bootstrap, virtualReactionTime remains frozen at
+  // reactionCurrentTime indefinitely and all future transport/config entries (resume reaction,
+  // stop original, etc.) never fire.
+  //
+  // Only runs when transportPauseStart* is not yet set, a post-PLAY deferred window is not
+  // active, and the transport track genuinely intends PAUSE at the current reaction time.
+  if (
+    !Number.isFinite(nextTracking.transportPauseStartReactionTime) &&
+    !Number.isFinite(nextTracking.transportPausePlayEntryT) &&
+    !reactionIsPlaying &&
+    input.reactionPlayerState !== yt.BUFFERING &&
+    Number.isFinite(actualOriginalTime)
+  ) {
+    const rtForBootstrap = Array.isArray(input.reactionTransportTrack) ? input.reactionTransportTrack : [];
+    let bootstrapIntendsPause = false;
+    for (let i = rtForBootstrap.length - 1; i >= 0; i--) {
+      const entryTime = Number(rtForBootstrap[i]?.t);
+      if (Number.isFinite(entryTime) && entryTime <= reactionCurrentTime + 0.001) {
+        bootstrapIntendsPause = Number(rtForBootstrap[i]?.state) === yt.PAUSED;
+        break;
+      }
+    }
+    if (bootstrapIntendsPause) {
+      nextTracking = {
+        ...nextTracking,
+        transportPauseStartReactionTime: reactionCurrentTime,
+        transportPauseStartOriginalTime: actualOriginalTime,
+      };
+    }
+  }
+
+  // Reread saved pause fields after auto-clear and bootstrap may have mutated nextTracking.
+  const effectivePauseReactionTime = nextTracking.transportPauseStartReactionTime;
+  const effectivePauseOriginalTime = nextTracking.transportPauseStartOriginalTime;
+
   const hasActiveTransportPause =
     !reactionAdvancedPastPlay &&
-    Number.isFinite(savedPauseReactionTime) &&
-    Number.isFinite(savedPauseOriginalTime) &&
+    Number.isFinite(effectivePauseReactionTime) &&
+    Number.isFinite(effectivePauseOriginalTime) &&
     Number.isFinite(actualOriginalTime);
   const virtualReactionTime: number = hasActiveTransportPause
-    ? (savedPauseReactionTime as number) + (actualOriginalTime - (savedPauseOriginalTime as number))
+    ? (effectivePauseReactionTime as number) + (actualOriginalTime - (effectivePauseOriginalTime as number))
     : reactionCurrentTime;
   const previousVirtualReactionTime: number = Number.isFinite(nextTracking.lastVirtualReactionTime)
     ? (nextTracking.lastVirtualReactionTime as number)

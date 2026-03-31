@@ -1142,22 +1142,23 @@ describe('multi-tick end-to-end simulation', () => {
         });
 
         const ticks = [
-            // Tick 0: reaction is PAUSED at t=0 (stale cursor should enforce PAUSED → but reaction is already paused → no applyReactionStateChange)
-            //         original should NOT be held (transport track says PAUSED, shouldHoldOriginalWhilePaused=false)
+            // Tick 0: reaction is PAUSED at t=0. Bootstrap initializes transportPauseStart* using
+            //         actualOriginalTime=0 as the reference point for virtual-time advancement.
+            //         virtual=0. original should NOT be held at PAUSED.
             {
                 reactionPlayerState: YT.PAUSED,
                 reactionCurrentTime: 0, previousReactionTime: 0,
                 currentStateOriginalVideo: YT.PLAYING, originalPlayerState: YT.PLAYING,
-                originalCurrentTime: 5, now: 100,
+                originalCurrentTime: 0, now: 100,
             },
-            // Tick 1: original advances, virtual=15, reaction still paused
+            // Tick 1: original advances to 15, virtual=0+(15-0)=15, reaction still paused
             {
                 reactionPlayerState: YT.PAUSED,
                 reactionCurrentTime: 0, previousReactionTime: 0,
                 currentStateOriginalVideo: YT.PLAYING, originalPlayerState: YT.PLAYING,
                 originalCurrentTime: 15, now: 200,
             },
-            // Tick 2: virtual=30.5 → transport PLAY fires
+            // Tick 2: original at 30.5 → virtual=0+(30.5-0)=30.5 → transport PLAY fires
             {
                 reactionPlayerState: YT.PAUSED,
                 reactionCurrentTime: 0, previousReactionTime: 0,
@@ -1229,7 +1230,148 @@ describe('multi-tick end-to-end simulation', () => {
         );
         expect(holdAction, 'in normal fine-tune user-pause, original should be held at PAUSED').toBeDefined();
     });
+
+    /**
+     * Scenario I — user's exact production config
+     *
+     * Matches the Firestore document reported as failing:
+     *
+     *   reactionTransportTrack: PLAY@0, PAUSE@112.5, PLAY@115
+     *   stateTimeline (original): PLAY@112.4(targetTime=0), PAUSE@115(targetTime=2.61)
+     *
+     * Expected playback sequence:
+     *   1. Reaction plays from 0.
+     *   2. At reaction t≈112.5, both stateTimeline PLAY@112.4 (original starts) and
+     *      transport PAUSE@112.5 (reaction pauses) fire in the same tick.
+     *   3. Virtual time advances via original clock. When original reaches ~2.5s the
+     *      virtual reaction time reaches 115.
+     *   4. At virtual t=115: stateTimeline PAUSE@115 fires (original stops at 2.61) AND
+     *      transportTrack PLAY@115 fires (reaction resumes).
+     *   5. After reaction resumes past t=115.5, original stays stopped.
+     *
+     * Previously broken because:
+     *   a) shouldHoldOriginalWhilePaused was true in the post-PLAY transition (fixed: !hasActiveTransportPause)
+     *   b) staleTimeline stale-cursor enforcement could wrongly enforce original PAUSED
+     */
+    it('scenario I — user production config: reaction pause with simultaneous original-stop and reaction-resume', () => {
+        const YT = YT_STATES;
+
+        const baseInput = makeBaseInput({
+            isFineTuneModeOn: true,
+            reactionTransportTrack: [
+                { t: 0,     state: YT.PLAYING },
+                { t: 112.5, state: YT.PAUSED  },
+                { t: 115,   state: YT.PLAYING },
+            ],
+            stateTimeline: [
+                { t: 112.4, state: YT.PLAYING, targetTime: 0    },
+                { t: 115,   state: YT.PAUSED,  targetTime: 2.61 },
+            ],
+            playerConfigs: [
+                { t: 0,     state: YT.PLAYING, targetTime: 0    },
+                { t: 112.4, state: YT.PLAYING, targetTime: 0    },
+                { t: 115,   state: YT.PAUSED,  targetTime: 2.61 },
+            ],
+            seekMin: 0,
+            seekMax: 100000,
+            originalDuration: 300,
+        });
+
+        const ticks = [
+            // Tick 0: reaction plays, approaches boundary
+            {
+                reactionPlayerState: YT.PLAYING, reactionCurrentTime: 110, previousReactionTime: 0,
+                currentStateOriginalVideo: YT.PAUSED, originalPlayerState: YT.PAUSED,
+                originalCurrentTime: 0, now: 100,
+            },
+            // Tick 1: stateTimeline PLAY@112.4 fires (original starts) AND
+            //         transportTrack PAUSE@112.5 fires (reaction pauses) — same tick
+            {
+                reactionPlayerState: YT.PLAYING, reactionCurrentTime: 112.8, previousReactionTime: 110,
+                currentStateOriginalVideo: YT.PAUSED, originalPlayerState: YT.PAUSED,
+                originalCurrentTime: 0.05, now: 200,
+            },
+            // Tick 2: reaction now PAUSED, original playing; virtual=112.5+(0.5-0.05)=112.95
+            {
+                reactionPlayerState: YT.PAUSED, reactionCurrentTime: 112.8, previousReactionTime: 112.8,
+                currentStateOriginalVideo: YT.PLAYING, originalPlayerState: YT.PLAYING,
+                originalCurrentTime: 0.5, now: 300,
+            },
+            // Tick 3: virtual=112.5+(2.0-0.05)=114.45, nothing fires yet
+            {
+                reactionPlayerState: YT.PAUSED, reactionCurrentTime: 112.8, previousReactionTime: 112.8,
+                currentStateOriginalVideo: YT.PLAYING, originalPlayerState: YT.PLAYING,
+                originalCurrentTime: 2.0, now: 400,
+            },
+            // Tick 4: virtual=112.5+(2.56-0.05)=115.01 → stateTimeline PAUSE@115 fires (original stops)
+            //         AND transportTrack PLAY@115 fires (reaction resumes)
+            {
+                reactionPlayerState: YT.PAUSED, reactionCurrentTime: 112.8, previousReactionTime: 112.8,
+                currentStateOriginalVideo: YT.PLAYING, originalPlayerState: YT.PLAYING,
+                originalCurrentTime: 2.56, now: 500,
+            },
+            // Tick 5: reaction PLAYING at 115.8 (resumed). auto-clear fires.
+            //         original should remain paused (no PLAY action for original).
+            {
+                reactionPlayerState: YT.PLAYING, reactionCurrentTime: 115.8, previousReactionTime: 115.5,
+                currentStateOriginalVideo: YT.PAUSED, originalPlayerState: YT.PAUSED,
+                originalCurrentTime: 2.61, now: 600,
+            },
+            // Tick 6: steady state — both in their final states, no spurious actions
+            {
+                reactionPlayerState: YT.PLAYING, reactionCurrentTime: 120, previousReactionTime: 115.8,
+                currentStateOriginalVideo: YT.PAUSED, originalPlayerState: YT.PAUSED,
+                originalCurrentTime: 2.61, now: 700,
+            },
+        ];
+
+        const { results } = simulateTicks(baseInput, ticks);
+
+        // Tick 1: original PLAY fires (stateTimeline PLAY@112.4) AND reaction PAUSE fires (transport PAUSE@112.5)
+        expect(
+            results[1].actions.find(a => a.type === 'applyOriginalStateChange' && a.nextState === YT.PLAYING),
+            'tick1: original PLAY@112.4 fires'
+        ).toBeDefined();
+        expect(
+            results[1].actions.find(a => a.type === 'applyReactionStateChange' && a.nextState === YT.PAUSED),
+            'tick1: transport PAUSE@112.5 fires'
+        ).toBeDefined();
+
+        // Ticks 2-3: original must NOT be paused (transport pause active, shouldHoldOriginalWhilePaused=false)
+        for (const tickIdx of [2, 3]) {
+            const spuriousStop = results[tickIdx].actions.find(
+                a => (a.type === 'applyOriginalStateChange' && a.nextState === YT.PAUSED) ||
+                      a.type === 'pauseOriginal'
+            );
+            expect(spuriousStop, `tick${tickIdx}: original must not be stopped while virtual window is open`).toBeUndefined();
+        }
+
+        // Tick 4: stateTimeline PAUSE@115 fires (original stops) AND transportTrack PLAY@115 fires (reaction resumes)
+        expect(
+            results[4].actions.find(a => a.type === 'applyOriginalStateChange' && a.nextState === YT.PAUSED),
+            'tick4: stateTimeline PAUSE@115 fires — original stops at virtual t=115'
+        ).toBeDefined();
+        expect(
+            results[4].actions.find(a => a.type === 'applyReactionStateChange' && a.nextState === YT.PLAYING),
+            'tick4: transport PLAY@115 fires — reaction resumes at virtual t=115'
+        ).toBeDefined();
+
+        // Tick 5: reaction resumes physically, original stays paused. No spurious original PLAY.
+        const spuriousOriginalPlay = results[5].actions.find(
+            a => a.type === 'applyOriginalStateChange' && a.nextState === YT.PLAYING
+        );
+        expect(spuriousOriginalPlay, 'tick5: original must NOT resume after reaction resumes').toBeUndefined();
+
+        // Ticks 5-6: no spurious reaction re-pause
+        for (const tickIdx of [5, 6]) {
+            const spuriousReactionPause = results[tickIdx].actions.find(
+                a => a.type === 'applyReactionStateChange' && a.nextState === YT.PAUSED
+            );
+            expect(spuriousReactionPause, `tick${tickIdx}: no spurious reaction PAUSE after it resumed`).toBeUndefined();
+        }
+    });
 });
+
 
 describe('applyTwinPlayersSyncActions — applyReactionStateChange', () => {
     const makeSnapshot = (overrides = {}) => ({
