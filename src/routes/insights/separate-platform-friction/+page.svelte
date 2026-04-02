@@ -59,7 +59,10 @@
     <section>
       <h2 class="mb-4 text-2xl font-semibold text-text-primary">Step 1 — Keep Creating Exactly as You Always Have</h2>
       <p class="mb-4">
-        Nothing about your current production changes. Same camera, same editing software, same upload schedule, same thumbnails, same titles, same audience interaction. Your main YouTube video goes up exactly as it would have without Pure Reactions in the picture.
+        Nothing about your main YouTube video changes. Same camera, same editing software, same upload schedule, same thumbnails, same titles, same audience interaction. Your reaction video goes up exactly as it would have without Pure Reactions in the picture.
+      </p>
+      <p class="mb-4">
+        The extra work that comes in Steps 2 and 3 is real, but it is deliberately minimal and self-contained. It adds a small one-time task per video — not a workflow overhaul.
       </p>
       <div class="my-6 rounded-lg border border-success/30 bg-success/5 p-6">
         <p class="text-text-primary">
@@ -74,7 +77,10 @@
     <section>
       <h2 class="mb-4 text-2xl font-semibold text-text-primary">Step 2 — Create an Unlisted Alternate Version</h2>
       <p class="mb-4">
-        After uploading your normal reaction video, create a second version of the same video. The only change: <strong class="text-text-primary">remove the original content's audio and video</strong> from the timeline, keeping everything else — your face cam, your commentary, your expressions, your edits.
+        After finishing your main reaction video, export a second version of the same edit. The only change: <strong class="text-text-primary">remove the original content's audio and video</strong> from the timeline, keeping everything else — your face cam, your commentary, your expressions, your edits.
+      </p>
+      <p class="mb-4">
+        Because your finished edit already contains all the cuts, everything that's left once the original tracks are deleted is a clean export. In most editing timelines this takes a few minutes.
       </p>
       <p class="mb-4">
         Upload this alternate version to YouTube as <strong class="text-text-primary">Unlisted</strong>.
@@ -108,6 +114,26 @@
             Pure Reactions will stream the original directly from YouTube and sync it with your unlisted video in real time — so viewers still experience it together, perfectly synchronized.
           </p>
         </div>
+        <div class="rounded-lg bg-surface p-6">
+          <h3 class="mb-3 text-lg font-medium text-text-primary">Point viewers to the Pure Reactions experience</h3>
+          <p class="mb-3">
+            Because this video shows only your reaction without the original content alongside it, viewers who land on it directly won't see the full experience. Guide them to the synced version with any combination of these:
+          </p>
+          <ul class="ml-6 list-disc space-y-2">
+            <li>
+              <strong class="text-text-primary">A brief note at the start of the video itself</strong> — a quick on-screen title card or voiceover: <em>"This is the reaction-only version. For the full synced experience with the original, use the link in the description."</em>
+            </li>
+            <li>
+              <strong class="text-text-primary">A YouTube info card or end card</strong> — use YouTube Studio's card feature to overlay a link to the Pure Reactions experience directly on the video during playback.
+            </li>
+            <li>
+              <strong class="text-text-primary">A link in the description of the unlisted video</strong> — easy to add during upload and ensures the link travels with the video wherever it's shared.
+            </li>
+            <li>
+              <strong class="text-text-primary">A pinned comment</strong> — after publishing, pin a comment with the Pure Reactions experience link so it's always the first thing viewers see in the comment section.
+            </li>
+          </ul>
+        </div>
       </div>
     </section>
 
@@ -119,6 +145,25 @@
       <p class="mb-4">
         Because the unlisted video contains only your content — no original audio, no original video — it passes Content ID scanning cleanly and can be used by Pure Reactions without any claims.
       </p>
+      <p class="mb-4">
+        You will also need to add the original video's playback controls — moments where the original is paused, muted, or resumed — to the reaction experience. This is where the fine-tune editor comes in.
+      </p>
+      <div class="space-y-4">
+        <div class="rounded-lg bg-surface p-6">
+          <h3 class="mb-3 text-lg font-medium text-text-primary">How the fine-tune editor saves you time</h3>
+          <p class="mb-3">
+            All the timing information you need is already visible in your original full-mix timeline — the exact moments you paused the original, muted it, or let it resume are encoded in your own editing cuts and audio waveforms.
+          </p>
+          <p class="mb-3">
+            You simply note those timestamps and enter them into the Pure Reactions fine-tune editor with a few clicks. The editor is designed specifically for this task: it pre-populates structure from your reaction video and lets you confirm or adjust individual control points one by one.
+          </p>
+          <ul class="ml-6 list-disc space-y-2">
+            <li>No manual synchronization code or technical skills required.</li>
+            <li>Each control point is added with a single click at the right timestamp.</li>
+            <li>The result is a perfectly timed twin-player experience that matches your original edit.</li>
+          </ul>
+        </div>
+      </div>
       <div class="my-6 rounded-lg border border-success/30 bg-success/5 p-6">
         <p class="text-text-primary">
           <strong>For viewers:</strong> They see you reacting in real time alongside the original content, synchronized frame by frame. The original creator gets the views and ad revenue on their YouTube video. You get yours on your reaction video. Both audiences win.
@@ -174,8 +219,12 @@
           </thead>
           <tbody class="text-sm">
             <tr class="border-b border-border-subtle">
-              <td class="p-4 font-medium text-text-primary">Upload schedule</td>
+              <td class="p-4 font-medium text-text-primary">Main video upload schedule</td>
               <td class="p-4 text-success">No change</td>
+            </tr>
+            <tr class="border-b border-border-subtle">
+              <td class="p-4 font-medium text-text-primary">Extra work per video</td>
+              <td class="p-4 text-warning">Minimal — one extra export + a few clicks in the fine-tune editor</td>
             </tr>
             <tr class="border-b border-border-subtle">
               <td class="p-4 font-medium text-text-primary">Video content & format</td>
@@ -240,11 +289,11 @@
         </div>
         <div class="flex items-start gap-4 rounded-lg bg-surface p-4">
           <span class="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-accent-primary/20 text-xs font-semibold text-accent-primary">2</span>
-          <p><strong class="text-text-primary">Export an alternate version.</strong> Same edit, but with the original content's audio and video tracks removed. Upload it to YouTube as Unlisted.</p>
+          <p><strong class="text-text-primary">Export an alternate version.</strong> Same edit, but with the original content's audio and video tracks removed — a quick operation since the full edit is already done. Upload it to YouTube as Unlisted, add a brief note at the start, a description link and/or a YouTube card pointing viewers to the Pure Reactions experience.</p>
         </div>
         <div class="flex items-start gap-4 rounded-lg bg-surface p-4">
           <span class="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-accent-primary/20 text-xs font-semibold text-accent-primary">3</span>
-          <p><strong class="text-text-primary">Create a Pure Reactions experience.</strong> Use your unlisted video as the reaction source. The platform pairs it with the original from YouTube.</p>
+          <p><strong class="text-text-primary">Create a Pure Reactions experience.</strong> Use your unlisted video as the reaction source. Add the original video's control points (pauses, silences, resumes) using the fine-tune editor — the timing is already visible in your edit, so this takes only a few clicks.</p>
         </div>
         <div class="flex items-start gap-4 rounded-lg bg-surface p-4">
           <span class="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-accent-primary/20 text-xs font-semibold text-accent-primary">4</span>
@@ -264,7 +313,7 @@
     <section>
       <h2 class="mb-4 text-2xl font-semibold text-text-primary">The Bottom Line</h2>
       <p class="mb-4 text-lg">
-        Platform adoption anxiety is real, and it's rational. But this approach doesn't ask you to take a leap of faith. It asks you to do one extra export and one extra upload — the kind of 20-minute task that sets up a complete safety net and a new way for your audience to experience your content.
+        Platform adoption anxiety is real, and it's rational. But this approach doesn't ask you to take a leap of faith. It asks you to do one extra export and spend a few minutes in the fine-tune editor — a small per-video overhead that sets up a complete safety net and a new way for your audience to experience your content.
       </p>
       <p class="text-lg">
         Your YouTube channel continues exactly as before. Your subscribers see no change. Your revenue stream stays intact. And if the worst-case copyright scenario ever arrives, you're already prepared — with a backup that could actually generate more reach than the original.
