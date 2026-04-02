@@ -83,6 +83,26 @@
       </span>
     </a>
 
+    <!-- Insight 4: Benefits for Viewers -->
+    <a
+      href="/insights/benefits-for-viewers"
+      class="group rounded-lg border border-border-strong bg-elevated p-6 transition-all duration-subtle hover:border-accent-primary/50 hover:bg-surface"
+    >
+      <div class="mb-4 inline-flex rounded-md bg-accent-secondary/20 px-3 py-1 text-xs font-medium text-accent-secondary">
+        Viewer Experience
+      </div>
+      <h2 class="mb-3 text-xl font-semibold text-text-primary group-hover:text-accent-primary transition-colors">
+        Benefits for Viewers
+      </h2>
+      <p class="mb-4 text-text-secondary">
+        Original quality video, independent volume controls, always-visible source links, guilt-free viewing, and a reliable way to discover more reactions.
+      </p>
+      <span class="inline-flex items-center gap-2 text-sm text-accent-primary">
+        Read article
+        <span aria-hidden="true">→</span>
+      </span>
+    </a>
+
   </div>
 
   <!-- CTA Section -->
