@@ -91,6 +91,11 @@
                 Legal Framework
               </a>
             </li>
+            <li>
+              <a href="/insights/separate-platform-friction" class="text-text-secondary transition-colors hover:text-accent-primary">
+                Zero-Friction Adoption
+              </a>
+            </li>
           </ul>
         </div>
 
