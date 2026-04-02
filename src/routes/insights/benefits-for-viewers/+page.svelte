@@ -101,14 +101,17 @@
     <section>
       <h2 class="mb-4 text-2xl font-semibold text-text-primary">Watch Without Guilt</h2>
       <p class="mb-4">
-        On traditional platforms, watching a reaction video often means the original creator earns nothing — all views and ad revenue go to the reactor's merged upload. That can feel uncomfortable, especially when the reaction is primarily driven by the quality of the original content.
+        People watch reactions because they enjoy the reactor — their personality, their takes, their energy. But on traditional platforms that enjoyment comes with a hidden cost on both sides.
       </p>
       <p class="mb-4">
-        Because PureReactions streams the original directly from its source, every view registers on the original creator's channel. You support both creators simply by watching.
+        For the reactor, merging copyrighted content into their upload is a constant legal risk. Videos get taken down, monetization is stripped, or ad revenue is transferred entirely to the original creator via Content ID — all because of a single merged file. For the original creator, their work is consumed through someone else's upload, missing out on direct views and watch time.
+      </p>
+      <p class="mb-4">
+        PureReactions sidesteps both problems by keeping the streams separate. The reactor's content never contains the original audio or video, so there is nothing to claim or take down. At the same time, every play of the original registers directly on the original creator's channel.
       </p>
       <div class="my-6 rounded-lg border border-success/30 bg-success/5 p-6">
         <p class="text-text-primary">
-          <strong>No compromise:</strong> Enjoy the reaction while the original creator gets the view count, watch time, and ad impressions they deserve.
+          <strong>No compromise:</strong> The reactor keeps their channel safe and monetization intact. The original creator gets the views, watch time, and ad impressions they deserve. You enjoy both without the guilt.
         </p>
       </div>
     </section>
@@ -130,7 +133,7 @@
       </p>
       <ul class="mb-4 ml-6 list-disc space-y-2">
         <li>Repositioning the original or reaction overlay anywhere on screen</li>
-        <li>Adjusting playback speed independently per stream</li>
+        <li>Adjusting playback speed in a synced manner (both streams together, so the viewing experience stays coherent)</li>
         <li>Saving your personal layout preferences across sessions</li>
       </ul>
       <p>
@@ -171,9 +174,9 @@
               <td class="p-4 text-success">Always visible</td>
             </tr>
             <tr class="border-b border-border-subtle">
-              <td class="p-4 font-medium text-text-primary">Original creator support</td>
-              <td class="p-4 text-danger">View goes to reactor only</td>
-              <td class="p-4 text-success">View counts for both</td>
+              <td class="p-4 font-medium text-text-primary">Creator safety &amp; credit</td>
+              <td class="p-4 text-danger">Reactor risks takedowns/claims; original misses direct views</td>
+              <td class="p-4 text-success">Reactor keeps channel safe; original gets direct views</td>
             </tr>
             <tr class="border-b border-border-subtle">
               <td class="p-4 font-medium text-text-primary">Find other reactions</td>
