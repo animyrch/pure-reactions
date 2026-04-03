@@ -92,8 +92,13 @@
               </a>
             </li>
             <li>
+<<<<<<< copilot/create-insights-article-separate-platform-friction
               <a href="/insights/separate-platform-friction" class="text-text-secondary transition-colors hover:text-accent-primary">
                 Zero-Friction Adoption
+=======
+              <a href="/insights/benefits-for-viewers" class="text-text-secondary transition-colors hover:text-accent-primary">
+                Benefits for Viewers
+>>>>>>> prod
               </a>
             </li>
           </ul>

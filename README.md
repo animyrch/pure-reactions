@@ -166,7 +166,23 @@ Key test fixtures for twin-player synchronization are in `tests/fixtures/reactio
 
 ## Deployment
 
-This project is configured for Netlify deployment (see `netlify.toml` and `svelte.config.js`).
+This project is configured for Netlify deployment (see `netlify.toml` and `svelte.config.js`). You may redeploy the platform under your own domain for **personal or community (non-commercial) use** by following the steps below.
+
+### Steps to Deploy Your Own Instance
+
+1. Fork or clone this repository.
+2. Create a free [Netlify](https://netlify.com) account and link it to your fork.
+3. Create the required third-party accounts and obtain credentials:
+   - [Firebase](https://console.firebase.google.com/) — Authentication, Firestore, and Realtime Database.
+   - [Algolia](https://www.algolia.com/) — Search index.
+   - [YouTube Data API](https://console.cloud.google.com/) — Video metadata.
+4. Copy `.env.example` to `.env` and fill in all values.
+5. In your Netlify project settings, add all environment variables listed in `.env.example` plus:
+   - `YOUTUBE_API_KEY` (server-side only)
+   - `FIREBASE_SERVICE_ACCOUNT` — path to your Firebase Admin SDK JSON key file (if using server functions); see the Installation section above for how to generate this key.
+6. Push to your fork's default branch — Netlify will build and deploy automatically.
+
+The platform is domain-agnostic: no hard-coded domain references exist in the application code. All external service callbacks (Firebase Auth, etc.) must be configured to allow your new domain in their respective consoles.
 
 ### Environment Variables for Production
 
@@ -177,7 +193,32 @@ Ensure these are set in your Netlify dashboard:
 
 ## License
 
-This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+**This project is non-commercial.** You may run it for personal or community use, but not for commercial purposes.
+
+This project is licensed under the **Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)** license — see the [LICENSE](LICENSE) file for details.
+
+[![CC BY-NC 4.0](https://licensebuttons.net/l/by-nc/4.0/88x31.png)](https://creativecommons.org/licenses/by-nc/4.0/)
+
+### What this means
+
+| Permitted | Restricted |
+|-----------|------------|
+| Copy, fork, and self-host the platform | Selling access or subscriptions |
+| Adapt and build upon the code | Running it as part of a paid product/service |
+| Use it for personal or community projects | Monetizing it through advertising without permission |
+| Redistribute with attribution | Any other commercial exploitation |
+
+### Attribution requirements
+
+When redistributing or adapting this project, you must:
+1. Credit the original project: **Pure Reactions** (<https://github.com/animyrch/pure-reactions>).
+2. Link to this license.
+3. Indicate if you made changes.
+4. Not imply that the original authors endorse your deployment.
+
+### Branding
+
+The name **Pure Reactions** and any associated logos or marks are not licensed for use in derivative deployments. If you redeploy this platform under a different domain, you must use a different name and remove or replace all Pure Reactions branding (site title, meta tags, footer credits, favicon) before going live.
 
 ## Test & Debug Features
 
