@@ -91,6 +91,11 @@
                 Legal Framework
               </a>
             </li>
+            <li>
+              <a href="/insights/benefits-for-viewers" class="text-text-secondary transition-colors hover:text-accent-primary">
+                Benefits for Viewers
+              </a>
+            </li>
           </ul>
         </div>
 
