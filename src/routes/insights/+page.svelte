@@ -83,7 +83,6 @@
       </span>
     </a>
 
-<<<<<<< copilot/create-insights-article-separate-platform-friction
     <!-- Insight 4: Separate Platform Friction -->
     <a 
       href="/insights/separate-platform-friction"
@@ -97,8 +96,14 @@
       </h2>
       <p class="mb-4 text-text-secondary">
         How to try Pure Reactions without changing a single thing about your YouTube workflow — and why it doubles as a copyright claim safety net.
-=======
-    <!-- Insight 4: Benefits for Viewers -->
+      </p>
+      <span class="inline-flex items-center gap-2 text-sm text-accent-primary">
+        Read article
+        <span aria-hidden="true">→</span>
+      </span>
+    </a>
+    
+    <!-- Insight 5: Benefits for Viewers -->
     <a
       href="/insights/benefits-for-viewers"
       class="group rounded-lg border border-border-strong bg-elevated p-6 transition-all duration-subtle hover:border-accent-primary/50 hover:bg-surface"
@@ -111,7 +116,6 @@
       </h2>
       <p class="mb-4 text-text-secondary">
         Original quality video, independent volume controls, always-visible source links, guilt-free viewing, and a reliable way to discover more reactions.
->>>>>>> prod
       </p>
       <span class="inline-flex items-center gap-2 text-sm text-accent-primary">
         Read article
