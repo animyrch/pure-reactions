@@ -12,6 +12,7 @@
   import { reactionDial } from "$lib/stores/reactionDial";
   import { prefersReducedMotion } from "$lib/stores/motion";
   import GoogleAnalytics from "$lib/components/Analytics/GoogleAnalytics.svelte";
+  import ArticleHeadingAnchors from "$lib/components/ArticleHeadingAnchors.svelte";
 
   $: currentToasts = $toasts; // Access the store value
 
@@ -101,6 +102,7 @@
       }}
     >
       <slot></slot>
+      <ArticleHeadingAnchors />
     </div>
   {/key}
 </div>
