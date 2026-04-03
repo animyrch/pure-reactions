@@ -289,11 +289,11 @@
         </div>
         <div class="flex items-start gap-4 rounded-lg bg-surface p-4">
           <span class="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-accent-primary/20 text-xs font-semibold text-accent-primary">2</span>
-          <p><strong class="text-text-primary">Export an alternate version.</strong> Same edit, but with the original content's audio and video tracks removed — a quick operation since the full edit is already done. Upload it to YouTube as Unlisted, add a brief note at the start, a description link and/or a YouTube card pointing viewers to the Pure Reactions experience.</p>
+          <p><strong class="text-text-primary">Export an alternate version.</strong> Same edit, but with the original content's audio and video tracks removed — a quick operation since the full edit is already done. Upload it to YouTube as Unlisted.</p>
         </div>
         <div class="flex items-start gap-4 rounded-lg bg-surface p-4">
           <span class="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-accent-primary/20 text-xs font-semibold text-accent-primary">3</span>
-          <p><strong class="text-text-primary">Create a Pure Reactions experience.</strong> Use your unlisted video as the reaction source. Add the original video's control points (pauses, silences, resumes) using the fine-tune editor — the timing is already visible in your edit, so this takes only a few clicks.</p>
+          <p><strong class="text-text-primary">Create a Pure Reactions experience based on the original video(s).</strong> Use your unlisted video as the reaction source. Add the original video's control points (pauses, silences, resumes) using the fine-tune editor — the timing is already visible in your edit, so this takes only a few clicks. Copy your Pure Reaction reaction experience URL and add it as a brief note at the start, a description link and/or a YouTube card pointing viewers to the Pure Reactions experience.</p>
         </div>
         <div class="flex items-start gap-4 rounded-lg bg-surface p-4">
           <span class="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-accent-primary/20 text-xs font-semibold text-accent-primary">4</span>
