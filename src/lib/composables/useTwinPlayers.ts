@@ -1208,7 +1208,15 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
         }
         scheduleNextSync(250, runSyncCycle);
         return;
-      }      
+      }
+
+      // If the reaction video has naturally ended, stop the sync cycle so the
+      // original video can continue playing freely until it finishes on its own.
+      // Playlist/queue transitions and mid-playlist pause are handled by the
+      // ENDED event handler in onReactionPlayerStateChange.
+      if (newReactionState === YT?.PlayerState?.ENDED) {
+        return;
+      }
 
       const previousReactionTime = snapshot.reactionCurrentTime;
       const reactionCurrentTime = parseFloat(playerReaction.getCurrentTime().toFixed(1));
@@ -1847,13 +1855,23 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       stateName: stateName(event?.data),
       ...getPlayerDebugInfo(event?.target)
     }, true);
-    if (event.data === YT.PlayerState.ENDED && get(state).isPlaylistAutoPlay) {
-      if (get(state).hasNextIndexInPlaylist) {
+    if (event.data === YT.PlayerState.ENDED) {
+      const snap = get(state);
+      if (snap.isPlaylistAutoPlay && snap.hasNextIndexInPlaylist) {
+        // Mid-playlist with autoplay: advance to the next reaction
         loadNextReactionInPlaylist();
+      } else if (snap.isQueueAutoPlay) {
+        // Queue autoplay: advance to the next queue item
+        loadNextReactionInQueue();
+      } else if (snap.playlistDocumentId && snap.hasNextIndexInPlaylist) {
+        // Mid-playlist without autoplay: stop both players
+        pauseOriginalVideo();
+        stopSyncScheduler();
+      } else {
+        // Individual reaction, or last item in playlist/queue:
+        // stop the sync scheduler so the original can finish naturally.
+        stopSyncScheduler();
       }
-    }
-    if (event.data === YT.PlayerState.ENDED && get(state).isQueueAutoPlay) {
-      loadNextReactionInQueue();
     }
     if (event.data === YT.PlayerState.PLAYING) {
       const snapshot = get(state);
