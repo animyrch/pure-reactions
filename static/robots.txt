@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /backend/
+Disallow: /account/
+Disallow: /edit-reaction/
+Disallow: /batch-edit/
+Disallow: /api/
+Disallow: /login/
+Disallow: /ios-test-secret/
+Disallow: /test-layout/
+
+Sitemap: https://purereactions.com/sitemap.xml
