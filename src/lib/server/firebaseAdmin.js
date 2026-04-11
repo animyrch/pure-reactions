@@ -66,3 +66,43 @@ export async function initializeFirebaseAdmin() {
 
   return { adminDb, adminFieldValue };
 }
+
+/**
+ * Fetch a reaction document by its slug (document ID) using Firebase Admin.
+ * Returns a plain object with the fields needed for SSR/SEO, or null if not found.
+ */
+export async function getReactionBySlug(slug) {
+  const { COLLECTION_REACTION_BINOMES } = await import('$lib/constants/firebase');
+  const { adminDb } = await initializeFirebaseAdmin();
+  if (!adminDb) {
+    return null;
+  }
+
+  try {
+    const docRef = adminDb.collection(COLLECTION_REACTION_BINOMES).doc(slug);
+    const docSnap = await docRef.get();
+    if (!docSnap.exists) {
+      return null;
+    }
+    const data = docSnap.data();
+    return {
+      id: docSnap.id,
+      reactionVideoId: data.reactionVideoId ?? null,
+      reactionVideoTitle: data.reactionVideoTitle ?? null,
+      reactionVideoAuthor: data.reactionVideoAuthor ?? null,
+      reactionVideoDescription: data.reactionVideoDescription ?? null,
+      originalVideoId: data.originalVideoId ?? null,
+      originalVideoTitle: data.originalVideoTitle ?? null,
+      originalVideoAuthor: data.originalVideoAuthor ?? null,
+      originalVideoDescription: data.originalVideoDescription ?? null,
+      originalVideoThumbnailUrl: data.originalVideoThumbnailUrl ?? null,
+      reactorDisplayName: data.reactorDisplayName ?? null,
+      thumbnailUrl: data.thumbnailUrl ?? null,
+      description: data.description ?? null,
+      isPublished: data.isPublished ?? false,
+    };
+  } catch (error) {
+    console.error('Failed to fetch reaction by slug:', error);
+    return null;
+  }
+}

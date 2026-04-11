@@ -1,5 +1,6 @@
 <script>
   import { page } from "$app/stores";
+  import SEO from "$lib/components/SEO.svelte";
   import CreatorDetails from "$lib/components/Video/CreatorDetails.svelte";
   import PlaylistQueue from "$lib/components/Video/PlaylistQueue.svelte";
   import OtherReactions from "$lib/components/Video/OtherReactions.svelte";
@@ -19,6 +20,23 @@
   import { TOASTS } from "$lib/constants/toasts";
 
   export let data;
+
+  $: reaction = data?.reaction;
+  $: seoTitle = reaction?.reactionVideoTitle || reaction?.originalVideoTitle || "Reaction";
+  $: seoDescription = reaction
+    ? [
+        reaction.reactionVideoTitle && reaction.originalVideoTitle
+          ? `${reaction.reactorDisplayName || reaction.reactionVideoAuthor || "A reactor"} reacts to ${reaction.originalVideoTitle}`
+          : null,
+        reaction.description,
+        reaction.originalVideoDescription,
+      ].filter(Boolean).join(" — ") || "Watch this reaction on Pure Reactions."
+    : "Watch this reaction on Pure Reactions.";
+  $: seoImage =
+    reaction?.thumbnailUrl ||
+    (reaction?.reactionVideoId
+      ? `https://i.ytimg.com/vi/${reaction.reactionVideoId}/hqdefault.jpg`
+      : undefined);
 
   const { state, actions } = useTwinPlayers({ data });
 
@@ -168,6 +186,14 @@
     reactionDial.reset();
   });
 </script>
+
+<SEO
+  title={seoTitle}
+  description={seoDescription}
+  type="video.other"
+  image={seoImage}
+  canonical="/reaction/{data.slug}"
+/>
 
 <!-- Loading overlay - covers content while YouTube players initialize in the background -->
 {#if $state.isLoading}
