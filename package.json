@@ -23,6 +23,8 @@
     "seed:twin-fixtures": "FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/seed-twin-player-fixtures.mjs",
     "repair:missing-playlist-original": "FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/repair-missing-playlist-original.mjs",
     "migrate:delete-legacy-timelines": "FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/migrate-delete-legacy-timelines.mjs",
+    "migrate:prod-to-local": "FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/migrate-prod-to-local.mjs",
+    "migrate:prod-to-local:dry": "FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/migrate-prod-to-local.mjs --dry",
     "algolia:status": "node scripts/algolia-status.mjs",
     "algolia:index": "FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/algolia-index.mjs",
     "algolia:index:apply": "FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/algolia-index.mjs --apply",

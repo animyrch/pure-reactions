@@ -628,6 +628,14 @@ export function createTwinPlayersPlaybackSyncController({
         return;
       }
 
+      // If the reaction video has naturally ended, stop the sync cycle so the
+      // original video can continue playing freely until it finishes on its own.
+      // Playlist/queue transitions and mid-playlist pause are handled by the
+      // ENDED event handler in onStateChangeReaction.
+      if (newReactionState === YT?.PlayerState?.ENDED) {
+        return;
+      }
+
       const previousReactionTime = snapshot.reactionCurrentTime;
       const reactionCurrentTime = parseFloat(playerReaction.getCurrentTime().toFixed(1));
       const rawDuration = typeof playerReaction.getDuration === 'function' ? Number(playerReaction.getDuration()) : Number.NaN;
@@ -1230,11 +1238,22 @@ export function createTwinPlayersPlaybackSyncController({
     }, true);
 
     const progressionHooks = getProgressionHooks();
-    if (event.data === YT.PlayerState.ENDED && snapshot.isPlaylistAutoPlay && snapshot.hasNextIndexInPlaylist) {
-      progressionHooks?.loadNextReactionInPlaylist();
-    }
-    if (event.data === YT.PlayerState.ENDED && snapshot.isQueueAutoPlay) {
-      progressionHooks?.loadNextReactionInQueue();
+    if (event.data === YT.PlayerState.ENDED) {
+      if (snapshot.isPlaylistAutoPlay && snapshot.hasNextIndexInPlaylist) {
+        // Mid-playlist with autoplay: advance to the next reaction
+        progressionHooks?.loadNextReactionInPlaylist();
+      } else if (snapshot.isQueueAutoPlay) {
+        // Queue autoplay: advance to the next queue item
+        progressionHooks?.loadNextReactionInQueue();
+      } else if (snapshot.playlistDocumentId && snapshot.hasNextIndexInPlaylist) {
+        // Mid-playlist without autoplay: stop both players
+        pauseOriginalVideo();
+        stopSyncScheduler();
+      } else {
+        // Individual reaction, or last item in playlist/queue:
+        // stop the sync scheduler so the original can finish naturally.
+        stopSyncScheduler();
+      }
     }
 
     if (event.data === YT.PlayerState.PLAYING) {
