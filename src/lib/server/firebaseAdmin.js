@@ -1,13 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { FIREBASE_CONFIG } from '$lib/constants/firebase';
+import { env } from '$env/dynamic/private';
 
 let adminDb = null;
 let adminFieldValue = null;
 let adminInitialized = false;
 
 function resolveServiceAccount() {
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT || process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  const raw = env.FIREBASE_SERVICE_ACCOUNT || env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (raw?.trim()) {
     const trimmed = raw.trim();
     if (trimmed.startsWith('{')) {
@@ -20,7 +21,7 @@ function resolveServiceAccount() {
     }
   }
 
-  const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  const credentialsPath = env.GOOGLE_APPLICATION_CREDENTIALS;
   if (credentialsPath?.trim()) {
     const absolutePath = path.resolve(process.cwd(), credentialsPath.trim());
     if (fs.existsSync(absolutePath)) {
