@@ -85,21 +85,18 @@ export async function getReactionBySlug(slug) {
       return null;
     }
     const data = docSnap.data();
+    // Return only the fields consumed by the SEO component in +page.svelte.
+    // Additional fields can be added here as noscript/SSR usage grows.
     return {
       id: docSnap.id,
       reactionVideoId: data.reactionVideoId ?? null,
       reactionVideoTitle: data.reactionVideoTitle ?? null,
       reactionVideoAuthor: data.reactionVideoAuthor ?? null,
-      reactionVideoDescription: data.reactionVideoDescription ?? null,
-      originalVideoId: data.originalVideoId ?? null,
       originalVideoTitle: data.originalVideoTitle ?? null,
-      originalVideoAuthor: data.originalVideoAuthor ?? null,
       originalVideoDescription: data.originalVideoDescription ?? null,
-      originalVideoThumbnailUrl: data.originalVideoThumbnailUrl ?? null,
       reactorDisplayName: data.reactorDisplayName ?? null,
       thumbnailUrl: data.thumbnailUrl ?? null,
       description: data.description ?? null,
-      isPublished: data.isPublished ?? false,
     };
   } catch (error) {
     console.error('Failed to fetch reaction by slug:', error);
