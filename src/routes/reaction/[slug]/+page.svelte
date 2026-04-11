@@ -18,6 +18,7 @@
   import { onDestroy } from "svelte";
   import { showToast } from "$lib/stores/toast";
   import { TOASTS } from "$lib/constants/toasts";
+  import { buildVideoObjectJsonLd, serializeJsonLd } from "$lib/helpers/videoObjectJsonLd";
 
   export let data;
 
@@ -37,6 +38,20 @@
     (reaction?.reactionVideoId
       ? `https://i.ytimg.com/vi/${reaction.reactionVideoId}/hqdefault.jpg`
       : undefined);
+
+  $: jsonLd = reaction
+    ? serializeJsonLd(
+        buildVideoObjectJsonLd({
+          name: seoTitle,
+          description: seoDescription,
+          thumbnailUrl: seoImage,
+          uploadDate: reaction.createdAt,
+          embedUrl: reaction.reactionVideoId
+            ? `https://www.youtube.com/embed/${reaction.reactionVideoId}`
+            : undefined,
+        }),
+      )
+    : null;
 
   const { state, actions } = useTwinPlayers({ data });
 
@@ -194,6 +209,13 @@
   image={seoImage}
   canonical="/reaction/{data.slug}"
 />
+
+{#if jsonLd}
+  <svelte:head>
+    <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+    <script type="application/ld+json">{@html jsonLd}</script>
+  </svelte:head>
+{/if}
 
 <!-- Loading overlay - covers content while YouTube players initialize in the background -->
 {#if $state.isLoading}
