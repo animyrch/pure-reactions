@@ -104,3 +104,65 @@ export async function getReactionBySlug(slug) {
     return null;
   }
 }
+
+/**
+ * Fetch a playlist document by its slug (document ID) using Firebase Admin.
+ * Returns a plain object with the fields needed for SSR/SEO, or null if not found.
+ */
+export async function getPlaylistBySlug(slug) {
+  const { COLLECTION_PLAYLISTS, COLLECTION_REACTION_BINOMES } = await import('$lib/constants/firebase');
+  const { adminDb } = await initializeFirebaseAdmin();
+  if (!adminDb) {
+    return null;
+  }
+
+  try {
+    const docRef = adminDb.collection(COLLECTION_PLAYLISTS).doc(slug);
+    const docSnap = await docRef.get();
+    if (!docSnap.exists) {
+      return null;
+    }
+    const data = docSnap.data();
+
+    const firstItemThumbnail = Array.isArray(data.sequenceItems)
+      ? (data.sequenceItems.find((i) => i.thumbnailUrl)?.thumbnailUrl ?? null)
+      : null;
+    const firstOriginalVideoId = Array.isArray(data.originalVideoIds)
+      ? (data.originalVideoIds[0] ?? null)
+      : null;
+
+    // Fetch the reaction video title from the first reaction document.
+    const firstReactionId = Array.isArray(data.reactionBinomeIds)
+      ? (data.reactionBinomeIds[0] ?? null)
+      : null;
+    let firstReactionVideoTitle = null;
+    let firstReactionDescription = null;
+    let firstReactionThumbnailUrl = null;
+    let firstReactionVideoId = null;
+    if (firstReactionId) {
+      const reactionSnap = await adminDb.collection(COLLECTION_REACTION_BINOMES).doc(firstReactionId).get();
+      if (reactionSnap.exists) {
+        const rd = reactionSnap.data();
+        firstReactionVideoTitle = rd.reactionVideoTitle ?? null;
+        firstReactionDescription = rd.description ?? null;
+        firstReactionThumbnailUrl = rd.thumbnailUrl ?? null;
+        firstReactionVideoId = rd.reactionVideoId ?? null;
+      }
+    }
+
+    return {
+      id: docSnap.id,
+      title: data.title ?? null,
+      description: data.description ?? null,
+      thumbnailUrl: firstItemThumbnail,
+      firstOriginalVideoId,
+      firstReactionVideoTitle,
+      firstReactionDescription,
+      firstReactionThumbnailUrl,
+      firstReactionVideoId,
+    };
+  } catch (error) {
+    console.error('Failed to fetch playlist by slug:', error);
+    return null;
+  }
+}

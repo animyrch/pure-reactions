@@ -2,6 +2,7 @@
   import { page } from "$app/stores";
   import { browser } from "$app/environment";
   import { onDestroy, onMount } from "svelte";
+  import SEO from "$lib/components/SEO.svelte";
   import CreatorDetails from "$lib/components/Video/CreatorDetails.svelte";
   import PlaylistQueue from "$lib/components/Video/PlaylistQueue.svelte";
   import OtherReactions from "$lib/components/Video/OtherReactions.svelte";
@@ -18,6 +19,19 @@
   import { getPlaylist } from "$lib/helpers/firebase";
 
   export let data;
+
+  $: playlist = data?.playlist;
+  $: seoTitle = playlist?.title || playlist?.firstReactionVideoTitle || "Playlist";
+  $: seoDescription = playlist?.description || playlist?.firstReactionDescription || "Watch this playlist on Pure Reactions.";
+  $: seoImage =
+    playlist?.thumbnailUrl ||
+    playlist?.firstReactionThumbnailUrl ||
+    (playlist?.firstReactionVideoId
+      ? `https://i.ytimg.com/vi/${playlist.firstReactionVideoId}/hqdefault.jpg`
+      : null) ||
+    (playlist?.firstOriginalVideoId
+      ? `https://i.ytimg.com/vi/${playlist.firstOriginalVideoId}/hqdefault.jpg`
+      : undefined);
 
   // We start with an empty reaction slug and load the selected one client-side.
   const { state, actions } = useTwinPlayers({
@@ -201,6 +215,14 @@
     }
   };
 </script>
+
+<SEO
+  title={seoTitle}
+  description={seoDescription}
+  type="video.other"
+  image={seoImage}
+  canonical="/playlist/{data.slug}"
+/>
 
 <div class={$state.isLoading ? "" : "hidden"}>
   <div class="flex justify-center py-24">
