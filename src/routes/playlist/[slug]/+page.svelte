@@ -17,6 +17,7 @@
   import { showToast } from "$lib/stores/toast";
   import { TOASTS } from "$lib/constants/toasts";
   import { getPlaylist } from "$lib/helpers/firebase";
+  import { buildVideoObjectJsonLd, serializeJsonLd } from "$lib/helpers/videoObjectJsonLd";
 
   export let data;
 
@@ -32,6 +33,28 @@
     (playlist?.firstOriginalVideoId
       ? `https://i.ytimg.com/vi/${playlist.firstOriginalVideoId}/hqdefault.jpg`
       : undefined);
+
+  // Prefer the live state video ID (client, after load); fall back to the
+  // server-loaded first reaction ID so JSON-LD is present in the initial SSR HTML.
+  $: jsonLdVideoId = $state.reactionVideoId || playlist?.firstReactionVideoId || null;
+  $: jsonLdName = $state.reactionVideoTitle || $state.originalVideoTitle || seoTitle;
+  $: jsonLdDescription =
+    $state.reactionVideoTitle && $state.originalVideoTitle
+      ? `${$state.reactorDisplayName || $state.reactionVideoAuthor || "A reactor"} reacts to ${$state.originalVideoTitle}`
+      : seoDescription;
+  $: jsonLdThumbnail = jsonLdVideoId
+    ? `https://i.ytimg.com/vi/${jsonLdVideoId}/hqdefault.jpg`
+    : seoImage;
+  $: jsonLd = jsonLdVideoId
+    ? serializeJsonLd(
+        buildVideoObjectJsonLd({
+          name: jsonLdName,
+          description: jsonLdDescription,
+          thumbnailUrl: jsonLdThumbnail,
+          embedUrl: `https://www.youtube.com/embed/${jsonLdVideoId}`,
+        }),
+      )
+    : null;
 
   // We start with an empty reaction slug and load the selected one client-side.
   const { state, actions } = useTwinPlayers({
@@ -215,6 +238,13 @@
     }
   };
 </script>
+
+<svelte:head>
+  {#if jsonLd}
+    <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+    {@html `<script type="application/ld+json">${jsonLd}</script>`}
+  {/if}
+</svelte:head>
 
 <SEO
   title={seoTitle}

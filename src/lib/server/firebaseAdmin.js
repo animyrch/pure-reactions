@@ -88,6 +88,12 @@ export async function getReactionBySlug(slug) {
     const data = docSnap.data();
     // Return only the fields consumed by the SEO component in +page.svelte.
     // Additional fields can be added here as noscript/SSR usage grows.
+    const createdAtTimestamp = data.createdAt;
+    const createdAtIso =
+      createdAtTimestamp && typeof createdAtTimestamp.toDate === 'function'
+        ? createdAtTimestamp.toDate().toISOString()
+        : null;
+
     return {
       id: docSnap.id,
       reactionVideoId: data.reactionVideoId ?? null,
@@ -98,6 +104,7 @@ export async function getReactionBySlug(slug) {
       reactorDisplayName: data.reactorDisplayName ?? null,
       thumbnailUrl: data.thumbnailUrl ?? null,
       description: data.description ?? null,
+      createdAt: createdAtIso,
     };
   } catch (error) {
     console.error('Failed to fetch reaction by slug:', error);
