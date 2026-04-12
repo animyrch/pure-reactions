@@ -131,6 +131,7 @@
 
 <div>
 	{#if $page.route.id === "/"}
+		<h1 class="sr-only">Pure Reactions — Synchronized Reaction Videos</h1>
 		<ReactionsSorting />
 	{/if}
 	{#if isLoading && reactions.length === 0}

@@ -1,5 +1,6 @@
 <script>
   import ReactionsList from '$lib/components/ReactionsList.svelte';
+  import SEO from '$lib/components/SEO.svelte';
 
   export let data;
 
@@ -9,6 +10,14 @@
     reactions?.[0]?.data?.userName ||
     'Pure Reactions user';
 </script>
+
+<SEO
+  title="{displayName} - Pure Reactions"
+  description="Watch reaction videos synced by {displayName} on Pure Reactions. Synchronized, fair-use-free reactions with twin-player technology."
+  canonical="/user/{data.userId}"
+  keywords="reactions by {displayName}, reaction videos, pure reactions"
+  type="profile"
+/>
 
 <div class="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-10">
   <header class="mb-8">
