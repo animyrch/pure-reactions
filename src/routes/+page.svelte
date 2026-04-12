@@ -12,6 +12,9 @@
 	import { isLoggedIn } from "$lib/stores/user";
 	import { goto } from "$app/navigation";
 
+	/** @type {import('./$types').PageData} */
+	export let data;
+
 	// Initialize Firebase
 	$: if (
 		$page.url.searchParams.get("sortBy") === SORTINGS.FOLLOWING &&
@@ -19,10 +22,17 @@
 	) {
 		goto(`/?sortBy=${SORTINGS.NEW}`);
 	}
-	let reactions = [];
+
+	// Seed the first page from server-side data so the initial HTML contains
+	// reaction cards without requiring JavaScript.
+	let reactions = data.reactions || [];
 	let isLoading = false;
-	let lastReactionDoc = null;
-	let hasMoreReactions = true;
+	// When the server pre-fetched the first page we use its cursor (a ms
+	// timestamp) to start the next client-side fetch from the right place.
+	// The cursor is a plain Date which Firestore Lite's startAfter() accepts
+	// as a field value matching the createdAt orderBy clause.
+	let lastReactionDoc = data.lastCursorMs ? new Date(data.lastCursorMs) : null;
+	let hasMoreReactions = (data.reactions?.length ?? 0) >= pageSize;
 	let sentinel;
 	const pageSize = 15;
 
@@ -70,7 +80,12 @@
 		};
 		observer = new IntersectionObserver(loadMore, options);
 		if (sentinel) observer.observe(sentinel);
-		loadReactions();
+		// Skip the initial fetch when the server already provided the first page.
+		if (reactions.length === 0) {
+			loadReactions();
+		} else {
+			ensureFillViewport();
+		}
 	});
 	onDestroy(() => {
 		if (observer) observer.disconnect();
@@ -81,7 +96,31 @@
 			loadReactions();
 		}
 	}
+
+	const websiteJsonLd = JSON.stringify({
+		"@context": "https://schema.org",
+		"@type": "WebSite",
+		"name": "Pure Reactions",
+		"url": "https://purereactions.com",
+		"potentialAction": {
+			"@type": "SearchAction",
+			"target": {
+				"@type": "EntryPoint",
+				"urlTemplate": "https://purereactions.com/search?q={search_term_string}"
+			},
+			"query-input": "required name=search_term_string"
+		}
+	});
+	// Build the JSON-LD script element as a string so that the literal closing
+	// tag does not appear in the Svelte template (which confuses HTML parsers).
+	const jsonLdScriptTag = `<script type="application/ld+json">${websiteJsonLd}</` + `script>`;
 </script>
+
+<svelte:head>
+	<!-- WebSite + SearchAction JSON-LD for Google Sitelinks Search Box -->
+	<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+	{@html jsonLdScriptTag}
+</svelte:head>
 
 <SEO
 	title="Pure Reactions - Synchronized Twin-Player Viewing"
