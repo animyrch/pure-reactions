@@ -99,7 +99,16 @@ See [docs/ALGOLIA_OPERATIONS.md](docs/ALGOLIA_OPERATIONS.md) for detailed search
 
 ### Sitemap Generation
 
-Generate and commit the static sitemap (`static/sitemap.xml`) from Firestore:
+The sitemap (`static/sitemap.xml`) is **automatically regenerated on every Netlify build** before the Vite build runs. No manual intervention is needed after a deploy.
+
+Required Netlify environment variables:
+
+| Variable | Description |
+|---|---|
+| `FIREBASE_SERVICE_ACCOUNT` | Firebase service account JSON (string or file path) |
+| `PUBLIC_BASE_URL` | Canonical base URL, e.g. `https://purereactions.com` |
+
+To regenerate the sitemap locally:
 
 ```bash
 export FIREBASE_SERVICE_ACCOUNT="./path/to/serviceAccount.json"
