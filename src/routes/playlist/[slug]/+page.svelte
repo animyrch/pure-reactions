@@ -34,22 +34,24 @@
       ? `https://i.ytimg.com/vi/${playlist.firstOriginalVideoId}/hqdefault.jpg`
       : undefined);
 
+  // Prefer the live state video ID (client, after load); fall back to the
+  // server-loaded first reaction ID so JSON-LD is present in the initial SSR HTML.
+  $: jsonLdVideoId = $state.reactionVideoId || playlist?.firstReactionVideoId || null;
   $: jsonLdName = $state.reactionVideoTitle || $state.originalVideoTitle || seoTitle;
   $: jsonLdDescription =
     $state.reactionVideoTitle && $state.originalVideoTitle
       ? `${$state.reactorDisplayName || $state.reactionVideoAuthor || "A reactor"} reacts to ${$state.originalVideoTitle}`
       : seoDescription;
-  $: jsonLdThumbnail =
-    $state.reactionVideoId
-      ? `https://i.ytimg.com/vi/${$state.reactionVideoId}/hqdefault.jpg`
-      : seoImage;
-  $: jsonLd = $state.reactionVideoId
+  $: jsonLdThumbnail = jsonLdVideoId
+    ? `https://i.ytimg.com/vi/${jsonLdVideoId}/hqdefault.jpg`
+    : seoImage;
+  $: jsonLd = jsonLdVideoId
     ? serializeJsonLd(
         buildVideoObjectJsonLd({
           name: jsonLdName,
           description: jsonLdDescription,
           thumbnailUrl: jsonLdThumbnail,
-          embedUrl: `https://www.youtube.com/embed/${$state.reactionVideoId}`,
+          embedUrl: `https://www.youtube.com/embed/${jsonLdVideoId}`,
         }),
       )
     : null;
