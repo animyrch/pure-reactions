@@ -240,7 +240,7 @@
 <svelte:head>
   {#if jsonLd}
     <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-    <script type="application/ld+json">{@html jsonLd}</script>
+    {@html `<script type="application/ld+json">${jsonLd}</script>`}
   {/if}
 </svelte:head>
 
