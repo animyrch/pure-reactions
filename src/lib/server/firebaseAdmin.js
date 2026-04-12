@@ -182,6 +182,68 @@ export async function getReactionsByPageServer(cursor, limitBy, _sort) {
 }
 
 /**
+ * Fetch all published reactions for a given reactor (by reactionVideoAuthor) using Firebase Admin.
+ * Returns an array of { id, data } plain objects with Timestamps serialized to milliseconds.
+ *
+ * @param {string} name - The reactor's channel name (reactionVideoAuthor field value).
+ * @returns {Promise<Array<{ id: string, data: object }>>}
+ */
+export async function getReactionsByReactorServer(name) {
+  if (!name) return [];
+  const { COLLECTION_REACTION_BINOMES } = await import('$lib/constants/firebase');
+  const { adminDb } = await initializeFirebaseAdmin();
+  if (!adminDb) return [];
+
+  try {
+    const snapshot = await adminDb
+      .collection(COLLECTION_REACTION_BINOMES)
+      .where('reactionVideoAuthor', '==', name)
+      .where('isPublished', '==', true)
+      .orderBy('createdAt', 'desc')
+      .get();
+
+    return snapshot.docs.map((doc) => ({
+      id: doc.id,
+      data: serializeFirestoreValue(doc.data()),
+    }));
+  } catch (error) {
+    console.error('Failed to fetch reactions by reactor (server):', error);
+    return [];
+  }
+}
+
+/**
+ * Fetch all published reactions for a given creator (by originalVideoAuthor) using Firebase Admin.
+ * Returns an array of { id, data } plain objects with Timestamps serialized to milliseconds.
+ *
+ * @param {string} name - The creator's channel name (originalVideoAuthor field value).
+ * @returns {Promise<Array<{ id: string, data: object }>>}
+ */
+export async function getReactionsByCreatorServer(name) {
+  if (!name) return [];
+  const { COLLECTION_REACTION_BINOMES } = await import('$lib/constants/firebase');
+  const { adminDb } = await initializeFirebaseAdmin();
+  if (!adminDb) return [];
+
+  try {
+    const snapshot = await adminDb
+      .collection(COLLECTION_REACTION_BINOMES)
+      .where('originalVideoAuthor', '==', name)
+      .where('isPublished', '==', true)
+      .orderBy('createdAt', 'desc')
+      .get();
+
+    return snapshot.docs.map((doc) => ({
+      id: doc.id,
+      data: serializeFirestoreValue(doc.data()),
+    }));
+  } catch (error) {
+    console.error('Failed to fetch reactions by creator (server):', error);
+    return [];
+  }
+}
+
+/**
  * Fetch a playlist document by its slug (document ID) using Firebase Admin.
  * Returns a plain object with the fields needed for SSR/SEO, or null if not found.
  */

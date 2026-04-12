@@ -68,13 +68,25 @@
         </header>
 
         <div class="identity">
-            <img
-                src={originalAvatarSrc}
-                alt={originalVideoAuthor ? `${originalVideoAuthor} avatar` : 'Original creator'}
-                loading="lazy"
-                width="48"
-                height="48"
-            />
+            {#if originalVideoAuthor}
+                <a href={`/creator/${encodeURIComponent(originalVideoAuthor)}`} title={`${originalVideoAuthor} on Pure Reactions`}>
+                    <img
+                        src={originalAvatarSrc}
+                        alt={`${originalVideoAuthor} on Pure Reactions`}
+                        loading="lazy"
+                        width="48"
+                        height="48"
+                    />
+                </a>
+            {:else}
+                <img
+                    src={originalAvatarSrc}
+                    alt="Original creator"
+                    loading="lazy"
+                    width="48"
+                    height="48"
+                />
+            {/if}
             <div class="identity-text m-auto">
                 {#if originalVideoAuthor}
                     <a
@@ -146,13 +158,25 @@
         </header>
 
         <div class="identity flex justify-center items-center gap-4">
-            <img
-                src={reactionAvatarSrc}
-                alt={reactionVideoAuthor ? `${reactionVideoAuthor} avatar` : 'Reactor'}
-                loading="lazy"
-                width="48"
-                height="48"
-            />
+            {#if reactionVideoAuthor}
+                <a href={`/reactor/${encodeURIComponent(reactionVideoAuthor)}`} title={`${reactionVideoAuthor} on Pure Reactions`}>
+                    <img
+                        src={reactionAvatarSrc}
+                        alt={`${reactionVideoAuthor} on Pure Reactions`}
+                        loading="lazy"
+                        width="48"
+                        height="48"
+                    />
+                </a>
+            {:else}
+                <img
+                    src={reactionAvatarSrc}
+                    alt="Reactor"
+                    loading="lazy"
+                    width="48"
+                    height="48"
+                />
+            {/if}
             <div class="identity-text m-auto">
                 {#if reactionVideoAuthor}
                     <a
