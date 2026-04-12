@@ -1,14 +1,9 @@
 import { error } from '@sveltejs/kit';
-/** @type {import('./$types').PageLoad} */
-import { getReactionsByReactorName } from '$lib/helpers/firebase';
 
-export async function load({ params }) {
+/** @type {import('./$types').PageLoad} */
+export function load({ params }) {
     if (params.slug) {
-        const creatorPureReactions = await getReactionsByReactorName(params.slug);
-        return {
-            slug: params.slug,
-            creatorPureReactions
-        };
+        return { slug: params.slug };
     }
-	throw error(404, 'Not found');
+    throw error(404, 'Not found');
 }
