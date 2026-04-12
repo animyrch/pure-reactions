@@ -210,12 +210,12 @@
   canonical="/reaction/{data.slug}"
 />
 
-{#if jsonLd}
-  <svelte:head>
+<svelte:head>
+  {#if jsonLd}
     <!-- eslint-disable-next-line svelte/no-at-html-tags -->
     <script type="application/ld+json">{@html jsonLd}</script>
-  </svelte:head>
-{/if}
+  {/if}
+</svelte:head>
 
 <!-- Loading overlay - covers content while YouTube players initialize in the background -->
 {#if $state.isLoading}
