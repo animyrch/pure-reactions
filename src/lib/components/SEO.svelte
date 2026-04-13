@@ -5,6 +5,7 @@
   export let type = "website";
   export let image = "/icon-512.png";
   export let keywords = "reaction videos, fair use, copyright free reactions, youtube reactions, video reactions, creator monetization";
+  export let robots = "index, follow";
   
   const siteName = "Pure Reactions";
   const twitterHandle = "@purereactions";
@@ -45,6 +46,6 @@
   {/if}
   
   <!-- Additional SEO -->
-  <meta name="robots" content="index, follow" />
+  <meta name="robots" content={robots} />
   <meta name="author" content="Pure Reactions" />
 </svelte:head>

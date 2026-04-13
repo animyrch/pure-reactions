@@ -34,5 +34,9 @@
 </svelte:head>
 
 <div>
+	<header class="mx-auto max-w-6xl px-4 pt-10 pb-4 sm:px-6 lg:px-10">
+		<p class="text-xs font-semibold uppercase tracking-[0.3em] text-text-muted">Original Creator</p>
+		<h1 class="mt-2 text-2xl font-semibold text-text-primary sm:text-3xl">{slug}</h1>
+	</header>
 	<ReactionsList reactions={data.creatorPureReactions} />
 </div>
