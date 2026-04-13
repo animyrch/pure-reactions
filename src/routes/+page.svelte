@@ -1,9 +1,5 @@
-<!-- src/App.svelte -->
-
 <script>
 	import { getReactionsByPage } from "$lib/helpers/firebase";
-	import ReactionsList from "$lib/components/ReactionsList.svelte";
-	import ReactionsSorting from "$lib/components/Navigation/ReactionsSorting.svelte";
 	import SEO from "$lib/components/SEO.svelte";
 	import { page } from "$app/stores";
 	import { SORTINGS } from "$lib/constants/sortings";
@@ -12,17 +8,26 @@
 	import { isLoggedIn } from "$lib/stores/user";
 	import { goto } from "$app/navigation";
 
-	// Initialize Firebase
+	import LandingHero from "$lib/components/landing/LandingHero.svelte";
+	import LandingSyncExplainer from "$lib/components/landing/LandingSyncExplainer.svelte";
+	import LandingWorkflow from "$lib/components/landing/LandingWorkflow.svelte";
+	import LandingTrust from "$lib/components/landing/LandingTrust.svelte";
+	import LandingCreatorProof from "$lib/components/landing/LandingCreatorProof.svelte";
+
+	/** @type {import('./$types').PageData} */
+	export let data;
+
 	$: if (
 		$page.url.searchParams.get("sortBy") === SORTINGS.FOLLOWING &&
 		!$isLoggedIn
 	) {
 		goto(`/?sortBy=${SORTINGS.NEW}`);
 	}
-	let reactions = [];
+
+	let reactions = data.reactions || [];
 	let isLoading = false;
-	let lastReactionDoc = null;
-	let hasMoreReactions = true;
+	let lastReactionDoc = data.lastCursorMs ? new Date(data.lastCursorMs) : null;
+	let hasMoreReactions = (data.reactions?.length ?? 0) >= pageSize;
 	let sentinel;
 	const pageSize = 15;
 
@@ -60,7 +65,7 @@
 			ensureFillViewport();
 		}
 	};
-	// Create an intersection observer to load more reactions when the user scrolls to the bottom of the list
+
 	let observer;
 	onMount(() => {
 		const options = {
@@ -70,7 +75,11 @@
 		};
 		observer = new IntersectionObserver(loadMore, options);
 		if (sentinel) observer.observe(sentinel);
-		loadReactions();
+		if (reactions.length === 0) {
+			loadReactions();
+		} else {
+			ensureFillViewport();
+		}
 	});
 	onDestroy(() => {
 		if (observer) observer.disconnect();
@@ -81,26 +90,71 @@
 			loadReactions();
 		}
 	}
+
+	const websiteJsonLd = JSON.stringify({
+		"@context": "https://schema.org",
+		"@type": "WebSite",
+		"name": "Pure Reactions",
+		"url": "https://purereactions.com",
+		"potentialAction": {
+			"@type": "SearchAction",
+			"target": {
+				"@type": "EntryPoint",
+				"urlTemplate": "https://purereactions.com/search?q={search_term_string}"
+			},
+			"query-input": "required name=search_term_string"
+		}
+	});
+
+	const appJsonLd = JSON.stringify({
+		"@context": "https://schema.org",
+		"@type": "SoftwareApplication",
+		"name": "Pure Reactions",
+		"url": "https://purereactions.com",
+		"applicationCategory": "MultimediaApplication",
+		"operatingSystem": "Web",
+		"description": "A creator tool for recording synchronized reaction, commentary, translation, and voiceover content. Your recording and the original video stay separate—copyright-safe and perfectly synced.",
+		"offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+		"featureList": [
+			"Synchronized twin-player playback",
+			"Copyright-safe reaction recording",
+			"YouTube and TikTok source support",
+			"Reaction, commentary, translation and voiceover workflows"
+		]
+	});
+
+	const jsonLdScriptTag =
+		`<script type="application/ld+json">${websiteJsonLd}</` + `script>` +
+		`<script type="application/ld+json">${appJsonLd}</` + `script>`;
 </script>
 
+<svelte:head>
+	{@html jsonLdScriptTag}
+</svelte:head>
+
 <SEO
-	title="Pure Reactions - Synchronized Twin-Player Viewing"
-	description="Watch synchronized content with perfect timing. Reactions, translations, voiceovers, commentary—all synced with original videos. No copyright claims, pure creative freedom."
+	title="Pure Reactions — Sync Your Reaction, Commentary & Translation Videos"
+	description="Record reaction videos, commentary, translations, voiceovers and more—perfectly synchronized with the original video. Your content stays copyright-safe on your own channel. Free to use."
 	canonical="/"
-	keywords="synchronized video player, twin player, reaction videos, video translations, voiceover sync, copyright free, fair use free"
+	keywords="reaction video tool, commentary creator, translation video sync, voiceover sync, synchronized video player, twin player, copyright safe reactions, reaction content creator, video sync platform, accessibility creator, mixer, synced reaction recording"
+	image="/og-preview.png"
 />
 
-<div>
-	{#if $page.route.id === "/"}
-		<ReactionsSorting />
-	{/if}
-	{#if isLoading && reactions.length === 0}
-		<div>Loading...</div>
-	{:else}
-		<ReactionsList {reactions} />
-	{/if}
+<!-- Landing narrative -->
+<div class="landing-page">
+	<LandingHero />
+	<LandingSyncExplainer />
+	<LandingWorkflow />
+	<LandingTrust />
+	<LandingCreatorProof {reactions} />
 	<div class="load-more" bind:this={sentinel} aria-hidden="true"></div>
 </div>
 
 <style>
+	.landing-page {
+		/* Pull the landing sections out of the default app-container padding
+		   so hero and full-bleed sections stretch edge-to-edge. */
+		margin-left: calc(-1 * max(1rem, var(--safe-area-inset-left, 0px)));
+		margin-right: calc(-1 * max(1rem, var(--safe-area-inset-right, 0px)));
+	}
 </style>

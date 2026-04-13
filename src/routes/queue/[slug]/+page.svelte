@@ -3,6 +3,7 @@
     import { page } from '$app/stores';
     import { goto } from '$app/navigation';
     import QueueBinomeCard from '$lib/components/QueueBinomeCard.svelte';
+    import SEO from '$lib/components/SEO.svelte';
     import { getReactionsByIds, getPlaylist, getQueueBySlug, updateQueueDocument } from '$lib/helpers/firebase';
     import { handlePrivateRoute } from '$lib/helpers/routing';
     import { readQueueProgress } from '$lib/helpers/queueProgress';
@@ -248,9 +249,12 @@
     onMount(hydrateQueueItems);
 </script>
 
-<svelte:head>
-    <title>{queueDefinition?.data?.title ? `${queueDefinition.data.title} • Pure Reactions` : 'Queue • Pure Reactions'}</title>
-</svelte:head>
+<SEO
+    title={queueDefinition?.data?.title ? `${queueDefinition.data.title} Queue` : 'Queue'}
+    description={queueDefinition?.data?.description || 'Watch this curated queue of synchronized reaction videos on Pure Reactions.'}
+    canonical="/queue/{slug}"
+    keywords="reaction queue, pure reactions queue, synchronized reactions playlist"
+/>
 
 <main class="set-page bg-background text-text-primary">
     <div class="mx-auto max-w-6xl px-4 py-10 sm:py-14">

@@ -5,6 +5,7 @@
     import { SearchOutline as SearchIcon } from 'flowbite-svelte-icons';
     import { getSearchProvider, isValidQuery, normalizeQuery } from '$lib/services/search';
     import SearchHit from '$lib/components/Search/SearchHit.svelte';
+    import SEO from '$lib/components/SEO.svelte';
     import { ALGOLIA_REACTIONS_INDEX } from '$lib/constants/algolia';
     import { COLLECTION_REACTION_BINOMES, db } from '$lib/constants/firebase';
     import { collection, getDocs, query as firestoreQuery, where, orderBy, limit } from 'firebase/firestore/lite';
@@ -109,11 +110,16 @@
     $: showFallback = showEmptyState && fallbackReactions.length > 0;
 </script>
 
-<svelte:head>
-    <title>{query ? `Search: ${query}` : 'Search'} - Pure Reactions</title>
-</svelte:head>
+<SEO
+    title={urlQuery ? `Search: ${urlQuery}` : 'Search Reactions'}
+    description="Search for synchronized reaction videos by title, reactor, or tags on Pure Reactions."
+    canonical="/search"
+    keywords="search reactions, find reaction videos, pure reactions search"
+    robots="noindex, follow"
+/>
 
 <div class="search-page-container mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <h1 class="sr-only">Search Reactions</h1>
     <!-- Search Input -->
     <div class="search-header mb-8">
         <form on:submit={handleSubmit} class="w-full">
