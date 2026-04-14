@@ -67,7 +67,7 @@
     <div class="reveal-proof-delay-3 mt-12 text-center">
       <button
         class="inline-flex items-center gap-2 rounded-lg bg-accent-primary px-8 py-3.5 text-base font-semibold text-background shadow-elevated transition duration-subtle ease-cinematic hover:bg-primary-600 hover:shadow-overlay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98]"
-        on:click={() => goToRoute("/backend")}
+        on:click={() => goToRoute("/react")}
       >
         Start creating
         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
