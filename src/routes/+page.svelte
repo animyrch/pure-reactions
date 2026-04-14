@@ -133,7 +133,7 @@
 </svelte:head>
 
 <SEO
-	title="Pure Reactions — Sync Your Reaction, Commentary & Translation Videos"
+	title="Pure Reactions — Sync Your Transformative Content (Reaction, Commentary & Translation Videos)"
 	description="Record reaction videos, commentary, translations, voiceovers and more—perfectly synchronized with the original video. Your content stays copyright-safe on your own channel. Free to use."
 	canonical="/"
 	keywords="reaction video tool, commentary creator, translation video sync, voiceover sync, synchronized video player, twin player, copyright safe reactions, reaction content creator, video sync platform, accessibility creator, mixer, synced reaction recording"
