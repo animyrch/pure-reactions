@@ -5,6 +5,7 @@
 	import { SORTINGS } from "$lib/constants/sortings";
 	import { userExtraDataStore } from "$lib/stores/userExtraData";
 	import { onMount, onDestroy, tick } from "svelte";
+	import { fade } from "svelte/transition";
 	import { isLoggedIn } from "$lib/stores/user";
 	import { goto } from "$app/navigation";
 
@@ -66,6 +67,10 @@
 		}
 	};
 
+	let creatorProofVisible = false;
+	let pillMounted = false;
+	let proofObserver;
+
 	let observer;
 	onMount(() => {
 		const options = {
@@ -81,8 +86,24 @@
 			ensureFillViewport();
 		}
 	});
+	onMount(() => {
+		const proofSection = document.getElementById('creator-proof');
+		if (proofSection) {
+			proofObserver = new IntersectionObserver(
+				([entry]) => {
+					creatorProofVisible = entry.isIntersecting;
+				},
+				{ threshold: 0.1 }
+			);
+			proofObserver.observe(proofSection);
+		}
+		const pillTimer = setTimeout(() => { pillMounted = true; }, 600);
+		return () => clearTimeout(pillTimer);
+	});
+
 	onDestroy(() => {
 		if (observer) observer.disconnect();
+		if (proofObserver) proofObserver.disconnect();
 	});
 
 	function loadMore(entries, _observer) {
@@ -139,6 +160,20 @@
 	keywords="reaction video tool, commentary creator, translation video sync, voiceover sync, synchronized video player, twin player, copyright safe reactions, reaction content creator, video sync platform, accessibility creator, mixer, synced reaction recording"
 	image="/og-preview.png"
 />
+
+{#if pillMounted && !creatorProofVisible}
+	<button
+		transition:fade={{ duration: 300 }}
+		class="fixed bottom-6 left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 rounded-full bg-surface/90 px-5 py-2.5 text-sm font-medium text-text-secondary shadow-elevated ring-1 ring-border-subtle backdrop-blur-sm transition-colors duration-subtle ease-cinematic hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+		on:click={() => document.getElementById('creator-proof')?.scrollIntoView({ behavior: 'smooth' })}
+		aria-label="Scroll down to see what creators are making"
+	>
+		See what creators are making
+		<svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+			<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+		</svg>
+	</button>
+{/if}
 
 <!-- Landing narrative -->
 <div class="landing-page">

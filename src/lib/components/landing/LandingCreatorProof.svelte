@@ -24,6 +24,7 @@
 </script>
 
 <section
+  id="creator-proof"
   bind:this={sectionEl}
   class="relative px-4 py-24 md:py-32"
   aria-label="Creator content"
