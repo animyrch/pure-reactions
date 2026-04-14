@@ -67,7 +67,7 @@
       class="hero-stagger-2 mb-6 text-4xl font-bold leading-[1.1] tracking-tight text-text-primary sm:text-5xl md:text-6xl lg:text-7xl"
       style="font-family: var(--font-display, 'Manrope', 'Inter', sans-serif);"
     >
-      Sync your reaction videos.<br class="hidden sm:block" />
+      Sync your transformative videos.<br class="hidden sm:block" />
       <span class="text-accent-primary">Copyright-safe. Always.</span>
     </h1>
 
@@ -99,7 +99,7 @@
     </div>
 
     <!-- Visual hint: dual-stream preview -->
-    <div class="hero-stagger-5 mt-16 flex items-center justify-center gap-3 md:gap-5">
+    <div class="hero-stagger-5 mt-16 flex items-center justify-center gap-3 flex-col md:flex-row md:gap-5">
       <div class="relative aspect-video w-40 overflow-hidden rounded-lg bg-surface ring-1 ring-border-subtle sm:w-52 md:w-64">
         <div class="flex h-full items-center justify-center">
           <div class="text-center">
