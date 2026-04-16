@@ -29,6 +29,19 @@
     $: hasResults = results.length > 0;
     $: isSearchMode = query.trim().length > 0;
 
+    // Attach IntersectionObserver reactively once sentinel is bound
+    $: if (sentinel && !observer) {
+        observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting && hasMore && !loading && !loadingMore) {
+                    loadMore();
+                }
+            },
+            { rootMargin: '200px' }
+        );
+        observer.observe(sentinel);
+    }
+
     onMount(async () => {
         searchProvider = getSearchProvider();
 
@@ -39,8 +52,6 @@
 
         await loadResults(0);
         initialLoadDone = true;
-
-        setupIntersectionObserver();
     });
 
     onDestroy(() => {
@@ -48,17 +59,14 @@
         if (observer) observer.disconnect();
     });
 
-    function setupIntersectionObserver() {
-        if (!sentinel) return;
-        observer = new IntersectionObserver(
-            (entries) => {
-                if (entries[0].isIntersecting && hasMore && !loading && !loadingMore) {
-                    loadMore();
-                }
-            },
-            { rootMargin: '200px' }
-        );
-        observer.observe(sentinel);
+    function triggerSearch(newQuery) {
+        if (newQuery) {
+            goto(`/search?q=${encodeURIComponent(newQuery)}`, { replaceState: true });
+        } else {
+            goto('/search', { replaceState: true });
+        }
+        currentPage = 0;
+        loadResults(0);
     }
 
     async function loadResults(pageNum) {
@@ -108,36 +116,20 @@
     function handleInput() {
         if (debounceTimer) clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
-            const normalized = normalizeQuery(query);
-            if (normalized) {
-                goto(`/search?q=${encodeURIComponent(normalized)}`, { replaceState: true });
-            } else {
-                goto('/search', { replaceState: true });
-            }
-            currentPage = 0;
-            loadResults(0);
+            triggerSearch(normalizeQuery(query));
         }, DEBOUNCE_DELAY);
     }
 
     function handleClear() {
         query = '';
         if (debounceTimer) clearTimeout(debounceTimer);
-        goto('/search', { replaceState: true });
-        currentPage = 0;
-        loadResults(0);
+        triggerSearch('');
     }
 
     function handleSubmit(event) {
         event.preventDefault();
         if (debounceTimer) clearTimeout(debounceTimer);
-        const normalized = normalizeQuery(query);
-        if (normalized) {
-            goto(`/search?q=${encodeURIComponent(normalized)}`, { replaceState: true });
-        } else {
-            goto('/search', { replaceState: true });
-        }
-        currentPage = 0;
-        loadResults(0);
+        triggerSearch(normalizeQuery(query));
     }
 </script>
 
