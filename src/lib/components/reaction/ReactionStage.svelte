@@ -187,8 +187,8 @@
             : "top-right";
     $: overlayCornerClass = overlayPositionClasses[normalizedOverlayCorner];
     $: isReactionPrimary = fullscreenPrimaryVideo === "reaction";
-    $: isDesktopOverlay = isDesktop && !isMobileLandscape && !isFullscreen;
-    $: isOverlayLayout = isFullscreen || isMobileLandscape || isDesktopOverlay;
+    $: isDesktopOverlay = isDesktop && !isMobileLandscape && !isFullscreen && bothVideosStarted;
+    $: isOverlayLayout = isFullscreen || (isMobileLandscape && bothVideosStarted) || isDesktopOverlay;
     $: isOriginalOverlay = isOverlayLayout && isReactionPrimary;
     $: isReactionOverlay = isOverlayLayout && !isReactionPrimary;
 
@@ -257,9 +257,11 @@
 
 <div
     bind:this={wrapperRef}
-    class={`theater-wrapper ${
+    class={`theater-wrapper transition-all duration-500 ${
         isFullscreen
             ? "theater-wrapper--fullscreen fixed inset-0 z-50 m-0 h-screen w-screen overflow-hidden rounded-none bg-black px-0 py-0 text-text-primary shadow-none"
+            : isDesktopOverlay
+            ? "relative w-full max-w-[80%] bg-black text-text-primary shadow-none md:shadow-elevated md:mx-auto md:my-10 md:rounded-2xl md:bg-surface/80 md:px-4 md:py-8 md:backdrop-blur sm:px-6 lg:px-10 xl:rounded-3xl"
             : "relative w-full max-w-none bg-black text-text-primary shadow-none md:shadow-elevated md:mx-auto md:my-10 md:rounded-2xl md:bg-surface/80 md:px-4 md:py-8 md:backdrop-blur sm:px-6 lg:px-10 xl:rounded-3xl"
     }`}
     style={`--control-dock-space: 80px; --overlay-width: ${normalizedOverlayWidth}%;`}
@@ -291,7 +293,7 @@
         data-stage="container"
         class={isFullscreen
             ? "relative h-full w-full"
-            : isDesktopOverlay
+            : isOverlayLayout
             ? "relative w-full aspect-video overflow-hidden"
             : "flex flex-col-reverse gap-0 md:grid md:gap-6 md:grid-cols-2 xl:gap-8"}
     >
