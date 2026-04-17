@@ -74,6 +74,13 @@
       return;
     }
 
+    // Skip view transitions for same-pathname navigations (e.g. search query param updates)
+    // to prevent focus loss caused by startViewTransition capturing/replacing the DOM
+    const fromPath = navigation.from?.url?.pathname ?? '';
+    if (toPath === fromPath) {
+      return;
+    }
+
     return new Promise((resolve) => {
       document.startViewTransition(async () => {
         resolve();

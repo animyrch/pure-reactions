@@ -8,7 +8,7 @@ let adminFieldValue = null;
 let adminInitialized = false;
 
 function resolveServiceAccount() {
-  const raw = env.FIREBASE_SERVICE_ACCOUNT || env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  const raw = env.FIREBASE_SERVICE_ACCOUNT;
   if (raw?.trim()) {
     const trimmed = raw.trim();
     if (trimmed.startsWith('{')) {

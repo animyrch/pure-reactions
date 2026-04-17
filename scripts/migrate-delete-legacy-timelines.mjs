@@ -125,9 +125,9 @@ function ensureAdminApp({ projectId, target }) {
     return admin.initializeApp({ projectId });
   }
 
-  const inlineJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  if (inlineJson) {
-    const parsed = JSON.parse(inlineJson);
+  const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT?.trim();
+  if (serviceAccount?.startsWith('{')) {
+    const parsed = JSON.parse(serviceAccount);
     return admin.initializeApp({
       credential: admin.credential.cert(parsed),
       projectId: projectId || parsed.project_id
@@ -181,8 +181,8 @@ async function migrate() {
       throw new Error('Refusing to migrate prod: set ALLOW_PROD_MIGRATION=1 or pass --allowProd');
     }
 
-    if (!process.env.FIREBASE_SERVICE_ACCOUNT && !process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
-      throw new Error('Missing prod credentials: set FIREBASE_SERVICE_ACCOUNT or FIREBASE_SERVICE_ACCOUNT_JSON');
+    if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+      throw new Error('Missing prod credentials: set FIREBASE_SERVICE_ACCOUNT');
     }
 
     if (dryRun) {

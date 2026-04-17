@@ -32,7 +32,7 @@ For local development, you have two options:
    export FIREBASE_SERVICE_ACCOUNT=./path-to-your-key.json
    ```
 
-#### Option 2: Using FIREBASE_SERVICE_ACCOUNT
+#### Option 2: Using inline JSON in FIREBASE_SERVICE_ACCOUNT
 
 Add to your `.env` file:
 ```
