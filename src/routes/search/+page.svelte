@@ -1,117 +1,140 @@
 <script>
-    import { onMount } from 'svelte';
+    import { onMount, onDestroy } from 'svelte';
     import { page } from '$app/stores';
     import { goto } from '$app/navigation';
     import { SearchOutline as SearchIcon } from 'flowbite-svelte-icons';
-    import { getSearchProvider, isValidQuery, normalizeQuery } from '$lib/services/search';
+    import { getSearchProvider, normalizeQuery } from '$lib/services/search';
     import SearchHit from '$lib/components/Search/SearchHit.svelte';
     import SEO from '$lib/components/SEO.svelte';
     import { ALGOLIA_REACTIONS_INDEX } from '$lib/constants/algolia';
-    import { COLLECTION_REACTION_BINOMES, db } from '$lib/constants/firebase';
-    import { collection, getDocs, query as firestoreQuery, where, orderBy, limit } from 'firebase/firestore/lite';
+
+    const HITS_PER_PAGE = 12;
+    const DEBOUNCE_DELAY = 1000;
 
     let searchProvider;
     let query = '';
     let searchInput;
     let loading = false;
+    let loadingMore = false;
     let results = [];
-    let fallbackReactions = [];
-    let searchPerformed = false; // Track if a search has been submitted
+    let currentPage = 0;
+    let totalPages = 0;
+    let totalHits = 0;
+    let initialLoadDone = false;
+    let debounceTimer;
+    let sentinel;
+    let observer;
 
-    $: urlQuery = $page.url.searchParams.get('q') || '';
+    $: hasMore = currentPage < totalPages - 1;
+    $: hasResults = results.length > 0;
+    $: isSearchMode = query.trim().length > 0;
 
-    // Sync query with URL on mount and URL changes (only when URL changes, not when user types)
-    let lastUrlQuery = '';
-    $: {
-        if (urlQuery !== lastUrlQuery) {
-            lastUrlQuery = urlQuery;
-            query = urlQuery;
-            if (query && searchProvider) {
-                performSearch();
-            }
-        }
+    // Attach IntersectionObserver reactively once sentinel is bound
+    $: if (sentinel && !observer) {
+        observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting && hasMore && !loading && !loadingMore) {
+                    loadMore();
+                }
+            },
+            { rootMargin: '200px' }
+        );
+        observer.observe(sentinel);
     }
 
     onMount(async () => {
         searchProvider = getSearchProvider();
-        
+
+        const urlQuery = $page.url.searchParams.get('q') || '';
         if (urlQuery) {
-            performSearch();
+            query = urlQuery;
         }
 
-        // Load fallback reactions
-        loadFallbackReactions();
+        await loadResults(0);
+        initialLoadDone = true;
     });
 
-    async function loadFallbackReactions() {
-        try {
-            const reactionsRef = collection(db, COLLECTION_REACTION_BINOMES);
-            const q = firestoreQuery(
-                reactionsRef,
-                where('isPublished', '==', true),
-                orderBy('createdAt', 'desc'),
-                limit(6)
-            );
-            const snapshot = await getDocs(q);
-            fallbackReactions = snapshot.docs.map(doc => ({
-                id: doc.id,
-                data: doc.data()
-            }));
-        } catch (error) {
-            console.error('Failed to load fallback reactions:', error);
-            fallbackReactions = [];
+    onDestroy(() => {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        if (observer) observer.disconnect();
+    });
+
+    function triggerSearch(newQuery) {
+        if (newQuery) {
+            goto(`/search?q=${encodeURIComponent(newQuery)}`, { replaceState: true });
+        } else {
+            goto('/search', { replaceState: true });
         }
+        currentPage = 0;
+        loadResults(0);
     }
 
-    async function performSearch() {
-        const normalized = normalizeQuery(query);
-
-        if (!normalized || !isValidQuery(normalized)) {
-            results = [];
-            loading = false;
-            searchPerformed = false;
-            return;
-        }
-
+    async function loadResults(pageNum) {
         if (!searchProvider || !searchProvider.isReady()) {
             console.error('Search provider not available');
             return;
         }
 
-        loading = true;
-        searchPerformed = true; // Mark that a search has been performed
+        if (pageNum === 0) {
+            loading = true;
+        } else {
+            loadingMore = true;
+        }
+
         try {
+            const normalized = normalizeQuery(query);
             const searchResult = await searchProvider.search(normalized, {
-                index: ALGOLIA_REACTIONS_INDEX
+                index: ALGOLIA_REACTIONS_INDEX,
+                hitsPerPage: HITS_PER_PAGE,
+                page: pageNum
             });
-            results = searchResult.hits || [];
+
+            if (pageNum === 0) {
+                results = searchResult.hits || [];
+            } else {
+                results = [...results, ...(searchResult.hits || [])];
+            }
+
+            currentPage = searchResult.page;
+            totalPages = searchResult.nbPages;
+            totalHits = searchResult.nbHits;
         } catch (error) {
             console.error('Search failed:', error);
-            results = [];
+            if (pageNum === 0) results = [];
         } finally {
             loading = false;
+            loadingMore = false;
         }
+    }
+
+    async function loadMore() {
+        if (hasMore && !loadingMore) {
+            await loadResults(currentPage + 1);
+        }
+    }
+
+    function handleInput() {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            triggerSearch(normalizeQuery(query));
+        }, DEBOUNCE_DELAY);
+    }
+
+    function handleClear() {
+        query = '';
+        if (debounceTimer) clearTimeout(debounceTimer);
+        triggerSearch('');
     }
 
     function handleSubmit(event) {
         event.preventDefault();
-        const normalized = normalizeQuery(query);
-        
-        if (!normalized || !isValidQuery(normalized)) {
-            return;
-        }
-
-        // Update URL and trigger search
-        goto(`/search?q=${encodeURIComponent(normalized)}`, { replaceState: false });
+        if (debounceTimer) clearTimeout(debounceTimer);
+        triggerSearch(normalizeQuery(query));
     }
-
-    $: hasResults = results.length > 0;
-    $: showEmptyState = !loading && searchPerformed && !hasResults;
-    $: showFallback = showEmptyState && fallbackReactions.length > 0;
 </script>
 
 <SEO
-    title={urlQuery ? `Search: ${urlQuery}` : 'Search Reactions'}
+    title={query ? `Search: ${query}` : 'Search Reactions'}
     description="Search for synchronized reaction videos by title, reactor, or tags on Pure Reactions."
     canonical="/search"
     keywords="search reactions, find reaction videos, pure reactions search"
@@ -130,45 +153,35 @@
                 <input
                     bind:this={searchInput}
                     bind:value={query}
+                    on:input={handleInput}
                     type="search"
-                    class="block w-full rounded-2xl border border-border-strong/50 bg-surface/80 py-4 pl-12 pr-32 text-base text-text-primary placeholder:text-text-muted focus:border-focus focus:outline-none focus:ring-2 focus:ring-focus focus:ring-offset-2 focus:ring-offset-background"
+                    class="block w-full rounded-2xl border border-border-strong/50 bg-surface/80 py-4 pl-12 pr-16 text-base text-text-primary placeholder:text-text-muted focus:border-focus focus:outline-none focus:ring-2 focus:ring-focus focus:ring-offset-2 focus:ring-offset-background"
                     placeholder="Search reactions by title, reactor, or tags..."
                     autocomplete="off"
                     autocapitalize="off"
                     spellcheck="false"
                 />
-                <div class="absolute inset-y-0 right-0 flex items-center gap-2 pr-2">
-                    {#if query}
+                {#if query}
+                    <div class="absolute inset-y-0 right-0 flex items-center pr-4">
                         <button
                             type="button"
                             class="rounded-lg px-3 py-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
-                            on:click={() => {
-                                query = '';
-                                results = [];
-                                goto('/search', { replaceState: true });
-                            }}
+                            on:click={handleClear}
                         >
                             Clear
                         </button>
-                    {/if}
-                    <button
-                        type="submit"
-                        class="rounded-lg bg-focus px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-focus/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={!query || query.trim().length < 2}
-                    >
-                        Search
-                    </button>
-                </div>
+                    </div>
+                {/if}
             </div>
         </form>
     </div>
 
-    <!-- Loading State -->
+    <!-- Loading State (initial load only) -->
     {#if loading}
         <div class="flex items-center justify-center py-24">
             <div class="text-center">
                 <div class="mb-4 inline-block h-12 w-12 animate-spin rounded-full border-4 border-border-strong border-t-focus"></div>
-                <p class="text-base text-text-secondary">Searching...</p>
+                <p class="text-base text-text-secondary">{isSearchMode ? 'Searching...' : 'Loading reactions...'}</p>
             </div>
         </div>
     {:else if hasResults}
@@ -176,7 +189,11 @@
         <div class="results-section">
             <div class="mb-6">
                 <h2 class="text-sm font-semibold uppercase tracking-wide text-text-secondary">
-                    {results.length} {results.length === 1 ? 'Result' : 'Results'} for "{query}"
+                    {#if isSearchMode}
+                        {totalHits} {totalHits === 1 ? 'Result' : 'Results'} for "{query}"
+                    {:else}
+                        Latest Reactions
+                    {/if}
                 </h2>
             </div>
             <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -184,68 +201,38 @@
                     <SearchHit {hit} />
                 {/each}
             </div>
-        </div>
-    {:else if showEmptyState}
-        <!-- Empty State -->
-        <div class="empty-state py-16 text-center">
-            <SearchIcon class="mx-auto mb-4 h-16 w-16 text-text-muted/50" />
-            <h2 class="mb-2 text-xl font-semibold text-text-primary">
-                No reactions found for "{query}"
-            </h2>
-            <p class="mb-8 text-base text-text-secondary">
-                Try adjusting your search terms or browse recent reactions below.
-            </p>
 
-            {#if showFallback}
-                <div class="fallback-content mt-12">
-                    <h3 class="mb-6 text-lg font-semibold text-text-primary">
-                        Recent Reactions
-                    </h3>
-                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                        {#each fallbackReactions as reaction (reaction.id)}
-                            <div class="fallback-item">
-                                <a
-                                    href="/reaction/{reaction.data.slug || reaction.id}"
-                                    class="block overflow-hidden rounded-2xl border border-border-strong/30 bg-surface/50 transition-all duration-300 hover:border-border-strong hover:shadow-elevated"
-                                >
-                                    {#if reaction.data.reactionVideoId}
-                                        <div class="aspect-video w-full overflow-hidden bg-elevated">
-                                            <img
-                                                src="https://i.ytimg.com/vi/{reaction.data.reactionVideoId}/mqdefault.jpg"
-                                                alt={reaction.data.reactionVideoTitle || 'Reaction thumbnail'}
-                                                class="h-full w-full object-cover"
-                                            />
-                                        </div>
-                                    {/if}
-                                    <div class="p-4">
-                                        <h4 class="mb-1 line-clamp-2 text-sm font-semibold text-text-primary">
-                                            {reaction.data.reactionVideoTitle || 'Untitled Reaction'}
-                                        </h4>
-                                        {#if reaction.data.reactorDisplayName || reaction.data.reactionVideoAuthor}
-                                            <p class="text-xs text-text-secondary">
-                                                {reaction.data.reactorDisplayName || reaction.data.reactionVideoAuthor}
-                                            </p>
-                                        {/if}
-                                    </div>
-                                </a>
-                            </div>
-                        {/each}
-                    </div>
+            <!-- Loading more indicator -->
+            {#if loadingMore}
+                <div class="flex items-center justify-center py-8">
+                    <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-border-strong border-t-focus"></div>
                 </div>
             {/if}
         </div>
-    {:else if !query}
-        <!-- Initial State -->
-        <div class="initial-state py-24 text-center">
-            <SearchIcon class="mx-auto mb-6 h-20 w-20 text-text-muted/30" />
-            <h2 class="mb-3 text-2xl font-bold text-text-primary">
-                Search for Reactions
-            </h2>
-            <p class="text-base text-text-secondary">
-                Enter a search term to discover reactions by title, reactor, or tags.
-            </p>
+    {:else if initialLoadDone}
+        <!-- Empty State (only after initial load completes) -->
+        <div class="empty-state py-16 text-center">
+            <SearchIcon class="mx-auto mb-4 h-16 w-16 text-text-muted/50" />
+            {#if isSearchMode}
+                <h2 class="mb-2 text-xl font-semibold text-text-primary">
+                    No reactions found for "{query}"
+                </h2>
+                <p class="text-base text-text-secondary">
+                    Try adjusting your search terms or clear the search to browse all reactions.
+                </p>
+            {:else}
+                <h2 class="mb-2 text-xl font-semibold text-text-primary">
+                    No reactions available
+                </h2>
+                <p class="text-base text-text-secondary">
+                    Check back soon for new content.
+                </p>
+            {/if}
         </div>
     {/if}
+
+    <!-- Infinite scroll sentinel (always rendered) -->
+    <div bind:this={sentinel} class="h-px w-full" aria-hidden="true"></div>
 </div>
 
 <style>

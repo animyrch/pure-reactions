@@ -29,14 +29,14 @@ export function writeAutoPlayCookie(value: boolean, playlistId?: string | null):
 
 export function readCinematicBarsCookie(): boolean {
   if (typeof document === 'undefined') {
-    return true;
+    return false;
   }
   const match = document.cookie
     .split('; ')
     .find((row) => row.startsWith('cinematicBars='))
     ?.split('=')[1];
   
-  if (match === undefined) return true;
+  if (match === undefined) return false;
   return match === 'true';
 }
 

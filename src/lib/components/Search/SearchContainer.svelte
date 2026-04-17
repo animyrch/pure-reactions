@@ -87,11 +87,6 @@
         flatHits = sections.flatMap((section) => section.hits);
     }
 
-    $: if (overlayOpen && flatHits.length && activeIndex === -1) {
-        activeIndex = 0;
-        focusActiveResult();
-    }
-
     $: if (!flatHits.length && activeIndex !== -1) {
         activeIndex = -1;
     }

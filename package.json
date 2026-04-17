@@ -29,6 +29,8 @@
     "algolia:index": "FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/algolia-index.mjs",
     "algolia:index:apply": "FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/algolia-index.mjs --apply",
     "approve:claim": "node scripts/approve-channel-claim.mjs",
+    "admin:reassign-reaction": "FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/reassign-reaction.mjs",
+    "admin:reassign-reaction:dry": "FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/reassign-reaction.mjs --dry",
     "generate-sitemap": "node scripts/generate-sitemap.js",
     "enrich-youtube": "node scripts/enrich-youtube.js"
   },
