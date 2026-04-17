@@ -116,13 +116,9 @@ function ensureAdminApp({ projectId, target }) {
   // target === 'prod'
   const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT?.trim();
   if (serviceAccount) {
-    if (!serviceAccount.startsWith('{')) {
-      throw new Error(
-        'FIREBASE_SERVICE_ACCOUNT must be an inline JSON string in scripts/algolia-index.mjs; file paths are not supported.'
-      );
-    }
-
-    const parsed = JSON.parse(serviceAccount);
+    const parsed = serviceAccount.startsWith('{')
+      ? JSON.parse(serviceAccount)
+      : JSON.parse(fs.readFileSync(path.resolve(process.cwd(), serviceAccount), 'utf8'));
 
     return admin.initializeApp({
       credential: admin.credential.cert(parsed),
@@ -285,6 +281,7 @@ async function indexReactions() {
       'reactionVideoTitle',
       'originalVideoId',
       'originalVideoTitle',
+      'playlistId',
       'reactionVideoAuthor',
       'tags',
       'slug',
