@@ -229,6 +229,7 @@ Minimal, cost-optimized search index for reactions.
 | `reactionVideoTitle` | string | Yes | Yes | Title of reaction video (primary search field) |
 | `originalVideoId` | string | No | Yes | YouTube video ID (original) |
 | `originalVideoTitle` | string | Yes | Yes | Title of original video (secondary search field) |
+| `playlistId` | string | No | Yes | Playlist document ID when the reaction belongs to a playlist, used to preserve playlist navigation semantics in search results |
 | `reactionVideoAuthor` | string | Yes | Yes | Reactor's YouTube channel handle (tertiary search field) |
 | `tags` | array[string] | Yes | Yes | Categorization tags (filterable) |
 | `slug` | string | No | Yes | URL-friendly identifier |
@@ -262,6 +263,8 @@ To minimize cost and payload size:
 - `state` - Recording session data, temporary
 - `reactorId` / `reactorDisplayName` - Privacy, not needed for search
 - `duration` - Derivable from YouTube API
+
+`playlistId` is intentionally retained even though it is not searchable because shared card components use it to route playlist-backed reactions into the playlist playback experience.
 
 #### Indexing Rules
 

@@ -145,6 +145,7 @@ function reactionToAlgoliaRecord(docId, data) {
     reactionVideoTitle: data.reactionVideoTitle || '',
     originalVideoId: data.originalVideoId || '',
     originalVideoTitle: data.originalVideoTitle || '',
+    playlistId: data.playlistId || '',
     
     // Reactor/channel information
     reactionVideoAuthor: data.reactionVideoAuthor || '',
