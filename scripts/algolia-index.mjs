@@ -123,6 +123,19 @@ function ensureAdminApp({ projectId, target }) {
     });
   }
 
+  // Fall back to file-path credential (local dev)
+  const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (serviceAccountPath) {
+    const abs = path.resolve(process.cwd(), serviceAccountPath);
+    if (fs.existsSync(abs)) {
+      const parsed = JSON.parse(fs.readFileSync(abs, 'utf8'));
+      return admin.initializeApp({
+        credential: admin.credential.cert(parsed),
+        projectId: projectId || parsed.project_id
+      });
+    }
+  }
+
   return admin.initializeApp({ projectId });
 }
 
