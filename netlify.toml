@@ -1,3 +1,9 @@
 [build]
   command = "npm run generate-sitemap && npm run build"
   publish = "build"
+
+# Reindex Algolia after every successful production deploy.
+# The plugin reads ALGOLIA_ADMIN_KEY and FIREBASE_SERVICE_ACCOUNT_JSON from
+# Netlify private env vars – no secrets are checked in or exposed to the client.
+[[plugins]]
+  package = "./netlify/plugins/algolia-reindex"

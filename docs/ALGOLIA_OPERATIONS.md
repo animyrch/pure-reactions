@@ -61,6 +61,46 @@ To minimize index size and cost:
 
 Add a short note in any reindexing run or automation that `isPublished` is the canonical field used to determine whether a reaction should be included in the index.
 
+## Automated Production Reindexing
+
+Algolia reindexing is automated via a **Netlify Build Plugin** that runs
+after every successful **production** deploy.
+
+### How it works
+
+1. Netlify builds and deploys the site.
+2. On success, the `algolia-reindex` plugin (in `netlify/plugins/algolia-reindex/`)
+   executes `scripts/algolia-index.mjs --apply`.
+3. The script fetches all `isPublished === true` reactions from Firestore and
+   pushes them to Algolia.
+4. Preview deploys, branch deploys, and local dev builds are **skipped** automatically
+   (the plugin checks `CONTEXT === 'production'`).
+
+### Required Netlify environment variables
+
+Set these as **private** environment variables in the Netlify dashboard
+(Site settings → Environment variables). Never commit them to the repo.
+
+| Variable | Purpose |
+|---|---|
+| `ALGOLIA_ADMIN_KEY` | Algolia admin API key (write access) |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | Firebase service-account JSON (full inline string) |
+| `PUBLIC_ALGOLIA_APP_ID` | Algolia application ID |
+| `PUBLIC_ALGOLIA_REACTIONS_INDEX` | Algolia index name |
+
+### Failure handling
+
+* The plugin uses `failPlugin`, which surfaces errors in deploy logs but
+  **does not block** the production release.
+* No secrets are logged – the plugin only checks for the *presence* of env vars.
+* Check the deploy log in Netlify for any `[algolia-reindex]` messages.
+
+### Visibility policy
+
+Only reactions with `isPublished === true` are indexed.
+This rule is enforced by the Firestore query in `scripts/algolia-index.mjs`
+and has not changed from manual runs.
+
 ## Operations
 
 ### Check Index Status
@@ -105,7 +145,10 @@ PUBLIC_ALGOLIA_REACTIONS_INDEX=your_index_name
 ALGOLIA_ADMIN_KEY=your_admin_key
 
 # Firebase (for indexing)
+# Option A – file path (local dev):
 FIREBASE_SERVICE_ACCOUNT=./path/to/service-account.json
+# Option B – inline JSON (CI / Netlify):
+# FIREBASE_SERVICE_ACCOUNT_JSON=<full service-account JSON string>
 PUBLIC_FIREBASE_COLLECTION_REACTION_BINOMES=reactions
 ```
 
