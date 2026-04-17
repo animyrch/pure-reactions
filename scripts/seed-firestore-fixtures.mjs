@@ -148,11 +148,9 @@ function ensureAdminApp({ projectId, target }) {
   }
 
   // target === 'prod'
-  // If FIREBASE_SERVICE_ACCOUNT is set, admin SDK picks it up automatically.
-  // Allow service account JSON inline for convenience.
-  const inlineJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  if (inlineJson) {
-    const parsed = JSON.parse(inlineJson);
+  const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT?.trim();
+  if (serviceAccount?.startsWith('{')) {
+    const parsed = JSON.parse(serviceAccount);
     return admin.initializeApp({
       credential: admin.credential.cert(parsed),
       projectId: projectId || parsed.project_id
@@ -197,9 +195,8 @@ async function seed() {
       throw new Error('Refusing to seed prod: set ALLOW_PROD_SEED=1 or pass --allowProd');
     }
 
-    // We allow either FIREBASE_SERVICE_ACCOUNT or FIREBASE_SERVICE_ACCOUNT_JSON.
-    if (!process.env.FIREBASE_SERVICE_ACCOUNT && !process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
-      throw new Error('Missing prod credentials: set FIREBASE_SERVICE_ACCOUNT or FIREBASE_SERVICE_ACCOUNT_JSON');
+    if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+      throw new Error('Missing prod credentials: set FIREBASE_SERVICE_ACCOUNT');
     }
   }
 

@@ -6,7 +6,7 @@
  *
  * Required Netlify env vars (private, server-side only):
  *   ALGOLIA_ADMIN_KEY
- *   FIREBASE_SERVICE_ACCOUNT_JSON   (full service-account JSON string)
+ *   FIREBASE_SERVICE_ACCOUNT        (file path or full service-account JSON string)
  *   PUBLIC_ALGOLIA_APP_ID
  *   PUBLIC_ALGOLIA_REACTIONS_INDEX
  */
@@ -17,7 +17,7 @@ const REQUIRED_ENV = [
   'PUBLIC_ALGOLIA_APP_ID',
   'ALGOLIA_ADMIN_KEY',
   'PUBLIC_ALGOLIA_REACTIONS_INDEX',
-  'FIREBASE_SERVICE_ACCOUNT_JSON'
+  'FIREBASE_SERVICE_ACCOUNT'
 ];
 
 export default {

@@ -84,7 +84,7 @@ Set these as **private** environment variables in the Netlify dashboard
 | Variable | Purpose |
 |---|---|
 | `ALGOLIA_ADMIN_KEY` | Algolia admin API key (write access) |
-| `FIREBASE_SERVICE_ACCOUNT_JSON` | Firebase service-account JSON (full inline string) |
+| `FIREBASE_SERVICE_ACCOUNT` | Firebase service-account credential, either a file path or full inline JSON |
 | `PUBLIC_ALGOLIA_APP_ID` | Algolia application ID |
 | `PUBLIC_ALGOLIA_REACTIONS_INDEX` | Algolia index name |
 
@@ -148,7 +148,7 @@ ALGOLIA_ADMIN_KEY=your_admin_key
 # Option A – file path (local dev):
 FIREBASE_SERVICE_ACCOUNT=./path/to/service-account.json
 # Option B – inline JSON (CI / Netlify):
-# FIREBASE_SERVICE_ACCOUNT_JSON=<full service-account JSON string>
+# FIREBASE_SERVICE_ACCOUNT=<full service-account JSON string>
 PUBLIC_FIREBASE_COLLECTION_REACTION_BINOMES=reactions
 ```
 

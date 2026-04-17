@@ -85,19 +85,12 @@ function ensureAdminApp({ projectId, target }) {
     return admin.initializeApp({ projectId });
   }
 
-  const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT;
-  if (serviceAccountPath) {
-    const abs = path.resolve(process.cwd(), serviceAccountPath);
-    const parsed = JSON.parse(fs.readFileSync(abs, 'utf8'));
-    return admin.initializeApp({
-      credential: admin.credential.cert(parsed),
-      projectId: projectId || parsed.project_id
-    });
-  }
+  const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT?.trim();
+  if (serviceAccount) {
+    const parsed = serviceAccount.startsWith('{')
+      ? JSON.parse(serviceAccount)
+      : JSON.parse(fs.readFileSync(path.resolve(process.cwd(), serviceAccount), 'utf8'));
 
-  const inlineJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  if (inlineJson) {
-    const parsed = JSON.parse(inlineJson);
     return admin.initializeApp({
       credential: admin.credential.cert(parsed),
       projectId: projectId || parsed.project_id
@@ -154,12 +147,9 @@ async function reassignReaction() {
         'Refusing to write to prod: pass --allowProd or set ALLOW_PROD_REASSIGN=1'
       );
     }
-    if (
-      !process.env.FIREBASE_SERVICE_ACCOUNT &&
-      !process.env.FIREBASE_SERVICE_ACCOUNT_JSON
-    ) {
+    if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
       throw new Error(
-        'Missing prod credentials: set FIREBASE_SERVICE_ACCOUNT or FIREBASE_SERVICE_ACCOUNT_JSON'
+        'Missing prod credentials: set FIREBASE_SERVICE_ACCOUNT'
       );
     }
   }

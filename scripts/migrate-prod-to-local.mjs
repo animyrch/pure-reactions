@@ -50,9 +50,9 @@ function loadDotEnvIfPresent(envPath = '.env') {
 function ensureAdminApp({ projectId }) {
   if (admin.apps.length) return admin.app();
 
-  const inlineJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  if (inlineJson) {
-    const parsed = JSON.parse(inlineJson);
+  const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT?.trim();
+  if (serviceAccount?.startsWith('{')) {
+    const parsed = JSON.parse(serviceAccount);
     return admin.initializeApp({
       credential: admin.credential.cert(parsed),
       projectId: projectId || parsed.project_id
@@ -192,8 +192,8 @@ async function main() {
     configProjectId ||
     'pure-reactions';
 
-  if (!process.env.FIREBASE_SERVICE_ACCOUNT && !process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
-    console.error('Missing credentials: set FIREBASE_SERVICE_ACCOUNT or FIREBASE_SERVICE_ACCOUNT_JSON');
+  if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+    console.error('Missing credentials: set FIREBASE_SERVICE_ACCOUNT');
     process.exit(1);
   }
 

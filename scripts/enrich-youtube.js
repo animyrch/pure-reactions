@@ -42,7 +42,7 @@ function loadDotEnvIfPresent(envPath = '.env') {
 }
 
 function resolveServiceAccount() {
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT || process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
   if (!raw) {
     throw new Error('FIREBASE_SERVICE_ACCOUNT is required (JSON string or file path).');
   }

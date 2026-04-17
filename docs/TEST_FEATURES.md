@@ -21,7 +21,7 @@ The seeder writes to the collection from `.env` (`PUBLIC_FIREBASE_COLLECTION_REA
 This is intentionally hard to do by accident.
 
 - Set credentials via `FIREBASE_SERVICE_ACCOUNT=/abs/path/to/serviceAccount.json`
-  (or `FIREBASE_SERVICE_ACCOUNT_JSON='{"type":"service_account",...}'`).
+  or `FIREBASE_SERVICE_ACCOUNT='{"type":"service_account",...}'`.
 - Explicitly allow prod seeding: `ALLOW_PROD_SEED=1`
 - Run:
 

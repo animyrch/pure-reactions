@@ -114,26 +114,20 @@ function ensureAdminApp({ projectId, target }) {
   }
 
   // target === 'prod'
-  const inlineJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  if (inlineJson) {
-    const parsed = JSON.parse(inlineJson);
+  const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT?.trim();
+  if (serviceAccount) {
+    if (!serviceAccount.startsWith('{')) {
+      throw new Error(
+        'FIREBASE_SERVICE_ACCOUNT must be an inline JSON string in scripts/algolia-index.mjs; file paths are not supported.'
+      );
+    }
+
+    const parsed = JSON.parse(serviceAccount);
+
     return admin.initializeApp({
       credential: admin.credential.cert(parsed),
       projectId: projectId || parsed.project_id
     });
-  }
-
-  // Fall back to file-path credential (local dev)
-  const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT;
-  if (serviceAccountPath) {
-    const abs = path.resolve(process.cwd(), serviceAccountPath);
-    if (fs.existsSync(abs)) {
-      const parsed = JSON.parse(fs.readFileSync(abs, 'utf8'));
-      return admin.initializeApp({
-        credential: admin.credential.cert(parsed),
-        projectId: projectId || parsed.project_id
-      });
-    }
   }
 
   return admin.initializeApp({ projectId });
