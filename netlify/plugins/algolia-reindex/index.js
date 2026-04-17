@@ -50,8 +50,9 @@ export default {
       console.log('[algolia-reindex] ✓ Algolia reindex completed successfully.');
     } catch (error) {
       // failPlugin surfaces the error in deploy logs without blocking the release.
+      const exitInfo = error.status != null ? ` (exit code ${error.status})` : '';
       return utils.build.failPlugin(
-        `[algolia-reindex] Reindex failed: ${error.message}`
+        `[algolia-reindex] Reindex failed${exitInfo}: ${error.message}`
       );
     }
   }
