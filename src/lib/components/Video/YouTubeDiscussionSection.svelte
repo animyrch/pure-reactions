@@ -24,6 +24,8 @@
     try {
       const payload = await fetchYouTubeComments(videoId);
       comments = payload.comments || [];
+      // Defensive fallback: server always returns sectionActionUrl for ok/empty,
+      // but guard against unexpected payloads from upstream errors.
       sectionActionUrl = payload.sectionActionUrl || `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`;
       loadState = payload.status || (comments.length > 0 ? 'ok' : 'empty');
     } catch {

@@ -180,6 +180,8 @@ export function formatCommentAge(isoDate) {
 export function formatLikeCount(count) {
   if (!count || count <= 0) return '';
   if (count < 1000) return String(count);
+  // Show one decimal place for low thousands (e.g. "1.5K") but round to whole
+  // for 10K+ where the decimal digit adds little value (e.g. "15K" not "15.0K").
   if (count < 1_000_000) return `${(count / 1000).toFixed(count < 10_000 ? 1 : 0)}K`;
   return `${(count / 1_000_000).toFixed(1)}M`;
 }
