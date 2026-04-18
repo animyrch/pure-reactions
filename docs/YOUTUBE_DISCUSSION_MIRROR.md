@@ -12,11 +12,11 @@ Reaction pages can display a read-only "Discussion on YouTube" section for the r
 
 | Aspect | Detail |
 |--------|--------|
-| Max comments per video | 10 |
+| Max comments per video | Set by `MAX_RESULTS_LIMIT` in `src/routes/api/youtube/comments/[videoId]/+server.js` |
 | Ordering | YouTube relevance (not configurable) |
 | Replies | Not fetched or rendered inline |
 | In-site engagement | None — no upvote, like, reply, or comment creation inside Pure Reactions |
-| Caching | Server-route level: `s-maxage=300, stale-while-revalidate=1800` (~5 min fresh, ~30 min stale) |
+| Caching | Set by `CACHE_CONTROL_HEADER` in `src/routes/api/youtube/comments/[videoId]/+server.js` |
 | SSR | Comments are **not** server-side rendered (client-side only) |
 
 ## Architecture
@@ -37,7 +37,7 @@ Browser (reaction page)
 - Normalizes the response into the UI-ready shape.
 - Never exposes the YouTube API key to the browser.
 - Returns structured `status` field: `ok`, `empty`, `commentsDisabled`, or `error`.
-- Applies cache-control headers for CDN/edge caching.
+- Applies cache-control headers for CDN/edge caching via `CACHE_CONTROL_HEADER`.
 
 ### Client helper
 
@@ -54,6 +54,12 @@ Browser (reaction page)
 |-----------|----------|----------------|
 | `YouTubeDiscussion.svelte` | `src/lib/components/Video/` | Resolves sections, renders one or two `YouTubeDiscussionSection` blocks |
 | `YouTubeDiscussionSection.svelte` | `src/lib/components/Video/` | Fetches and renders comments for a single video, handles all load states |
+
+## Responsive Layout
+
+- On mobile and other narrow single-column layouts, discussion sections stack vertically.
+- When the page has enough horizontal space, original and reaction discussion sections sit side by side, matching the original/reaction metadata split above.
+- Comment cards inside each discussion section remain a vertical list; only the section wrapper changes responsively.
 
 ## Display Logic
 
@@ -81,7 +87,6 @@ Each section handles:
 | Action | Scope | URL pattern |
 |--------|-------|-------------|
 | Comment on YouTube | Section-level | `https://www.youtube.com/watch?v={id}&lc=comments` |
-| Reply on YouTube | Comment-level | `https://www.youtube.com/watch?v={id}&lc={commentId}` |
 | View thread on YouTube | Comment-level | `https://www.youtube.com/watch?v={id}&lc={commentId}` |
 
 All links open in a new tab with `rel="noopener noreferrer"`.
@@ -91,11 +96,11 @@ All links open in a new tab with `rel="noopener noreferrer"`.
 The server endpoint returns:
 
 ```
-Cache-Control: public, s-maxage=300, stale-while-revalidate=1800
+Cache-Control: public, s-maxage=86400, stale-while-revalidate=2592000
 ```
 
-- ~5 minutes fresh cache at CDN/edge
-- ~30 minutes stale reuse during background refresh
+- 1 day fresh cache at CDN/edge
+- 30 days stale reuse during background refresh
 - No browser-to-YouTube direct calls
 - No persistent storage of comments
 
@@ -133,8 +138,7 @@ The normalized comment payload from the server endpoint:
       "updatedAt": "2024-01-15T10:30:00Z",
       "likeCount": 42,
       "replyCount": 3,
-      "viewThreadUrl": "https://www.youtube.com/watch?v=abc123&lc=...",
-      "replyOnYoutubeUrl": "https://www.youtube.com/watch?v=abc123&lc=..."
+      "viewThreadUrl": "https://www.youtube.com/watch?v=abc123&lc=..."
     }
   ]
 }

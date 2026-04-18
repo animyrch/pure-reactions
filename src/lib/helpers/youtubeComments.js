@@ -23,7 +23,6 @@
  * @property {number} likeCount
  * @property {number} replyCount
  * @property {string} viewThreadUrl
- * @property {string} replyOnYoutubeUrl
  */
 
 /**

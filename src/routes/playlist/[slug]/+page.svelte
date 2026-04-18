@@ -6,6 +6,7 @@
   import CreatorDetails from "$lib/components/Video/CreatorDetails.svelte";
   import PlaylistQueue from "$lib/components/Video/PlaylistQueue.svelte";
   import OtherReactions from "$lib/components/Video/OtherReactions.svelte";
+  import YouTubeDiscussion from "$lib/components/Video/YouTubeDiscussion.svelte";
   import SubtleLoader from "$lib/components/design-system/SubtleLoader.svelte";
   import ReactionStage from "$lib/components/reaction/ReactionStage.svelte";
   import AttributionBlock from "$lib/components/reaction/AttributionBlock.svelte";
@@ -327,6 +328,16 @@
         originalVideoId={$state.originalVideoId}
         reactionVideoId={$state.reactionVideoId}
       />
+    {/if}
+
+    {#if !$state.isEditModeOn}
+      <div class="mx-auto w-full px-4 pb-8 pt-4 sm:px-6 lg:px-10">
+        <YouTubeDiscussion
+          reactionVideoId={$state.reactionVideoId}
+          originalVideoId={$state.originalVideoId}
+          originalVideoPlatform={$state.originalVideoPlatform}
+        />
+      </div>
     {/if}
   {/if}
 </div>

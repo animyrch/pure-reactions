@@ -59,16 +59,15 @@
         isDesktop = e.matches;
     }
 
+    $: shouldAutoHideMobileDock = isMobileLandscape;
+
     function showControls() {
-        if (!isMobileLandscape && !isFullscreen) return; // Only apply auto-hide in mobile landscape or fullscreen (if desired, currently targeting mobile landscape per request)
-
-        // Actually, request says: "The control dock should be visible as a bottom overlay when the user goes into landscape mode... disappears after 3 seconds"
-        // So we strictly enforce this logic when isMobileLandscape is true.
-
         controlsVisible = true;
         if (controlsTimeout) clearTimeout(controlsTimeout);
+        if (!shouldAutoHideMobileDock) return;
+
         controlsTimeout = setTimeout(() => {
-            if (isMobileLandscape) {
+            if (shouldAutoHideMobileDock) {
                 controlsVisible = false;
             }
         }, 3000);
@@ -83,18 +82,12 @@
     }
 
     function handleInteraction() {
-        if (isMobileLandscape) {
+        if (shouldAutoHideMobileDock) {
             showControls();
         }
     }
 
-    /* 
-       Computed stickyControlsClass:
-       - If isMobileLandscape: toggle opacity based on controlsVisible.
-       - Else: stick to default passed prop (or 'opacity-100' logic from parent if it was dynamic, but here we can just pipe it or override).
-       The parent passes `stickyControlsClass`, but for mobile landscape we need to override it.
-    */
-    $: effectiveStickyControlsClass = isMobileLandscape
+    $: effectiveStickyControlsClass = shouldAutoHideMobileDock
         ? controlsVisible
             ? "opacity-100 pointer-events-auto"
             : "opacity-0 pointer-events-none"
@@ -195,7 +188,7 @@
     onMount(() => {
         // Match CSS: @media (orientation: landscape) and (max-width: 1023px), (orientation: landscape) and (max-height: 600px)
         landscapeMediaQuery = window.matchMedia(
-            "(orientation: landscape) and (max-width: 1023px), (orientation: landscape) and (max-height: 600px)",
+            "(hover: none) and (pointer: coarse) and (orientation: landscape) and (max-width: 1023px), (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-height: 768px), (hover: none) and (pointer: coarse) and (orientation: landscape) and (min-aspect-ratio: 1.5) and (max-height: 900px)",
         );
 
         isMobileLandscape = landscapeMediaQuery.matches;

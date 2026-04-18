@@ -350,7 +350,7 @@ export function createTwinPlayersStateController({
     canShowCloseEditModeButton: false,
     showCinematicBars,
     isFullscreen,
-    isControlSurfaceVisible: false,
+    isControlSurfaceVisible: !isFullscreen,
     isExitButtonExpanded: false,
     fullscreenOverlayVisible: true,
     fullscreenPrimaryVideo: DEFAULT_FULLSCREEN_PRIMARY_VIDEO,

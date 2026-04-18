@@ -5,6 +5,9 @@ import { YOUTUBE_API_KEY } from '$env/static/private';
 /** Maximum top-level comments the endpoint will ever return. */
 const MAX_RESULTS_LIMIT = 10;
 
+/** Cache policy for shared/CDN caches. 1 minimum cache, 30 day forced-update */
+const CACHE_CONTROL_HEADER = 'public, s-maxage=86400, stale-while-revalidate=2592000';
+
 /** Only allow relevance ordering to keep API usage predictable. */
 const ALLOWED_ORDER = 'relevance';
 
@@ -17,9 +20,8 @@ function buildOutboundUrls(videoId, commentId) {
   const viewThreadUrl = commentId
     ? `${canonicalVideoUrl}&lc=${encodeURIComponent(commentId)}`
     : sectionActionUrl;
-  const replyOnYoutubeUrl = viewThreadUrl;
 
-  return { canonicalVideoUrl, sectionActionUrl, viewThreadUrl, replyOnYoutubeUrl };
+  return { canonicalVideoUrl, sectionActionUrl, viewThreadUrl };
 }
 
 /**
@@ -30,7 +32,7 @@ function normalizeComment(item, videoId) {
   if (!snippet) return null;
 
   const commentId = item.snippet?.topLevelComment?.id || item.id;
-  const { viewThreadUrl, replyOnYoutubeUrl } = buildOutboundUrls(videoId, commentId);
+  const { viewThreadUrl } = buildOutboundUrls(videoId, commentId);
 
   return {
     threadId: item.id,
@@ -44,7 +46,6 @@ function normalizeComment(item, videoId) {
     likeCount: typeof snippet.likeCount === 'number' ? snippet.likeCount : 0,
     replyCount: typeof item.snippet?.totalReplyCount === 'number' ? item.snippet.totalReplyCount : 0,
     viewThreadUrl,
-    replyOnYoutubeUrl,
   };
 }
 
@@ -151,10 +152,9 @@ export const GET = async ({ params }) => {
 
 /**
  * Return cache-control headers.
- * ~5 min fresh + ~30 min stale-while-revalidate.
  */
 function cacheHeaders() {
   return {
-    'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=1800',
+    'Cache-Control': CACHE_CONTROL_HEADER,
   };
 }

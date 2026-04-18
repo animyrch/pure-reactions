@@ -165,15 +165,6 @@
                 </span>
               {/if}
               <a
-                href={comment.replyOnYoutubeUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="font-medium text-accent-primary hover:text-text-primary transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-                aria-label="Reply on YouTube to comment by {comment.authorDisplayName}"
-              >
-                Reply on YouTube
-              </a>
-              <a
                 href={comment.viewThreadUrl}
                 target="_blank"
                 rel="noopener noreferrer"

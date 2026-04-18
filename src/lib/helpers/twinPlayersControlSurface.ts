@@ -36,7 +36,7 @@ export function createTwinPlayersControlSurfaceController({
   const scheduleHideControls = () => {
     clearTimeout(controlHideTimeout);
     if (!getSnapshot().isFullscreen) {
-      updateState({ isControlSurfaceVisible: false, isExitButtonExpanded: false });
+      updateState({ isControlSurfaceVisible: true, isExitButtonExpanded: false });
       return;
     }
 
@@ -96,7 +96,7 @@ export function createTwinPlayersControlSurfaceController({
   const handleExitFullscreenClick = () => {
     onExitFullscreen();
     updateState({
-      isControlSurfaceVisible: false,
+      isControlSurfaceVisible: true,
       fullscreenOverlayVisible: true
     });
     clearTimeout(controlHideTimeout);
@@ -112,6 +112,7 @@ export function createTwinPlayersControlSurfaceController({
 
   const syncWithFullscreenState = () => {
     if (!getSnapshot().isFullscreen) {
+      updateState({ isControlSurfaceVisible: true, isExitButtonExpanded: false });
       return;
     }
 

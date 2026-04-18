@@ -19,7 +19,7 @@
 
 {#if sections.length > 0}
   <div
-    class="space-y-4"
+    class="discussion-grid"
     data-testid="youtube-discussion"
     aria-label="YouTube discussions"
   >
@@ -32,3 +32,12 @@
     {/each}
   </div>
 {/if}
+
+<style>
+  .discussion-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    align-items: start;
+    gap: 1rem;
+  }
+</style>
