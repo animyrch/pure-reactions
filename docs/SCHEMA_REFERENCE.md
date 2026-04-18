@@ -451,6 +451,7 @@ const docRef = await addDoc(collection(db, 'reactions'), {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.5 | 2026-04-18 | Added YouTube Discussion Mirror API response schema (`/api/youtube/comments/[videoId]`) — see `docs/YOUTUBE_DISCUSSION_MIRROR.md` |
 | 1.4 | 2026-03-07 | Added ordered playlist `sequenceItems` snapshot schema for duplicate-safe mixed YouTube/TikTok recording and playback, plus legacy compatibility notes for `originalVideoIds` |
 | 1.3 | 2026-03-07 | Added normalized original-video author/description/thumbnail/url fields, documented `originalTikTok` enrichment metadata, and extended shared-session schema with original platform/url |
 | 1.2 | 2026-03-07 | Documented `originalVideoPlatform`, clarified cross-platform original IDs, and added optional `originalYoutube`/`youtube` enrichment metadata for reaction docs |
