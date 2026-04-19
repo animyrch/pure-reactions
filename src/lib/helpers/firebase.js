@@ -414,17 +414,26 @@ export const addToPlaylistDocument = async ({
             Number.isFinite(Number(sequenceIndex))
                 ? Number(sequenceIndex)
                 : normalizedSequenceItems.length;
+        const existingSequenceItem = normalizedSequenceItems[fallbackIndex];
+        const nextSequenceItem = sequenceItem
+            ? {
+                  ...(existingSequenceItem || {}),
+                  ...(originalVideoId && !sequenceItem.originalVideoId
+                      ? { originalVideoId }
+                      : {}),
+                  ...sequenceItem,
+              }
+            : existingSequenceItem ||
+              (originalVideoId
+                  ? {
+                        originalVideoId,
+                    }
+                  : undefined);
         const updatedPlaylist = assignReactionToSequenceIndex({
             playlistDocument: playlistData,
             reactionDocumentId,
             sequenceIndex: fallbackIndex,
-            sequenceItem:
-                sequenceItem ||
-                (originalVideoId
-                    ? {
-                          originalVideoId,
-                      }
-                    : undefined),
+            sequenceItem: nextSequenceItem,
         });
         await setDoc(playlistDocumentRef, updatedPlaylist, { merge: false });
     } catch (error) {
