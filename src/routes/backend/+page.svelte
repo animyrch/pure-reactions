@@ -1031,13 +1031,56 @@
     let currentTimeDisplay = "0:00 / 0:00";
     let isFocusReactOn = false;
 
+    const isDegradedQueueTitle = (title, videoId, platform) => {
+        const normalizedTitle = typeof title === "string" ? title.trim() : "";
+        if (!normalizedTitle) {
+            return true;
+        }
+
+        const label = platform === "tiktok" ? "TikTok" : "YouTube";
+        return (
+            normalizedTitle === `${label} ${videoId}` ||
+            normalizedTitle === `${label} video`
+        );
+    };
+
+    const buildPlaylistSequenceSnapshot = (sequenceItem) => {
+        const nextSequenceItem = sequenceItem ? { ...sequenceItem } : {};
+        const originalPlatform = isTikTokOriginal ? "tiktok" : "youtube";
+
+        if (!nextSequenceItem.originalVideoId && originalVideoId) {
+            nextSequenceItem.originalVideoId = originalVideoId;
+        }
+        if (!nextSequenceItem.originalVideoPlatform && originalPlatform) {
+            nextSequenceItem.originalVideoPlatform = originalPlatform;
+        }
+        if (!nextSequenceItem.originalVideoUrl && originalVideoUrl) {
+            nextSequenceItem.originalVideoUrl = originalVideoUrl;
+        }
+        if (
+            isDegradedQueueTitle(
+                nextSequenceItem.title,
+                nextSequenceItem.originalVideoId || originalVideoId,
+                nextSequenceItem.originalVideoPlatform || originalPlatform,
+            ) &&
+            originalVideoTitle
+        ) {
+            nextSequenceItem.title = originalVideoTitle;
+        }
+        if (!nextSequenceItem.channelTitle && originalVideoAuthor) {
+            nextSequenceItem.channelTitle = originalVideoAuthor;
+        }
+        if (!nextSequenceItem.thumbnailUrl && originalVideoThumbnailUrl) {
+            nextSequenceItem.thumbnailUrl = originalVideoThumbnailUrl;
+        }
+
+        return nextSequenceItem;
+    };
+
     const syncPlaylistReaction = async (currentReactionDocumentId) => {
         if (currentPlaylistDocumentId) {
             const baseSequenceItem = playlistSequenceItems[currentSequenceIndex];
-            const sequenceItem =
-                baseSequenceItem && !baseSequenceItem.thumbnailUrl && originalVideoThumbnailUrl
-                    ? { ...baseSequenceItem, thumbnailUrl: originalVideoThumbnailUrl }
-                    : baseSequenceItem;
+            const sequenceItem = buildPlaylistSequenceSnapshot(baseSequenceItem);
             const updateData = {
                 reactionDocumentId: currentReactionDocumentId,
                 playlistDocumentId: currentPlaylistDocumentId,
