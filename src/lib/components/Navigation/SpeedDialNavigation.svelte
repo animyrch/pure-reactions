@@ -1,6 +1,6 @@
 <script>
   import { onMount } from "svelte";
-  import { afterNavigate } from "$app/navigation";
+  import { afterNavigate, goto } from "$app/navigation";
   import { fly } from "svelte/transition";
   import {
     ShareNodesSolid,
@@ -58,7 +58,7 @@
       icon: ShareNodesSolid,
       onSelect: () => copyCurrentUrl(),
     },
-    { name: "Search", icon: SearchOutline, onSelect: () => jumpToHeaderSearch() },
+    { name: "Search", icon: SearchOutline, onSelect: () => goToSearchPage() },
     { name: "My Account", icon: UserCircleSolid, href: "/account" },
     {
       name: "Reactors I Follow",
@@ -147,16 +147,8 @@
     }
   };
 
-  function jumpToHeaderSearch() {
-    if (typeof window === 'undefined') return;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    setTimeout(() => {
-      const headerSearch = document.querySelector('header .search-trigger');
-      if (headerSearch) {
-        if (typeof headerSearch.click === 'function') headerSearch.click();
-        if (typeof headerSearch.focus === 'function') headerSearch.focus();
-      }
-    }, 350);
+  function goToSearchPage() {
+    goto("/search");
   }
 
   function buildReactionOptions(state) {
