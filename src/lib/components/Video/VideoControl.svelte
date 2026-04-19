@@ -74,6 +74,10 @@
 
     const scheduleHide = () => {
         clearHideTimeout();
+        if (!isFullscreen) {
+            isInteracting = true;
+            return;
+        }
         // If dragging or hovering controls, don't hide
         if (isDragging || isHoveringControls) return;
 
@@ -86,7 +90,9 @@
 
     const revealControls = () => {
         isInteracting = true;
-        scheduleHide();
+        if (isFullscreen) {
+            scheduleHide();
+        }
     };
 
     let prevBothVideosStarted = bothVideosStarted;
@@ -298,6 +304,7 @@
     }
 
     $: isVisible =
+        !isFullscreen ||
         !bothVideosStarted ||
         isInteracting ||
         isKeyboardFocus ||

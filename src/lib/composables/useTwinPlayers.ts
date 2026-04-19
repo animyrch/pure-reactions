@@ -559,7 +559,12 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       return;
     }
     // Update state reactively instead of refreshing
-    updateState({ isFullscreen: value });
+    updateState({
+      isFullscreen: value,
+      isControlSurfaceVisible: !value,
+      isExitButtonExpanded: false,
+      fullscreenOverlayVisible: true
+    });
 
     // Update URL for shareability/refresh persistence using History API
     const url = new URL(window.location.href);
