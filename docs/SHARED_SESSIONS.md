@@ -44,7 +44,8 @@ This feature allows reactors to share their reaction sessions in real-time with 
 
 ## Security Considerations
 - Sessions are public by design (anyone with the URL can join)
-- No authentication required for viewers
+- Viewers authenticate with Firebase anonymous auth before writing presence data
+- Only the session host can create, update, or delete the session state in Realtime Database
 - Sessions automatically expire after 24 hours
 - Reactor controls all video playback
 
