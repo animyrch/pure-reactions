@@ -1,5 +1,6 @@
 /** @type {import('./$types').PageLoad} */
 import { browser } from '$app/environment';
+import { env } from '$env/dynamic/public';
 import { invalidate } from '$app/navigation';
 import { checkUserSignInStatusWrapper, signOutWrapper, signInWithEmailAndPasswordWrapper } from '$lib/helpers/firebase.js';
 import { createUserWithEmailAndPasswordWrapper } from '../lib/helpers/firebase.js';
@@ -43,12 +44,15 @@ export async function load({ depends }) {
         if (action === 'signup' && email && password) {
             const { successful, error } = await createUserWithEmailAndPasswordWrapper(email, password);
             if (successful) {
-                showToast('Success! Check your email to confirm your account.', TOASTS.SUCCESS, 10000);
+                const signupMessage = env.PUBLIC_FIREBASE_USE_EMULATORS === 'true'
+                    ? 'Success! Open the verification link printed by the Firebase Auth emulator, then verify your account to continue.'
+                    : 'Success! Check your email to confirm your account.';
+                showToast(signupMessage, TOASTS.SUCCESS, 12000);
                 const user = await checkUserSignInStatusWrapper();
                 currentUser.set(user);
                 await userExtraDataStore.fetchUserData(user?.uid);
                 await invalidate('app:auth');
-                await goToRoute('/');
+                await goToRoute('/account/verify');
             }
             return { successful, error };
         }

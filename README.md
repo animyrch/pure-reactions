@@ -67,6 +67,8 @@ A platform for creating and sharing authentic reaction videos with synchronized 
      - Firestore at `127.0.0.1:8086`
      - Realtime Database at `127.0.0.1:9000`
      - Auth at `127.0.0.1:9099`
+    - Local account creation works against the Auth emulator, but new accounts still need email verification before they can create reactions or use other protected actions.
+    - After signing up locally, watch the terminal running `npm run start-emulators`: the Auth emulator prints the verification link there. Open that link in your browser, then refresh the app or use the verification page to continue.
    - If you need custom ports or hosts, update the corresponding `PUBLIC_*_EMULATOR_*` values in `.env`
 
 5. Start the development server:
