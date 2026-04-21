@@ -7,6 +7,7 @@ let adminAuth = null;
 let adminDb = null;
 let adminFieldValue = null;
 let adminInitialized = false;
+let adminMissingConfigurationLogged = false;
 
 function isUsingEmulators() {
   return process.env.PUBLIC_FIREBASE_USE_EMULATORS === 'true';
@@ -46,36 +47,48 @@ function resolveServiceAccount() {
   return null;
 }
 
+function logMissingAdminConfiguration() {
+  if (adminMissingConfigurationLogged) {
+    return;
+  }
+
+  adminMissingConfigurationLogged = true;
+  console.warn(
+    'Firebase Admin is not configured. Set FIREBASE_SERVICE_ACCOUNT or GOOGLE_APPLICATION_CREDENTIALS, or enable PUBLIC_FIREBASE_USE_EMULATORS=true. Server-side admin features will fall back to empty responses.'
+  );
+}
+
 export async function initializeFirebaseAdmin() {
   if (adminInitialized) {
     return { adminAuth, adminDb, adminFieldValue };
   }
 
   try {
-    const { getAuth } = await import('firebase-admin/auth');
-    const { getFirestore, FieldValue } = await import('firebase-admin/firestore');
     const { initializeApp, getApps, cert } = await import('firebase-admin/app');
 
-    let adminApp;
-    if (!getApps().length) {
+    let adminApp = getApps()[0];
+    if (!adminApp) {
       const projectId = getAdminProjectId();
       if (isUsingEmulators()) {
         applyAdminEmulatorEnvironment();
         adminApp = initializeApp({ projectId });
       } else {
         const serviceAccount = resolveServiceAccount();
-        if (serviceAccount) {
-          adminApp = initializeApp({
-            credential: cert(serviceAccount),
-            projectId
-          });
-        } else {
-          adminApp = initializeApp({ projectId });
+        if (!serviceAccount) {
+          logMissingAdminConfiguration();
+          adminInitialized = true;
+          return { adminAuth, adminDb, adminFieldValue };
         }
+
+        adminApp = initializeApp({
+          credential: cert(serviceAccount),
+          projectId
+        });
       }
-    } else {
-      adminApp = getApps()[0];
     }
+
+    const { getAuth } = await import('firebase-admin/auth');
+    const { getFirestore, FieldValue } = await import('firebase-admin/firestore');
 
     adminAuth = getAuth(adminApp);
     adminDb = getFirestore(adminApp);

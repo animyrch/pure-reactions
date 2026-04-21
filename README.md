@@ -41,6 +41,7 @@ A platform for creating and sharing authentic reaction videos with synchronized 
 
    For normal local app development, keep `PUBLIC_FIREBASE_USE_EMULATORS=true`.
    The app's client and server runtime will use the local Firebase emulators, so you do not need a real Firebase project just to run the app locally.
+   The checked-in `.env.example` is already emulator-safe: it uses the local collection names, leaves `FIREBASE_SERVICE_ACCOUNT` commented out, and keeps `PUBLIC_FIREBASE_CONFIG={}` so the app falls back to the demo emulator project automatically.
    Real Firebase credentials are still needed for deployment and certain admin scripts.
 
    Add any non-Firebase credentials you need, such as:

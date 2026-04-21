@@ -4,16 +4,21 @@ import { getDatabase, connectDatabaseEmulator } from "firebase/database";
 import { getFirestore, connectFirestoreEmulator } from "firebase/firestore/lite";
 import { getAuth, connectAuthEmulator } from "firebase/auth";
 
-export const COLLECTION_REACTION_BINOMES = env.PUBLIC_FIREBASE_COLLECTION_REACTION_BINOMES || 'reactions-local';
-export const COLLECTION_USER_DATA = env.PUBLIC_FIREBASE_COLLECTION_USER_DATA || 'userData_local';
-export const COLLECTION_PLAYLISTS = env.PUBLIC_FIREBASE_COLLECTION_PLAYLISTS || 'playlists_local';
-export const COLLECTION_QUEUES = env.PUBLIC_FIREBASE_COLLECTION_QUEUES || 'queues_local';
-export const COLLECTION_YOUTUBE_CHANNEL_CLAIMS = env.PUBLIC_FIREBASE_COLLECTION_YOUTUBE_CHANNEL_CLAIMS || 'youtubeChannelClaims_local';
-const DEFAULT_YOUTUBE_CHANNEL_VERIFICATIONS = (env.PUBLIC_FIREBASE_COLLECTION_YOUTUBE_CHANNEL_CLAIMS || 'youtubeChannelClaims_local')
-    ? (env.PUBLIC_FIREBASE_COLLECTION_YOUTUBE_CHANNEL_CLAIMS || 'youtubeChannelClaims_local').replace('youtubeChannelClaims', 'youtubeChannelVerifications')
+function readCollectionName(value, fallback) {
+    const trimmed = value?.trim();
+    return trimmed && trimmed !== 'your_collection_name' ? trimmed : fallback;
+}
+
+export const COLLECTION_REACTION_BINOMES = readCollectionName(env.PUBLIC_FIREBASE_COLLECTION_REACTION_BINOMES, 'reactions-local');
+export const COLLECTION_USER_DATA = readCollectionName(env.PUBLIC_FIREBASE_COLLECTION_USER_DATA, 'userData_local');
+export const COLLECTION_PLAYLISTS = readCollectionName(env.PUBLIC_FIREBASE_COLLECTION_PLAYLISTS, 'playlists_local');
+export const COLLECTION_QUEUES = readCollectionName(env.PUBLIC_FIREBASE_COLLECTION_QUEUES, 'queues_local');
+export const COLLECTION_YOUTUBE_CHANNEL_CLAIMS = readCollectionName(env.PUBLIC_FIREBASE_COLLECTION_YOUTUBE_CHANNEL_CLAIMS, 'youtubeChannelClaims_local');
+const DEFAULT_YOUTUBE_CHANNEL_VERIFICATIONS = COLLECTION_YOUTUBE_CHANNEL_CLAIMS
+    ? COLLECTION_YOUTUBE_CHANNEL_CLAIMS.replace('youtubeChannelClaims', 'youtubeChannelVerifications')
     : 'youtubeChannelVerifications_local';
 export const COLLECTION_YOUTUBE_CHANNEL_VERIFICATIONS =
-    env.PUBLIC_FIREBASE_COLLECTION_YOUTUBE_CHANNEL_VERIFICATIONS || DEFAULT_YOUTUBE_CHANNEL_VERIFICATIONS;
+    readCollectionName(env.PUBLIC_FIREBASE_COLLECTION_YOUTUBE_CHANNEL_VERIFICATIONS, DEFAULT_YOUTUBE_CHANNEL_VERIFICATIONS);
 let parsedConfig = {};
 try {
     parsedConfig = env.PUBLIC_FIREBASE_CONFIG ? JSON.parse(env.PUBLIC_FIREBASE_CONFIG) : {};
@@ -26,6 +31,16 @@ try {
 
 // Fallback for emulators (e.g. CI) where config might be missing.
 if (env.PUBLIC_FIREBASE_USE_EMULATORS === 'true') {
+    if (parsedConfig.projectId === 'your_project_id') {
+        delete parsedConfig.projectId;
+    }
+    if (parsedConfig.databaseURL?.includes?.('your_project_id')) {
+        delete parsedConfig.databaseURL;
+    }
+    if (parsedConfig.apiKey === 'your_api_key') {
+        delete parsedConfig.apiKey;
+    }
+
     if (!parsedConfig.projectId) {
         parsedConfig.projectId = 'demo-pure-reactions';
     }
