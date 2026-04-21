@@ -16,11 +16,12 @@ A platform for creating and sharing authentic reaction videos with synchronized 
 ### Prerequisites
 
 - **Node.js 20+** (see `.nvmrc`) - If you use `nvm`: `nvm install && nvm use`
-- Firebase account for backend services
+- **Java 21** - required for the Firebase Emulator Suite
+- Firebase account for backend services in deployed environments
 - Algolia account for search functionality
 - YouTube Data API key
 
-### Installation
+### Development
 
 1. Clone the repository:
    ```bash
@@ -37,22 +38,35 @@ A platform for creating and sharing authentic reaction videos with synchronized 
    ```bash
    cp .env.example .env
    ```
-   
-   Edit `.env` and fill in your configuration:
-   - Firebase configuration (collections, emulator settings)
-   - Algolia credentials (app ID, search API key, index name)
-   - YouTube API key
 
-4. Set up Firebase Admin SDK:
-   - Go to [Firebase Console](https://console.firebase.google.com/)
-   - Navigate to Project Settings → Service Accounts
-   - Click "Generate New Private Key"
-   - Save the JSON file in the root directory as `pure-reactions-firebase-adminsdk-[key-id].json`
-   - Set the path in your environment:
+   For normal local app development, keep `PUBLIC_FIREBASE_USE_EMULATORS=true`.
+   The app's client and server runtime will use the local Firebase emulators, so you do not need a real Firebase project just to run the app locally.
+   Real Firebase credentials are still needed for deployment and certain admin scripts.
+
+   Add any non-Firebase credentials you need, such as:
+   - Algolia credentials (`PUBLIC_ALGOLIA_APP_ID`, `PUBLIC_ALGOLIA_SEARCH_API_KEY`, `PUBLIC_ALGOLIA_REACTIONS_INDEX`)
+   - `YOUTUBE_API_KEY` for server-side YouTube metadata requests
+
+4. Set up local Firebase emulators:
+   - Install the Firebase CLI if you do not already have it:
      ```bash
-     export FIREBASE_SERVICE_ACCOUNT="./pure-reactions-firebase-adminsdk-[key-id].json"
+     npm install -g firebase-tools
      ```
-   - **Never commit this file to git** (it's automatically ignored)
+   - If you are only running the app locally, the default emulator settings in `.env.example` are enough.
+   - If multiple JDKs are installed, make sure Java 21 is active before starting the emulators. On macOS:
+     ```bash
+     export JAVA_HOME=$(/usr/libexec/java_home -v 21)
+     export PATH="$JAVA_HOME/bin:$PATH"
+     ```
+   - Start the local emulator suite in a separate terminal:
+     ```bash
+     npm run start-emulators
+     ```
+   - The app connects to the following local services by default when `PUBLIC_FIREBASE_USE_EMULATORS=true`:
+     - Firestore at `127.0.0.1:8086`
+     - Realtime Database at `127.0.0.1:9000`
+     - Auth at `127.0.0.1:9099`
+   - If you need custom ports or hosts, update the corresponding `PUBLIC_*_EMULATOR_*` values in `.env`
 
 5. Start the development server:
    ```bash
@@ -61,7 +75,7 @@ A platform for creating and sharing authentic reaction videos with synchronized 
 
    The app will be available at `http://localhost:5173`
 
-## Development
+## Scripts
 
 ### Available Scripts
 
@@ -69,6 +83,7 @@ A platform for creating and sharing authentic reaction videos with synchronized 
 - `npm run build` - Build for production
 - `npm run preview` - Preview production build
 - `npm run lint` - Run ESLint
+- `npm run start-emulators` - Start the Firebase Emulator Suite for Firestore, Auth, and Realtime Database
 - `npm run e2e` - Run end-to-end tests with Playwright
 
 ### Database Scripts
@@ -177,6 +192,18 @@ Key test fixtures for twin-player synchronization are in `tests/fixtures/reactio
 
 This project is configured for Netlify deployment (see `netlify.toml` and `svelte.config.js`). You may redeploy the platform under your own domain for **personal or community (non-commercial) use** by following the steps below.
 
+### Firebase for Deployment
+
+Local development defaults to Firebase emulators. For a deployed instance that talks to a real Firebase project:
+
+1. Create a Firebase project and enable Authentication, Firestore, and Realtime Database.
+2. Add your Firebase web app config to `PUBLIC_FIREBASE_CONFIG`.
+3. Set `PUBLIC_FIREBASE_USE_EMULATORS=false` in your deployed environment.
+4. Generate a Firebase Admin SDK key from Firebase Console → Project Settings → Service Accounts.
+5. Store that key in `FIREBASE_SERVICE_ACCOUNT` as either a file path (local/private runtime) or an inline JSON string (Netlify/private hosting env var).
+
+The Admin SDK key is private and must never be committed to git.
+
 ### Steps to Deploy Your Own Instance
 
 1. Fork or clone this repository.
@@ -188,7 +215,7 @@ This project is configured for Netlify deployment (see `netlify.toml` and `svelt
 4. Copy `.env.example` to `.env` and fill in all values.
 5. In your Netlify project settings, add all environment variables listed in `.env.example` plus:
    - `YOUTUBE_API_KEY` (server-side only)
-   - `FIREBASE_SERVICE_ACCOUNT` — path to your Firebase Admin SDK JSON key file (if using server functions); see the Installation section above for how to generate this key.
+   - `FIREBASE_SERVICE_ACCOUNT` — Firebase Admin SDK JSON key material for server-side access
 6. Push to your fork's default branch — Netlify will build and deploy automatically.
 
 The platform is domain-agnostic: no hard-coded domain references exist in the application code. All external service callbacks (Firebase Auth, etc.) must be configured to allow your new domain in their respective consoles.
@@ -197,6 +224,7 @@ The platform is domain-agnostic: no hard-coded domain references exist in the ap
 
 Ensure these are set in your Netlify dashboard:
 - All `PUBLIC_*` variables from `.env.example`
+- `PUBLIC_FIREBASE_USE_EMULATORS=false`
 - `YOUTUBE_API_KEY` (server-side only)
 - Firebase Admin SDK credentials (if needed for server functions)
 

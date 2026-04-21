@@ -12,7 +12,7 @@
     "lint": "eslint . --ext .js,.svelte",
     "test:integration": "vitest run --config vitest.config.integration.js",
     "test:integration:watch": "vitest --config vitest.config.integration.js",
-    "start-emulators": "firebase emulators:start --only firestore",
+    "start-emulators": "firebase emulators:start --project demo-pure-reactions --only firestore,auth,database",
     "e2e": "playwright test",
     "test:e2e": "playwright test",
     "test:e2e:ci": "if [ -x /usr/libexec/java_home ]; then export JAVA_HOME=$(/usr/libexec/java_home -v 21); export PATH=\"$JAVA_HOME/bin:$PATH\"; fi; npx firebase-tools emulators:exec --project demo-pure-reactions --only firestore,auth,database \"npm run test:e2e\"",
