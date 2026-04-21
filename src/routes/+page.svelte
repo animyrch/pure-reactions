@@ -17,6 +17,7 @@
 
 	/** @type {import('./$types').PageData} */
 	export let data;
+	const pageSize = 15;
 
 	$: if (
 		$page.url.searchParams.get("sortBy") === SORTINGS.FOLLOWING &&
@@ -27,10 +28,10 @@
 
 	let reactions = data.reactions || [];
 	let isLoading = false;
+	let hasLoadedInitialResults = reactions.length > 0;
 	let lastReactionDoc = data.lastCursorMs ? new Date(data.lastCursorMs) : null;
-	let hasMoreReactions = (data.reactions?.length ?? 0) >= pageSize;
+	let hasMoreReactions = reactions.length > 0 ? reactions.length >= pageSize : true;
 	let sentinel;
-	const pageSize = 15;
 
 	const ensureFillViewport = async () => {
 		await tick();
@@ -61,8 +62,12 @@
 				reactionsResponse.reactions?.length === pageSize &&
 				!!reactionsResponse.lastVisible;
 			reactions = [...reactions, ...(reactionsResponse.reactions || [])];
+		} catch (error) {
+			console.error('Failed to load reactions for landing page:', error);
+			hasMoreReactions = false;
 		} finally {
 			isLoading = false;
+			hasLoadedInitialResults = true;
 			ensureFillViewport();
 		}
 	};
@@ -181,7 +186,7 @@
 	<LandingSyncExplainer />
 	<LandingWorkflow />
 	<LandingTrust />
-	<LandingCreatorProof {reactions} />
+	<LandingCreatorProof {reactions} loading={isLoading} hasLoaded={hasLoadedInitialResults} />
 	<div class="load-more" bind:this={sentinel} aria-hidden="true"></div>
 </div>
 

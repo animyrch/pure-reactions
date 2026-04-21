@@ -4,6 +4,8 @@
   import { onMount } from "svelte";
 
   export let reactions = [];
+  export let loading = false;
+  export let hasLoaded = false;
 
   let sectionEl;
   let revealed = false;
@@ -56,9 +58,13 @@
     <div class="reveal-proof-delay-2">
       {#if reactions.length > 0}
         <ReactionsList {reactions} />
-      {:else}
+      {:else if loading || !hasLoaded}
         <div class="flex items-center justify-center py-16">
           <p class="text-text-muted">Loading reactions…</p>
+        </div>
+      {:else}
+        <div class="flex items-center justify-center py-16">
+          <p class="text-text-muted">No published reactions yet.</p>
         </div>
       {/if}
     </div>
