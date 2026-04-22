@@ -1,0 +1,70 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "sharedSessions": {
+      "$sessionId": {
+        ".read": true,
+        ".write": "auth != null && ((!data.exists() && newData.exists() && newData.child('reactorId').isString() && newData.child('reactorId').val() === auth.uid) || (data.exists() && data.child('reactorId').val() === auth.uid))",
+        "reactorId": {
+          ".validate": "newData.isString() && auth != null && newData.val() === auth.uid"
+        },
+        "activeReactionDocumentId": {
+          ".validate": "newData.isString() && newData.val().length > 0"
+        },
+        "originalVideoId": {
+          ".validate": "newData.isString() && newData.val().length > 0"
+        },
+        "originalVideoPlatform": {
+          ".validate": "newData.isString() && (newData.val() === 'youtube' || newData.val() === 'tiktok')"
+        },
+        "originalVideoUrl": {
+          ".validate": "newData.isString()"
+        },
+        "state": {
+          ".validate": "newData.isString() && (newData.val() === 'waiting' || newData.val() === 'playing' || newData.val() === 'paused' || newData.val() === 'ended')"
+        },
+        "currentTime": {
+          ".validate": "newData.isNumber() && newData.val() >= 0"
+        },
+        "duration": {
+          ".validate": "newData.isNumber() && newData.val() >= 0"
+        },
+        "volume": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100"
+        },
+        "playbackRate": {
+          ".validate": "newData.isNumber() && newData.val() >= 0.25 && newData.val() <= 2"
+        },
+        "createdAt": {
+          ".validate": "newData.exists()"
+        },
+        "lastUpdated": {
+          ".validate": "newData.exists()"
+        },
+        "viewers": {
+          ".validate": "!newData.exists() || newData.hasChildren() || newData.val() === null",
+          "$viewerId": {
+            ".write": "auth != null && auth.uid === $viewerId && root.child('sharedSessions/' + $sessionId).exists()",
+            ".validate": "!newData.exists() || (newData.hasChildren(['name', 'joinedAt', 'isActive']) && newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 80 && newData.child('joinedAt').exists() && newData.child('isActive').isBoolean())",
+            "name": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 80"
+            },
+            "joinedAt": {
+              ".validate": "newData.exists()"
+            },
+            "isActive": {
+              ".validate": "newData.isBoolean()"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    }
+  }
+}

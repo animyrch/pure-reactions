@@ -288,24 +288,33 @@ Real-time co-watching sessions.
 
 ```javascript
 {
-  hostId: string,           // User ID of session host
-  reactionId: string,       // Current reaction being watched
+  reactorId: string,        // Firebase Auth UID of the session host
+  activeReactionDocumentId: string, // Current reaction document being watched
   originalVideoId: string,  // Current original video ID
   originalVideoPlatform: string, // 'youtube' | 'tiktok'
   originalVideoUrl: string, // Canonical original video URL when known
-  state: string,            // 'playing' | 'paused'
+  state: string,            // 'waiting' | 'playing' | 'paused' | 'ended'
   currentTime: number,      // Playback position in seconds
+  duration: number,         // Original media duration in seconds
   volume: number,           // Volume level (0-100)
   playbackRate: number,     // Playback speed (0.25-2.0)
+  createdAt: timestamp,     // Server timestamp
   lastUpdated: timestamp,   // Server timestamp
   viewers: {                // Map of viewer IDs
-    [userId]: {
+    [authUid]: {
       joinedAt: timestamp,
-      displayName: string
+      name: string,
+      isActive: boolean
     }
   }
 }
 ```
+
+#### Access Pattern
+
+- Reads are public for anyone with the share URL.
+- Session writes require `auth.uid === reactorId`.
+- Viewer presence writes require Firebase Auth and must use the viewer's own `auth.uid` as the `viewers/{authUid}` key.
 
 ---
 
@@ -453,7 +462,8 @@ const docRef = await addDoc(collection(db, 'reactions'), {
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 1.6 | 2026-04-22 | Documented unified overlay snapshot timeline schema (`overlayVisibilityTimeline` now stores `visible` + `primary`) and static `fullscreenPrimaryVideo` fallback semantics |
+| 1.7 | 2026-04-22 | Documented unified overlay snapshot timeline schema (`overlayVisibilityTimeline` now stores `visible` + `primary`) and static `fullscreenPrimaryVideo` fallback semantics |
+| 1.6 | 2026-04-21 | Documented Realtime Database shared-session access pattern, anonymous viewer auth, and aligned shared-session field names with the live implementation |
 | 1.5 | 2026-04-18 | Added YouTube Discussion Mirror API response schema (`/api/youtube/comments/[videoId]`) — see `docs/YOUTUBE_DISCUSSION_MIRROR.md` |
 | 1.4 | 2026-03-07 | Added ordered playlist `sequenceItems` snapshot schema for duplicate-safe mixed YouTube/TikTok recording and playback, plus legacy compatibility notes for `originalVideoIds` |
 | 1.3 | 2026-03-07 | Added normalized original-video author/description/thumbnail/url fields, documented `originalTikTok` enrichment metadata, and extended shared-session schema with original platform/url |

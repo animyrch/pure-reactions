@@ -1005,9 +1005,18 @@ export const createUserWithEmailAndPasswordWrapper = async (email, password) => 
                 console.error('Failed to set fallback display name:', error);
             }
         }
-        sendEmailVerification(userCreds.user, {
-            url: window.location.href
-        });
+        const verificationUrl = typeof window !== 'undefined'
+            ? new URL('/account/verify', window.location.origin).toString()
+            : undefined;
+
+        await sendEmailVerification(
+            userCreds.user,
+            verificationUrl
+                ? {
+                    url: verificationUrl
+                }
+                : undefined
+        );
         successful = true;
     } catch (error) {
         const errorCode = error?.code || 'auth/error';

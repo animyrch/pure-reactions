@@ -1,5 +1,6 @@
 
 <script>
+  import { env } from '$env/dynamic/public';
   export let data;
 
   let email = '';
@@ -11,6 +12,7 @@
   let canSubmitSignUp = false;
   let backendMissingRequirements = [];
   let backendFallbackMessage = '';
+  const isUsingFirebaseEmulators = env.PUBLIC_FIREBASE_USE_EMULATORS === 'true';
 
   const passwordRules = [
     {
@@ -202,6 +204,17 @@
       >
         Sign Up
       </button>
+      {#if isUsingFirebaseEmulators}
+        <div class="mt-4 rounded border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900" role="note">
+          <p class="font-medium">Local development note</p>
+          <p class="mt-1">
+            The Firebase Auth emulator lets you create accounts locally, but new accounts still need email verification before they can create reactions or use protected actions.
+          </p>
+          <p class="mt-1">
+            After signing up, open the verification link printed in the terminal running the emulator.
+          </p>
+        </div>
+      {/if}
     </form>
   <p class="mt-4 text-center">Already have an account? <button type="button" class="text-blue-500 underline-offset-2 hover:underline bg-transparent p-0 border-0" on:click={toggleForm}>Login</button></p>
   {/if}
