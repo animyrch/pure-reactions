@@ -12,55 +12,12 @@ import {
 	COLLECTION_PLAYLISTS,
 	COLLECTION_QUEUES,
 	COLLECTION_YOUTUBE_CHANNEL_CLAIMS,
-	COLLECTION_YOUTUBE_CHANNEL_VERIFICATIONS,
-	FIREBASE_CONFIG
+	COLLECTION_YOUTUBE_CHANNEL_VERIFICATIONS
 } from '$lib/constants/firebase';
-
-let adminAuth = null;
-let adminDb = null;
-let adminFieldValue = null;
-let adminInitialized = false;
+import { initializeFirebaseAdmin } from '$lib/server/firebaseAdmin';
 
 const EXPORT_RATE_LIMIT_SECONDS = 60 * 60 * 24;
 const ALGOLIA_BATCH_LIMIT = 1000;
-
-async function initializeFirebaseAdmin() {
-	if (adminInitialized) {
-		return { adminAuth, adminDb, adminFieldValue };
-	}
-
-	try {
-		const { getAuth } = await import('firebase-admin/auth');
-		const { getFirestore, FieldValue } = await import('firebase-admin/firestore');
-		const { initializeApp, getApps, cert } = await import('firebase-admin/app');
-
-		let adminApp;
-		if (!getApps().length) {
-			if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-				const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-				adminApp = initializeApp({
-					credential: cert(serviceAccount),
-					projectId: FIREBASE_CONFIG.projectId
-				});
-			} else {
-				adminApp = initializeApp({
-					projectId: FIREBASE_CONFIG.projectId
-				});
-			}
-		} else {
-			adminApp = getApps()[0];
-		}
-
-		adminAuth = getAuth(adminApp);
-		adminDb = getFirestore(adminApp);
-		adminFieldValue = FieldValue;
-		adminInitialized = true;
-	} catch (error) {
-		console.error('Failed to initialize Firebase Admin:', error);
-	}
-
-	return { adminAuth, adminDb, adminFieldValue };
-}
 
 function buildAuthProfile(userRecord) {
 	if (!userRecord) return null;

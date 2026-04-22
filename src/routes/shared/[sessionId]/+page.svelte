@@ -1,8 +1,10 @@
 <script>
     /* global YT */
     import { onMount, onDestroy } from 'svelte';
+    import { signInAnonymously } from 'firebase/auth';
     import { page } from '$app/stores';
     import { goToRoute } from '$lib/helpers/routing';
+    import { auth } from '$lib/constants/firebase';
     import {
         getSessionData,
         listenToSession,
@@ -42,7 +44,14 @@
         rel: 0
     };
 
-    const generateViewerId = () => 'viewer_' + Math.random().toString(36).substr(2, 9);
+    async function ensureViewerAuth() {
+        if (auth.currentUser) {
+            return auth.currentUser;
+        }
+
+        const credentials = await signInAnonymously(auth);
+        return credentials.user;
+    }
 
     function clearAllControlTimeouts() {
         controlTimeouts.forEach((timeoutId) => {
@@ -228,7 +237,8 @@
                 return;
             }
 
-            viewerId = generateViewerId();
+            const viewerUser = await ensureViewerAuth();
+            viewerId = viewerUser.uid;
             await joinSharedSession(sessionId, viewerId, 'Anonymous Viewer');
 
             currentVideoId = sessionData.originalVideoId;

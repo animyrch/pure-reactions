@@ -1,51 +1,7 @@
 import { json } from '@sveltejs/kit';
-
-// Lazy import Firebase Admin to avoid SSR/build issues
-let adminAuth = null;
-let adminDb = null;
-let adminInitialized = false;
+import { initializeFirebaseAdmin } from '$lib/server/firebaseAdmin';
 
 const RECENT_AUTH_THRESHOLD_SECONDS = 5 * 60;
-
-async function initializeFirebaseAdmin() {
-	if (adminInitialized) {
-		return { adminAuth, adminDb };
-	}
-
-	try {
-		const { getAuth } = await import('firebase-admin/auth');
-		const { getFirestore } = await import('firebase-admin/firestore');
-		const { initializeApp, getApps, cert } = await import('firebase-admin/app');
-		const { FIREBASE_CONFIG } = await import('$lib/constants/firebase');
-
-		let adminApp;
-		if (!getApps().length) {
-			// In production (Netlify), service account is provided via environment
-			if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-				const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-				adminApp = initializeApp({
-					credential: cert(serviceAccount),
-					projectId: FIREBASE_CONFIG.projectId
-				});
-			} else {
-				// For local development with emulator or FIREBASE_SERVICE_ACCOUNT
-				adminApp = initializeApp({
-					projectId: FIREBASE_CONFIG.projectId
-				});
-			}
-		} else {
-			adminApp = getApps()[0];
-		}
-
-		adminAuth = getAuth(adminApp);
-		adminDb = getFirestore(adminApp);
-		adminInitialized = true;
-	} catch (error) {
-		console.error('Failed to initialize Firebase Admin:', error);
-	}
-
-	return { adminAuth, adminDb };
-}
 
 async function deleteUserData(userId, adminDb) {
 	const {

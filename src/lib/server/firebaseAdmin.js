@@ -3,9 +3,24 @@ import path from 'node:path';
 import { FIREBASE_CONFIG } from '$lib/constants/firebase';
 import { env } from '$env/dynamic/private';
 
+let adminAuth = null;
 let adminDb = null;
 let adminFieldValue = null;
 let adminInitialized = false;
+let adminMissingConfigurationLogged = false;
+
+function isUsingEmulators() {
+  return process.env.PUBLIC_FIREBASE_USE_EMULATORS === 'true';
+}
+
+function getAdminProjectId() {
+  return FIREBASE_CONFIG.projectId || process.env.PUBLIC_FIREBASE_PROJECT_ID || 'demo-pure-reactions';
+}
+
+function applyAdminEmulatorEnvironment() {
+  process.env.FIRESTORE_EMULATOR_HOST = `${process.env.PUBLIC_FIRESTORE_EMULATOR_HOST || '127.0.0.1'}:${process.env.PUBLIC_FIRESTORE_EMULATOR_PORT || '8086'}`;
+  process.env.FIREBASE_AUTH_EMULATOR_HOST = `${process.env.PUBLIC_AUTH_EMULATOR_HOST || '127.0.0.1'}:${process.env.PUBLIC_AUTH_EMULATOR_PORT || '9099'}`;
+}
 
 function resolveServiceAccount() {
   const raw = env.FIREBASE_SERVICE_ACCOUNT;
@@ -32,32 +47,50 @@ function resolveServiceAccount() {
   return null;
 }
 
+function logMissingAdminConfiguration() {
+  if (adminMissingConfigurationLogged) {
+    return;
+  }
+
+  adminMissingConfigurationLogged = true;
+  console.warn(
+    'Firebase Admin is not configured. Set FIREBASE_SERVICE_ACCOUNT or GOOGLE_APPLICATION_CREDENTIALS, or enable PUBLIC_FIREBASE_USE_EMULATORS=true. Server-side admin features will fall back to empty responses.'
+  );
+}
+
 export async function initializeFirebaseAdmin() {
   if (adminInitialized) {
-    return { adminDb, adminFieldValue };
+    return { adminAuth, adminDb, adminFieldValue };
   }
 
   try {
-    const { getFirestore, FieldValue } = await import('firebase-admin/firestore');
     const { initializeApp, getApps, cert } = await import('firebase-admin/app');
 
-    let adminApp;
-    if (!getApps().length) {
-      const serviceAccount = resolveServiceAccount();
-      if (serviceAccount) {
+    let adminApp = getApps()[0];
+    if (!adminApp) {
+      const projectId = getAdminProjectId();
+      if (isUsingEmulators()) {
+        applyAdminEmulatorEnvironment();
+        adminApp = initializeApp({ projectId });
+      } else {
+        const serviceAccount = resolveServiceAccount();
+        if (!serviceAccount) {
+          logMissingAdminConfiguration();
+          adminInitialized = true;
+          return { adminAuth, adminDb, adminFieldValue };
+        }
+
         adminApp = initializeApp({
           credential: cert(serviceAccount),
-          projectId: FIREBASE_CONFIG.projectId
-        });
-      } else {
-        adminApp = initializeApp({
-          projectId: FIREBASE_CONFIG.projectId
+          projectId
         });
       }
-    } else {
-      adminApp = getApps()[0];
     }
 
+    const { getAuth } = await import('firebase-admin/auth');
+    const { getFirestore, FieldValue } = await import('firebase-admin/firestore');
+
+    adminAuth = getAuth(adminApp);
     adminDb = getFirestore(adminApp);
     adminFieldValue = FieldValue;
     adminInitialized = true;
@@ -65,7 +98,7 @@ export async function initializeFirebaseAdmin() {
     console.error('Failed to initialize Firebase Admin:', error);
   }
 
-  return { adminDb, adminFieldValue };
+  return { adminAuth, adminDb, adminFieldValue };
 }
 
 /**
