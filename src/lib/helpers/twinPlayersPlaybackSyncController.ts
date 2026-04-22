@@ -699,6 +699,8 @@ export function createTwinPlayersPlaybackSyncController({
           globalGain: snapshot.globalGain,
           isFineTuneModeOn: snapshot.isFineTuneModeOn,
           isFullscreen: snapshot.isFullscreen,
+          defaultFullscreenPrimaryVideo: snapshot.fullscreenPrimaryVideoDefault,
+          currentFullscreenPrimaryVideo: snapshot.fullscreenPrimaryVideo,
           currentStateOriginalVideo: snapshot.currentStateOriginalVideo,
           currentPlaybackRate: snapshot.currentPlaybackRate,
           currentVolumeOriginalVideo: snapshot.currentVolumeOriginalVideo,
@@ -824,8 +826,18 @@ export function createTwinPlayersPlaybackSyncController({
         enforceReactionMuteMode(result.enforceMuteModeWithOriginalState);
       }
 
-      if (typeof result.stateUpdates.fullscreenOverlayVisible === 'boolean') {
-        updateState({ fullscreenOverlayVisible: result.stateUpdates.fullscreenOverlayVisible });
+      if (
+        typeof result.stateUpdates.fullscreenOverlayVisible === 'boolean'
+        || typeof result.stateUpdates.fullscreenPrimaryVideo === 'string'
+      ) {
+        updateState({
+          ...(typeof result.stateUpdates.fullscreenOverlayVisible === 'boolean'
+            ? { fullscreenOverlayVisible: result.stateUpdates.fullscreenOverlayVisible }
+            : {}),
+          ...(typeof result.stateUpdates.fullscreenPrimaryVideo === 'string'
+            ? { fullscreenPrimaryVideo: result.stateUpdates.fullscreenPrimaryVideo }
+            : {})
+        });
       }
 
       const nextBoundaries = [
@@ -1039,6 +1051,8 @@ export function createTwinPlayersPlaybackSyncController({
         globalGain: snapshot.globalGain,
         isFineTuneModeOn: snapshot.isFineTuneModeOn,
         isFullscreen: snapshot.isFullscreen,
+        defaultFullscreenPrimaryVideo: snapshot.fullscreenPrimaryVideoDefault,
+        currentFullscreenPrimaryVideo: snapshot.fullscreenPrimaryVideo,
         currentStateOriginalVideo: initialState,
         currentPlaybackRate: snapshot.currentPlaybackRate,
         currentVolumeOriginalVideo: snapshot.currentVolumeOriginalVideo,
@@ -1076,6 +1090,20 @@ export function createTwinPlayersPlaybackSyncController({
     );
 
     Object.assign(syncTracking, initialTick.nextTracking);
+
+    if (
+      typeof initialTick.stateUpdates.fullscreenOverlayVisible === 'boolean'
+      || typeof initialTick.stateUpdates.fullscreenPrimaryVideo === 'string'
+    ) {
+      updateState({
+        ...(typeof initialTick.stateUpdates.fullscreenOverlayVisible === 'boolean'
+          ? { fullscreenOverlayVisible: initialTick.stateUpdates.fullscreenOverlayVisible }
+          : {}),
+        ...(typeof initialTick.stateUpdates.fullscreenPrimaryVideo === 'string'
+          ? { fullscreenPrimaryVideo: initialTick.stateUpdates.fullscreenPrimaryVideo }
+          : {})
+      });
+    }
 
     const initialApplied = applyTwinPlayersSyncActions(initialTick.actions, {
       snapshot,

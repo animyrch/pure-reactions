@@ -97,17 +97,62 @@ export const getCurrentPlaybackRateFromConfigs = (currentTime, playbackConfigsOr
         : DEFAULT_PLAYBACK_RATE;
 };
 
-export const getCurrentOverlayVisibilityFromConfigs = (currentTime, overlayVisibilityTimeline, timeOffset = 0) => {
-    const DEFAULT_VISIBILITY = true;
+const normalizeOverlayPrimary = (value, fallback = 'original') =>
+    value === 'reaction' ? 'reaction' : fallback;
+
+const normalizeOverlayDefaultPrimary = (value) =>
+    normalizeOverlayPrimary(value, 'original');
+
+export const getCurrentOverlaySnapshotFromConfigs = (
+    currentTime,
+    overlayVisibilityTimeline,
+    timeOffset = 0,
+    defaultPrimary = 'original'
+) => {
     const effectiveTime = Number(currentTime) - Number(timeOffset || 0);
+    const fallback = {
+        visible: true,
+        primary: normalizeOverlayDefaultPrimary(defaultPrimary)
+    };
 
     if (!Array.isArray(overlayVisibilityTimeline) || overlayVisibilityTimeline.length === 0) {
-        return DEFAULT_VISIBILITY;
+        return fallback;
     }
 
-    const ev = findLastEventAtOrBefore(overlayVisibilityTimeline, effectiveTime);
-    return ev && typeof ev.visible === 'boolean' ? ev.visible : DEFAULT_VISIBILITY;
+    const sortedTimeline = [...overlayVisibilityTimeline]
+        .filter((entry) => Number.isFinite(Number(entry?.t)))
+        .sort((a, b) => Number(a.t) - Number(b.t));
+
+    let active = { ...fallback };
+    for (const entry of sortedTimeline) {
+        const entryTime = Number(entry.t);
+        if (entryTime > effectiveTime) {
+            break;
+        }
+        active = {
+            visible: typeof entry?.visible === 'boolean' ? entry.visible : active.visible,
+            primary: normalizeOverlayPrimary(entry?.primary, active.primary)
+        };
+    }
+
+    return active;
 };
+
+export const getCurrentOverlayVisibilityFromConfigs = (currentTime, overlayVisibilityTimeline, timeOffset = 0) => {
+    return getCurrentOverlaySnapshotFromConfigs(currentTime, overlayVisibilityTimeline, timeOffset).visible;
+};
+
+export const getCurrentOverlayPrimaryFromConfigs = (
+    currentTime,
+    overlayVisibilityTimeline,
+    defaultPrimary = 'original',
+    timeOffset = 0
+) => getCurrentOverlaySnapshotFromConfigs(
+    currentTime,
+    overlayVisibilityTimeline,
+    timeOffset,
+    defaultPrimary
+).primary;
 
 export const getCompensatedReactionTime = (startTime, playlistBufferTime = 0) => {
     const currentTime = new Date().getTime();

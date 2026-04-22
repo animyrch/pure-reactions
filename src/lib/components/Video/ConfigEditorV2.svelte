@@ -14,6 +14,7 @@
   export let playbackRateConfigs = {};
   export let playbackRateTimeline = [];
   export let overlayVisibilityTimeline = [];
+  export let fullscreenPrimaryVideoDefault = "original";
   export let reactionCurrentTime = 0;
   export let reactionDuration = 0;
   export let seekMin = 0;
@@ -77,7 +78,7 @@
 
   const normalizeVolumeEvents = (timeline, configs, trackId = "volume") => {
     if (Array.isArray(timeline) && timeline.length) {
-      return timeline
+      return sortedTimeline
         .map((event, index) => {
           const timeInReaction = parseSeconds(event?.t);
           const volume = Number.parseFloat(event?.volume);
@@ -113,7 +114,7 @@
 
   const normalizePlayerEvents = (timeline, configs) => {
     if (Array.isArray(timeline) && timeline.length) {
-      return timeline
+      return sortedTimeline
         .map((event, index) => {
           const timeInReaction = parseSeconds(event?.t);
           const state = Number.parseFloat(event?.state);
@@ -188,17 +189,25 @@
 
   const normalizeOverlayVisibilityEvents = (timeline) => {
     if (Array.isArray(timeline) && timeline.length) {
+      const sortedTimeline = [...timeline]
+        .filter((event) => Number.isFinite(parseSeconds(event?.t)))
+        .sort((a, b) => Number(a.t) - Number(b.t));
+      let previousPrimary =
+        fullscreenPrimaryVideoDefault === "reaction" ? "reaction" : "original";
       return timeline
         .map((event, index) => {
           const timeInReaction = parseSeconds(event?.t);
           const visible = typeof event?.visible === 'boolean' ? event.visible : true;
+          const primary = event?.primary === "reaction" ? "reaction" : previousPrimary;
           if (!Number.isFinite(timeInReaction)) return null;
+          previousPrimary = primary;
           return {
             id: `overlay-visibility-array-${index}-${timeInReaction}`,
             type: "overlayVisibility",
             trackId: "overlayVisibility",
             timeInReaction,
             visible,
+            primary,
           };
         })
         .filter(Boolean);
@@ -370,6 +379,7 @@
       {reactionVolumeEvents}
       playbackRateEvents={playbackEvents}
       overlayVisibilityEvents={overlayVisibilityEvents}
+      overlayPrimaryDefault={fullscreenPrimaryVideoDefault}
       {allowPlaybackRate}
       on:createPlayerConfig={(event) =>
         dispatch("createPlayerConfig", event.detail)}

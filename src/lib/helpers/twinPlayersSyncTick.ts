@@ -2,7 +2,7 @@ import {
   getCurrentPlaybackRateFromConfigs,
   getCurrentStateFromStateConfigs,
   getCurrentVolumeFromVolumeConfigs,
-  getCurrentOverlayVisibilityFromConfigs
+  getCurrentOverlaySnapshotFromConfigs
 } from '$lib/helpers/reaction';
 import {
   decideSyncMode,
@@ -44,6 +44,8 @@ export type TwinPlayersSyncTickInput = {
   isFineTuneModeOn: boolean;
   isFullscreen: boolean;
 
+  defaultFullscreenPrimaryVideo: 'original' | 'reaction';
+  currentFullscreenPrimaryVideo: 'original' | 'reaction';
   currentStateOriginalVideo: number;
   currentPlaybackRate: number;
   currentVolumeOriginalVideo: number;
@@ -101,6 +103,7 @@ export type TwinPlayersSyncTickResult = {
     currentVolumeOriginalVideo?: number;
     currentVolumeReactionVideo?: number;
     fullscreenOverlayVisible?: boolean;
+    fullscreenPrimaryVideo?: 'original' | 'reaction';
   };
   enforceMuteModeWithOriginalState?: number;
   nextBoundaryReactionTime?: number;
@@ -301,14 +304,20 @@ export function computeTwinPlayersSyncTick(
   }
 
   // 2.5) Overlay visibility (applies in overlay layout mode)
-  const desiredOverlayVisible = getCurrentOverlayVisibilityFromConfigs(
+  const activeOverlaySnapshot = getCurrentOverlaySnapshotFromConfigs(
     reactionCurrentTime,
     input.overlayVisibilityTimeline,
-    timeOffset
+    timeOffset,
+    input.defaultFullscreenPrimaryVideo
   );
+  const desiredOverlayVisible = activeOverlaySnapshot.visible;
+  const desiredOverlayPrimary = activeOverlaySnapshot.primary;
 
   if (desiredOverlayVisible !== input.currentFullscreenOverlayVisible) {
     stateUpdates.fullscreenOverlayVisible = desiredOverlayVisible;
+  }
+  if (desiredOverlayPrimary !== input.currentFullscreenPrimaryVideo) {
+    stateUpdates.fullscreenPrimaryVideo = desiredOverlayPrimary;
   }
 
   // 3) State/time sync (original)

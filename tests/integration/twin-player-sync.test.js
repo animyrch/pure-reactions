@@ -3,21 +3,25 @@ import {
     getCurrentVolumeFromVolumeConfigs, 
     getCurrentStateFromStateConfigs, 
     getCurrentPlaybackRateFromConfigs,
-    getCurrentOverlayVisibilityFromConfigs 
+    getCurrentOverlayVisibilityFromConfigs,
+    getCurrentOverlayPrimaryFromConfigs,
+    getCurrentOverlaySnapshotFromConfigs
 } from '../../src/lib/helpers/reaction.js';
+import { overlayVisibilityTimelineArrayToMap } from '../../src/lib/helpers/twinPlayersTimeline.ts';
 
 describe('Twin Player Sync Logic (Integration)', () => {
-    describe('getCurrentOverlayVisibilityFromConfigs', () => {
-        it('should return default visibility (true) when no timeline provided', () => {
-            const result = getCurrentOverlayVisibilityFromConfigs(5.0, null);
-            expect(result).toBe(true);
+    describe('overlay snapshot timeline resolution', () => {
+        it('should return defaults when no overlay cues exist', () => {
+            const snapshot = getCurrentOverlaySnapshotFromConfigs(5.0, null, 0, 'reaction');
+            expect(snapshot).toEqual({ visible: true, primary: 'reaction' });
+            expect(getCurrentOverlayVisibilityFromConfigs(5.0, null)).toBe(true);
         });
 
-        it('should handle visibility switches in timeline', () => {
+        it('should apply complete cue snapshots atomically at cue boundaries', () => {
             const timeline = [
-                { t: 0, visible: true },
-                { t: 3, visible: false },
-                { t: 6, visible: true }
+                { t: 0, visible: true, primary: 'original' },
+                { t: 3, visible: false, primary: 'reaction' },
+                { t: 6, visible: true, primary: 'reaction' }
             ];
 
             expect(getCurrentOverlayVisibilityFromConfigs(1.0, timeline)).toBe(true);
@@ -25,25 +29,69 @@ describe('Twin Player Sync Logic (Integration)', () => {
             expect(getCurrentOverlayVisibilityFromConfigs(4.0, timeline)).toBe(false);
             expect(getCurrentOverlayVisibilityFromConfigs(6.0, timeline)).toBe(true);
             expect(getCurrentOverlayVisibilityFromConfigs(10.0, timeline)).toBe(true);
+            expect(getCurrentOverlayPrimaryFromConfigs(2.99, timeline, 'original')).toBe('original');
+            expect(getCurrentOverlayPrimaryFromConfigs(3.0, timeline, 'original')).toBe('reaction');
         });
 
         it('should respect time offset', () => {
             const timeline = [
-                { t: 0, visible: true },
-                { t: 10, visible: false }
+                { t: 0, visible: true, primary: 'original' },
+                { t: 10, visible: false, primary: 'reaction' }
             ];
 
             // If timeOffset = 5, currentTime 12 maps to effective time 7 (visible)
             // If timeOffset = 5, currentTime 17 maps to effective time 12 (hidden)
             expect(getCurrentOverlayVisibilityFromConfigs(12.0, timeline, 5.0)).toBe(true);
             expect(getCurrentOverlayVisibilityFromConfigs(17.0, timeline, 5.0)).toBe(false);
+            expect(getCurrentOverlayPrimaryFromConfigs(17.0, timeline, 'original', 5.0)).toBe('reaction');
         });
 
-        it('should return true for time before first event', () => {
+        it('should carry forward previous active cue values for later cue defaults', () => {
+            const timeline = [
+                { t: 2, visible: false, primary: 'reaction' },
+                { t: 8, visible: true }
+            ];
+
+            expect(getCurrentOverlaySnapshotFromConfigs(7.5, timeline, 0, 'original')).toEqual({
+                visible: false,
+                primary: 'reaction'
+            });
+            expect(getCurrentOverlaySnapshotFromConfigs(8.0, timeline, 0, 'original')).toEqual({
+                visible: true,
+                primary: 'reaction'
+            });
+        });
+
+        it('should normalize legacy visibility-only cues with static primary fallback', () => {
             const timeline = [
                 { t: 10, visible: false }
             ];
-            expect(getCurrentOverlayVisibilityFromConfigs(5.0, timeline)).toBe(true);
+
+            expect(getCurrentOverlaySnapshotFromConfigs(5.0, timeline, 0, 'reaction')).toEqual({
+                visible: true,
+                primary: 'reaction'
+            });
+            expect(getCurrentOverlaySnapshotFromConfigs(12.0, timeline, 0, 'reaction')).toEqual({
+                visible: false,
+                primary: 'reaction'
+            });
+        });
+    });
+
+    describe('overlay timeline map persistence normalization', () => {
+        it('should persist full snapshots with carry-forward primary for legacy entries', () => {
+            const map = overlayVisibilityTimelineArrayToMap(
+                [
+                    { t: 6, visible: true },
+                    { t: 3, visible: false, primary: 'reaction' }
+                ],
+                'original'
+            );
+
+            expect(Array.from(map.values())).toEqual([
+                { t: 3, visible: false, primary: 'reaction' },
+                { t: 6, visible: true, primary: 'reaction' }
+            ]);
         });
     });
 

@@ -71,6 +71,7 @@ export type TwinPlayersState = {
   isReactionMuteModeEnabled: boolean;
   isReactionAutoMuted: boolean;
   fullscreenPrimaryVideo: FullscreenPrimaryVideo;
+  fullscreenPrimaryVideoDefault: FullscreenPrimaryVideo;
   fullscreenOverlayWidthPercent: number;
   fullscreenOverlayCorner: FullscreenOverlayCorner;
   pageSlug: string;
@@ -127,6 +128,7 @@ type TwinPlayersUiState = Pick<
   | 'isExitButtonExpanded'
   | 'fullscreenOverlayVisible'
   | 'fullscreenPrimaryVideo'
+  | 'fullscreenPrimaryVideoDefault'
   | 'fullscreenOverlayWidthPercent'
   | 'fullscreenOverlayCorner'
 >;
@@ -224,6 +226,7 @@ const uiKeys = [
   'isExitButtonExpanded',
   'fullscreenOverlayVisible',
   'fullscreenPrimaryVideo',
+  'fullscreenPrimaryVideoDefault',
   'fullscreenOverlayWidthPercent',
   'fullscreenOverlayCorner'
 ] as const;
@@ -354,6 +357,7 @@ export function createTwinPlayersStateController({
     isExitButtonExpanded: false,
     fullscreenOverlayVisible: true,
     fullscreenPrimaryVideo: DEFAULT_FULLSCREEN_PRIMARY_VIDEO,
+    fullscreenPrimaryVideoDefault: DEFAULT_FULLSCREEN_PRIMARY_VIDEO,
     fullscreenOverlayWidthPercent: DEFAULT_FULLSCREEN_OVERLAY_WIDTH_PERCENT,
     fullscreenOverlayCorner: DEFAULT_FULLSCREEN_OVERLAY_CORNER
   });
