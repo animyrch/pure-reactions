@@ -1,3 +1,5 @@
+import { getSortedFiniteTimelineByT } from './twinPlayersTimeline';
+
 const getClosestSmallerKey = (timedConfigs, searchKey) => {
     if (!timedConfigs) {
         return -Infinity;
@@ -100,9 +102,6 @@ export const getCurrentPlaybackRateFromConfigs = (currentTime, playbackConfigsOr
 const normalizeOverlayPrimary = (value, fallback = 'original') =>
     value === 'reaction' ? 'reaction' : fallback;
 
-const normalizeOverlayDefaultPrimary = (value) =>
-    normalizeOverlayPrimary(value, 'original');
-
 export const getCurrentOverlaySnapshotFromConfigs = (
     currentTime,
     overlayVisibilityTimeline,
@@ -112,16 +111,14 @@ export const getCurrentOverlaySnapshotFromConfigs = (
     const effectiveTime = Number(currentTime) - Number(timeOffset || 0);
     const fallback = {
         visible: true,
-        primary: normalizeOverlayDefaultPrimary(defaultPrimary)
+        primary: normalizeOverlayPrimary(defaultPrimary)
     };
 
     if (!Array.isArray(overlayVisibilityTimeline) || overlayVisibilityTimeline.length === 0) {
         return fallback;
     }
 
-    const sortedTimeline = [...overlayVisibilityTimeline]
-        .filter((entry) => Number.isFinite(Number(entry?.t)))
-        .sort((a, b) => Number(a.t) - Number(b.t));
+    const sortedTimeline = getSortedFiniteTimelineByT(overlayVisibilityTimeline);
 
     let active = { ...fallback };
     for (const entry of sortedTimeline) {

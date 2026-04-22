@@ -289,17 +289,23 @@
     : [];
   $: overlayVisibilityEventsSorted = Array.isArray(overlayVisibilityEvents)
     ? (() => {
-        const sorted = [...overlayVisibilityEvents]
-        .map((event) => ({
-          ...event,
-          timeInReaction: sanitizeNumber(event?.timeInReaction ?? event?.t),
-          visible: typeof event?.visible === 'boolean' ? event.visible : true,
-          primary: event?.primary === "reaction" ? "reaction" : undefined,
-        }))
-        .filter((event) => Number.isFinite(event.timeInReaction))
-        .sort((a, b) => a.timeInReaction - b.timeInReaction);
-        let previousPrimary = overlayPrimaryDefault === "reaction" ? "reaction" : "original";
-        return sorted.map((event) => {
+        const normalizedEvents = [];
+        for (const event of overlayVisibilityEvents) {
+          const timeInReaction = sanitizeNumber(event?.timeInReaction ?? event?.t);
+          if (!Number.isFinite(timeInReaction)) {
+            continue;
+          }
+          normalizedEvents.push({
+            ...event,
+            timeInReaction,
+            visible: typeof event?.visible === "boolean" ? event.visible : true,
+            primary: event?.primary === "reaction" ? "reaction" : undefined,
+          });
+        }
+        normalizedEvents.sort((a, b) => a.timeInReaction - b.timeInReaction);
+        let previousPrimary =
+          overlayPrimaryDefault === "reaction" ? "reaction" : "original";
+        return normalizedEvents.map((event) => {
           const primary = event.primary ?? previousPrimary;
           previousPrimary = primary;
           return { ...event, primary };
@@ -604,27 +610,11 @@
         viewportSpan > 0
           ? clamp01((clamped.value - safeViewportStart) / viewportSpan)
           : 0;
-        const {
-          initialTimeInReaction,
-          initialTargetTime,
-          initialState,
-          initialVolume,
-          initialRate,
-          initialVisible,
-          initialPrimary,
-        } = activeMarker;
-        activeMarker = {
-          ...activeMarker,
-          timeInReaction: clamped.value,
-          ratio: nextRatio,
-        initialTimeInReaction,
-        initialTargetTime,
-          initialState,
-          initialVolume,
-          initialRate,
-          initialVisible,
-          initialPrimary,
-        };
+      activeMarker = {
+        ...activeMarker,
+        timeInReaction: clamped.value,
+        ratio: nextRatio,
+      };
     }
   }
   $: if (pendingConfig) {
@@ -646,20 +636,11 @@
         ? clamp01((activeReactionSeconds - safeViewportStart) / viewportSpan)
         : 0;
     if (Math.abs(nextRatio - activeMarker.ratio) > 0.0005) {
-      const { initialTimeInReaction, initialTargetTime, initialState, initialVolume, initialRate, initialVisible } =
-        activeMarker;
       activeMarker = {
         ...activeMarker,
         ratio: nextRatio,
         timeInReaction: activeReactionSeconds,
         targetTime: activeTargetSeconds,
-        initialTimeInReaction,
-        initialTargetTime,
-        initialState,
-        initialVolume,
-        initialRate,
-        initialVisible,
-        initialPrimary: activeMarker.initialPrimary,
       };
     }
   }
@@ -1027,15 +1008,6 @@
     );
     enforceActiveTargetLock();
     if (activeMarker) {
-      const {
-        initialTimeInReaction,
-        initialTargetTime,
-        initialState,
-        initialVolume,
-        initialRate,
-        initialVisible,
-        initialPrimary,
-      } = activeMarker;
       const nextRatio =
         viewportSpan > 0
           ? clamp01((activeReactionSeconds - safeViewportStart) / viewportSpan)
@@ -1045,13 +1017,6 @@
         timeInReaction: activeReactionSeconds,
         targetTime: activeTargetSeconds,
         ratio: nextRatio,
-        initialTimeInReaction,
-        initialTargetTime,
-        initialState,
-        initialVolume,
-        initialRate,
-        initialVisible,
-        initialPrimary,
       };
     }
   };
@@ -1661,13 +1626,19 @@
                       >{marker.label} at {marker.timeLabel}</span
                     >
                     {#if marker.icon}
-                      <span class="pointer-events-none inline-flex items-center gap-1" aria-hidden="true">
+                      <span
+                        class="pointer-events-none inline-flex items-center gap-1"
+                        aria-hidden="true"
+                      >
                         <svelte:component
                           this={marker.icon}
                           class="h-2 w-2 hover:h-4 hover:w-4 hover:z-30 transition-transform"
+                          aria-hidden="true"
                         />
                         {#if marker.primaryIndicator}
-                          <span class="text-[9px] font-bold leading-none">{marker.primaryIndicator}</span>
+                          <span class="text-[9px] font-bold leading-none" aria-hidden="true">
+                            {marker.primaryIndicator}
+                          </span>
                         {/if}
                       </span>
                     {:else}

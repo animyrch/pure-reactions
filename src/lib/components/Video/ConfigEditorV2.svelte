@@ -1,6 +1,7 @@
 <script>
   import { createEventDispatcher } from "svelte";
   import { page } from "$app/stores";
+  import { getSortedFiniteTimelineByT } from "$lib/helpers/twinPlayersTimeline";
   import DebugConfigs from "./DebugConfigs.svelte";
   import InteractiveSynchronizer from "./InteractiveSynchronizer.svelte";
   const dispatch = createEventDispatcher();
@@ -78,7 +79,7 @@
 
   const normalizeVolumeEvents = (timeline, configs, trackId = "volume") => {
     if (Array.isArray(timeline) && timeline.length) {
-      return sortedTimeline
+      return timeline
         .map((event, index) => {
           const timeInReaction = parseSeconds(event?.t);
           const volume = Number.parseFloat(event?.volume);
@@ -114,7 +115,7 @@
 
   const normalizePlayerEvents = (timeline, configs) => {
     if (Array.isArray(timeline) && timeline.length) {
-      return sortedTimeline
+      return timeline
         .map((event, index) => {
           const timeInReaction = parseSeconds(event?.t);
           const state = Number.parseFloat(event?.state);
@@ -188,31 +189,28 @@
   };
 
   const normalizeOverlayVisibilityEvents = (timeline) => {
-    if (Array.isArray(timeline) && timeline.length) {
-      const sortedTimeline = [...timeline]
-        .filter((event) => Number.isFinite(parseSeconds(event?.t)))
-        .sort((a, b) => Number(a.t) - Number(b.t));
-      let previousPrimary =
-        fullscreenPrimaryVideoDefault === "reaction" ? "reaction" : "original";
-      return timeline
-        .map((event, index) => {
-          const timeInReaction = parseSeconds(event?.t);
-          const visible = typeof event?.visible === 'boolean' ? event.visible : true;
-          const primary = event?.primary === "reaction" ? "reaction" : previousPrimary;
-          if (!Number.isFinite(timeInReaction)) return null;
-          previousPrimary = primary;
-          return {
-            id: `overlay-visibility-array-${index}-${timeInReaction}`,
-            type: "overlayVisibility",
-            trackId: "overlayVisibility",
-            timeInReaction,
-            visible,
-            primary,
-          };
-        })
-        .filter(Boolean);
+    if (!Array.isArray(timeline) || !timeline.length) {
+      return [];
     }
-    return [];
+    let previousPrimary =
+      fullscreenPrimaryVideoDefault === "reaction" ? "reaction" : "original";
+    return timeline
+      .map((event, index) => {
+        const timeInReaction = parseSeconds(event?.t);
+        const visible = typeof event?.visible === 'boolean' ? event.visible : true;
+        const primary = event?.primary === "reaction" ? "reaction" : previousPrimary;
+        if (!Number.isFinite(timeInReaction)) return null;
+        previousPrimary = primary;
+        return {
+          id: `overlay-visibility-array-${index}-${timeInReaction}`,
+          type: "overlayVisibility",
+          trackId: "overlayVisibility",
+          timeInReaction,
+          visible,
+          primary,
+        };
+      })
+      .filter(Boolean);
   };
 
   $: volumeEvents = normalizeVolumeEvents(
@@ -237,8 +235,11 @@
     playbackRateTimeline,
     playbackRateConfigs,
   );
-  $: overlayVisibilityEvents = normalizeOverlayVisibilityEvents(
+  $: sortedOverlayVisibilityTimeline = getSortedOverlayTimeline(
     overlayVisibilityTimeline,
+  );
+  $: overlayVisibilityEvents = normalizeOverlayVisibilityEvents(
+    sortedOverlayVisibilityTimeline,
   );
 
   $: timelineEntries = [

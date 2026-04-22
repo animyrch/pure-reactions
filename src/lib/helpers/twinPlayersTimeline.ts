@@ -4,6 +4,37 @@ export const roundTargetTime = (value: number) => Math.round(value * 100) / 100;
 export const roundVolume = (value: number) => Math.round(Math.min(Math.max(value, 0), 100));
 export const roundPlaybackRate = (value: number) => Math.round(value * 100) / 100;
 
+export const getSortedFiniteTimelineByT = (timeline: any[] = []) => {
+  if (!Array.isArray(timeline) || timeline.length === 0) {
+    return [];
+  }
+
+  let previousTime = -Infinity;
+  let isSorted = true;
+  let hasInvalidEntries = false;
+
+  for (const entry of timeline) {
+    const time = Number(entry?.t);
+    if (!Number.isFinite(time)) {
+      hasInvalidEntries = true;
+      break;
+    }
+    if (time < previousTime) {
+      isSorted = false;
+      break;
+    }
+    previousTime = time;
+  }
+
+  if (isSorted && !hasInvalidEntries) {
+    return timeline;
+  }
+
+  return [...timeline]
+    .filter((entry) => Number.isFinite(Number(entry?.t)))
+    .sort((a, b) => Number(a.t) - Number(b.t));
+};
+
 export const buildPlayerEventTimeline = (timeline: any[] = []) =>
   timeline
     .map((event: any, index: number) => ({
@@ -78,7 +109,7 @@ export const playbackTimelineArrayToMap = (timeline: any[] = []) => {
 
 export type OverlayPrimaryVideo = 'original' | 'reaction';
 
-const normalizeOverlayPrimary = (
+const normalizeOverlayPrimaryValue = (
   value: unknown,
   fallback: OverlayPrimaryVideo = 'original'
 ): OverlayPrimaryVideo => (value === 'reaction' ? 'reaction' : fallback);
@@ -92,11 +123,11 @@ export const overlayVisibilityTimelineArrayToMap = (
     .filter((entry) => entry && Number.isFinite(Number(entry?.t)))
     .sort((a, b) => Number(a.t) - Number(b.t));
 
-  let lastPrimary: OverlayPrimaryVideo = normalizeOverlayPrimary(defaultPrimary, 'original');
+  let lastPrimary: OverlayPrimaryVideo = normalizeOverlayPrimaryValue(defaultPrimary, 'original');
   for (const entry of sortedTimeline) {
     const roundedReactionTime = roundReactionTime(Math.max(0, Number(entry.t)));
     const visible = entry?.visible !== false;
-    const primary = normalizeOverlayPrimary(entry?.primary, lastPrimary);
+    const primary = normalizeOverlayPrimaryValue(entry?.primary, lastPrimary);
     lastPrimary = primary;
     map.set(roundedReactionTime.toFixed(3), {
       t: roundedReactionTime,
