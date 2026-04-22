@@ -198,7 +198,7 @@
       .map((event, index) => {
         const timeInReaction = parseSeconds(event?.t);
         const visible = typeof event?.visible === 'boolean' ? event.visible : true;
-        const primary = event?.primary === "reaction" ? "reaction" : previousPrimary;
+        const primary = (event?.primary === "reaction" || event?.primary === "original") ? event.primary : previousPrimary;
         if (!Number.isFinite(timeInReaction)) return null;
         previousPrimary = primary;
         return {
@@ -235,7 +235,7 @@
     playbackRateTimeline,
     playbackRateConfigs,
   );
-  $: sortedOverlayVisibilityTimeline = getSortedOverlayTimeline(
+  $: sortedOverlayVisibilityTimeline = getSortedFiniteTimelineByT(
     overlayVisibilityTimeline,
   );
   $: overlayVisibilityEvents = normalizeOverlayVisibilityEvents(

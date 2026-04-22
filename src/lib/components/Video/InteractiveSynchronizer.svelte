@@ -299,7 +299,7 @@
             ...event,
             timeInReaction,
             visible: typeof event?.visible === "boolean" ? event.visible : true,
-            primary: event?.primary === "reaction" ? "reaction" : undefined,
+            primary: (event?.primary === "reaction" || event?.primary === "original") ? event.primary : undefined,
           });
         }
         normalizedEvents.sort((a, b) => a.timeInReaction - b.timeInReaction);
@@ -1149,8 +1149,8 @@
     const initialVisible = typeof previousOverlayEvent?.visible === 'boolean'
       ? previousOverlayEvent.visible
       : true;
-    const initialPrimary = previousOverlayEvent?.primary === "reaction"
-      ? "reaction"
+    const initialPrimary = (previousOverlayEvent?.primary === "reaction" || previousOverlayEvent?.primary === "original")
+      ? previousOverlayEvent.primary
       : overlayPrimaryDefault === "reaction"
         ? "reaction"
         : "original";
