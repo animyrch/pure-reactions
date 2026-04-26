@@ -15,7 +15,7 @@ export const DEFAULT_FULLSCREEN_PRIMARY_VIDEO: FullscreenPrimaryVideo = 'origina
 export const DEFAULT_FULLSCREEN_OVERLAY_WIDTH_PERCENT = 35;
 export const DEFAULT_FULLSCREEN_OVERLAY_CORNER: FullscreenOverlayCorner = 'top-right';
 export const FULLSCREEN_OVERLAY_WIDTH_MIN = 5;
-export const FULLSCREEN_OVERLAY_WIDTH_MAX = 50;
+export const FULLSCREEN_OVERLAY_WIDTH_MAX = 80;
 export const FULLSCREEN_OVERLAY_WIDTH_STEP = 5;
 
 export const normalizeFullscreenPrimaryVideo = (value: unknown): FullscreenPrimaryVideo =>

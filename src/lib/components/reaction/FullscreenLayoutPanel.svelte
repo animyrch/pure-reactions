@@ -9,7 +9,7 @@
   export let onSetFullscreenOverlayCorner = () => {};
 
   const OVERLAY_WIDTH_MIN = 5;
-  const OVERLAY_WIDTH_MAX = 50;
+  const OVERLAY_WIDTH_MAX = 80;
   const OVERLAY_WIDTH_STEP = 5;
   const DEFAULT_OVERLAY_WIDTH = 35;
 
@@ -158,7 +158,7 @@
             Smaller video width
           </h3>
           <p class="mt-1 text-sm text-text-muted">
-            Choose a width from 5% to 50% in 5% steps.
+            Choose a width from 5% to 80% in 5% steps.
           </p>
         </div>
         <div class="flex w-full flex-col gap-2">

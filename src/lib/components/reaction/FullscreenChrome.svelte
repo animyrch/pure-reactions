@@ -18,7 +18,7 @@
   export { overlayElement as overlayRef };
 
   const OVERLAY_WIDTH_MIN = 5;
-  const OVERLAY_WIDTH_MAX = 50;
+  const OVERLAY_WIDTH_MAX = 80;
   const OVERLAY_WIDTH_STEP = 5;
   const DEFAULT_OVERLAY_WIDTH = 35;
 
