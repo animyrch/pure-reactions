@@ -1,4 +1,5 @@
 import { onDestroy, onMount, tick } from 'svelte';
+import { env } from '$env/dynamic/public';
 import { get } from 'svelte/store';
 import {
   readAutoPlayCookie,
@@ -88,6 +89,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
 
   const initialUrlState = getInitialUrlState();
   const lazySyncRequested = Boolean(initialUrlState.mobileLazySync);
+  const enableSyncEngineV2 = initialUrlState.syncEngine === 'v2'
+    || (initialUrlState.syncEngine !== 'v1' && env.PUBLIC_SYNC_ENGINE_V2 === 'true');
   // console.log('Initial URL State:', initialUrlState);
   let initRetryCount = 0;
   const MAX_INIT_RETRIES = 3;
@@ -303,6 +306,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     debugClickGate,
     enableGateDebug: ENABLE_GATE_DEBUG,
     lazySyncRequested,
+    enableSyncEngineV2,
     isLiveInstance,
     isInstanceDestroyed,
     getActiveInstanceId,
@@ -792,7 +796,8 @@ function getInitialUrlState() {
       queueSlug: null as string | null,
       queueIndex: null as number | null,
       queueAutoPlay: false,
-      mobileLazySync: false
+      mobileLazySync: false,
+      syncEngine: null as string | null
     };
   }
   const url = new URL(window.location.href);
@@ -808,6 +813,7 @@ function getInitialUrlState() {
     queueSlug,
     queueIndex: queueIndexRaw ? Number(queueIndexRaw) : null,
     queueAutoPlay: queueAutoPlayRaw === 'true',
-    mobileLazySync
+    mobileLazySync,
+    syncEngine: params.get('syncEngine')
   };
 }
