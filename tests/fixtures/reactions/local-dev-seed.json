@@ -1,0 +1,136 @@
+{
+  "version": 1,
+  "description": "Sample published reactions for local emulator contributor mode. These populate the home page and search results so a fresh clone works immediately without remote credentials.",
+  "docs": [
+    {
+      "id": "local-sample-001",
+      "data": {
+        "isPublished": true,
+        "offsetStartTime": 0,
+        "originalVideoAuthor": "@the_animaniace",
+        "originalVideoId": "8-3PahRtgF4",
+        "originalVideoTitle": "The original Dragon Ball was UNHINGED 💀 | Mercenary Tao HUNTS down Goku",
+        "playbackTimeline": [{ "rate": 1, "t": 0 }],
+        "playlistId": "",
+        "reactionVideoAuthor": "@localreactor",
+        "reactionVideoId": "8-3PahRtgF4",
+        "reactionVideoTitle": "Reacting to The original Dragon Ball was UNHINGED 💀",
+        "reactorDisplayName": "Local Reactor",
+        "reactorId": "local-user-001",
+        "reactionVolumeTimeline": [{ "t": 2, "volume": 80 }],
+        "stateTimeline": [
+          { "state": 1, "t": 0, "targetTime": 0 },
+          { "state": 2, "t": 5, "targetTime": 5 }
+        ],
+        "volumeTimeline": [{ "t": 2, "volume": 100 }],
+        "youtubePlaylistId": "",
+        "updatedAt": "2026-01-01T10:00:00Z"
+      }
+    },
+    {
+      "id": "local-sample-002",
+      "data": {
+        "isPublished": true,
+        "offsetStartTime": 0,
+        "originalVideoAuthor": "@testCreatorB",
+        "originalVideoId": "qg6b4b0FAB4",
+        "originalVideoTitle": "Sample Original Video B — Play Trigger Demo",
+        "playbackTimeline": [{ "rate": 1, "t": 0 }],
+        "playlistId": "",
+        "reactionVideoAuthor": "@devreactor",
+        "reactionVideoId": "qg6b4b0FAB4",
+        "reactionVideoTitle": "Reacting to Sample Original Video B",
+        "reactorDisplayName": "Dev Reactor",
+        "reactorId": "local-user-002",
+        "reactionVolumeTimeline": [],
+        "stateTimeline": [
+          { "state": 1, "t": 0, "targetTime": 0 }
+        ],
+        "volumeTimeline": [],
+        "youtubePlaylistId": "",
+        "updatedAt": "2026-01-02T10:00:00Z"
+      }
+    },
+    {
+      "id": "local-sample-003",
+      "data": {
+        "isPublished": true,
+        "offsetStartTime": 0,
+        "originalVideoAuthor": "@testCreatorC",
+        "originalVideoId": "dHh_gt4sBbw",
+        "originalVideoTitle": "Sample Original Video C — Volume Stability Demo",
+        "playbackTimeline": [{ "rate": 1, "t": 0 }],
+        "playlistId": "",
+        "reactionVideoAuthor": "@volumereactor",
+        "reactionVideoId": "dHh_gt4sBbw",
+        "reactionVideoTitle": "Reacting to Sample Original Video C",
+        "reactorDisplayName": "Volume Reactor",
+        "reactorId": "local-user-003",
+        "reactionVolumeTimeline": [
+          { "t": 3, "volume": 50 },
+          { "t": 10, "volume": 90 }
+        ],
+        "stateTimeline": [
+          { "state": 1, "t": 0, "targetTime": 0 },
+          { "state": 2, "t": 8, "targetTime": 8 }
+        ],
+        "volumeTimeline": [
+          { "t": 3, "volume": 70 },
+          { "t": 10, "volume": 100 }
+        ],
+        "youtubePlaylistId": "",
+        "updatedAt": "2026-01-03T10:00:00Z"
+      }
+    },
+    {
+      "id": "local-sample-004",
+      "data": {
+        "isPublished": true,
+        "offsetStartTime": 0,
+        "originalVideoAuthor": "@testCreatorD",
+        "originalVideoId": "GQ_SlNONhx4",
+        "originalVideoTitle": "Sample Original Video D — Resume After Pause Demo",
+        "playbackTimeline": [{ "rate": 1, "t": 0 }],
+        "playlistId": "",
+        "reactionVideoAuthor": "@pausereactor",
+        "reactionVideoId": "GQ_SlNONhx4",
+        "reactionVideoTitle": "Reacting to Sample Original Video D",
+        "reactorDisplayName": "Pause Reactor",
+        "reactorId": "local-user-004",
+        "reactionVolumeTimeline": [],
+        "stateTimeline": [
+          { "state": 1, "t": 0, "targetTime": 0 },
+          { "state": 3, "t": 12, "targetTime": 12 },
+          { "state": 2, "t": 20, "targetTime": 20 }
+        ],
+        "volumeTimeline": [],
+        "youtubePlaylistId": "",
+        "updatedAt": "2026-01-04T10:00:00Z"
+      }
+    },
+    {
+      "id": "local-sample-005",
+      "data": {
+        "isPublished": true,
+        "offsetStartTime": 0,
+        "originalVideoAuthor": "@openSourceCreator",
+        "originalVideoId": "8-3PahRtgF4",
+        "originalVideoTitle": "Open Source Demo: Dragon Ball Reaction Showcase",
+        "playbackTimeline": [{ "rate": 1, "t": 0 }],
+        "playlistId": "",
+        "reactionVideoAuthor": "@opensourcefan",
+        "reactionVideoId": "8-3PahRtgF4",
+        "reactionVideoTitle": "Open Source Fan Reacts to Dragon Ball Showcase",
+        "reactorDisplayName": "Open Source Fan",
+        "reactorId": "local-user-005",
+        "reactionVolumeTimeline": [],
+        "stateTimeline": [
+          { "state": 1, "t": 0, "targetTime": 0 }
+        ],
+        "volumeTimeline": [],
+        "youtubePlaylistId": "",
+        "updatedAt": "2026-01-05T10:00:00Z"
+      }
+    }
+  ]
+}

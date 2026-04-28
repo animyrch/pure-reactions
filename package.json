@@ -20,6 +20,7 @@
     "test:rules": "if [ -x /usr/libexec/java_home ]; then export JAVA_HOME=$(/usr/libexec/java_home -v 21); export PATH=\"$JAVA_HOME/bin:$PATH\"; fi; firebase emulators:exec --only firestore \"node --test tests/firestore.rules.spec.mjs\"",
     "test:rules:database": "if [ -x /usr/libexec/java_home ]; then export JAVA_HOME=$(/usr/libexec/java_home -v 21); export PATH=\"$JAVA_HOME/bin:$PATH\"; fi; firebase emulators:exec --only auth,database \"node --test tests/database.rules.spec.mjs\"",
     "seed": "FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/seed-twin-player-fixtures.mjs -- --target prod --allowProd",
+    "seed:local-dev": "PUBLIC_FIREBASE_USE_EMULATORS=true node scripts/seed-twin-player-fixtures.mjs --target emulator",
     "seed:firestore": "FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/seed-firestore-fixtures.mjs",
     "seed:twin-fixtures": "FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/seed-twin-player-fixtures.mjs",
     "repair:missing-playlist-original": "FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/repair-missing-playlist-original.mjs",

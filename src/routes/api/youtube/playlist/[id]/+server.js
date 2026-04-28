@@ -1,8 +1,9 @@
 // src/routes/api/youtube/playlist/[id]/+server.js
 import { json } from '@sveltejs/kit';
-import { YOUTUBE_API_KEY } from '$env/static/private';
+import { env } from '$env/dynamic/private';
 
 export const GET = async ({ params, url }) => {
+  const YOUTUBE_API_KEY = env.YOUTUBE_API_KEY || '';
   const playlistId = params.id;
   const pageToken = url.searchParams.get('pageToken') || '';
   const includePlaylistTitle = url.searchParams.get('includePlaylistTitle') === '1';
@@ -10,6 +11,14 @@ export const GET = async ({ params, url }) => {
     Math.max(Number(url.searchParams.get('maxResults')) || 50, 1),
     50,
   );
+
+  // Local / contributor mode: return empty playlist when no API key is configured.
+  if (!YOUTUBE_API_KEY) {
+    const payload = includePlaylistTitle
+      ? { items: [], playlistTitle: '' }
+      : [];
+    return json(payload);
+  }
 
   const requestUrl =
     `https://www.googleapis.com/youtube/v3/playlistItems` +

@@ -1,6 +1,6 @@
 // src/routes/api/youtube/comments/[videoId]/+server.js
 import { json } from '@sveltejs/kit';
-import { YOUTUBE_API_KEY } from '$env/static/private';
+import { env } from '$env/dynamic/private';
 
 /** Maximum top-level comments the endpoint will ever return. */
 const MAX_RESULTS_LIMIT = 10;
@@ -50,12 +50,22 @@ function normalizeComment(item, videoId) {
 }
 
 export const GET = async ({ params }) => {
+  const YOUTUBE_API_KEY = env.YOUTUBE_API_KEY || '';
   const videoId = params.videoId;
 
   if (!videoId || !/^[a-zA-Z0-9_-]{1,64}$/.test(videoId)) {
     return json(
       { status: 'error', error: 'Invalid video ID', comments: [] },
       { status: 400 },
+    );
+  }
+
+  // Local / contributor mode: return empty comments when no API key is configured.
+  if (!YOUTUBE_API_KEY) {
+    const { canonicalVideoUrl, sectionActionUrl } = buildOutboundUrls(videoId);
+    return json(
+      { status: 'empty', videoId, canonicalVideoUrl, sectionActionUrl, comments: [] },
+      { status: 200, headers: cacheHeaders() },
     );
   }
 
