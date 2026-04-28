@@ -1044,6 +1044,7 @@ export function createTwinPlayersPlaybackSyncController({
           volumeConfigs: snapshot.volumeConfigs,
           reactionVolumeConfigs: snapshot.reactionVolumeConfigs,
           playbackRateConfigs: snapshot.playbackRateConfigs,
+          playbackRateTimeline: snapshot.playbackRateTimeline,
           overlayVisibilityTimeline: snapshot.overlayVisibilityTimeline,
           stateTimeline: snapshot.stateTimeline,
           reactionPlayerState,
@@ -1061,7 +1062,20 @@ export function createTwinPlayersPlaybackSyncController({
       Object.assign(syncTracking, result.nextTracking);
 
       const softSyncAction = result.actions.find((action: any) => action.type === 'applySoftSync');
-      const filteredActions = softSyncAction || syncTracking.softSyncIsActive
+      const speedCueAction = result.actions.find((action: any) => action.type === 'setOriginalPlaybackRate');
+
+      // A speed cue (playback-rate change from the timeline) must take priority over an active
+      // soft sync. Cancel any in-flight soft sync so the new rate applies immediately and
+      // subsequent state cues (play/pause) use the correct rate.
+      if (speedCueAction && (softSyncAction || syncTracking.softSyncIsActive)) {
+        if (typeof syncTracking.softSyncResetTimeoutId === 'number') {
+          clearTimeout(syncTracking.softSyncResetTimeoutId);
+          syncTracking.softSyncResetTimeoutId = undefined;
+        }
+        syncTracking.softSyncIsActive = false;
+      }
+
+      const filteredActions = !speedCueAction && (softSyncAction || syncTracking.softSyncIsActive)
         ? result.actions.filter((action: any) => action.type !== 'setOriginalPlaybackRate')
         : result.actions;
 
@@ -1093,7 +1107,7 @@ export function createTwinPlayersPlaybackSyncController({
       changingReactionVolume = nextGuards.changingReactionVolume;
       changingSpeed = nextGuards.changingSpeed;
 
-      if (softSyncAction && 'rate' in softSyncAction && 'durationMs' in softSyncAction) {
+      if (softSyncAction && 'rate' in softSyncAction && 'durationMs' in softSyncAction && !speedCueAction) {
         if (typeof syncTracking.softSyncResetTimeoutId === 'number') {
           clearTimeout(syncTracking.softSyncResetTimeoutId);
           syncTracking.softSyncResetTimeoutId = undefined;
@@ -1104,17 +1118,20 @@ export function createTwinPlayersPlaybackSyncController({
           setPlaybackRateForOriginalVideo(softSyncAction.rate);
           changingSpeed = false;
 
-          const desiredRate = getCurrentPlaybackRateFromConfigs(
-            reactionCurrentTime,
-            snapshot.playbackRateConfigs,
-            snapshot.timeOffset
-          );
-
           syncTracking.softSyncResetTimeoutId = setTimeout(() => {
             if (!changingSpeed && playerOriginal) {
+              // Compute the desired rate freshly at reset time so that any speed cue that fired
+              // during the soft-sync window is honoured rather than being overwritten with the
+              // rate that was active when the soft sync started.
+              const resetSnapshot = getSnapshot();
+              const freshRate = getCurrentPlaybackRateFromConfigs(
+                Number(resetSnapshot.reactionCurrentTime),
+                resetSnapshot.playbackRateTimeline,
+                resetSnapshot.timeOffset
+              );
               changingSpeed = true;
-              setPlaybackRateForOriginalVideo(desiredRate);
-              updateState({ currentPlaybackRate: desiredRate });
+              setPlaybackRateForOriginalVideo(freshRate);
+              updateState({ currentPlaybackRate: freshRate });
               changingSpeed = false;
             }
             syncTracking.softSyncIsActive = false;
@@ -1127,9 +1144,11 @@ export function createTwinPlayersPlaybackSyncController({
           syncTracking.softSyncResetTimeoutId = undefined;
         }
 
+        // Use playbackRateTimeline (always correct) instead of playbackRateConfigs which may be
+        // empty when only the new array-format timeline is present in the reaction document.
         const desiredRate = getCurrentPlaybackRateFromConfigs(
           reactionCurrentTime,
-          snapshot.playbackRateConfigs,
+          snapshot.playbackRateTimeline,
           snapshot.timeOffset
         );
 
@@ -1405,6 +1424,7 @@ export function createTwinPlayersPlaybackSyncController({
         volumeConfigs: snapshot.volumeConfigs,
         reactionVolumeConfigs: snapshot.reactionVolumeConfigs,
         playbackRateConfigs: snapshot.playbackRateConfigs,
+        playbackRateTimeline: snapshot.playbackRateTimeline,
         overlayVisibilityTimeline: snapshot.overlayVisibilityTimeline,
         stateTimeline: snapshot.stateTimeline,
         reactionPlayerState: typeof snapshot.playerReaction?.getPlayerState === 'function'
