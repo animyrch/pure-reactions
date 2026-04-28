@@ -288,12 +288,12 @@ export function computeTwinPlayersSyncTick(
   // 2) Playback rate (original)
   // Prefer playbackRateTimeline (new array format, always correct) over playbackRateConfigs
   // (legacy object map that may be empty when only the new format is present in the document).
-  const playbackRateSource = Array.isArray(input.playbackRateTimeline) && input.playbackRateTimeline.length > 0
+  const effectivePlaybackRateData = Array.isArray(input.playbackRateTimeline) && input.playbackRateTimeline.length > 0
     ? input.playbackRateTimeline
     : input.playbackRateConfigs;
   const desiredPlaybackRate = getCurrentPlaybackRateFromConfigs(
     reactionCurrentTime,
-    playbackRateSource,
+    effectivePlaybackRateData,
     timeOffset
   );
 

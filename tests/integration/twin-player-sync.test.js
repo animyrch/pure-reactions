@@ -259,9 +259,10 @@ describe('Twin Player Sync Logic (Integration)', () => {
 const YT_PLAYING = 1;
 const YT_PAUSED = 2;
 const YT_BUFFERING = 3;
+const YT_CUED = 5;
 const YT_ENDED = 0;
 
-const ytStates = { PLAYING: YT_PLAYING, PAUSED: YT_PAUSED, BUFFERING: YT_BUFFERING, CUED: 5, ENDED: YT_ENDED };
+const ytStates = { PLAYING: YT_PLAYING, PAUSED: YT_PAUSED, BUFFERING: YT_BUFFERING, CUED: YT_CUED, ENDED: YT_ENDED };
 
 const makeTracking = (overrides = {}) => ({
     lastOriginalSeekAt: 0,
