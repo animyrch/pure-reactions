@@ -3,7 +3,8 @@ import {
     getCurrentVolumeFromVolumeConfigs, 
     getCurrentStateFromStateConfigs, 
     getCurrentPlaybackRateFromConfigs,
-    getCurrentOverlayVisibilityFromConfigs 
+    getCurrentOverlayVisibilityFromConfigs,
+    integratePlaybackRate
 } from '../../src/lib/helpers/reaction.js';
 import { computeTwinPlayersSyncTick } from '../../src/lib/helpers/twinPlayersSyncTick.ts';
 
@@ -461,8 +462,6 @@ describe('Playback speed cue persistence (regression)', () => {
     });
 });
 
-import { integratePlaybackRate } from '../../src/lib/helpers/reaction.js';
-
 describe('integratePlaybackRate', () => {
     it('returns zero for empty interval', () => {
         expect(integratePlaybackRate(10, 10, [])).toBe(0);
@@ -538,7 +537,7 @@ describe('computeTwinPlayersSyncTick — non-1x playback rate', () => {
         isReactionMuteModeEnabled: false,
         isReactionAutoMuted: false,
         isMobileAudioEnvironment: false,
-        isMobilePlaybackDevice: false,
+        isMobilePlaybackDevice: () => false,
         isMobileLazySyncEnabled: false,
         // Single state event at t=0: original starts at position 0, playing
         playerConfigs: { '0.0': { time: '0.00', state: 1 } },

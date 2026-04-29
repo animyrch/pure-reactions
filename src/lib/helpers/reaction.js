@@ -104,9 +104,9 @@ export const getCurrentPlaybackRateFromConfigs = (currentTime, playbackConfigsOr
  * from `fromEffectiveTime` to `toEffectiveTime`, accounting for all rate-change
  * events in `playbackRateTimeline`.
  *
- * Both time parameters and the timeline `t` values must be in the same
- * "effective time" scale (reaction time minus timeOffset, which equals reaction
- * time when timeOffset = 0).
+ * Both time parameters and the timeline `t` values must be in normalized reaction
+ * time after removing timeOffset (i.e., reaction time minus timeOffset, which
+ * equals reaction time when timeOffset = 0).
  *
  * @param {number} fromEffectiveTime
  * @param {number} toEffectiveTime

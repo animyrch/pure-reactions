@@ -800,8 +800,8 @@ export function createTwinPlayersPlaybackSyncController({
     ) {
       // Integrate playback rate from anchor to current reaction time so that
       // non-1x speed cues are correctly reflected in the scrub target position.
-      const effectiveReactionTime = normalizedReactionTime - Number(snapshot.timeOffset || 0);
-      targetTime += integratePlaybackRate(anchorTime, effectiveReactionTime, snapshot.playbackRateTimeline ?? []);
+      const timeOffsetAdjustedReactionTime = normalizedReactionTime - Number(snapshot.timeOffset || 0);
+      targetTime += integratePlaybackRate(anchorTime, timeOffsetAdjustedReactionTime, snapshot.playbackRateTimeline ?? []);
     }
 
     return {
