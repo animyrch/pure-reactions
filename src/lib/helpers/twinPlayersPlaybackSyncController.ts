@@ -1,7 +1,8 @@
 import {
   getCurrentPlaybackRateFromConfigs,
   getCurrentStateFromStateConfigs,
-  getCurrentVolumeFromVolumeConfigs
+  getCurrentVolumeFromVolumeConfigs,
+  integratePlaybackRate
 } from '$lib/helpers/reaction';
 import { applyTwinPlayersSyncActions } from '$lib/helpers/twinPlayersSyncApply';
 import {
@@ -797,7 +798,10 @@ export function createTwinPlayersPlaybackSyncController({
       && Number.isFinite(anchorTime)
       && Number.isFinite(normalizedReactionTime)
     ) {
-      targetTime += Math.max(normalizedReactionTime - anchorTime, 0);
+      // Integrate playback rate from anchor to current reaction time so that
+      // non-1x speed cues are correctly reflected in the scrub target position.
+      const effectiveReactionTime = normalizedReactionTime - Number(snapshot.timeOffset || 0);
+      targetTime += integratePlaybackRate(anchorTime, effectiveReactionTime, snapshot.playbackRateTimeline ?? []);
     }
 
     return {

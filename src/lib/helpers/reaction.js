@@ -97,6 +97,62 @@ export const getCurrentPlaybackRateFromConfigs = (currentTime, playbackConfigsOr
         : DEFAULT_PLAYBACK_RATE;
 };
 
+/**
+ * Integrate the original video's playback rate over a reaction-time interval.
+ *
+ * Returns the total original-video seconds that elapse while the reaction plays
+ * from `fromEffectiveTime` to `toEffectiveTime`, accounting for all rate-change
+ * events in `playbackRateTimeline`.
+ *
+ * Both time parameters and the timeline `t` values must be in the same
+ * "effective time" scale (reaction time minus timeOffset, which equals reaction
+ * time when timeOffset = 0).
+ *
+ * @param {number} fromEffectiveTime
+ * @param {number} toEffectiveTime
+ * @param {Array<{t: number, rate: number}>} playbackRateTimeline - sorted ascending by t
+ * @returns {number}
+ */
+export const integratePlaybackRate = (fromEffectiveTime, toEffectiveTime, playbackRateTimeline) => {
+    const DEFAULT_RATE = 1;
+
+    if (!Number.isFinite(fromEffectiveTime) || !Number.isFinite(toEffectiveTime) || fromEffectiveTime >= toEffectiveTime) {
+        return 0;
+    }
+
+    if (!Array.isArray(playbackRateTimeline) || playbackRateTimeline.length === 0) {
+        return (toEffectiveTime - fromEffectiveTime) * DEFAULT_RATE;
+    }
+
+    // Find the rate that is active at fromEffectiveTime
+    let currentRate = DEFAULT_RATE;
+    for (const event of playbackRateTimeline) {
+        if (Number.isFinite(event?.t) && event.t <= fromEffectiveTime) {
+            currentRate = typeof event.rate === 'number' ? event.rate : DEFAULT_RATE;
+        }
+    }
+
+    // Walk rate-change boundaries that fall strictly between fromEffectiveTime and toEffectiveTime
+    let result = 0;
+    let cursor = fromEffectiveTime;
+
+    for (const event of playbackRateTimeline) {
+        const et = Number(event?.t);
+        if (!Number.isFinite(et)) continue;
+        if (et <= fromEffectiveTime) continue; // already covered by initial rate scan
+        if (et >= toEffectiveTime) break;      // past the end of the interval
+
+        result += currentRate * (et - cursor);
+        cursor = et;
+        currentRate = typeof event.rate === 'number' ? event.rate : DEFAULT_RATE;
+    }
+
+    // Final segment from cursor to toEffectiveTime
+    result += currentRate * (toEffectiveTime - cursor);
+
+    return result;
+};
+
 export const getCurrentOverlayVisibilityFromConfigs = (currentTime, overlayVisibilityTimeline, timeOffset = 0) => {
     const DEFAULT_VISIBILITY = true;
     const effectiveTime = Number(currentTime) - Number(timeOffset || 0);

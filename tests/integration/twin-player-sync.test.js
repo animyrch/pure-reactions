@@ -460,3 +460,144 @@ describe('Playback speed cue persistence (regression)', () => {
         });
     });
 });
+
+import { integratePlaybackRate } from '../../src/lib/helpers/reaction.js';
+
+describe('integratePlaybackRate', () => {
+    it('returns zero for empty interval', () => {
+        expect(integratePlaybackRate(10, 10, [])).toBe(0);
+        expect(integratePlaybackRate(10, 5, [])).toBe(0);
+    });
+
+    it('uses 1× default rate when timeline is empty', () => {
+        expect(integratePlaybackRate(0, 10, [])).toBe(10);
+        expect(integratePlaybackRate(5, 15, [])).toBe(10);
+    });
+
+    it('uses 1× default rate when timeline is null/undefined', () => {
+        expect(integratePlaybackRate(0, 10, null)).toBe(10);
+        expect(integratePlaybackRate(0, 10, undefined)).toBe(10);
+    });
+
+    it('applies constant non-1x rate covering the whole interval', () => {
+        const timeline = [{ t: 0, rate: 0.5 }];
+        expect(integratePlaybackRate(0, 120, timeline)).toBe(60);
+        expect(integratePlaybackRate(100, 120, timeline)).toBe(10);
+    });
+
+    it('correctly integrates a rate change mid-interval (document 1x6mbIpqMYU1G4YI33sq scenario)', () => {
+        // Reaction: 1× from t=0 to t=120, then 0.5× from t=120 onward
+        const timeline = [{ t: 120, rate: 0.5 }];
+
+        // From t=0 to t=120: all at 1× → 120 original seconds
+        expect(integratePlaybackRate(0, 120, timeline)).toBe(120);
+
+        // From t=0 to t=125: 120s at 1× + 5s at 0.5× = 122.5
+        expect(integratePlaybackRate(0, 125, timeline)).toBeCloseTo(122.5);
+
+        // From t=120 to t=130: all at 0.5× → 5 original seconds
+        expect(integratePlaybackRate(120, 130, timeline)).toBe(5);
+
+        // From t=110 to t=130: 10s at 1× + 10s at 0.5× = 15
+        expect(integratePlaybackRate(110, 130, timeline)).toBe(15);
+    });
+
+    it('handles multiple rate changes', () => {
+        const timeline = [
+            { t: 10, rate: 2.0 },
+            { t: 20, rate: 0.5 },
+        ];
+        // t=0→10: 1× → 10; t=10→20: 2× → 20; t=20→30: 0.5× → 5 → total 35
+        expect(integratePlaybackRate(0, 30, timeline)).toBe(35);
+    });
+
+    it('returns 1× rate for the interval before any rate-change event', () => {
+        const timeline = [{ t: 50, rate: 0.25 }];
+        expect(integratePlaybackRate(0, 50, timeline)).toBe(50);
+    });
+});
+
+describe('computeTwinPlayersSyncTick — non-1x playback rate', () => {
+    // Shared helpers
+    const YT = { PLAYING: 1, PAUSED: 2, BUFFERING: 3, CUED: 5, ENDED: 0 };
+
+    const baseInput = (overrides = {}) => ({
+        reactionCurrentTime: 125,
+        previousReactionTime: 124.9,
+        seekMin: 0,
+        seekMax: Infinity,
+        timeOffset: 0,
+        globalGain: 1,
+        isFineTuneModeOn: false,
+        isFullscreen: false,
+        currentStateOriginalVideo: YT.PLAYING,
+        currentPlaybackRate: 0.5,
+        currentVolumeOriginalVideo: 100,
+        currentVolumeReactionVideo: 100,
+        currentFullscreenOverlayVisible: true,
+        isReactionMuteModeEnabled: false,
+        isReactionAutoMuted: false,
+        isMobileAudioEnvironment: false,
+        isMobilePlaybackDevice: false,
+        isMobileLazySyncEnabled: false,
+        // Single state event at t=0: original starts at position 0, playing
+        playerConfigs: { '0.0': { time: '0.00', state: 1 } },
+        stateTimeline: [{ t: 0, state: 1, targetTime: 0 }],
+        volumeConfigs: {},
+        reactionVolumeConfigs: {},
+        playbackRateConfigs: { '120.0': { rate: 0.5 } },
+        playbackRateTimeline: [{ t: 120, rate: 0.5 }],
+        overlayVisibilityTimeline: [],
+        reactionPlayerState: YT.PLAYING,
+        originalPlayerState: YT.PLAYING,
+        // Original is at the correct 0.5× position: 120×1 + 5×0.5 = 122.5
+        originalCurrentTime: 122.5,
+        originalDuration: 300,
+        originalIsMuted: false,
+        reactionIsMuted: false,
+        now: Date.now(),
+        yt: YT,
+        ...overrides
+    });
+
+    const baseTracking = () => ({
+        lastOriginalTargetTime: undefined,
+        lastOriginalSeekAt: 0,
+        lastOriginalSeekTarget: undefined,
+        mobileAudioWinner: null,
+        stateTimelineIndex: undefined,
+        softSyncIsActive: false,
+        softSyncResetTimeoutId: undefined,
+        lastSoftSyncAt: 0
+    });
+
+    it('does not emit soft-sync when desiredPlaybackRate is 0.5', () => {
+        const result = computeTwinPlayersSyncTick(baseInput(), baseTracking());
+        const hasSoftSync = result.actions.some(a => a.type === 'applySoftSync');
+        expect(hasSoftSync).toBe(false);
+    });
+
+    it('computes correct target time using rate integration, producing near-zero drift', () => {
+        // Original is exactly at 122.5 (correct 0.5× position).
+        // With the fix, computedTargetTime should equal 122.5 → drift ≈ 0.
+        // Without the fix it would be 125 → drift = -2.5, triggering a seek.
+        const result = computeTwinPlayersSyncTick(baseInput(), baseTracking());
+        const seekAction = result.actions.find(a => a.type === 'applyOriginalStateChange');
+        // No seek should be required when original is at the correct position
+        expect(seekAction).toBeUndefined();
+    });
+
+    it('still emits soft-sync at 1× rate when desiredPlaybackRate is 1.0', () => {
+        const tracking = baseTracking();
+        const input = baseInput({
+            currentPlaybackRate: 1.0,
+            playbackRateTimeline: [],   // no speed cues → 1× throughout
+            playbackRateConfigs: {},
+            // Introduce a small drift to trigger soft sync
+            originalCurrentTime: 124.7, // slightly behind target 125
+        });
+        const result = computeTwinPlayersSyncTick(input, tracking);
+        const hasSoftSync = result.actions.some(a => a.type === 'applySoftSync');
+        expect(hasSoftSync).toBe(true);
+    });
+});
