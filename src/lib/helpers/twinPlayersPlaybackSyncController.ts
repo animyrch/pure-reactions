@@ -51,6 +51,7 @@ type CreateTwinPlayersPlaybackSyncControllerOptions = {
   getLastUserResumeAt: () => number;
   setLastUserResumeAt: (value: number) => void;
   markPlayerReady: () => void;
+  useNewSyncEngine?: boolean;
 };
 
 const isMobileAudioEnvironment = () => {
@@ -84,6 +85,7 @@ export function createTwinPlayersPlaybackSyncController({
   getLastUserResumeAt,
   setLastUserResumeAt,
   markPlayerReady,
+  useNewSyncEngine = false,
 }: CreateTwinPlayersPlaybackSyncControllerOptions) {
   let syncTimeout: ReturnType<typeof setTimeout> | undefined;
   let durationProbeTimeout: ReturnType<typeof setTimeout> | undefined;
@@ -98,7 +100,9 @@ export function createTwinPlayersPlaybackSyncController({
     stateTimelineIndex: 0,
     lastSoftSyncAt: 0,
     softSyncIsActive: false,
-    softSyncResetTimeoutId: undefined
+    softSyncResetTimeoutId: undefined,
+    lastReactionApiTime: 0,
+    lastReactionPerformanceTime: 0
   };
 
   const stateName = (value: number | undefined) => {
@@ -641,7 +645,22 @@ export function createTwinPlayersPlaybackSyncController({
       }
 
       const previousReactionTime = snapshot.reactionCurrentTime;
-      const reactionCurrentTime = parseFloat(playerReaction.getCurrentTime().toFixed(1));
+      const rawCurrentTime = playerReaction.getCurrentTime();
+      let reactionCurrentTime = parseFloat(rawCurrentTime.toFixed(1));
+
+      if (useNewSyncEngine) {
+        const nowPerf = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        if (rawCurrentTime !== syncTracking.lastReactionApiTime) {
+          syncTracking.lastReactionApiTime = rawCurrentTime;
+          syncTracking.lastReactionPerformanceTime = nowPerf;
+          reactionCurrentTime = rawCurrentTime;
+        } else {
+          const elapsed = (nowPerf - (syncTracking.lastReactionPerformanceTime || nowPerf)) / 1000;
+          const rate = typeof playerReaction.getPlaybackRate === 'function' ? playerReaction.getPlaybackRate() : 1;
+          reactionCurrentTime = rawCurrentTime + (elapsed * rate);
+        }
+      }
+
       const rawDuration = typeof playerReaction.getDuration === 'function' ? Number(playerReaction.getDuration()) : Number.NaN;
       const reactionDuration = Number.isFinite(rawDuration) ? rawDuration : snapshot.reactionDuration;
       if (reactionCurrentTime !== snapshot.reactionCurrentTime || Math.abs(reactionDuration - snapshot.reactionDuration) > 0.1) {
@@ -726,7 +745,8 @@ export function createTwinPlayersPlaybackSyncController({
           originalIsMuted,
           reactionIsMuted,
           now: Date.now(),
-          yt: ytStates
+          yt: ytStates,
+          useNewSyncEngine
         },
         syncTracking
       );
@@ -1159,6 +1179,11 @@ export function createTwinPlayersPlaybackSyncController({
       ...getPlayerDebugInfo(event?.target)
     }, true);
 
+    if (useNewSyncEngine && event.data === YT.PlayerState.BUFFERING) {
+      pausePlayerWithTrace('reaction', getSnapshot().playerReaction, 'original buffering interrupt');
+      return;
+    }
+
     if (event.data === YT.PlayerState.PLAYING) {
       const snapshot = getSnapshot();
       const playerInfo = getPlayerDebugInfo(event?.target);
@@ -1190,6 +1215,12 @@ export function createTwinPlayersPlaybackSyncController({
           ...playerInfo
         });
         startVideos();
+      } else if (useNewSyncEngine && !snapshot.isUserPaused) {
+        // If we resumed from buffering, make sure reaction starts too
+        const reactionState = getPlayerStateSafely(snapshot.playerReaction);
+        if (reactionState !== YT.PlayerState.PLAYING && reactionState !== YT.PlayerState.BUFFERING) {
+          startReactionVideo();
+        }
       }
     }
   };
@@ -1240,6 +1271,11 @@ export function createTwinPlayersPlaybackSyncController({
       stateName: stateName(event?.data),
       ...getPlayerDebugInfo(event?.target)
     }, true);
+
+    if (useNewSyncEngine && event.data === YT.PlayerState.BUFFERING) {
+      pausePlayerWithTrace('original', getSnapshot().playerOriginal, 'reaction buffering interrupt');
+      return;
+    }
 
     const progressionHooks = getProgressionHooks();
     if (event.data === YT.PlayerState.ENDED) {

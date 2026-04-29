@@ -118,6 +118,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     isFullscreen: initialUrlState.isFullscreen
   });
 
+  const useNewSyncEngine = initialUrlState.useNewSyncEngine;
+
   let initSeq = 0;
   let isSwitchingReactionInPlace = false;
   let lastUserResumeAt = 0;
@@ -315,6 +317,7 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
       lastUserResumeAt = value;
     },
     markPlayerReady,
+    useNewSyncEngine,
   });
 
   const {
@@ -792,7 +795,8 @@ function getInitialUrlState() {
       queueSlug: null as string | null,
       queueIndex: null as number | null,
       queueAutoPlay: false,
-      mobileLazySync: false
+      mobileLazySync: false,
+      useNewSyncEngine: false
     };
   }
   const url = new URL(window.location.href);
@@ -802,12 +806,15 @@ function getInitialUrlState() {
   const queueAutoPlayRaw = params.get('queueAutoPlay');
   const mobileLazySyncRaw = params.get('mobileLazySync') ?? params.get('lazySync');
   const mobileLazySync = mobileLazySyncRaw === 'true' || mobileLazySyncRaw === '1' || params.has('mobileLazySync') || params.has('lazySync');
+  const useNewSyncEngineRaw = params.get('newSyncEngine');
+  const useNewSyncEngine = useNewSyncEngineRaw === 'true' || useNewSyncEngineRaw === '1' || params.has('newSyncEngine');
   return {
     isFullscreen: params.get('isFullscreen') === 'true',
     playlistId: params.get('playlistId'),
     queueSlug,
     queueIndex: queueIndexRaw ? Number(queueIndexRaw) : null,
     queueAutoPlay: queueAutoPlayRaw === 'true',
-    mobileLazySync
+    mobileLazySync,
+    useNewSyncEngine
   };
 }

@@ -21,6 +21,8 @@ export type TwinPlayersSyncTracking = {
   lastSoftSyncAt: number;
   softSyncIsActive: boolean;
   softSyncResetTimeoutId?: number;
+  lastReactionApiTime?: number;
+  lastReactionPerformanceTime?: number;
 };
 
 export type TwinPlayersPlayerState = {
@@ -73,6 +75,7 @@ export type TwinPlayersSyncTickInput = {
 
   now: number;
   yt: TwinPlayersPlayerState;
+  useNewSyncEngine?: boolean;
 };
 
 export type TwinPlayersSyncAction =
@@ -153,7 +156,9 @@ export function computeTwinPlayersSyncTick(
     stateTimelineIndex: Number.isFinite(tracking.stateTimelineIndex) ? tracking.stateTimelineIndex : 0,
     lastSoftSyncAt: Number.isFinite(tracking.lastSoftSyncAt) ? tracking.lastSoftSyncAt : 0,
     softSyncIsActive: Boolean(tracking.softSyncIsActive),
-    softSyncResetTimeoutId: tracking.softSyncResetTimeoutId
+    softSyncResetTimeoutId: tracking.softSyncResetTimeoutId,
+    lastReactionApiTime: tracking.lastReactionApiTime,
+    lastReactionPerformanceTime: tracking.lastReactionPerformanceTime
   };
 
   const reactionCurrentTime = Number(input.reactionCurrentTime);
@@ -420,11 +425,13 @@ export function computeTwinPlayersSyncTick(
 
   const isMobileLazySyncEnabled = Boolean(input.isMobileLazySyncEnabled);
 
-  const tolerance = isMobileLazySyncEnabled
-    ? 2.0
-    : (effectiveConfigState === yt.PLAYING
-        ? 0.9
-        : 0.05);
+  const tolerance = input.useNewSyncEngine
+    ? 0.25
+    : (isMobileLazySyncEnabled
+      ? 2.0
+      : (effectiveConfigState === yt.PLAYING
+          ? 0.9
+          : 0.05));
 
   let targetMismatch = false;
   let driftAbs = Number.NaN;
@@ -465,7 +472,8 @@ export function computeTwinPlayersSyncTick(
   // Soft-sync logic: use playback rate adjustment for small drift when playing
   const isPlaying = effectiveConfigState === yt.PLAYING && input.originalPlayerState === yt.PLAYING;
   const isBuffering = input.originalPlayerState === yt.BUFFERING;
-  const canUseSoftSync = isPlaying && !isBuffering && !shouldApplyState && Number.isFinite(driftAbs);
+  // Decide sync mode
+  const canUseSoftSync = !input.useNewSyncEngine && isPlaying && !isBuffering && !shouldApplyState && Number.isFinite(driftAbs);
   
   // Decide sync mode
   const syncMode = canUseSoftSync ? decideSyncMode(drift, DEFAULT_SOFT_SYNC_CONFIG) : 'hard-sync';
@@ -495,13 +503,20 @@ export function computeTwinPlayersSyncTick(
     // No action needed here
   } else {
     // Hard-sync: use existing seek logic for large drift or when soft-sync not applicable
-    const shouldApplySeek = targetMismatch && (
-      isMobileLazySyncEnabled
-        ? (Number.isFinite(driftAbs)
-            && driftAbs > 2.0
-            && now - nextTracking.lastOriginalSeekAt > 3500)
-        : (Number.isFinite(driftAbs) && (driftAbs > 2.5 || now - nextTracking.lastOriginalSeekAt > 3500))
-    );
+    let shouldApplySeek = false;
+    
+    if (input.useNewSyncEngine) {
+      // In the new engine, any drift outside the 250ms deadband triggers a seek, but with a short debounce to avoid loops
+      shouldApplySeek = targetMismatch && Number.isFinite(driftAbs) && (now - nextTracking.lastOriginalSeekAt > 1500);
+    } else {
+      shouldApplySeek = targetMismatch && (
+        isMobileLazySyncEnabled
+          ? (Number.isFinite(driftAbs)
+              && driftAbs > 2.0
+              && now - nextTracking.lastOriginalSeekAt > 3500)
+          : (Number.isFinite(driftAbs) && (driftAbs > 2.5 || now - nextTracking.lastOriginalSeekAt > 3500))
+      );
+    }
 
     if (shouldApplySync && configIsInRange && (shouldApplyState || shouldApplySeek)) {
       if (
@@ -513,8 +528,8 @@ export function computeTwinPlayersSyncTick(
           nextState: effectiveConfigState,
           targetTime: computedTargetTime,
           options: {
-            throttleMs: 3500,
-            allowSeekAhead: !(Number.isFinite(driftAbs) && driftAbs < 1.25),
+            throttleMs: input.useNewSyncEngine ? 1500 : 3500,
+            allowSeekAhead: input.useNewSyncEngine ? true : !(Number.isFinite(driftAbs) && driftAbs < 1.25),
             forceSeek: shouldApplyState
           }
         });
