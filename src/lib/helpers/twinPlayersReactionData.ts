@@ -103,7 +103,7 @@ export function deriveTwinPlayersReactionData({
     1.0,
     timeOffset
   );
-  const currentPlaybackRate = getCurrentPlaybackRateFromConfigs(offsetStartTime || 0, playbackRateConfigs, timeOffset);
+  const currentPlaybackRate = getCurrentPlaybackRateFromConfigs(offsetStartTime || 0, playbackRateTimeline, timeOffset);
 
   const resolvedReactorId =
     typeof reactionData?.reactorId === 'string'

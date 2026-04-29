@@ -3,8 +3,10 @@ import {
     getCurrentVolumeFromVolumeConfigs, 
     getCurrentStateFromStateConfigs, 
     getCurrentPlaybackRateFromConfigs,
-    getCurrentOverlayVisibilityFromConfigs 
+    getCurrentOverlayVisibilityFromConfigs,
+    integratePlaybackRate
 } from '../../src/lib/helpers/reaction.js';
+import { computeTwinPlayersSyncTick } from '../../src/lib/helpers/twinPlayersSyncTick.ts';
 
 describe('Twin Player Sync Logic (Integration)', () => {
     describe('getCurrentOverlayVisibilityFromConfigs', () => {
@@ -248,5 +250,353 @@ describe('Twin Player Sync Logic (Integration)', () => {
             const after = results.filter(r => r.time >= 5.0);
             expect(after.every(r => r.volume === 10)).toBe(true);
         });
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Regression: playback speed cues must persist through subsequent state cues
+// ---------------------------------------------------------------------------
+
+const YT_PLAYING = 1;
+const YT_PAUSED = 2;
+const YT_BUFFERING = 3;
+const YT_CUED = 5;
+const YT_ENDED = 0;
+
+const ytStates = { PLAYING: YT_PLAYING, PAUSED: YT_PAUSED, BUFFERING: YT_BUFFERING, CUED: YT_CUED, ENDED: YT_ENDED };
+
+const makeTracking = (overrides = {}) => ({
+    lastOriginalSeekAt: 0,
+    lastOriginalTargetTime: undefined,
+    lastOriginalSeekTarget: undefined,
+    mobileAudioWinner: null,
+    stateTimelineIndex: 0,
+    lastSoftSyncAt: 0,
+    softSyncIsActive: false,
+    softSyncResetTimeoutId: undefined,
+    ...overrides
+});
+
+const makeInput = (overrides = {}) => ({
+    reactionCurrentTime: 0,
+    previousReactionTime: 0,
+    seekMin: 0,
+    seekMax: Infinity,
+    timeOffset: 0,
+    globalGain: 1,
+    isFineTuneModeOn: false,
+    isFullscreen: false,
+    currentStateOriginalVideo: YT_PLAYING,
+    currentPlaybackRate: 1,
+    currentVolumeOriginalVideo: 100,
+    currentVolumeReactionVideo: 100,
+    currentFullscreenOverlayVisible: true,
+    isReactionMuteModeEnabled: false,
+    isReactionAutoMuted: false,
+    isMobileAudioEnvironment: false,
+    isMobilePlaybackDevice: () => false,
+    isMobileLazySyncEnabled: false,
+    playerConfigs: {},
+    volumeConfigs: {},
+    reactionVolumeConfigs: {},
+    playbackRateConfigs: {},
+    playbackRateTimeline: [],
+    overlayVisibilityTimeline: [],
+    stateTimeline: [],
+    reactionPlayerState: YT_PLAYING,
+    originalPlayerState: YT_PLAYING,
+    originalCurrentTime: 0,
+    originalDuration: 120,
+    originalIsMuted: false,
+    reactionIsMuted: false,
+    now: 1000,
+    yt: ytStates,
+    ...overrides
+});
+
+describe('Playback speed cue persistence (regression)', () => {
+    describe('getCurrentPlaybackRateFromConfigs handles timeline-only reactions', () => {
+        it('returns the rate from playbackRateTimeline when playbackRateConfigs is empty', () => {
+            // Simulates a document where playbackTimeline (new format) is the only source
+            // and playbackRateConfigs was stored as {} (empty object).
+            const emptyConfigs = {};
+            const timeline = [{ t: 0, rate: 1.0 }, { t: 5, rate: 1.5 }];
+
+            // Empty configs: falls back to default
+            expect(getCurrentPlaybackRateFromConfigs(6, emptyConfigs, 0)).toBe(1);
+            // Array timeline: correctly returns 1.5
+            expect(getCurrentPlaybackRateFromConfigs(6, timeline, 0)).toBe(1.5);
+        });
+    });
+
+    describe('computeTwinPlayersSyncTick: speed cue from playbackRateTimeline', () => {
+        it('emits setOriginalPlaybackRate when a speed cue fires via playbackRateTimeline', () => {
+            const playbackRateTimeline = [{ t: 0, rate: 1.0 }, { t: 5, rate: 1.5 }];
+            const input = makeInput({
+                reactionCurrentTime: 5.1,
+                previousReactionTime: 4.9,
+                currentPlaybackRate: 1.0,
+                // playbackRateConfigs is empty – only the timeline carries the cue
+                playbackRateConfigs: {},
+                playbackRateTimeline,
+                originalPlayerState: YT_PLAYING,
+                originalCurrentTime: 5.1,
+            });
+
+            const result = computeTwinPlayersSyncTick(input, makeTracking());
+            const rateAction = result.actions.find(a => a.type === 'setOriginalPlaybackRate');
+
+            expect(rateAction).toBeDefined();
+            expect(rateAction.rate).toBe(1.5);
+            expect(result.stateUpdates.currentPlaybackRate).toBe(1.5);
+        });
+
+        it('does NOT emit setOriginalPlaybackRate when playbackRateTimeline is empty and configs is empty', () => {
+            const input = makeInput({
+                reactionCurrentTime: 5.1,
+                previousReactionTime: 4.9,
+                currentPlaybackRate: 1.0,
+                playbackRateConfigs: {},
+                playbackRateTimeline: [],
+            });
+
+            const result = computeTwinPlayersSyncTick(input, makeTracking());
+            const rateAction = result.actions.find(a => a.type === 'setOriginalPlaybackRate');
+
+            expect(rateAction).toBeUndefined();
+        });
+    });
+
+    describe('computeTwinPlayersSyncTick: speed cue persists through state cues', () => {
+        // Shared timeline: speed cue at t=5, play cue at t=10, pause cue at t=15, play cue at t=20
+        const playbackRateTimeline = [{ t: 0, rate: 1.0 }, { t: 5, rate: 1.5 }];
+        const stateTimeline = [
+            { t: 0, state: YT_PLAYING, targetTime: 0 },
+            { t: 10, state: YT_PAUSED, targetTime: 10 },
+            { t: 15, state: YT_PLAYING, targetTime: 15 },
+        ];
+
+        it('does not reset speed to 1 when a pause cue fires after a speed cue', () => {
+            // At t=10.1 the pause cue fires. Current rate should already be 1.5.
+            // No new speed cue exists, so no setOriginalPlaybackRate should fire.
+            const input = makeInput({
+                reactionCurrentTime: 10.1,
+                previousReactionTime: 9.9,
+                currentPlaybackRate: 1.5,
+                playbackRateConfigs: {},
+                playbackRateTimeline,
+                stateTimeline,
+                originalPlayerState: YT_PLAYING,
+                originalCurrentTime: 10.1,
+                stateTimelineIndex: 2, // cursor past the t=10 entry will be set via tracking
+            });
+
+            const tracking = makeTracking({ stateTimelineIndex: 1 }); // cursor at t=10 entry
+            const result = computeTwinPlayersSyncTick(input, tracking);
+
+            // No rate reset
+            const rateAction = result.actions.find(a => a.type === 'setOriginalPlaybackRate');
+            expect(rateAction).toBeUndefined();
+
+            // Pause state change should be requested
+            const stateAction = result.actions.find(a => a.type === 'applyOriginalStateChange');
+            expect(stateAction).toBeDefined();
+            expect(stateAction.nextState).toBe(YT_PAUSED);
+        });
+
+        it('does not reset speed to 1 when a play cue fires after a speed cue', () => {
+            // At t=15.1 the second play cue fires. Rate is 1.5, no new speed cue.
+            const input = makeInput({
+                reactionCurrentTime: 15.1,
+                previousReactionTime: 14.9,
+                currentPlaybackRate: 1.5,
+                playbackRateConfigs: {},
+                playbackRateTimeline,
+                stateTimeline,
+                originalPlayerState: YT_PAUSED,
+                originalCurrentTime: 15.1,
+            });
+
+            const tracking = makeTracking({ stateTimelineIndex: 2 }); // cursor at t=15 entry
+            const result = computeTwinPlayersSyncTick(input, tracking);
+
+            // No rate reset
+            const rateAction = result.actions.find(a => a.type === 'setOriginalPlaybackRate');
+            expect(rateAction).toBeUndefined();
+        });
+
+        it('speed cue and play cue fire in the same tick: rate update precedes state change', () => {
+            // Tick covers [4.9, 5.1]: speed cue at t=5 AND start of play are both captured.
+            // playbackRateTimeline has the speed cue; playbackRateConfigs is empty.
+            const stateTimelineWithPlay = [
+                { t: 0, state: YT_PLAYING, targetTime: 0 },
+                { t: 5, state: YT_PLAYING, targetTime: 5 },
+            ];
+            const input = makeInput({
+                reactionCurrentTime: 5.1,
+                previousReactionTime: 4.9,
+                currentPlaybackRate: 1.0,
+                playbackRateConfigs: {},
+                playbackRateTimeline,
+                stateTimeline: stateTimelineWithPlay,
+                originalPlayerState: YT_PLAYING,
+                originalCurrentTime: 5.1,
+            });
+
+            const tracking = makeTracking({ stateTimelineIndex: 1 }); // cursor at t=5 entry
+            const result = computeTwinPlayersSyncTick(input, tracking);
+
+            const actions = result.actions;
+            const rateIdx = actions.findIndex(a => a.type === 'setOriginalPlaybackRate');
+            const stateIdx = actions.findIndex(a => a.type === 'applyOriginalStateChange');
+
+            // Both actions must be present
+            expect(rateIdx).toBeGreaterThanOrEqual(0);
+            expect(stateIdx).toBeGreaterThanOrEqual(0);
+
+            // Rate change must come BEFORE state change so startOriginalVideo() picks up the new rate
+            expect(rateIdx).toBeLessThan(stateIdx);
+            expect(actions[rateIdx].rate).toBe(1.5);
+            expect(result.stateUpdates.currentPlaybackRate).toBe(1.5);
+        });
+    });
+});
+
+describe('integratePlaybackRate', () => {
+    it('returns zero for empty interval', () => {
+        expect(integratePlaybackRate(10, 10, [])).toBe(0);
+        expect(integratePlaybackRate(10, 5, [])).toBe(0);
+    });
+
+    it('uses 1× default rate when timeline is empty', () => {
+        expect(integratePlaybackRate(0, 10, [])).toBe(10);
+        expect(integratePlaybackRate(5, 15, [])).toBe(10);
+    });
+
+    it('uses 1× default rate when timeline is null/undefined', () => {
+        expect(integratePlaybackRate(0, 10, null)).toBe(10);
+        expect(integratePlaybackRate(0, 10, undefined)).toBe(10);
+    });
+
+    it('applies constant non-1x rate covering the whole interval', () => {
+        const timeline = [{ t: 0, rate: 0.5 }];
+        expect(integratePlaybackRate(0, 120, timeline)).toBe(60);
+        expect(integratePlaybackRate(100, 120, timeline)).toBe(10);
+    });
+
+    it('correctly integrates a rate change mid-interval (document 1x6mbIpqMYU1G4YI33sq scenario)', () => {
+        // Reaction: 1× from t=0 to t=120, then 0.5× from t=120 onward
+        const timeline = [{ t: 120, rate: 0.5 }];
+
+        // From t=0 to t=120: all at 1× → 120 original seconds
+        expect(integratePlaybackRate(0, 120, timeline)).toBe(120);
+
+        // From t=0 to t=125: 120s at 1× + 5s at 0.5× = 122.5
+        expect(integratePlaybackRate(0, 125, timeline)).toBeCloseTo(122.5);
+
+        // From t=120 to t=130: all at 0.5× → 5 original seconds
+        expect(integratePlaybackRate(120, 130, timeline)).toBe(5);
+
+        // From t=110 to t=130: 10s at 1× + 10s at 0.5× = 15
+        expect(integratePlaybackRate(110, 130, timeline)).toBe(15);
+    });
+
+    it('handles multiple rate changes', () => {
+        const timeline = [
+            { t: 10, rate: 2.0 },
+            { t: 20, rate: 0.5 },
+        ];
+        // t=0→10: 1× → 10; t=10→20: 2× → 20; t=20→30: 0.5× → 5 → total 35
+        expect(integratePlaybackRate(0, 30, timeline)).toBe(35);
+    });
+
+    it('returns 1× rate for the interval before any rate-change event', () => {
+        const timeline = [{ t: 50, rate: 0.25 }];
+        expect(integratePlaybackRate(0, 50, timeline)).toBe(50);
+    });
+});
+
+describe('computeTwinPlayersSyncTick — non-1x playback rate', () => {
+    // Shared helpers
+    const YT = { PLAYING: 1, PAUSED: 2, BUFFERING: 3, CUED: 5, ENDED: 0 };
+
+    const baseInput = (overrides = {}) => ({
+        reactionCurrentTime: 125,
+        previousReactionTime: 124.9,
+        seekMin: 0,
+        seekMax: Infinity,
+        timeOffset: 0,
+        globalGain: 1,
+        isFineTuneModeOn: false,
+        isFullscreen: false,
+        currentStateOriginalVideo: YT.PLAYING,
+        currentPlaybackRate: 0.5,
+        currentVolumeOriginalVideo: 100,
+        currentVolumeReactionVideo: 100,
+        currentFullscreenOverlayVisible: true,
+        isReactionMuteModeEnabled: false,
+        isReactionAutoMuted: false,
+        isMobileAudioEnvironment: false,
+        isMobilePlaybackDevice: () => false,
+        isMobileLazySyncEnabled: false,
+        // Single state event at t=0: original starts at position 0, playing
+        playerConfigs: { '0.0': { time: '0.00', state: 1 } },
+        stateTimeline: [{ t: 0, state: 1, targetTime: 0 }],
+        volumeConfigs: {},
+        reactionVolumeConfigs: {},
+        playbackRateConfigs: { '120.0': { rate: 0.5 } },
+        playbackRateTimeline: [{ t: 120, rate: 0.5 }],
+        overlayVisibilityTimeline: [],
+        reactionPlayerState: YT.PLAYING,
+        originalPlayerState: YT.PLAYING,
+        // Original is at the correct 0.5× position: 120×1 + 5×0.5 = 122.5
+        originalCurrentTime: 122.5,
+        originalDuration: 300,
+        originalIsMuted: false,
+        reactionIsMuted: false,
+        now: Date.now(),
+        yt: YT,
+        ...overrides
+    });
+
+    const baseTracking = () => ({
+        lastOriginalTargetTime: undefined,
+        lastOriginalSeekAt: 0,
+        lastOriginalSeekTarget: undefined,
+        mobileAudioWinner: null,
+        stateTimelineIndex: undefined,
+        softSyncIsActive: false,
+        softSyncResetTimeoutId: undefined,
+        lastSoftSyncAt: 0
+    });
+
+    it('does not emit soft-sync when desiredPlaybackRate is 0.5', () => {
+        const result = computeTwinPlayersSyncTick(baseInput(), baseTracking());
+        const hasSoftSync = result.actions.some(a => a.type === 'applySoftSync');
+        expect(hasSoftSync).toBe(false);
+    });
+
+    it('computes correct target time using rate integration, producing near-zero drift', () => {
+        // Original is exactly at 122.5 (correct 0.5× position).
+        // With the fix, computedTargetTime should equal 122.5 → drift ≈ 0.
+        // Without the fix it would be 125 → drift = -2.5, triggering a seek.
+        const result = computeTwinPlayersSyncTick(baseInput(), baseTracking());
+        const seekAction = result.actions.find(a => a.type === 'applyOriginalStateChange');
+        // No seek should be required when original is at the correct position
+        expect(seekAction).toBeUndefined();
+    });
+
+    it('still emits soft-sync at 1× rate when desiredPlaybackRate is 1.0', () => {
+        const tracking = baseTracking();
+        const input = baseInput({
+            currentPlaybackRate: 1.0,
+            playbackRateTimeline: [],   // no speed cues → 1× throughout
+            playbackRateConfigs: {},
+            // Introduce a small drift to trigger soft sync
+            originalCurrentTime: 124.7, // slightly behind target 125
+        });
+        const result = computeTwinPlayersSyncTick(input, tracking);
+        const hasSoftSync = result.actions.some(a => a.type === 'applySoftSync');
+        expect(hasSoftSync).toBe(true);
     });
 });
