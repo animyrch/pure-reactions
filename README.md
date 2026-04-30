@@ -13,13 +13,25 @@ A platform for creating and sharing authentic reaction videos with synchronized 
 
 ## Getting Started
 
+### No-credentials contributor setup (recommended)
+
+A fresh clone can be fully functional without any remote service credentials:
+
+| Service | Required for local dev? | Behaviour when absent |
+|---|---|---|
+| Firebase (emulator) | Yes — install Firebase CLI | Local emulators replace the cloud project |
+| Algolia | **No** | Local in-memory search is used automatically |
+| YouTube Data API | **No** | Playlist and comment endpoints return empty results gracefully |
+
+This means you can clone, install, seed, and run the app without signing up for Algolia or YouTube API access.
+
 ### Prerequisites
 
 - **Node.js 20+** (see `.nvmrc`) - If you use `nvm`: `nvm install && nvm use`
 - **Java 21** - required for the Firebase Emulator Suite
-- Firebase account for backend services in deployed environments
-- Algolia account for search functionality
-- YouTube Data API key
+- Firebase account — only needed for **deployed** environments; local emulators handle everything for contributor work
+- Algolia account — **optional**; local search works out-of-the-box without it
+- YouTube Data API key — **optional**; playlist/comment endpoints degrade gracefully without it
 
 ### Development
 
@@ -39,14 +51,12 @@ A platform for creating and sharing authentic reaction videos with synchronized 
    cp .env.example .env
    ```
 
-   For normal local app development, keep `PUBLIC_FIREBASE_USE_EMULATORS=true`.
-   The app's client and server runtime will use the local Firebase emulators, so you do not need a real Firebase project just to run the app locally.
-   The checked-in `.env.example` is already emulator-safe: it uses the local collection names, leaves `FIREBASE_SERVICE_ACCOUNT` commented out, and keeps `PUBLIC_FIREBASE_CONFIG={}` so the app falls back to the demo emulator project automatically.
-   Real Firebase credentials are still needed for deployment and certain admin scripts.
+   The default `.env.example` is already configured for local contributor mode:
+   - `PUBLIC_FIREBASE_USE_EMULATORS=true` — app connects to local Firebase emulators.
+   - Algolia variables are commented-out placeholders; leave them empty and local search activates automatically.
+   - `YOUTUBE_API_KEY` is optional; if omitted, YouTube-dependent endpoints return empty results instead of errors.
 
-   Add any non-Firebase credentials you need, such as:
-   - Algolia credentials (`PUBLIC_ALGOLIA_APP_ID`, `PUBLIC_ALGOLIA_SEARCH_API_KEY`, `PUBLIC_ALGOLIA_REACTIONS_INDEX`)
-   - `YOUTUBE_API_KEY` for server-side YouTube metadata requests
+   Real Firebase credentials are still needed for deployment and certain admin scripts.
 
 4. Set up local Firebase emulators:
    - Install the Firebase CLI if you do not already have it:
@@ -71,7 +81,14 @@ A platform for creating and sharing authentic reaction videos with synchronized 
     - After signing up locally, watch the terminal running `npm run start-emulators`: the Auth emulator prints the verification link there. Open that link in your browser, then refresh the app or use the verification page to continue.
    - If you need custom ports or hosts, update the corresponding `PUBLIC_*_EMULATOR_*` values in `.env`
 
-5. Start the development server:
+5. Seed example data into the local emulators (with emulators already running):
+   ```bash
+   npm run seed:local-dev
+   ```
+
+   This populates the Firestore emulator with published sample reactions so the home page, search, and reaction pages are immediately usable — no remote data required.
+
+6. Start the development server:
    ```bash
    npm run dev
    ```
@@ -91,18 +108,12 @@ A platform for creating and sharing authentic reaction videos with synchronized 
 
 ### Database Scripts
 
-Before running these scripts, ensure `FIREBASE_SERVICE_ACCOUNT` is set:
+- `npm run seed:local-dev` - Seed the local Firestore emulator with sample reactions (requires emulators running; no credentials needed)
+- `npm run seed:twin-fixtures` - Seed twin player test fixtures into the local emulator (requires emulators running)
 
-- `npm run seed:firestore` - Seed Firestore with test data
-- `npm run seed:twin-fixtures` - Seed twin player test fixtures
-- `npm run migrate:delete-legacy-timelines` - Clean up legacy timeline data
+The following scripts target a real Firebase project and require `FIREBASE_SERVICE_ACCOUNT` to be set:
 
-### Database Scripts
-
-Before running these scripts, ensure `FIREBASE_SERVICE_ACCOUNT` is set:
-
-- `npm run seed:firestore` - Seed Firestore with test data
-- `npm run seed:twin-fixtures` - Seed twin player test fixtures
+- `npm run seed:firestore` - Seed Firestore with test data (prod)
 - `npm run migrate:delete-legacy-timelines` - Clean up legacy timeline data
 
 ### Algolia Search Scripts
