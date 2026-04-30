@@ -1,7 +1,8 @@
 import {
   getCurrentPlaybackRateFromConfigs,
   getCurrentStateFromStateConfigs,
-  getCurrentVolumeFromVolumeConfigs
+  getCurrentVolumeFromVolumeConfigs,
+  integratePlaybackRate
 } from '$lib/helpers/reaction';
 import { applyTwinPlayersSyncActions } from '$lib/helpers/twinPlayersSyncApply';
 import {
@@ -13,6 +14,18 @@ import {
   type TwinPlayersPlayerState,
   type TwinPlayersSyncTracking
 } from '$lib/helpers/twinPlayersSyncTick';
+import {
+  createSyncEngineV2,
+  type SyncEngineV2
+} from '$lib/helpers/twinPlayersSyncEngineV2';
+import type {
+  SyncDecision,
+  PlayerObservation
+} from '$lib/helpers/twinPlayersSyncReconcileV2';
+import {
+  compileSyncPlan,
+  syncPlanTimeMsToSeconds
+} from '$lib/helpers/twinPlayersSyncPlanV2';
 import type { TwinPlayersState } from '$lib/helpers/twinPlayersStateController';
 
 declare const YT: any;
@@ -41,6 +54,7 @@ type CreateTwinPlayersPlaybackSyncControllerOptions = {
   debugClickGate: TwinPlayersDebugClickGate;
   enableGateDebug?: boolean;
   lazySyncRequested: boolean;
+  enableSyncEngineV2?: boolean;
   isLiveInstance: () => boolean;
   isInstanceDestroyed: () => boolean;
   getActiveInstanceId: () => string | null;
@@ -74,6 +88,7 @@ export function createTwinPlayersPlaybackSyncController({
   debugClickGate,
   enableGateDebug = false,
   lazySyncRequested,
+  enableSyncEngineV2 = false,
   isLiveInstance,
   isInstanceDestroyed,
   getActiveInstanceId,
@@ -100,6 +115,8 @@ export function createTwinPlayersPlaybackSyncController({
     softSyncIsActive: false,
     softSyncResetTimeoutId: undefined
   };
+  let syncEngineV2: SyncEngineV2 | null = null;
+  let syncEngineV2PlanKey = '';
 
   const stateName = (value: number | undefined) => {
     switch (value) {
@@ -415,7 +432,286 @@ export function createTwinPlayersPlaybackSyncController({
     return false;
   };
 
-  const goToSecondsInReactionVideo = (seconds: number) => {
+  const getYtStates = (): TwinPlayersPlayerState => ({
+    PLAYING: typeof YT?.PlayerState?.PLAYING === 'number' ? YT.PlayerState.PLAYING : 1,
+    PAUSED: typeof YT?.PlayerState?.PAUSED === 'number' ? YT.PlayerState.PAUSED : 2,
+    BUFFERING: typeof YT?.PlayerState?.BUFFERING === 'number' ? YT.PlayerState.BUFFERING : 3,
+    CUED: typeof YT?.PlayerState?.CUED === 'number' ? YT.PlayerState.CUED : 5,
+    ENDED: typeof YT?.PlayerState?.ENDED === 'number' ? YT.PlayerState.ENDED : 0
+  });
+
+  const isMobilePlaybackDevice = () => {
+    const ua = typeof navigator !== 'undefined' ? String(navigator.userAgent || '') : '';
+    return /iPhone|iPad|iPod|Android/i.test(ua);
+  };
+
+  const buildSyncEngineV2PlanInput = (snapshot: TwinPlayersState) => ({
+    offsetStartTime: snapshot.offsetStartTime,
+    reactionFinishTime: snapshot.reactionFinishTime,
+    timeOffset: snapshot.timeOffset,
+    globalGain: snapshot.globalGain,
+    playerConfigs: snapshot.playerConfigs,
+    volumeConfigs: snapshot.volumeConfigs,
+    reactionVolumeConfigs: snapshot.reactionVolumeConfigs,
+    playbackRateConfigs: snapshot.playbackRateConfigs,
+    stateTimeline: snapshot.stateTimeline,
+    volumeTimeline: snapshot.volumeTimeline,
+    reactionVolumeTimeline: snapshot.reactionVolumeTimeline,
+    playbackRateTimeline: snapshot.playbackRateTimeline,
+    overlayVisibilityTimeline: snapshot.overlayVisibilityTimeline
+  });
+
+  const getSyncEngineV2PlanKey = (snapshot: TwinPlayersState) =>
+    JSON.stringify(buildSyncEngineV2PlanInput(snapshot));
+
+  const getOrCreateSyncEngineV2 = (snapshot: TwinPlayersState) => {
+    const planKey = getSyncEngineV2PlanKey(snapshot);
+    if (syncEngineV2 && syncEngineV2PlanKey === planKey) {
+      return syncEngineV2;
+    }
+
+    const ytStates = getYtStates();
+    syncEngineV2 = createSyncEngineV2({
+      plan: compileSyncPlan(buildSyncEngineV2PlanInput(snapshot)),
+      isMobilePlaybackDevice: isMobilePlaybackDevice(),
+      policy: {
+        playingState: ytStates.PLAYING,
+        pausedState: ytStates.PAUSED,
+        bufferingState: ytStates.BUFFERING,
+        endedState: ytStates.ENDED
+      }
+    });
+    syncEngineV2PlanKey = planKey;
+    return syncEngineV2;
+  };
+
+  const readPlayerTimeMs = (player: any): number | undefined => {
+    if (!player || typeof player.getCurrentTime !== 'function') {
+      return undefined;
+    }
+    const value = Number(player.getCurrentTime());
+    return Number.isFinite(value) ? Math.round(value * 1000) : undefined;
+  };
+
+  const readPlayerDurationMs = (player: any): number | undefined => {
+    if (!player || typeof player.getDuration !== 'function') {
+      return undefined;
+    }
+    const value = Number(player.getDuration());
+    return Number.isFinite(value) && value > 0 ? Math.round(value * 1000) : undefined;
+  };
+
+  const createSyncEngineV2Observation = (
+    snapshot: TwinPlayersState,
+    reactionCurrentTime: number,
+    reactionPlayerState: number,
+    nowMs: number
+  ): PlayerObservation => ({
+    nowMs,
+    reactionCurrentTimeMs: Math.round(Number(reactionCurrentTime || 0) * 1000),
+    reactionPlayerState,
+    originalCurrentTimeMs: readPlayerTimeMs(snapshot.playerOriginal),
+    originalDurationMs: readPlayerDurationMs(snapshot.playerOriginal),
+    originalPlayerState: getPlayerStateSafely(snapshot.playerOriginal),
+    originalVolume: snapshot.currentVolumeOriginalVideo,
+    reactionVolume: snapshot.currentVolumeReactionVideo,
+    currentPlaybackRate: snapshot.currentPlaybackRate,
+    fullscreenOverlayVisible: snapshot.fullscreenOverlayVisible,
+    isUserPaused: snapshot.isUserPaused
+  });
+
+  const logSyncEngineV2Decision = (engine: SyncEngineV2, decisions: SyncDecision[]) => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const diagnostics = engine.getLastDiagnostics();
+    (window as any).__twinPlayersLog = (window as any).__twinPlayersLog || [];
+    (window as any).__twinPlayersLog.push({
+      ts: Date.now(),
+      msg: '[TwinPlayersV2] sync decision',
+      data: {
+        ...diagnostics,
+        decisions
+      }
+    });
+  };
+
+  const applySyncEngineV2Decisions = (
+    decisions: SyncDecision[],
+    snapshot: TwinPlayersState
+  ) => {
+    for (const decision of decisions) {
+      switch (decision.type) {
+        case 'setOriginalVolume': {
+          const resolvedVolume = snapshot.originalVideoPlatform === 'tiktok'
+            ? (decision.volume >= 100 ? 100 : 0)
+            : decision.volume;
+          if (!changingVolume && snapshot.currentVolumeOriginalVideo !== resolvedVolume) {
+            changingVolume = true;
+            setVolumeForOriginalVideo(resolvedVolume);
+            updateState({ currentVolumeOriginalVideo: resolvedVolume });
+            changingVolume = false;
+          }
+          break;
+        }
+        case 'setReactionVolume': {
+          if (!changingReactionVolume && snapshot.currentVolumeReactionVideo !== decision.volume) {
+            changingReactionVolume = true;
+            setVolumeForReactionVideo(decision.volume);
+            updateState({ currentVolumeReactionVideo: decision.volume });
+            changingReactionVolume = false;
+          }
+          break;
+        }
+        case 'setOriginalPlaybackRate': {
+          if (snapshot.originalVideoPlatform === 'tiktok') {
+            break;
+          }
+          if (!changingSpeed && Math.abs(snapshot.currentPlaybackRate - decision.rate) > 0.001) {
+            changingSpeed = true;
+            setPlaybackRateForOriginalVideo(decision.rate);
+            updateState({ currentPlaybackRate: decision.rate });
+            changingSpeed = false;
+          }
+          break;
+        }
+        case 'applySoftSync': {
+          if (snapshot.originalVideoPlatform === 'tiktok') {
+            break;
+          }
+          if (typeof syncTracking.softSyncResetTimeoutId === 'number') {
+            clearTimeout(syncTracking.softSyncResetTimeoutId);
+            syncTracking.softSyncResetTimeoutId = undefined;
+          }
+          if (!changingSpeed) {
+            changingSpeed = true;
+            setPlaybackRateForOriginalVideo(decision.rate);
+            changingSpeed = false;
+          }
+          syncTracking.softSyncIsActive = true;
+          syncTracking.softSyncResetTimeoutId = setTimeout(() => {
+            if (!changingSpeed) {
+              changingSpeed = true;
+              setPlaybackRateForOriginalVideo(decision.resetRate);
+              updateState({ currentPlaybackRate: decision.resetRate });
+              changingSpeed = false;
+            }
+            syncTracking.softSyncIsActive = false;
+            syncTracking.softSyncResetTimeoutId = undefined;
+          }, decision.durationMs) as any;
+          break;
+        }
+        case 'seekOriginal': {
+          goToSecondsInOriginalVideo(syncPlanTimeMsToSeconds(decision.targetTimeMs), {
+            allowSeekAhead: decision.allowSeekAhead,
+            force: decision.force
+          });
+          break;
+        }
+        case 'playOriginal': {
+          startOriginalVideo();
+          break;
+        }
+        case 'pauseOriginal': {
+          pauseOriginalVideo();
+          break;
+        }
+        case 'seekThenPlayOriginal': {
+          goToSecondsInOriginalVideo(syncPlanTimeMsToSeconds(decision.targetTimeMs), {
+            allowSeekAhead: true,
+            force: true
+          });
+          startOriginalVideo();
+          break;
+        }
+        case 'setFullscreenOverlayVisible': {
+          updateState({ fullscreenOverlayVisible: decision.visible });
+          break;
+        }
+      }
+    }
+  };
+
+  const applySyncEngineV2MobileAudio = (
+    desired: { originalState: number; originalVolume: number; reactionVolume: number },
+    snapshot: TwinPlayersState
+  ) => {
+    if (!isMobileAudioEnvironment()) {
+      return;
+    }
+
+    const ytStates = getYtStates();
+    const delta = desired.originalVolume - desired.reactionVolume;
+    const hysteresis = 3;
+    let originalWins = desired.originalState === ytStates.PLAYING
+      ? desired.originalVolume >= desired.reactionVolume
+      : desired.originalVolume > desired.reactionVolume;
+
+    if (syncTracking.mobileAudioWinner && Math.abs(delta) <= hysteresis) {
+      originalWins = syncTracking.mobileAudioWinner === 'original';
+    }
+
+    syncTracking.mobileAudioWinner = originalWins ? 'original' : 'reaction';
+
+    if (originalWins) {
+      if (!changingVolume && snapshot.currentVolumeOriginalVideo !== desired.originalVolume) {
+        changingVolume = true;
+        setVolumeForOriginalVideo(desired.originalVolume);
+        updateState({ currentVolumeOriginalVideo: desired.originalVolume });
+        changingVolume = false;
+      }
+      snapshot.playerOriginal?.unMute?.();
+      muteReactionAudio(snapshot.playerReaction);
+      return;
+    }
+
+    if (!changingReactionVolume && snapshot.currentVolumeReactionVideo !== desired.reactionVolume) {
+      changingReactionVolume = true;
+      setVolumeForReactionVideo(desired.reactionVolume);
+      updateState({ currentVolumeReactionVideo: desired.reactionVolume });
+      changingReactionVolume = false;
+    }
+    snapshot.playerOriginal?.mute?.();
+    unmuteReactionAudio(snapshot.playerReaction);
+  };
+
+  const runSyncEngineV2Cycle = ({
+    snapshot,
+    reactionCurrentTime,
+    reactionPlayerState,
+    force = false
+  }: {
+    snapshot: TwinPlayersState;
+    reactionCurrentTime: number;
+    reactionPlayerState: number;
+    force?: boolean;
+  }) => {
+    const engine = getOrCreateSyncEngineV2(snapshot);
+    const nowMs = Date.now();
+    engine.observePlayers(
+      createSyncEngineV2Observation(snapshot, reactionCurrentTime, reactionPlayerState, nowMs)
+    );
+    if (force) {
+      engine.handleManualSync();
+    }
+    const decisions = engine.tick(nowMs);
+    applySyncEngineV2Decisions(decisions, snapshot);
+
+    const desired = engine.getLastDesiredState();
+    if (desired) {
+      applySyncEngineV2MobileAudio(desired, snapshot);
+      updateState({
+        currentStateOriginalVideo: desired.originalState,
+        currentPlaybackRate: desired.playbackRate
+      });
+      enforceReactionMuteMode(desired.originalState);
+    }
+
+    logSyncEngineV2Decision(engine, decisions);
+    return engine;
+  };
+
+  const goToSecondsInReactionVideo = (seconds: number, options?: { skipOriginalSync?: boolean }) => {
     const normalized = Number(seconds);
     if (!Number.isFinite(normalized)) {
       return;
@@ -447,6 +743,22 @@ export function createTwinPlayersPlaybackSyncController({
 
     snapshot.playerReaction?.seekTo?.(clamped, true);
     updateState({ reactionCurrentTime: clamped });
+
+    if (!options?.skipOriginalSync && enableSyncEngineV2) {
+      const engine = getOrCreateSyncEngineV2(snapshot);
+      engine.handleScrub(Math.round(clamped * 1000), Date.now());
+      runSyncEngineV2Cycle({
+        snapshot,
+        reactionCurrentTime: clamped,
+        reactionPlayerState: getPlayerStateSafely(snapshot.playerReaction) ?? YT?.PlayerState?.PAUSED ?? 2,
+        force: true
+      });
+      return;
+    }
+
+    if (!options?.skipOriginalSync) {
+      applyOriginalPlaybackForReactionTime(clamped, snapshot, { forceSeek: true });
+    }
   };
 
   const stopSyncScheduler = () => {
@@ -486,7 +798,10 @@ export function createTwinPlayersPlaybackSyncController({
       && Number.isFinite(anchorTime)
       && Number.isFinite(normalizedReactionTime)
     ) {
-      targetTime += Math.max(normalizedReactionTime - anchorTime, 0);
+      // Integrate playback rate from anchor to current reaction time so that
+      // non-1x speed cues are correctly reflected in the scrub target position.
+      const timeOffsetAdjustedReactionTime = normalizedReactionTime - Number(snapshot.timeOffset || 0);
+      targetTime += integratePlaybackRate(anchorTime, timeOffsetAdjustedReactionTime, snapshot.playbackRateTimeline ?? []);
     }
 
     return {
@@ -669,6 +984,26 @@ export function createTwinPlayersPlaybackSyncController({
         return;
       }
 
+      if (enableSyncEngineV2) {
+        const engine = runSyncEngineV2Cycle({
+          snapshot,
+          reactionCurrentTime,
+          reactionPlayerState
+        });
+        const nextBoundaryMs = engine.getLastDesiredState()?.nextBoundaryMs ?? null;
+        const delayMs = computeNextSyncDelayMs({
+          reactionCurrentTime,
+          reactionPlayerState,
+          ytPlayingState: YT.PlayerState.PLAYING,
+          ytBufferingState: YT.PlayerState.BUFFERING,
+          nextBoundaryReactionTime: typeof nextBoundaryMs === 'number'
+            ? syncPlanTimeMsToSeconds(nextBoundaryMs)
+            : null
+        });
+        scheduleNextSync(delayMs, runSyncCycle);
+        return;
+      }
+
       const ytStates: TwinPlayersPlayerState = {
         PLAYING: typeof YT?.PlayerState?.PLAYING === 'number' ? YT.PlayerState.PLAYING : 1,
         PAUSED: typeof YT?.PlayerState?.PAUSED === 'number' ? YT.PlayerState.PAUSED : 2,
@@ -715,6 +1050,7 @@ export function createTwinPlayersPlaybackSyncController({
           volumeConfigs: snapshot.volumeConfigs,
           reactionVolumeConfigs: snapshot.reactionVolumeConfigs,
           playbackRateConfigs: snapshot.playbackRateConfigs,
+          playbackRateTimeline: snapshot.playbackRateTimeline,
           overlayVisibilityTimeline: snapshot.overlayVisibilityTimeline,
           stateTimeline: snapshot.stateTimeline,
           reactionPlayerState,
@@ -732,7 +1068,20 @@ export function createTwinPlayersPlaybackSyncController({
       Object.assign(syncTracking, result.nextTracking);
 
       const softSyncAction = result.actions.find((action: any) => action.type === 'applySoftSync');
-      const filteredActions = softSyncAction || syncTracking.softSyncIsActive
+      const speedCueAction = result.actions.find((action: any) => action.type === 'setOriginalPlaybackRate');
+
+      // A speed cue (playback-rate change from the timeline) must take priority over an active
+      // soft sync. Cancel any in-flight soft sync so the new rate applies immediately and
+      // subsequent state cues (play/pause) use the correct rate.
+      if (speedCueAction && (softSyncAction || syncTracking.softSyncIsActive)) {
+        if (typeof syncTracking.softSyncResetTimeoutId === 'number') {
+          clearTimeout(syncTracking.softSyncResetTimeoutId);
+          syncTracking.softSyncResetTimeoutId = undefined;
+        }
+        syncTracking.softSyncIsActive = false;
+      }
+
+      const filteredActions = !speedCueAction && (softSyncAction || syncTracking.softSyncIsActive)
         ? result.actions.filter((action: any) => action.type !== 'setOriginalPlaybackRate')
         : result.actions;
 
@@ -764,7 +1113,7 @@ export function createTwinPlayersPlaybackSyncController({
       changingReactionVolume = nextGuards.changingReactionVolume;
       changingSpeed = nextGuards.changingSpeed;
 
-      if (softSyncAction && 'rate' in softSyncAction && 'durationMs' in softSyncAction) {
+      if (softSyncAction && 'rate' in softSyncAction && 'durationMs' in softSyncAction && !speedCueAction) {
         if (typeof syncTracking.softSyncResetTimeoutId === 'number') {
           clearTimeout(syncTracking.softSyncResetTimeoutId);
           syncTracking.softSyncResetTimeoutId = undefined;
@@ -775,17 +1124,20 @@ export function createTwinPlayersPlaybackSyncController({
           setPlaybackRateForOriginalVideo(softSyncAction.rate);
           changingSpeed = false;
 
-          const desiredRate = getCurrentPlaybackRateFromConfigs(
-            reactionCurrentTime,
-            snapshot.playbackRateConfigs,
-            snapshot.timeOffset
-          );
-
           syncTracking.softSyncResetTimeoutId = setTimeout(() => {
             if (!changingSpeed && playerOriginal) {
+              // Compute the desired rate freshly at reset time so that any speed cue that fired
+              // during the soft-sync window is honoured rather than being overwritten with the
+              // rate that was active when the soft sync started.
+              const resetSnapshot = getSnapshot();
+              const freshRate = getCurrentPlaybackRateFromConfigs(
+                Number(resetSnapshot.reactionCurrentTime),
+                resetSnapshot.playbackRateTimeline,
+                resetSnapshot.timeOffset
+              );
               changingSpeed = true;
-              setPlaybackRateForOriginalVideo(desiredRate);
-              updateState({ currentPlaybackRate: desiredRate });
+              setPlaybackRateForOriginalVideo(freshRate);
+              updateState({ currentPlaybackRate: freshRate });
               changingSpeed = false;
             }
             syncTracking.softSyncIsActive = false;
@@ -798,9 +1150,11 @@ export function createTwinPlayersPlaybackSyncController({
           syncTracking.softSyncResetTimeoutId = undefined;
         }
 
+        // Use playbackRateTimeline (always correct) instead of playbackRateConfigs which may be
+        // empty when only the new array-format timeline is present in the reaction document.
         const desiredRate = getCurrentPlaybackRateFromConfigs(
           reactionCurrentTime,
-          snapshot.playbackRateConfigs,
+          snapshot.playbackRateTimeline,
           snapshot.timeOffset
         );
 
@@ -1009,6 +1363,29 @@ export function createTwinPlayersPlaybackSyncController({
     });
 
     const startTime = snapshot.offsetStartTime || 0;
+    syncTracking.mobileAudioWinner = null;
+
+    if (enableSyncEngineV2) {
+      const engine = getOrCreateSyncEngineV2(snapshot);
+      engine.handleScrub(Math.round(startTime * 1000), Date.now());
+      runSyncEngineV2Cycle({
+        snapshot,
+        reactionCurrentTime: startTime,
+        reactionPlayerState: typeof snapshot.playerReaction?.getPlayerState === 'function'
+          ? Number(snapshot.playerReaction.getPlayerState())
+          : YT.PlayerState.PAUSED,
+        force: true
+      });
+
+      goToSecondsInReactionVideo(startTime, { skipOriginalSync: true });
+      debugClickGate('[TwinPlayers] startVideos forced reaction seek (v2)', { startTime });
+
+      setPlaybackRateForOriginalVideo(snapshot.currentPlaybackRate);
+      startReactionVideo();
+      pollVideoCurrentTime();
+      return;
+    }
+
     const initialConfig = getCurrentStateFromStateConfigs(
       startTime,
       snapshot.playerConfigs,
@@ -1018,8 +1395,6 @@ export function createTwinPlayersPlaybackSyncController({
     const rawInitialState = Number(initialConfig.state);
     const initialState = Number.isFinite(rawInitialState) ? rawInitialState : -1;
     const initialTargetTime = Number(initialConfig.time ?? 0);
-
-    syncTracking.mobileAudioWinner = null;
 
     const ytStates: TwinPlayersPlayerState = {
       PLAYING: typeof YT?.PlayerState?.PLAYING === 'number' ? YT.PlayerState.PLAYING : 1,
@@ -1067,6 +1442,7 @@ export function createTwinPlayersPlaybackSyncController({
         volumeConfigs: snapshot.volumeConfigs,
         reactionVolumeConfigs: snapshot.reactionVolumeConfigs,
         playbackRateConfigs: snapshot.playbackRateConfigs,
+        playbackRateTimeline: snapshot.playbackRateTimeline,
         overlayVisibilityTimeline: snapshot.overlayVisibilityTimeline,
         stateTimeline: snapshot.stateTimeline,
         reactionPlayerState: typeof snapshot.playerReaction?.getPlayerState === 'function'
@@ -1147,7 +1523,7 @@ export function createTwinPlayersPlaybackSyncController({
       pauseOriginalVideo();
     }
 
-    goToSecondsInReactionVideo(startTime);
+    goToSecondsInReactionVideo(startTime, { skipOriginalSync: true });
     debugClickGate('[TwinPlayers] startVideos forced reaction seek', { startTime });
 
     setPlaybackRateForOriginalVideo(snapshot.currentPlaybackRate);
@@ -1337,7 +1713,7 @@ export function createTwinPlayersPlaybackSyncController({
           offsetStartTime: snapshot.offsetStartTime,
           playbackRate: snapshot.currentPlaybackRate
         }, true);
-        goToSecondsInReactionVideo(snapshot.offsetStartTime || 0);
+        goToSecondsInReactionVideo(snapshot.offsetStartTime || 0, { skipOriginalSync: true });
         setPlaybackRateForOriginalVideo(snapshot.currentPlaybackRate);
         updateState({ bothVideosStarted: true });
         debugClickGate('[TwinPlayers] bothVideosStarted set true via handlePlayStateChange gate release', {
@@ -1352,6 +1728,17 @@ export function createTwinPlayersPlaybackSyncController({
       const reactionNow = typeof snapshot.playerReaction?.getCurrentTime === 'function'
         ? Number(snapshot.playerReaction.getCurrentTime())
         : Number(snapshot.reactionCurrentTime);
+
+      if (enableSyncEngineV2) {
+        runSyncEngineV2Cycle({
+          snapshot,
+          reactionCurrentTime: reactionNow,
+          reactionPlayerState: YT.PlayerState.PLAYING,
+          force: wasUserPaused
+        });
+        startReactionVideo();
+        return;
+      }
 
       applyOriginalPlaybackForReactionTime(reactionNow, snapshot, {
         syncTargetTime: false
@@ -1378,7 +1765,7 @@ export function createTwinPlayersPlaybackSyncController({
         offsetStartTime: snapshot.offsetStartTime,
         playbackRate: snapshot.currentPlaybackRate
       }, true);
-      goToSecondsInReactionVideo(snapshot.offsetStartTime || 0);
+      goToSecondsInReactionVideo(snapshot.offsetStartTime || 0, { skipOriginalSync: true });
       setPlaybackRateForOriginalVideo(snapshot.currentPlaybackRate);
       updateState({ bothVideosStarted: true });
       debugClickGate('[TwinPlayers] bothVideosStarted set true via syncVideos gate release', {
@@ -1394,6 +1781,17 @@ export function createTwinPlayersPlaybackSyncController({
       ? Number(snapshot.playerReaction.getCurrentTime())
       : Number(snapshot.reactionCurrentTime);
 
+    if (enableSyncEngineV2) {
+      runSyncEngineV2Cycle({
+        snapshot,
+        reactionCurrentTime: reactionNow,
+        reactionPlayerState: getPlayerStateSafely(snapshot.playerReaction) ?? YT.PlayerState.PAUSED,
+        force: true
+      });
+      startReactionVideo();
+      return;
+    }
+
     applyOriginalPlaybackForReactionTime(reactionNow, snapshot);
     startReactionVideo();
   };
@@ -1407,6 +1805,8 @@ export function createTwinPlayersPlaybackSyncController({
     }
     syncTracking.softSyncIsActive = false;
     resetOriginalStateTracking();
+    syncEngineV2 = null;
+    syncEngineV2PlanKey = '';
   };
 
   return {

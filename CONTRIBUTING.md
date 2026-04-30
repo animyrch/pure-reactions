@@ -38,8 +38,10 @@ By participating in this project, you agree to maintain a respectful and collabo
 
 - Node.js 20+ (see `.nvmrc`)
 - npm or pnpm
-- Firebase account for backend services
-- Algolia account for search functionality
+- Firebase CLI (for local emulators) — `npm install -g firebase-tools`
+- A Firebase account is **not** required for contributor work; local emulators handle everything
+- Algolia credentials are **not** required; local search activates automatically when credentials are absent
+- A YouTube API key is **not** required; YouTube endpoints degrade gracefully without it
 
 ### Development Setup
 
@@ -56,10 +58,20 @@ By participating in this project, you agree to maintain a respectful and collabo
 
 3. Set up environment variables:
    - Copy `.env.example` to `.env`
-   - Fill in your Firebase, Algolia, and YouTube API credentials
-   - Place your Firebase Admin SDK JSON file in the secrets folder (it will be automatically ignored by git)
+   - The default values in `.env.example` are already configured for local contributor mode — no credentials need to be added for basic development
+   - Algolia and YouTube API keys are optional; the app falls back to local implementations automatically
 
-4. Start the development server:
+4. Start local Firebase emulators in a separate terminal:
+   ```bash
+   npm run start-emulators
+   ```
+
+5. Seed example data into the emulators:
+   ```bash
+   npm run seed:local-dev
+   ```
+
+6. Start the development server:
    ```bash
    npm run dev
    ```

@@ -2,7 +2,8 @@ import {
   getCurrentPlaybackRateFromConfigs,
   getCurrentStateFromStateConfigs,
   getCurrentVolumeFromVolumeConfigs,
-  getCurrentOverlaySnapshotFromConfigs
+  getCurrentOverlaySnapshotFromConfigs,
+  integratePlaybackRate
 } from '$lib/helpers/reaction';
 import {
   decideSyncMode,
@@ -63,6 +64,7 @@ export type TwinPlayersSyncTickInput = {
   volumeConfigs: any;
   reactionVolumeConfigs: any;
   playbackRateConfigs: any;
+  playbackRateTimeline?: any[];
   overlayVisibilityTimeline: any[];
   stateTimeline: any[];
 
@@ -288,9 +290,14 @@ export function computeTwinPlayersSyncTick(
   }
 
   // 2) Playback rate (original)
+  // Prefer playbackRateTimeline (new array format, always correct) over playbackRateConfigs
+  // (legacy object map that may be empty when only the new format is present in the document).
+  const effectivePlaybackRateData = Array.isArray(input.playbackRateTimeline) && input.playbackRateTimeline.length > 0
+    ? input.playbackRateTimeline
+    : input.playbackRateConfigs;
   const desiredPlaybackRate = getCurrentPlaybackRateFromConfigs(
     reactionCurrentTime,
-    input.playbackRateConfigs,
+    effectivePlaybackRateData,
     timeOffset
   );
 
@@ -396,9 +403,10 @@ export function computeTwinPlayersSyncTick(
   let computedTargetTime = Number.isFinite(baseTargetTime) ? baseTargetTime : Number.NaN;
 
   if (Number.isFinite(computedTargetTime) && Number.isFinite(anchorTime)) {
-    const deltaSinceAnchor = currentEffective - anchorTime;
-    if (effectiveConfigState === yt.PLAYING && Number.isFinite(deltaSinceAnchor)) {
-      computedTargetTime += Math.max(deltaSinceAnchor, 0);
+    if (effectiveConfigState === yt.PLAYING) {
+      // Integrate the playback rate from the anchor to the current effective time so that
+      // non-1x speed cues are accounted for when projecting the expected original position.
+      computedTargetTime += integratePlaybackRate(anchorTime, currentEffective, input.playbackRateTimeline ?? []);
     }
   }
 
@@ -474,7 +482,11 @@ export function computeTwinPlayersSyncTick(
   // Soft-sync logic: use playback rate adjustment for small drift when playing
   const isPlaying = effectiveConfigState === yt.PLAYING && input.originalPlayerState === yt.PLAYING;
   const isBuffering = input.originalPlayerState === yt.BUFFERING;
-  const canUseSoftSync = isPlaying && !isBuffering && !shouldApplyState && Number.isFinite(driftAbs);
+  // Soft-sync is calibrated to apply ±10 % rate tweaks around a 1× base rate.
+  // When the desired rate is not 1×, those tweaks are wrong and would push the
+  // original player away from its intended speed, so we skip soft-sync entirely.
+  const canUseSoftSync = isPlaying && !isBuffering && !shouldApplyState && Number.isFinite(driftAbs)
+    && Math.abs(desiredPlaybackRate - 1.0) < 0.001;
   
   // Decide sync mode
   const syncMode = canUseSoftSync ? decideSyncMode(drift, DEFAULT_SOFT_SYNC_CONFIG) : 'hard-sync';
