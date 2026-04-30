@@ -1712,50 +1712,52 @@
               <span class="text-xs text-text-muted">sec</span>
             </div>
           </div>
-          <span class="text-xs text-text-muted whitespace-nowrap"
-            >Original video at</span
-          >
-          <div class="flex flex-nowrap items-end gap-3">
-            <div class="flex items-center gap-1">
-              <label class="sr-only" for={PENDING_TARGET_MINUTES_INPUT_ID}
-                >Original minutes</label
-              >
-              <input
-                id={PENDING_TARGET_MINUTES_INPUT_ID}
-                type="number"
-                min="0"
-                step="1"
-                inputmode="numeric"
-                class="w-16 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
-                value={pendingTargetMinutesInput}
-                on:input={(event) => {
-                  pendingTargetMinutesInput = event.currentTarget.value;
-                  refreshPendingDerivedValues();
-                }}
-              />
-              <span class="text-xs text-text-muted">min</span>
+          {#if pendingConfig.trackId === "originalVideo"}
+            <span class="text-xs text-text-muted whitespace-nowrap"
+              >Original video at</span
+            >
+            <div class="flex flex-nowrap items-end gap-3">
+              <div class="flex items-center gap-1">
+                <label class="sr-only" for={PENDING_TARGET_MINUTES_INPUT_ID}
+                  >Original minutes</label
+                >
+                <input
+                  id={PENDING_TARGET_MINUTES_INPUT_ID}
+                  type="number"
+                  min="0"
+                  step="1"
+                  inputmode="numeric"
+                  class="w-16 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                  value={pendingTargetMinutesInput}
+                  on:input={(event) => {
+                    pendingTargetMinutesInput = event.currentTarget.value;
+                    refreshPendingDerivedValues();
+                  }}
+                />
+                <span class="text-xs text-text-muted">min</span>
+              </div>
+              <div class="flex items-center gap-1">
+                <label class="sr-only" for={PENDING_TARGET_SECONDS_INPUT_ID}
+                  >Original seconds</label
+                >
+                <input
+                  id={PENDING_TARGET_SECONDS_INPUT_ID}
+                  type="number"
+                  min="0"
+                  max="59.99"
+                  step="0.5"
+                  inputmode="decimal"
+                  class="w-20 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                  value={pendingTargetSecondsInput}
+                  on:input={(event) => {
+                    pendingTargetSecondsInput = event.currentTarget.value;
+                    refreshPendingDerivedValues();
+                  }}
+                />
+                <span class="text-xs text-text-muted">sec</span>
+              </div>
             </div>
-            <div class="flex items-center gap-1">
-              <label class="sr-only" for={PENDING_TARGET_SECONDS_INPUT_ID}
-                >Original seconds</label
-              >
-              <input
-                id={PENDING_TARGET_SECONDS_INPUT_ID}
-                type="number"
-                min="0"
-                max="59.99"
-                step="0.5"
-                inputmode="decimal"
-                class="w-20 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
-                value={pendingTargetSecondsInput}
-                on:input={(event) => {
-                  pendingTargetSecondsInput = event.currentTarget.value;
-                  refreshPendingDerivedValues();
-                }}
-              />
-              <span class="text-xs text-text-muted">sec</span>
-            </div>
-          </div>
+          {/if}
         </div>
         {#if pendingConfig.trackId === "originalVideo"}
           <div class="flex flex-wrap gap-2">
