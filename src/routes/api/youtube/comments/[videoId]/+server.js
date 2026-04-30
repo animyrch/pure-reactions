@@ -12,6 +12,61 @@ const CACHE_CONTROL_HEADER = 'public, s-maxage=86400, stale-while-revalidate=259
 const ALLOWED_ORDER = 'relevance';
 
 /**
+ * Build deterministic placeholder comments for use when no API key is configured.
+ * Returns the same normalized shape produced by normalizeComment() so all UI paths
+ * render correctly during local development.
+ *
+ * @param {string} videoId
+ * @param {string} sectionActionUrl
+ * @returns {import('./types').YouTubeComment[]}
+ */
+function buildPlaceholderComments(videoId, sectionActionUrl) {
+  const viewThreadUrl = sectionActionUrl;
+  return [
+    {
+      threadId: 'placeholder-thread-1',
+      commentId: 'placeholder-comment-1',
+      authorDisplayName: 'Sample Viewer',
+      authorProfileUrl: null,
+      authorAvatarUrl: null,
+      textDisplay:
+        'This is a placeholder comment — add a YOUTUBE_API_KEY to load real comments from YouTube.',
+      publishedAt: '2024-06-01T12:00:00Z',
+      updatedAt: '2024-06-01T12:00:00Z',
+      likeCount: 42,
+      replyCount: 3,
+      viewThreadUrl,
+    },
+    {
+      threadId: 'placeholder-thread-2',
+      commentId: 'placeholder-comment-2',
+      authorDisplayName: 'Another Viewer',
+      authorProfileUrl: null,
+      authorAvatarUrl: null,
+      textDisplay: 'Wow, what a reaction! The moment at 1:23 had me in tears. Instant subscribe.',
+      publishedAt: '2024-06-02T09:15:00Z',
+      updatedAt: '2024-06-02T09:15:00Z',
+      likeCount: 18,
+      replyCount: 1,
+      viewThreadUrl,
+    },
+    {
+      threadId: 'placeholder-thread-3',
+      commentId: 'placeholder-comment-3',
+      authorDisplayName: 'Longtime Fan',
+      authorProfileUrl: null,
+      authorAvatarUrl: null,
+      textDisplay: 'Been watching this channel for years — every reaction feels genuine. Loved this one.',
+      publishedAt: '2024-06-03T17:45:00Z',
+      updatedAt: '2024-06-03T17:45:00Z',
+      likeCount: 7,
+      replyCount: 0,
+      viewThreadUrl,
+    },
+  ];
+}
+
+/**
  * Build outbound YouTube URLs for a given video and comment thread.
  */
 function buildOutboundUrls(videoId, commentId) {
@@ -60,11 +115,20 @@ export const GET = async ({ params }) => {
     );
   }
 
-  // Local / contributor mode: return empty comments when no API key is configured.
+  // Local / contributor mode: return placeholder comments when no API key is configured.
+  // Uses the same normalized shape produced by normalizeComment() so every UI rendering
+  // path (comment list, avatars, like counts, outbound links) can be verified locally.
   if (!YOUTUBE_API_KEY) {
     const { canonicalVideoUrl, sectionActionUrl } = buildOutboundUrls(videoId);
     return json(
-      { status: 'empty', videoId, canonicalVideoUrl, sectionActionUrl, comments: [] },
+      {
+        status: 'ok',
+        videoId,
+        canonicalVideoUrl,
+        sectionActionUrl,
+        comments: buildPlaceholderComments(videoId, sectionActionUrl),
+        isPlaceholder: true,
+      },
       { status: 200, headers: cacheHeaders() },
     );
   }
