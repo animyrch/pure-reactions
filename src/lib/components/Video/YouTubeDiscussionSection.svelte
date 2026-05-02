@@ -14,6 +14,8 @@
   let loadState = 'idle';
   let comments = [];
   let sectionActionUrl = '';
+  /** True when the server returned sample data because no API key is configured. */
+  let isPlaceholder = false;
 
   async function load() {
     if (!videoId) {
@@ -28,6 +30,7 @@
       // but guard against unexpected payloads from upstream errors.
       sectionActionUrl = payload.sectionActionUrl || `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`;
       loadState = payload.status || (comments.length > 0 ? 'ok' : 'empty');
+      isPlaceholder = payload.isPlaceholder === true;
     } catch {
       loadState = 'error';
     }
@@ -59,6 +62,12 @@
       </h3>
       <span class="text-xs text-text-muted">·</span>
       <span class="text-xs text-text-secondary">{sourceLabel}</span>
+      {#if isPlaceholder}
+        <span
+          class="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wider text-amber-500"
+          title="No YOUTUBE_API_KEY configured — showing sample data"
+        >Sample data</span>
+      {/if}
     </div>
 
     {#if loadState === 'ok' || loadState === 'empty'}

@@ -1,11 +1,15 @@
 import { env } from '$env/dynamic/public';
 import { AlgoliaSearchProvider } from './AlgoliaSearchProvider.js';
+import { LocalSearchProvider } from './LocalSearchProvider.js';
+import { LOCAL_SEARCH_FIXTURES } from './local-search-fixtures.js';
 
 /**
  * Search Service Factory
- * 
+ *
  * Creates and manages search provider instances.
- * Provides a single point of configuration for the entire app.
+ * When Algolia credentials are present, Algolia is used.
+ * When credentials are absent (local / contributor mode), the LocalSearchProvider
+ * is used automatically — no external setup required.
  */
 
 let searchProviderInstance = null;
@@ -32,9 +36,12 @@ const SEARCH_CONFIG = {
 };
 
 /**
- * Get or create the search provider instance
- * Currently returns Algolia, but can be easily swapped
- * 
+ * Get or create the search provider instance.
+ *
+ * Selection priority:
+ *  1. Algolia — when PUBLIC_ALGOLIA_APP_ID and PUBLIC_ALGOLIA_SEARCH_API_KEY are set.
+ *  2. Local   — automatic fallback for local / contributor mode (no credentials needed).
+ *
  * @returns {SearchProvider} Search provider instance
  */
 export function getSearchProvider() {
@@ -42,33 +49,15 @@ export function getSearchProvider() {
 		return searchProviderInstance;
 	}
 
-	// Default to Algolia for now
-	// To switch providers, change this block
-	const provider = 'algolia';
+	const algoliaConfig = SEARCH_CONFIG.algolia;
+	const hasAlgolia = Boolean(algoliaConfig.appId && algoliaConfig.searchKey);
 
-	switch (provider) {
-		case 'algolia': {
-			const config = SEARCH_CONFIG.algolia;
-			
-			if (!config.appId || !config.searchKey) {
-				console.warn('[SearchService] Algolia credentials not configured');
-				return null;
-			}
-
-			searchProviderInstance = new AlgoliaSearchProvider(config);
-			break;
-		}
-
-		// Future providers can be added here:
-		// case 'meilisearch':
-		//   searchProviderInstance = new MeilisearchProvider(config);
-		//   break;
-		// case 'typesense':
-		//   searchProviderInstance = new TypesenseProvider(config);
-		//   break;
-
-		default:
-			throw new Error(`Unknown search provider: ${provider}`);
+	if (hasAlgolia) {
+		searchProviderInstance = new AlgoliaSearchProvider(algoliaConfig);
+	} else {
+		// Local / contributor mode: no remote credentials required.
+		console.info('[SearchService] Algolia credentials not configured — using local search provider (contributor mode).');
+		searchProviderInstance = new LocalSearchProvider({ data: LOCAL_SEARCH_FIXTURES });
 	}
 
 	return searchProviderInstance;
