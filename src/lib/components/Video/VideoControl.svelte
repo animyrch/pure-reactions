@@ -5,7 +5,7 @@
         PlaySolid,
         ClockOutline,
         ArrowsRepeatOutline,
-        VideoCameraSolid,
+        VideoCameraOutline,
         ExpandOutline,
     } from "flowbite-svelte-icons";
 
@@ -430,7 +430,7 @@
                             ? "Disable cinematic bars"
                             : "Enable cinematic bars"}
                     >
-                        <VideoCameraSolid class="h-4 w-4" />
+                        <VideoCameraOutline class="h-4 w-4" />
                         <span class="sr-only"
                             >Toggle cinematic letterboxing</span
                         >
