@@ -31,7 +31,7 @@
         BullhornSolid,
         PauseSolid,
         PlaySolid,
-        VideoCameraSolid,
+        VideoCameraOutline,
         DownloadSolid,
         UsersSolid,
     } from "flowbite-svelte-icons";
@@ -1411,7 +1411,7 @@
             description: isStartingReaction
                 ? "Setting up the reaction document and session."
                 : "Create your synced session and prep the recorder.",
-            icon: VideoCameraSolid,
+            icon: VideoCameraOutline,
             onClick: onClickStartReaction,
             disabled:
                 isStartingReaction ||
