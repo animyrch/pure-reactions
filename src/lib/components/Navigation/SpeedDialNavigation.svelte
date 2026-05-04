@@ -11,9 +11,9 @@
     BellActiveAltSolid,
     PenSolid,
     CheckCircleSolid,
-    ArrowUpFromBracketSolid,
+    ArrowUpFromBracketOutline,
     EyeSlashSolid,
-    BarsSolid,
+    BarsOutline,
     ListMusicSolid,
   } from "flowbite-svelte-icons";
   import { page } from "$app/stores";
@@ -191,7 +191,7 @@
     ) {
       itemList.push({
         name: "Publish Reaction",
-        icon: ArrowUpFromBracketSolid,
+        icon: ArrowUpFromBracketOutline,
         onSelect: handlers.setIsPublished,
       });
     }
@@ -272,7 +272,7 @@
       on:click={toggleDial}
     >
       <span class="sr-only">Toggle quick navigation</span>
-      <BarsSolid class="h-5 w-5" />
+      <BarsOutline class="h-5 w-5" />
     </button>
   </div>
 {/if}
