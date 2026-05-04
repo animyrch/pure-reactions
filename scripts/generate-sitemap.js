@@ -35,28 +35,42 @@ function loadDotEnvIfPresent(envPath = '.env') {
   }
 }
 
-function resolveServiceAccount() {
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
-  if (!raw) {
-    throw new Error('FIREBASE_SERVICE_ACCOUNT is required (JSON string or file path).');
-  }
-
-  const trimmed = raw.trim();
+function parseServiceAccount(raw) {
+  const trimmed = raw?.trim();
   if (!trimmed) {
-    throw new Error('FIREBASE_SERVICE_ACCOUNT is empty.');
+    return null;
   }
 
   if (trimmed.startsWith('{')) {
     return JSON.parse(trimmed);
   }
 
-  const abs = path.resolve(process.cwd(), trimmed);
-  if (!fs.existsSync(abs)) {
-    throw new Error(`FIREBASE_SERVICE_ACCOUNT path not found: ${abs}`);
+  const absolutePath = path.resolve(process.cwd(), trimmed);
+  if (fs.existsSync(absolutePath)) {
+    return JSON.parse(fs.readFileSync(absolutePath, 'utf8'));
   }
 
-  const content = fs.readFileSync(abs, 'utf8');
-  return JSON.parse(content);
+  try {
+    return JSON.parse(Buffer.from(trimmed, 'base64').toString('utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function resolveServiceAccount() {
+  const fromEnv = parseServiceAccount(process.env.FIREBASE_SERVICE_ACCOUNT);
+  if (fromEnv) {
+    return fromEnv;
+  }
+
+  const fromGoogleCredentialsPath = parseServiceAccount(process.env.GOOGLE_APPLICATION_CREDENTIALS);
+  if (fromGoogleCredentialsPath) {
+    return fromGoogleCredentialsPath;
+  }
+
+  throw new Error(
+    'Firebase Admin credentials are required. Set FIREBASE_SERVICE_ACCOUNT to a JSON string, a file path, or a base64-encoded JSON payload, or set GOOGLE_APPLICATION_CREDENTIALS to a file path.'
+  );
 }
 
 function ensureBaseUrl(raw) {

@@ -5,8 +5,8 @@
         PlaySolid,
         ClockOutline,
         ArrowsRepeatOutline,
-        VideoSolid,
-        ExpandSolid,
+        VideoCameraOutline,
+        ExpandOutline,
     } from "flowbite-svelte-icons";
 
     export let bothVideosStarted;
@@ -430,7 +430,7 @@
                             ? "Disable cinematic bars"
                             : "Enable cinematic bars"}
                     >
-                        <VideoSolid class="h-4 w-4" />
+                        <VideoCameraOutline class="h-4 w-4" />
                         <span class="sr-only"
                             >Toggle cinematic letterboxing</span
                         >
@@ -445,7 +445,7 @@
                             on:click={enterFullscreen}
                             aria-label="Enter fullscreen view"
                         >
-                            <ExpandSolid class="h-4 w-4" />
+                            <ExpandOutline class="h-4 w-4" />
                             <span class="sr-only">Enter fullscreen</span>
                         </button>
                     </div>
