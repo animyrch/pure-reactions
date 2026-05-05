@@ -1,25 +1,31 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { 
     getCurrentVolumeFromVolumeConfigs, 
     getCurrentStateFromStateConfigs, 
     getCurrentPlaybackRateFromConfigs,
     getCurrentOverlayVisibilityFromConfigs,
+    getCurrentOverlayPrimaryFromConfigs,
+    getCurrentOverlaySnapshotFromConfigs,
     integratePlaybackRate
 } from '../../src/lib/helpers/reaction.js';
 import { computeTwinPlayersSyncTick } from '../../src/lib/helpers/twinPlayersSyncTick.ts';
+import { createTwinPlayersPlaybackSyncController } from '../../src/lib/helpers/twinPlayersPlaybackSyncController.ts';
+import { overlayVisibilityTimelineArrayToMap } from '../../src/lib/helpers/twinPlayersTimeline.ts';
 
 describe('Twin Player Sync Logic (Integration)', () => {
-    describe('getCurrentOverlayVisibilityFromConfigs', () => {
-        it('should return default visibility (true) when no timeline provided', () => {
-            const result = getCurrentOverlayVisibilityFromConfigs(5.0, null);
-            expect(result).toBe(true);
+    describe('overlay snapshot timeline resolution', () => {
+        it('should return defaults when no overlay cues exist', () => {
+            const snapshot = getCurrentOverlaySnapshotFromConfigs(5.0, null, 0, 'reaction');
+            expect(snapshot).toEqual({ visible: true, primary: 'reaction' });
+            expect(getCurrentOverlayVisibilityFromConfigs(5.0, null)).toBe(true);
         });
 
-        it('should handle visibility switches in timeline', () => {
+        it('should apply complete cue snapshots atomically at cue boundaries', () => {
             const timeline = [
-                { t: 0, visible: true },
-                { t: 3, visible: false },
-                { t: 6, visible: true }
+                { t: 0, visible: true, primary: 'original' },
+                { t: 3, visible: false, primary: 'reaction' },
+                { t: 6, visible: true, primary: 'reaction' },
+                { t: 9, visible: true, primary: 'original' }
             ];
 
             expect(getCurrentOverlayVisibilityFromConfigs(1.0, timeline)).toBe(true);
@@ -27,25 +33,72 @@ describe('Twin Player Sync Logic (Integration)', () => {
             expect(getCurrentOverlayVisibilityFromConfigs(4.0, timeline)).toBe(false);
             expect(getCurrentOverlayVisibilityFromConfigs(6.0, timeline)).toBe(true);
             expect(getCurrentOverlayVisibilityFromConfigs(10.0, timeline)).toBe(true);
+            expect(getCurrentOverlayPrimaryFromConfigs(2.99, timeline, 'original')).toBe('original');
+            expect(getCurrentOverlayPrimaryFromConfigs(3.0, timeline, 'original')).toBe('reaction');
+            expect(getCurrentOverlayPrimaryFromConfigs(9.0, timeline, 'original')).toBe('original');
         });
 
         it('should respect time offset', () => {
             const timeline = [
-                { t: 0, visible: true },
-                { t: 10, visible: false }
+                { t: 0, visible: true, primary: 'original' },
+                { t: 10, visible: false, primary: 'reaction' }
             ];
 
             // If timeOffset = 5, currentTime 12 maps to effective time 7 (visible)
             // If timeOffset = 5, currentTime 17 maps to effective time 12 (hidden)
             expect(getCurrentOverlayVisibilityFromConfigs(12.0, timeline, 5.0)).toBe(true);
             expect(getCurrentOverlayVisibilityFromConfigs(17.0, timeline, 5.0)).toBe(false);
+            expect(getCurrentOverlayPrimaryFromConfigs(17.0, timeline, 'original', 5.0)).toBe('reaction');
         });
 
-        it('should return true for time before first event', () => {
+        it('should carry forward previous active cue values for later cue defaults', () => {
+            const timeline = [
+                { t: 2, visible: false, primary: 'reaction' },
+                { t: 8, visible: true }
+            ];
+
+            expect(getCurrentOverlaySnapshotFromConfigs(7.5, timeline, 0, 'original')).toEqual({
+                visible: false,
+                primary: 'reaction'
+            });
+            expect(getCurrentOverlaySnapshotFromConfigs(8.0, timeline, 0, 'original')).toEqual({
+                visible: true,
+                primary: 'reaction'
+            });
+        });
+
+        it('should normalize legacy visibility-only cues with static primary fallback', () => {
             const timeline = [
                 { t: 10, visible: false }
             ];
-            expect(getCurrentOverlayVisibilityFromConfigs(5.0, timeline)).toBe(true);
+
+            expect(getCurrentOverlaySnapshotFromConfigs(5.0, timeline, 0, 'reaction')).toEqual({
+                visible: true,
+                primary: 'reaction'
+            });
+            expect(getCurrentOverlaySnapshotFromConfigs(12.0, timeline, 0, 'reaction')).toEqual({
+                visible: false,
+                primary: 'reaction'
+            });
+        });
+    });
+
+    describe('overlay timeline map persistence normalization', () => {
+        it('should persist full snapshots with carry-forward primary for legacy entries', () => {
+            const map = overlayVisibilityTimelineArrayToMap(
+                [
+                    { t: 9, visible: true, primary: 'original' },
+                    { t: 6, visible: true },
+                    { t: 3, visible: false, primary: 'reaction' }
+                ],
+                'original'
+            );
+
+            expect(Array.from(map.values())).toEqual([
+                { t: 3, visible: false, primary: 'reaction' },
+                { t: 6, visible: true, primary: 'reaction' },
+                { t: 9, visible: true, primary: 'original' }
+            ]);
         });
     });
 
@@ -312,6 +365,171 @@ const makeInput = (overrides = {}) => ({
     now: 1000,
     yt: ytStates,
     ...overrides
+});
+
+const createPlaybackControllerHarness = (overrides = {}) => {
+    const ytStatesForHarness = {
+        UNSTARTED: -1,
+        ENDED: 0,
+        PLAYING: 1,
+        PAUSED: 2,
+        BUFFERING: 3,
+        CUED: 5,
+    };
+
+    const reactionPlayer = {
+        currentTime: Number(overrides.reactionCurrentTime ?? 0),
+        duration: Number(overrides.reactionDuration ?? 120),
+        state: Number(overrides.reactionPlayerState ?? ytStatesForHarness.PAUSED),
+        seekTo: vi.fn((time) => {
+            reactionPlayer.currentTime = Number(time);
+        }),
+        getCurrentTime: vi.fn(() => reactionPlayer.currentTime),
+        getDuration: vi.fn(() => reactionPlayer.duration),
+        getPlayerState: vi.fn(() => reactionPlayer.state),
+        playVideo: vi.fn(() => {
+            reactionPlayer.state = ytStatesForHarness.PLAYING;
+        }),
+        pauseVideo: vi.fn(() => {
+            reactionPlayer.state = ytStatesForHarness.PAUSED;
+        }),
+        setVolume: vi.fn(),
+        mute: vi.fn(),
+        unMute: vi.fn(),
+        isMuted: vi.fn(() => false),
+    };
+
+    const originalPlayer = {
+        currentTime: Number(overrides.originalCurrentTime ?? 0),
+        duration: Number(overrides.originalDuration ?? 240),
+        state: Number(overrides.originalPlayerState ?? ytStatesForHarness.PAUSED),
+        seekTo: vi.fn((time) => {
+            originalPlayer.currentTime = Number(time);
+        }),
+        getCurrentTime: vi.fn(() => originalPlayer.currentTime),
+        getDuration: vi.fn(() => originalPlayer.duration),
+        getPlayerState: vi.fn(() => originalPlayer.state),
+        playVideo: vi.fn(() => {
+            originalPlayer.state = ytStatesForHarness.PLAYING;
+        }),
+        pauseVideo: vi.fn(() => {
+            originalPlayer.state = ytStatesForHarness.PAUSED;
+        }),
+        setPlaybackRate: vi.fn(),
+        setVolume: vi.fn(),
+        mute: vi.fn(),
+        unMute: vi.fn(),
+        isMuted: vi.fn(() => false),
+    };
+
+    const snapshot = {
+        bothVideosStarted: true,
+        isUserPaused: false,
+        offsetStartTime: 0,
+        reactionFinishTime: 0,
+        reactionDuration: reactionPlayer.duration,
+        seekMin: 0,
+        seekMax: Number.POSITIVE_INFINITY,
+        playerReaction: reactionPlayer,
+        playerOriginal: originalPlayer,
+        reactionCurrentTime: reactionPlayer.currentTime,
+        currentStateOriginalVideo: ytStatesForHarness.PAUSED,
+        currentPlaybackRate: 1,
+        timeOffset: 0,
+        globalGain: 1,
+        playerConfigs: {},
+        stateTimeline: [],
+        volumeConfigs: {},
+        reactionVolumeConfigs: {},
+        playbackRateConfigs: {},
+        playbackRateTimeline: [],
+        overlayVisibilityTimeline: [],
+        fullscreenPrimaryVideoDefault: 'original',
+        fullscreenPrimaryVideo: 'reaction',
+        fullscreenOverlayVisible: true,
+        currentVolumeOriginalVideo: 100,
+        currentVolumeReactionVideo: 100,
+        isReactionMuteModeEnabled: false,
+        isReactionAutoMuted: false,
+        hasNextIndexInPlaylist: false,
+        isPlaylistAutoPlay: false,
+        isQueueAutoPlay: false,
+        originalVideoPlatform: 'youtube',
+        ...overrides,
+    };
+
+    const updateState = vi.fn((patch) => {
+        Object.assign(snapshot, patch);
+    });
+
+    const controller = createTwinPlayersPlaybackSyncController({
+        getSnapshot: () => snapshot,
+        updateState,
+        getProgressionHooks: () => null,
+        getPlayerDebugInfo: () => ({}),
+        debugClickGate: () => {},
+        lazySyncRequested: false,
+        isLiveInstance: () => true,
+        isInstanceDestroyed: () => false,
+        getActiveInstanceId: () => 'test-instance',
+        isSwitchingReactionInPlace: () => false,
+        getGateState: () => ({ originalVideoClicked: true, reactionVideoClicked: true }),
+        markOriginalVideoClicked: () => true,
+        markReactionVideoClicked: () => true,
+        getLastUserResumeAt: () => 0,
+        setLastUserResumeAt: () => {},
+        markPlayerReady: () => {},
+    });
+
+    return {
+        controller,
+        snapshot,
+        updateState,
+        reactionPlayer,
+        originalPlayer,
+    };
+};
+
+describe('Playback controller overlay primary regression', () => {
+    it('updates fullscreen primary when fine-tune seeking crosses to a later original-primary cue', () => {
+        const previousYT = globalThis.YT;
+        globalThis.YT = {
+            PlayerState: {
+                UNSTARTED: -1,
+                ENDED: 0,
+                PLAYING: 1,
+                PAUSED: 2,
+                BUFFERING: 3,
+                CUED: 5,
+            },
+        };
+
+        const { controller, snapshot, updateState } = createPlaybackControllerHarness({
+            overlayVisibilityTimeline: [
+                { t: 5, visible: true, primary: 'reaction' },
+                { t: 10, visible: true, primary: 'original' },
+            ],
+            fullscreenPrimaryVideoDefault: 'original',
+            fullscreenPrimaryVideo: 'reaction',
+            fullscreenOverlayVisible: true,
+        });
+
+        try {
+            controller.seekReactionTo(10.1);
+
+            expect(snapshot.fullscreenPrimaryVideo).toBe('original');
+            expect(updateState).toHaveBeenCalledWith(
+                expect.objectContaining({ fullscreenPrimaryVideo: 'original' })
+            );
+        } finally {
+            controller.dispose();
+            if (typeof previousYT === 'undefined') {
+                delete globalThis.YT;
+            } else {
+                globalThis.YT = previousYT;
+            }
+        }
+    });
 });
 
 describe('Playback speed cue persistence (regression)', () => {

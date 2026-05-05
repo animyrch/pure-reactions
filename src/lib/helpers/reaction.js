@@ -1,3 +1,5 @@
+import { getSortedFiniteTimelineByT } from './twinPlayersTimeline';
+
 const getClosestSmallerKey = (timedConfigs, searchKey) => {
     if (!timedConfigs) {
         return -Infinity;
@@ -97,6 +99,62 @@ export const getCurrentPlaybackRateFromConfigs = (currentTime, playbackConfigsOr
         : DEFAULT_PLAYBACK_RATE;
 };
 
+const normalizeOverlayPrimary = (value, fallback = 'original') => {
+    if (value === 'reaction' || value === 'original') {
+        return value;
+    }
+    return fallback;
+};
+
+export const getCurrentOverlaySnapshotFromConfigs = (
+    currentTime,
+    overlayVisibilityTimeline,
+    timeOffset = 0,
+    defaultPrimary = 'original'
+) => {
+    const effectiveTime = Number(currentTime) - Number(timeOffset || 0);
+    const fallback = {
+        visible: true,
+        primary: normalizeOverlayPrimary(defaultPrimary)
+    };
+
+    if (!Array.isArray(overlayVisibilityTimeline) || overlayVisibilityTimeline.length === 0) {
+        return fallback;
+    }
+
+    const sortedTimeline = getSortedFiniteTimelineByT(overlayVisibilityTimeline);
+
+    let active = { ...fallback };
+    for (const entry of sortedTimeline) {
+        const entryTime = Number(entry.t);
+        if (entryTime > effectiveTime) {
+            break;
+        }
+        active = {
+            visible: typeof entry?.visible === 'boolean' ? entry.visible : active.visible,
+            primary: normalizeOverlayPrimary(entry?.primary, active.primary)
+        };
+    }
+
+    return active;
+};
+
+export const getCurrentOverlayVisibilityFromConfigs = (currentTime, overlayVisibilityTimeline, timeOffset = 0) => {
+    return getCurrentOverlaySnapshotFromConfigs(currentTime, overlayVisibilityTimeline, timeOffset).visible;
+};
+
+export const getCurrentOverlayPrimaryFromConfigs = (
+    currentTime,
+    overlayVisibilityTimeline,
+    defaultPrimary = 'original',
+    timeOffset = 0
+) => getCurrentOverlaySnapshotFromConfigs(
+    currentTime,
+    overlayVisibilityTimeline,
+    timeOffset,
+    defaultPrimary
+).primary;
+
 /**
  * Integrate the original video's playback rate over a reaction-time interval.
  *
@@ -151,18 +209,6 @@ export const integratePlaybackRate = (fromEffectiveTime, toEffectiveTime, playba
     result += currentRate * (toEffectiveTime - cursor);
 
     return result;
-};
-
-export const getCurrentOverlayVisibilityFromConfigs = (currentTime, overlayVisibilityTimeline, timeOffset = 0) => {
-    const DEFAULT_VISIBILITY = true;
-    const effectiveTime = Number(currentTime) - Number(timeOffset || 0);
-
-    if (!Array.isArray(overlayVisibilityTimeline) || overlayVisibilityTimeline.length === 0) {
-        return DEFAULT_VISIBILITY;
-    }
-
-    const ev = findLastEventAtOrBefore(overlayVisibilityTimeline, effectiveTime);
-    return ev && typeof ev.visible === 'boolean' ? ev.visible : DEFAULT_VISIBILITY;
 };
 
 export const getCompensatedReactionTime = (startTime, playlistBufferTime = 0) => {

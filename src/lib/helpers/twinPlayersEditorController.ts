@@ -8,6 +8,8 @@ import {
 } from '$lib/helpers/twinPlayersReactionData';
 import {
   buildPlayerEventTimeline,
+  overlayVisibilityTimelineArrayToMap,
+  type OverlayPrimaryVideo,
   playbackTimelineArrayToMap,
   roundPlaybackRate,
   roundReactionTime,
@@ -84,6 +86,7 @@ type UpdateVolumeConfigParams = {
 type UpdateOverlayVisibilityConfigParams = {
   timeInReaction: number;
   visible: boolean;
+  primary: OverlayPrimaryVideo;
   previousTimeInReaction: number;
 };
 
@@ -258,7 +261,7 @@ export function createTwinPlayersEditorController({
   };
 
   const persistOverlayVisibilityTimelineMap = async (
-    map: Map<string, { t: number; visible: boolean }>,
+    map: Map<string, { t: number; visible: boolean; primary: OverlayPrimaryVideo }>,
     referenceTime: number
   ) => {
     const normalizedTimeline = Array.from(map.values()).sort((a, b) => a.t - b.t);
@@ -266,7 +269,8 @@ export function createTwinPlayersEditorController({
     await updateFirebaseDocument({
       overlayVisibilityTimeline: normalizedTimeline.map((entry) => ({
         t: Number(entry.t),
-        visible: typeof entry.visible === 'boolean' ? entry.visible : true
+        visible: typeof entry.visible === 'boolean' ? entry.visible : true,
+        primary: entry.primary === 'reaction' ? 'reaction' : 'original'
       }))
     });
 
@@ -396,7 +400,7 @@ export function createTwinPlayersEditorController({
   const setFullscreenPrimaryVideo = async (value: FullscreenPrimaryVideo) => {
     const normalized = normalizeFullscreenPrimaryVideo(value);
     await updateFirebaseDocument({ fullscreenPrimaryVideo: normalized });
-    updateState({ fullscreenPrimaryVideo: normalized });
+    updateState({ fullscreenPrimaryVideo: normalized, fullscreenPrimaryVideoDefault: normalized });
   };
 
   const setFullscreenOverlayWidthPercent = async (value: number) => {
@@ -496,25 +500,28 @@ export function createTwinPlayersEditorController({
     }
   };
 
-  const createOverlayVisibilityConfig = async ({ timeInReaction, visible }: { timeInReaction: number; visible: boolean }) => {
+  const createOverlayVisibilityConfig = async ({
+    timeInReaction,
+    visible,
+    primary
+  }: {
+    timeInReaction: number;
+    visible: boolean;
+    primary: OverlayPrimaryVideo;
+  }) => {
     const snapshot = getSnapshot();
     const sanitizedReactionTime = Number.isFinite(timeInReaction) ? Math.max(0, timeInReaction) : 0;
     const roundedReactionTime = roundReactionTime(sanitizedReactionTime);
     const sanitizedVisible = typeof visible === 'boolean' ? visible : true;
-    const timelineMap = new Map<string, { t: number; visible: boolean }>();
-
-    (Array.isArray(snapshot.overlayVisibilityTimeline) ? snapshot.overlayVisibilityTimeline : []).forEach((entry) => {
-      if (entry && Number.isFinite(entry.t)) {
-        timelineMap.set(Number(entry.t).toFixed(3), {
-          t: Number(entry.t),
-          visible: typeof entry.visible === 'boolean' ? entry.visible : true
-        });
-      }
-    });
+    const timelineMap = overlayVisibilityTimelineArrayToMap(
+      Array.isArray(snapshot.overlayVisibilityTimeline) ? snapshot.overlayVisibilityTimeline : [],
+      snapshot.fullscreenPrimaryVideoDefault
+    );
 
     timelineMap.set(roundedReactionTime.toFixed(3), {
       t: roundedReactionTime,
-      visible: sanitizedVisible
+      visible: sanitizedVisible,
+      primary: primary === 'reaction' ? 'reaction' : 'original'
     });
 
     try {
@@ -794,19 +801,14 @@ export function createTwinPlayersEditorController({
   const updateOverlayVisibilityConfig = async ({
     timeInReaction,
     visible,
+    primary,
     previousTimeInReaction
   }: UpdateOverlayVisibilityConfigParams) => {
     const snapshot = getSnapshot();
-    const timelineMap = new Map<string, { t: number; visible: boolean }>();
-
-    (Array.isArray(snapshot.overlayVisibilityTimeline) ? snapshot.overlayVisibilityTimeline : []).forEach((entry) => {
-      if (entry && Number.isFinite(entry.t)) {
-        timelineMap.set(Number(entry.t).toFixed(3), {
-          t: Number(entry.t),
-          visible: typeof entry.visible === 'boolean' ? entry.visible : true
-        });
-      }
-    });
+    const timelineMap = overlayVisibilityTimelineArrayToMap(
+      Array.isArray(snapshot.overlayVisibilityTimeline) ? snapshot.overlayVisibilityTimeline : [],
+      snapshot.fullscreenPrimaryVideoDefault
+    );
 
     const sanitizedReactionTime = Number.isFinite(timeInReaction) ? Math.max(0, timeInReaction) : 0;
     const roundedReactionTime = roundReactionTime(sanitizedReactionTime);
@@ -824,6 +826,9 @@ export function createTwinPlayersEditorController({
     }
 
     const resolvedVisible = typeof visible === 'boolean' ? visible : (currentEntry?.visible ?? true);
+    const resolvedPrimary = primary === 'reaction' || primary === 'original'
+      ? primary
+      : (currentEntry?.primary ?? snapshot.fullscreenPrimaryVideoDefault);
 
     if (nextKey !== previousKey) {
       timelineMap.delete(previousKey);
@@ -831,7 +836,8 @@ export function createTwinPlayersEditorController({
 
     timelineMap.set(nextKey, {
       t: roundedReactionTime,
-      visible: resolvedVisible
+      visible: resolvedVisible,
+      primary: resolvedPrimary
     });
 
     try {
@@ -844,16 +850,10 @@ export function createTwinPlayersEditorController({
 
   const deleteOverlayVisibilityConfig = async ({ timeInReaction }: { timeInReaction: number }) => {
     const snapshot = getSnapshot();
-    const timelineMap = new Map<string, { t: number; visible: boolean }>();
-
-    (Array.isArray(snapshot.overlayVisibilityTimeline) ? snapshot.overlayVisibilityTimeline : []).forEach((entry) => {
-      if (entry && Number.isFinite(entry.t)) {
-        timelineMap.set(Number(entry.t).toFixed(3), {
-          t: Number(entry.t),
-          visible: typeof entry.visible === 'boolean' ? entry.visible : true
-        });
-      }
-    });
+    const timelineMap = overlayVisibilityTimelineArrayToMap(
+      Array.isArray(snapshot.overlayVisibilityTimeline) ? snapshot.overlayVisibilityTimeline : [],
+      snapshot.fullscreenPrimaryVideoDefault
+    );
 
     const sanitizedReactionTime = Number.isFinite(timeInReaction) ? Math.max(0, timeInReaction) : 0;
     const key = roundReactionTime(sanitizedReactionTime).toFixed(3);

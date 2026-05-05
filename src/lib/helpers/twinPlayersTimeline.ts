@@ -4,6 +4,37 @@ export const roundTargetTime = (value: number) => Math.round(value * 100) / 100;
 export const roundVolume = (value: number) => Math.round(Math.min(Math.max(value, 0), 100));
 export const roundPlaybackRate = (value: number) => Math.round(value * 100) / 100;
 
+export const getSortedFiniteTimelineByT = (timeline: any[] = []) => {
+  if (!Array.isArray(timeline) || timeline.length === 0) {
+    return [];
+  }
+
+  let previousTime = -Infinity;
+  let isSorted = true;
+  let hasInvalidEntries = false;
+
+  for (const entry of timeline) {
+    const time = Number(entry?.t);
+    if (!Number.isFinite(time)) {
+      hasInvalidEntries = true;
+      break;
+    }
+    if (time < previousTime) {
+      isSorted = false;
+      break;
+    }
+    previousTime = time;
+  }
+
+  if (isSorted && !hasInvalidEntries) {
+    return timeline;
+  }
+
+  return [...timeline]
+    .filter((entry) => Number.isFinite(Number(entry?.t)))
+    .sort((a, b) => Number(a.t) - Number(b.t));
+};
+
 export const buildPlayerEventTimeline = (timeline: any[] = []) =>
   timeline
     .map((event: any, index: number) => ({
@@ -76,17 +107,37 @@ export const playbackTimelineArrayToMap = (timeline: any[] = []) => {
   return map;
 };
 
-export const overlayVisibilityTimelineArrayToMap = (timeline: any[] = []) => {
-  const map = new Map<string, { t: number; visible: boolean }>();
-  for (const entry of timeline) {
-    if (!entry) continue;
-    const rawReactionTime = Number(entry?.t);
-    if (!Number.isFinite(rawReactionTime)) continue;
-    const roundedReactionTime = roundReactionTime(Math.max(0, rawReactionTime));
+export type OverlayPrimaryVideo = 'original' | 'reaction';
+
+const normalizeOverlayPrimaryValue = (
+  value: unknown,
+  fallback: OverlayPrimaryVideo = 'original'
+): OverlayPrimaryVideo => {
+  if (value === 'reaction' || value === 'original') {
+    return value;
+  }
+  return fallback;
+};
+
+export const overlayVisibilityTimelineArrayToMap = (
+  timeline: any[] = [],
+  defaultPrimary: OverlayPrimaryVideo = 'original'
+) => {
+  const map = new Map<string, { t: number; visible: boolean; primary: OverlayPrimaryVideo }>();
+  const sortedTimeline = [...timeline]
+    .filter((entry) => entry && Number.isFinite(Number(entry?.t)))
+    .sort((a, b) => Number(a.t) - Number(b.t));
+
+  let lastPrimary: OverlayPrimaryVideo = normalizeOverlayPrimaryValue(defaultPrimary, 'original');
+  for (const entry of sortedTimeline) {
+    const roundedReactionTime = roundReactionTime(Math.max(0, Number(entry.t)));
     const visible = entry?.visible !== false;
+    const primary = normalizeOverlayPrimaryValue(entry?.primary, lastPrimary);
+    lastPrimary = primary;
     map.set(roundedReactionTime.toFixed(3), {
       t: roundedReactionTime,
-      visible
+      visible,
+      primary
     });
   }
   return map;

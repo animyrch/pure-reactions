@@ -41,6 +41,8 @@ The main collection for reaction videos.
 |-------|------|----------|-------------|
 | `timelines` | object/array | No | Synchronization timeline data (supports legacy object and new array formats) |
 | `configs` | object | No | Playback configuration (volume, speed, pause points) |
+| `overlayVisibilityTimeline` | array[object] | No | Unified overlay timeline snapshots. Each entry is `{ t: number, visible: boolean, primary: "original" \| "reaction" }`. Legacy entries may omit `primary` and are normalized using carry-forward + `fullscreenPrimaryVideo`. |
+| `fullscreenPrimaryVideo` | string | No | Static overlay fallback primary video (`original` or `reaction`) used when no overlay cue exists and as default for first overlay cue. |
 | `state` | string | No | Playback state for recording sessions |
 
 #### Metadata Fields
@@ -460,6 +462,7 @@ const docRef = await addDoc(collection(db, 'reactions'), {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.7 | 2026-04-22 | Documented unified overlay snapshot timeline schema (`overlayVisibilityTimeline` now stores `visible` + `primary`) and static `fullscreenPrimaryVideo` fallback semantics |
 | 1.6 | 2026-04-21 | Documented Realtime Database shared-session access pattern, anonymous viewer auth, and aligned shared-session field names with the live implementation |
 | 1.5 | 2026-04-18 | Added YouTube Discussion Mirror API response schema (`/api/youtube/comments/[videoId]`) — see `docs/YOUTUBE_DISCUSSION_MIRROR.md` |
 | 1.4 | 2026-03-07 | Added ordered playlist `sequenceItems` snapshot schema for duplicate-safe mixed YouTube/TikTok recording and playback, plus legacy compatibility notes for `originalVideoIds` |

@@ -257,7 +257,7 @@
           reactionCurrentTime={$state.reactionCurrentTime}
           reactionDuration={$state.reactionDuration}
           playerEventTimeline={$state.playerEventTimeline}
-          fullscreenPrimaryVideo={$state.fullscreenPrimaryVideo}
+          fullscreenPrimaryVideoDefault={$state.fullscreenPrimaryVideoDefault}
           fullscreenOverlayWidthPercent={$state.fullscreenOverlayWidthPercent}
           fullscreenOverlayCorner={$state.fullscreenOverlayCorner}
           originalVideoPlatform={$state.originalVideoPlatform}
