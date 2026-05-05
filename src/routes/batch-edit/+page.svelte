@@ -17,7 +17,7 @@
         CheckCircleSolid,
         ExclamationCircleSolid,
         ArrowRightSolid,
-        FileEditSolid,
+        FilePenOutline,
     } from "flowbite-svelte-icons";
     import SubtleLoader from "$lib/components/design-system/SubtleLoader.svelte";
 
@@ -330,7 +330,7 @@
                         {#if isApplying}
                             <SubtleLoader size="sm" />
                         {:else}
-                            <FileEditSolid class="h-4 w-4" />
+                            <FilePenOutline class="h-4 w-4" />
                             <span
                                 >Apply to {selectedReactionIds.size} Selected</span
                             >

@@ -10,6 +10,7 @@ import {
 } from '../../src/lib/helpers/reaction.js';
 import { computeTwinPlayersSyncTick } from '../../src/lib/helpers/twinPlayersSyncTick.ts';
 import { overlayVisibilityTimelineArrayToMap } from '../../src/lib/helpers/twinPlayersTimeline.ts';
+import { computeTwinPlayersSyncTick } from '../../src/lib/helpers/twinPlayersSyncTick.ts';
 
 describe('Twin Player Sync Logic (Integration)', () => {
     describe('overlay snapshot timeline resolution', () => {
