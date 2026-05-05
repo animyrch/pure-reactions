@@ -99,8 +99,12 @@ export const getCurrentPlaybackRateFromConfigs = (currentTime, playbackConfigsOr
         : DEFAULT_PLAYBACK_RATE;
 };
 
-const normalizeOverlayPrimary = (value, fallback = 'original') =>
-    value === 'reaction' ? 'reaction' : fallback;
+const normalizeOverlayPrimary = (value, fallback = 'original') => {
+    if (value === 'reaction' || value === 'original') {
+        return value;
+    }
+    return fallback;
+};
 
 export const getCurrentOverlaySnapshotFromConfigs = (
     currentTime,

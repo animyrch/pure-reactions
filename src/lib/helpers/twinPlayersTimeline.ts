@@ -112,7 +112,12 @@ export type OverlayPrimaryVideo = 'original' | 'reaction';
 const normalizeOverlayPrimaryValue = (
   value: unknown,
   fallback: OverlayPrimaryVideo = 'original'
-): OverlayPrimaryVideo => (value === 'reaction' ? 'reaction' : fallback);
+): OverlayPrimaryVideo => {
+  if (value === 'reaction' || value === 'original') {
+    return value;
+  }
+  return fallback;
+};
 
 export const overlayVisibilityTimelineArrayToMap = (
   timeline: any[] = [],

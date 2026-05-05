@@ -1,4 +1,5 @@
 import {
+  getCurrentOverlaySnapshotFromConfigs,
   getCurrentPlaybackRateFromConfigs,
   getCurrentStateFromStateConfigs,
   getCurrentVolumeFromVolumeConfigs,
@@ -744,6 +745,10 @@ export function createTwinPlayersPlaybackSyncController({
     snapshot.playerReaction?.seekTo?.(clamped, true);
     updateState({ reactionCurrentTime: clamped });
 
+    if (!options?.skipOriginalSync) {
+      applyOverlaySnapshotForReactionTime(clamped, snapshot);
+    }
+
     if (!options?.skipOriginalSync && enableSyncEngineV2) {
       const engine = getOrCreateSyncEngineV2(snapshot);
       engine.handleScrub(Math.round(clamped * 1000), Date.now());
@@ -811,6 +816,32 @@ export function createTwinPlayersPlaybackSyncController({
     };
   };
 
+  const applyOverlaySnapshotForReactionTime = (
+    reactionTime: number,
+    snapshot = getSnapshot()
+  ) => {
+    const overlaySnapshot = getCurrentOverlaySnapshotFromConfigs(
+      reactionTime,
+      snapshot.overlayVisibilityTimeline,
+      snapshot.timeOffset,
+      snapshot.fullscreenPrimaryVideoDefault
+    );
+
+    const patch: Partial<TwinPlayersState> = {};
+
+    if (snapshot.fullscreenOverlayVisible !== overlaySnapshot.visible) {
+      patch.fullscreenOverlayVisible = overlaySnapshot.visible;
+    }
+
+    if (snapshot.fullscreenPrimaryVideo !== overlaySnapshot.primary) {
+      patch.fullscreenPrimaryVideo = overlaySnapshot.primary;
+    }
+
+    if (Object.keys(patch).length > 0) {
+      updateState(patch);
+    }
+  };
+
   const handleStateChangeInOriginalVideo = (
     previousState: number,
     nextState: number,
@@ -863,6 +894,7 @@ export function createTwinPlayersPlaybackSyncController({
     } = {}
   ) => {
     const { desiredState, targetTime } = getDesiredOriginalPlaybackAtReactionTime(reactionTime, snapshot);
+    applyOverlaySnapshotForReactionTime(reactionTime, snapshot);
 
     if (options.syncTargetTime === false) {
       if (desiredState === YT.PlayerState.PLAYING) {
