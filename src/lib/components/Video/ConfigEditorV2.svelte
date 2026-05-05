@@ -1,6 +1,7 @@
 <script>
   import { createEventDispatcher } from "svelte";
   import { page } from "$app/stores";
+  import { getSortedFiniteTimelineByT } from "$lib/helpers/twinPlayersTimeline";
   import DebugConfigs from "./DebugConfigs.svelte";
   import InteractiveSynchronizer from "./InteractiveSynchronizer.svelte";
   const dispatch = createEventDispatcher();
@@ -14,6 +15,7 @@
   export let playbackRateConfigs = {};
   export let playbackRateTimeline = [];
   export let overlayVisibilityTimeline = [];
+  export let fullscreenPrimaryVideoDefault = "original";
   export let reactionCurrentTime = 0;
   export let reactionDuration = 0;
   export let seekMin = 0;
@@ -187,23 +189,28 @@
   };
 
   const normalizeOverlayVisibilityEvents = (timeline) => {
-    if (Array.isArray(timeline) && timeline.length) {
-      return timeline
-        .map((event, index) => {
-          const timeInReaction = parseSeconds(event?.t);
-          const visible = typeof event?.visible === 'boolean' ? event.visible : true;
-          if (!Number.isFinite(timeInReaction)) return null;
-          return {
-            id: `overlay-visibility-array-${index}-${timeInReaction}`,
-            type: "overlayVisibility",
-            trackId: "overlayVisibility",
-            timeInReaction,
-            visible,
-          };
-        })
-        .filter(Boolean);
+    if (!Array.isArray(timeline) || !timeline.length) {
+      return [];
     }
-    return [];
+    let previousPrimary =
+      fullscreenPrimaryVideoDefault === "reaction" ? "reaction" : "original";
+    return timeline
+      .map((event, index) => {
+        const timeInReaction = parseSeconds(event?.t);
+        const visible = typeof event?.visible === 'boolean' ? event.visible : true;
+        const primary = (event?.primary === "reaction" || event?.primary === "original") ? event.primary : previousPrimary;
+        if (!Number.isFinite(timeInReaction)) return null;
+        previousPrimary = primary;
+        return {
+          id: `overlay-visibility-array-${index}-${timeInReaction}`,
+          type: "overlayVisibility",
+          trackId: "overlayVisibility",
+          timeInReaction,
+          visible,
+          primary,
+        };
+      })
+      .filter(Boolean);
   };
 
   $: volumeEvents = normalizeVolumeEvents(
@@ -228,8 +235,11 @@
     playbackRateTimeline,
     playbackRateConfigs,
   );
-  $: overlayVisibilityEvents = normalizeOverlayVisibilityEvents(
+  $: sortedOverlayVisibilityTimeline = getSortedFiniteTimelineByT(
     overlayVisibilityTimeline,
+  );
+  $: overlayVisibilityEvents = normalizeOverlayVisibilityEvents(
+    sortedOverlayVisibilityTimeline,
   );
 
   $: timelineEntries = [
@@ -370,6 +380,7 @@
       {reactionVolumeEvents}
       playbackRateEvents={playbackEvents}
       overlayVisibilityEvents={overlayVisibilityEvents}
+      overlayPrimaryDefault={fullscreenPrimaryVideoDefault}
       {allowPlaybackRate}
       on:createPlayerConfig={(event) =>
         dispatch("createPlayerConfig", event.detail)}

@@ -55,6 +55,7 @@ export function buildTwinPlayersSetupStatePatch({
     isReactionMuteModeEnabled: derived.isReactionMuteModeEnabled,
     isReactionAutoMuted: false,
     fullscreenPrimaryVideo: derived.fullscreenPrimaryVideo,
+    fullscreenPrimaryVideoDefault: derived.fullscreenPrimaryVideo,
     fullscreenOverlayWidthPercent: derived.fullscreenOverlayWidthPercent,
     fullscreenOverlayCorner: derived.fullscreenOverlayCorner,
     currentPlaybackRate: derived.currentPlaybackRate,

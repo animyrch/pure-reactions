@@ -44,7 +44,7 @@ Validate **critical cross-system integration** that cannot be tested at lower le
 - **Drift measurement** → Integration tests for `computeTwinPlayersSyncTick`
 - **Volume stability** → Integration tests for volume timeline helpers
 - **Playlist transitions** → Integration tests for playlist state logic
-- **Overlay visibility** → Integration tests for `getCurrentOverlayVisibilityFromConfigs`
+- **Overlay track snapshots** → Integration tests for `getCurrentOverlaySnapshotFromConfigs`
 - **Homepage sorting** → (Removed; nondeterministic Firestore ordering)
 
 ---
@@ -64,7 +64,7 @@ Test **stateless logic** and **mocked API boundaries** without browser/network o
 
 | Test File | Coverage |
 | :--- | :--- |
-| `twin-player-sync.test.js` | `getCurrentVolumeFromVolumeConfigs`, `getCurrentStateFromStateConfigs`, `getCurrentPlaybackRateFromConfigs`, timeline boundary detection, volume change stability |
+| `twin-player-sync.test.js` | `getCurrentVolumeFromVolumeConfigs`, `getCurrentStateFromStateConfigs`, `getCurrentPlaybackRateFromConfigs`, overlay snapshot resolution, timeline boundary detection, volume change stability |
 | `search-provider.test.js` | Search provider interface, filtering, pagination, error handling |
 | `playlist-logic.test.js` | Playlist state transitions, timing preservation logic, volume state transitions, offset time handling |
 

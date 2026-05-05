@@ -191,6 +191,7 @@ export function createTwinPlayersOrchestrationController({
         isReactionMuteModeEnabled: false,
         isReactionAutoMuted: false,
         fullscreenPrimaryVideo: DEFAULT_FULLSCREEN_PRIMARY_VIDEO,
+        fullscreenPrimaryVideoDefault: DEFAULT_FULLSCREEN_PRIMARY_VIDEO,
         fullscreenOverlayWidthPercent: DEFAULT_FULLSCREEN_OVERLAY_WIDTH_PERCENT,
         fullscreenOverlayCorner: DEFAULT_FULLSCREEN_OVERLAY_CORNER
       });
@@ -215,6 +216,7 @@ export function createTwinPlayersOrchestrationController({
         isReactionMuteModeEnabled: Boolean(reactionData?.muteReactionWhileOriginalPlays),
         isReactionAutoMuted: false,
         fullscreenPrimaryVideo: DEFAULT_FULLSCREEN_PRIMARY_VIDEO,
+        fullscreenPrimaryVideoDefault: DEFAULT_FULLSCREEN_PRIMARY_VIDEO,
         fullscreenOverlayWidthPercent: DEFAULT_FULLSCREEN_OVERLAY_WIDTH_PERCENT,
         fullscreenOverlayCorner: DEFAULT_FULLSCREEN_OVERLAY_CORNER
       });

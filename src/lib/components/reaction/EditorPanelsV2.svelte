@@ -30,7 +30,7 @@
   export let reactionCurrentTime = 0;
   export let reactionDuration = 0;
   export let playerEventTimeline = [];
-  export let fullscreenPrimaryVideo = "original";
+  export let fullscreenPrimaryVideoDefault = "original";
   export let fullscreenOverlayWidthPercent = 35;
   export let fullscreenOverlayCorner = "top-right";
   /** Original video platform. Controls which editing capabilities are available. */
@@ -747,7 +747,7 @@
 
   {#if isEditModeOn && !isFineTuneModeOn}
     <FullscreenLayoutPanel
-      {fullscreenPrimaryVideo}
+      fullscreenPrimaryVideo={fullscreenPrimaryVideoDefault}
       {fullscreenOverlayWidthPercent}
       {fullscreenOverlayCorner}
       {onSetFullscreenPrimaryVideo}
@@ -789,6 +789,7 @@
               {playbackRateConfigs}
               {playbackRateTimeline}
               {overlayVisibilityTimeline}
+              fullscreenPrimaryVideoDefault={fullscreenPrimaryVideoDefault}
               {reactionCurrentTime}
               {reactionDuration}
               seekMin={offsetStartTime}

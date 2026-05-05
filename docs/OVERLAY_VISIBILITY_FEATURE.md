@@ -1,22 +1,27 @@
-# Overlay Visibility Track Feature
+# Overlay Timeline Feature
 
 ## Overview
-This feature implements a dedicated timeline track to control overlay visibility in fullscreen mode, allowing creators to temporarily hide the overlay to emphasize main content or reduce visual noise during key moments.
+This feature implements a dedicated **Overlay** timeline track where each cue stores a full overlay snapshot:
+
+- `visible` (`boolean`)
+- `primary` (`"original" | "reaction"`)
+
+This enables creators to author one cue that fully defines overlay behavior at that timestamp.
 
 ## Implementation Summary
 
 ### Data Layer
-- **New Timeline Field**: `overlayVisibilityTimeline` - array of `{ t: number, visible: boolean }` entries
+- **Timeline Field**: `overlayVisibilityTimeline` - array of `{ t: number, visible: boolean, primary: "original" | "reaction" }` entries
 - **Helper Functions**:
   - `overlayVisibilityTimelineArrayToMap()` in `twinPlayersTimeline.ts` - converts timeline to map
-  - `getCurrentOverlayVisibilityFromConfigs()` in `reaction.js` - gets current visibility state
+  - `getCurrentOverlaySnapshotFromConfigs()` in `reaction.js` - resolves active overlay snapshot
 
 ### Sync Logic
 - **Type Extensions**:
-  - `TwinPlayersSyncTickInput` now includes `overlayVisibilityTimeline`, `isFullscreen`, and `currentFullscreenOverlayVisible`
-  - `TwinPlayersSyncTickResult.stateUpdates` now includes `fullscreenOverlayVisible`
-- **Computation**: `computeTwinPlayersSyncTick()` evaluates overlay visibility only when `isFullscreen` is true
-- **Scheduling**: Overlay visibility timeline boundaries are included in sync scheduler for precise timing
+  - `TwinPlayersSyncTickInput` includes overlay timeline + static primary fallback + current applied overlay state
+  - `TwinPlayersSyncTickResult.stateUpdates` includes both `fullscreenOverlayVisible` and `fullscreenPrimaryVideo`
+- **Computation**: `computeTwinPlayersSyncTick()` resolves one overlay snapshot at the current reaction time and applies it atomically
+- **Scheduling**: Overlay timeline boundaries are included in sync scheduling for deterministic boundary switching
 
 ### State Management
 - **Composable State**: `TwinPlayersState` includes:
@@ -31,9 +36,11 @@ This feature implements a dedicated timeline track to control overlay visibility
 - **All Pages Wired**: reaction, playlist, and edit-reaction pages all pass `fullscreenOverlayVisible` prop
 
 ### Timeline Semantics
-- **Stateful**: Visibility persists from config until changed by another config
-- **Fullscreen Only**: Visibility control only applies when `isFullscreen` is true
-- **Smooth Transitions**: 300ms ease-cinematic opacity transitions
+- **Stateful snapshots**: Last cue at or before `t` is active
+- **Carry-forward defaults**:
+  - first cue defaults to static values (`visible: true`, static `fullscreenPrimaryVideo`)
+  - later cues default to previous active overlay snapshot
+- **Backward compatible**: Legacy visibility-only cues are normalized by carrying forward `primary`
 
 ## Testing
 - **Fixture**: `twin-overlay-visibility.json` - demonstrates overlay hiding at t=3s and showing at t=6s
@@ -45,14 +52,14 @@ This feature implements a dedicated timeline track to control overlay visibility
   - Reset to visible when exiting fullscreen
 
 ## Usage Example
-To create a reaction with overlay visibility control:
+To create a reaction with overlay snapshot control:
 
 ```json
 {
   "overlayVisibilityTimeline": [
-    { "t": 0, "visible": true },     // Start visible
-    { "t": 45, "visible": false },   // Hide at 45 seconds
-    { "t": 90, "visible": true }     // Show again at 90 seconds
+    { "t": 0, "visible": true, "primary": "original" },
+    { "t": 45, "visible": false, "primary": "reaction" },
+    { "t": 90, "visible": true, "primary": "reaction" }
   ]
 }
 ```
@@ -60,9 +67,5 @@ To create a reaction with overlay visibility control:
 ## Technical Notes
 - Follows existing timeline patterns (volume, playback rate)
 - No implicit resets between configs
-- Only affects fullscreen mode
-- No effect on non-fullscreen layouts
+- Applied consistently across fullscreen, desktop overlay mode, and mobile landscape mode
 - Smooth opacity transitions maintain cinematic feel
-
-## Future Enhancements
-The editor UI for creating/editing overlay visibility configs is not included in this implementation, as the issue focuses on fullscreen playback behavior. This can be added in a future enhancement.
