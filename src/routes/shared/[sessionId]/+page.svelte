@@ -419,7 +419,7 @@
                         <div class="relative aspect-video w-full bg-black">
                             <iframe
                                 title="Twitch Player"
-                                src="https://player.twitch.tv/?channel=animy_tr&parent=localhost"
+                                src="https://player.twitch.tv/?channel=animy_tr&parent={$page.url.hostname}"
                                 allowfullscreen
                                 loading="lazy"
                                 class="h-full w-full border-0"
@@ -428,7 +428,7 @@
                         <div class="hidden border-t border-slate-900/60 lg:block">
                             <iframe
                                 title="Twitch Chat"
-                                src="https://www.twitch.tv/embed/animy_tr/chat?parent=localhost"
+                                src="https://www.twitch.tv/embed/animy_tr/chat?parent={$page.url.hostname}"
                                 loading="lazy"
                                 class="h-64 w-full border-0"
                             ></iframe>
