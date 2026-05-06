@@ -131,6 +131,7 @@ export async function getReactionBySlug(slug) {
       reactorDisplayName: data.reactorDisplayName ?? null,
       thumbnailUrl: data.thumbnailUrl ?? null,
       description: data.description ?? null,
+      isPublished: data.isPublished ?? null,
     };
   } catch (error) {
     console.error('Failed to fetch reaction by slug:', error);
