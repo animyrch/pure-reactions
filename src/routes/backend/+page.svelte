@@ -1895,7 +1895,7 @@
                                 max="100"
                                 step="1"
                                 bind:value={soundLevel}
-                                on:input={() => logVolumeChange(soundLevel)}
+                                on:change={() => logVolumeChange(soundLevel)}
                                 class="h-1 flex-1 appearance-none rounded-full bg-slate-800 accent-blue-500"
                                 aria-label="Volume"
                             />
