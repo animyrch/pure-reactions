@@ -38,6 +38,7 @@
     (reaction?.reactionVideoId
       ? `https://i.ytimg.com/vi/${reaction.reactionVideoId}/hqdefault.jpg`
       : undefined);
+  $: seoRobots = reaction?.isPublished === false ? "noindex, follow" : "index, follow";
 
   const { state, actions } = useTwinPlayers({ data });
 
@@ -194,6 +195,7 @@
   type="video.other"
   image={seoImage}
   canonical="/reaction/{data.slug}"
+  robots={seoRobots}
 />
 
 <!-- Loading overlay - covers content while YouTube players initialize in the background -->
