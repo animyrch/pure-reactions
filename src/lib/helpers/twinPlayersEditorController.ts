@@ -1,4 +1,4 @@
-import { firestoreDeleteField, updateFirebaseDocument } from '$lib/helpers/firebase';
+import { firestoreDeleteField, requestReactionEnrichment, updateFirebaseDocument } from '$lib/helpers/firebase';
 import {
   normalizeFullscreenOverlayCorner,
   normalizeFullscreenOverlayWidthPercent,
@@ -874,6 +874,13 @@ export function createTwinPlayersEditorController({
 
   const setIsPublished = async () => {
     await updateFirebaseDocument({ isPublished: true });
+    const reactionId =
+      typeof window !== 'undefined' ? window.currentReactionDocumentId : undefined;
+    if (reactionId) {
+      requestReactionEnrichment(reactionId, { force: true }).catch((error: unknown) => {
+        console.error('Failed to enqueue reaction enrichment on publish', error);
+      });
+    }
     if (typeof location !== 'undefined') {
       location.reload();
     }

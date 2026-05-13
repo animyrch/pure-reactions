@@ -66,7 +66,7 @@ const shouldRequestReactionEnrichment = (data) => {
     ].some((value) => typeof value === 'string' && value.trim());
 };
 
-export const requestReactionEnrichment = async (reactionId) => {
+export const requestReactionEnrichment = async (reactionId, { force = false } = {}) => {
     if (!reactionId || typeof fetch !== 'function') {
         return false;
     }
@@ -77,7 +77,7 @@ export const requestReactionEnrichment = async (reactionId) => {
             headers: {
                 'content-type': 'application/json'
             },
-            body: JSON.stringify({ reactionId })
+            body: JSON.stringify({ reactionId, force })
         });
 
         if (!response.ok) {

@@ -58,6 +58,7 @@ function isMetaComplete(meta, youtubeId) {
   if (meta.videoId && youtubeId && meta.videoId !== youtubeId) return false;
   if (!meta.title || !meta.thumbnail || !meta.publishedAt) return false;
   if (!Number.isFinite(meta.durationSeconds)) return false;
+  if (!meta.description) return false;
   return true;
 }
 
@@ -157,7 +158,7 @@ function buildMetaFromResponse(response, youtubeId) {
   });
 }
 
-export async function enrichReactionDocument({ adminDb, adminFieldValue, collectionName, reactionId }) {
+export async function enrichReactionDocument({ adminDb, adminFieldValue, collectionName, reactionId, force = false }) {
   const docRef = adminDb.collection(collectionName).doc(reactionId);
   const snapshot = await docRef.get();
   if (!snapshot.exists) {
@@ -176,17 +177,16 @@ export async function enrichReactionDocument({ adminDb, adminFieldValue, collect
 
   const reactionNeedsUpdate =
     Boolean(reactionYoutubeId) &&
-    (!isMetaComplete(data?.youtube?.meta, reactionYoutubeId) &&
-      (isStale(data?.lastEnrichedAt) || !data?.youtube?.meta));
+    (force || !isMetaComplete(data?.youtube?.meta, reactionYoutubeId) || isStale(data?.lastEnrichedAt));
 
   const originalNeedsUpdate =
     originalPlatform === 'youtube'
       ? Boolean(originalYoutubeId) &&
-        (!isMetaComplete(data?.originalYoutube?.meta, originalYoutubeId) &&
-          (isStale(data?.originalYoutube?.lastEnrichedAt) || !data?.originalYoutube?.meta))
+        (force || !isMetaComplete(data?.originalYoutube?.meta, originalYoutubeId) ||
+          isStale(data?.originalYoutube?.lastEnrichedAt))
       : Boolean(originalTikTokId) &&
-        (!isTikTokMetaComplete(data?.originalTikTok?.meta, originalTikTokId) &&
-          (isStale(data?.originalTikTok?.lastEnrichedAt) || !data?.originalTikTok?.meta));
+        (force || !isTikTokMetaComplete(data?.originalTikTok?.meta, originalTikTokId) ||
+          isStale(data?.originalTikTok?.lastEnrichedAt));
 
   if (!reactionNeedsUpdate && !originalNeedsUpdate) {
     return { found: true, updated: false, reason: 'meta-fresh' };
