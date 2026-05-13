@@ -877,7 +877,7 @@ export function createTwinPlayersEditorController({
     const reactionId =
       typeof window !== 'undefined' ? window.currentReactionDocumentId : undefined;
     if (reactionId) {
-      requestReactionEnrichment(reactionId).catch((error) => {
+      requestReactionEnrichment(reactionId, { force: true }).catch((error: unknown) => {
         console.error('Failed to enqueue reaction enrichment on publish', error);
       });
     }

@@ -5,7 +5,7 @@ import { enrichReactionDocument } from '$lib/server/reactionEnrichment';
 
 export const POST = async ({ request }) => {
   try {
-    const { reactionId } = await request.json();
+    const { reactionId, force } = await request.json();
     if (typeof reactionId !== 'string' || !reactionId.trim()) {
       return json({ error: 'reactionId is required' }, { status: 400 });
     }
@@ -19,7 +19,8 @@ export const POST = async ({ request }) => {
       adminDb,
       adminFieldValue,
       collectionName: COLLECTION_REACTION_BINOMES,
-      reactionId: reactionId.trim()
+      reactionId: reactionId.trim(),
+      force: force === true
     });
 
     if (!result.found) {
