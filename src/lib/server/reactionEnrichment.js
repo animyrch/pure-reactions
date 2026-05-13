@@ -58,6 +58,7 @@ function isMetaComplete(meta, youtubeId) {
   if (meta.videoId && youtubeId && meta.videoId !== youtubeId) return false;
   if (!meta.title || !meta.thumbnail || !meta.publishedAt) return false;
   if (!Number.isFinite(meta.durationSeconds)) return false;
+  if (!meta.description) return false;
   return true;
 }
 
