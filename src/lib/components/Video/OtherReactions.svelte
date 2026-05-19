@@ -7,9 +7,9 @@
     export let originalVideoId;
     export let reactionVideoId;
     export let originalVideoTitle = "";
-    export let hasReactions = false;
+    export let hasOtherReactions = false;
 
-    $: hasReactions = otherReactions.length > 0;
+    $: hasOtherReactions = otherReactions.length > 0;
 
     let otherReactions = [];
     let itemRefs = [];
