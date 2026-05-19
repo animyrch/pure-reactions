@@ -286,9 +286,9 @@
         </div>
       {/if}
 
-      <div class="grid grid-cols-1 gap-8 items-start mt-6 w-full {hasOtherReactions && !$state.isEditModeOn ? 'lg:grid-cols-3' : 'lg:grid-cols-2'}">
-        <!-- Column 1: Metadata & Playlist Queue -->
-        <div class="flex flex-col gap-6 order-1 lg:order-1">
+      <div class="grid grid-cols-1 gap-8 items-start mt-6 w-full {hasOtherReactions && !$state.isEditModeOn ? 'lg:grid-cols-3' : ''}">
+        <!-- Row 1, Col 1-2: Metadata & Playlist Queue -->
+        <div class="flex flex-col gap-6 {hasOtherReactions && !$state.isEditModeOn ? 'lg:col-span-2' : ''}">
           <div data-testid="reaction-metadata">
             <CreatorDetails
               originalVideoAuthor={$state.originalVideoAuthor}
@@ -332,25 +332,25 @@
           {/if}
         </div>
 
-        <!-- Column 2: YouTube Discussion (Comments) -->
-        <div class="flex flex-col gap-6 order-3 lg:order-2">
-          {#if !$state.isEditModeOn}
-            <YouTubeDiscussion
-              reactionVideoId={$state.reactionVideoId}
-              originalVideoId={$state.originalVideoId}
-              originalVideoPlatform={$state.originalVideoPlatform}
-            />
-          {/if}
-        </div>
-
-        <!-- Column 3: Other Reactions -->
+        <!-- Row 1-2, Col 3: Other Reactions -->
         {#if !$state.isEditModeOn && $state.originalVideoId && $state.reactionVideoId}
-          <div class="flex flex-col gap-6 order-2 lg:order-3 {hasOtherReactions ? 'block' : 'hidden'}">
+          <div class="{hasOtherReactions && !$state.isEditModeOn ? 'lg:col-span-1 lg:row-span-2' : ''} flex flex-col gap-6 {hasOtherReactions ? 'block' : 'hidden'}">
             <OtherReactions
               originalVideoId={$state.originalVideoId}
               reactionVideoId={$state.reactionVideoId}
               originalVideoTitle={$state.originalVideoTitle}
               bind:hasReactions={hasOtherReactions}
+            />
+          </div>
+        {/if}
+
+        <!-- Row 2, Col 1-2: YouTube Discussion (Comments) -->
+        {#if !$state.isEditModeOn}
+          <div class="{hasOtherReactions && !$state.isEditModeOn ? 'lg:col-span-2' : ''}">
+            <YouTubeDiscussion
+              reactionVideoId={$state.reactionVideoId}
+              originalVideoId={$state.originalVideoId}
+              originalVideoPlatform={$state.originalVideoPlatform}
             />
           </div>
         {/if}
