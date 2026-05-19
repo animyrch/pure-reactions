@@ -53,6 +53,7 @@
   let playlistSlug = "";
   let playlistDocumentLocal = null;
   let playlistInitError = "";
+  let hasOtherReactions = false;
 
   $: playlistOwnerId = ($state.playlistDocument ?? playlistDocumentLocal)
     ?.userId;
@@ -281,64 +282,76 @@
   />
 
   {#if !$state.isFullscreen}
-    <div class="mx-auto w-full px-4 pt-6 sm:px-6 lg:px-10">
-      <CreatorDetails
-        originalVideoAuthor={$state.originalVideoAuthor}
-        originalVideoAuthorUrl={$state.originalVideoAuthorUrl}
-        originalVideoTitle={$state.originalVideoTitle}
-        originalVideoId={$state.originalVideoId}
-        originalVideoUrl={$state.originalVideoUrl}
-        originalVideoDescription={$state.originalVideoDescription}
-        originalVideoPlatform={$state.originalVideoPlatform}
-        reactionVideoAuthor={$state.reactionVideoAuthor}
-        reactionVideoTitle={$state.reactionVideoTitle}
-        reactionVideoId={$state.reactionVideoId}
-        reactionVideoDescription={$state.reactionVideoDescription}
-        pageSlug={$state.pageSlug}
-        isUsersOwnVideo={$state.isUsersOwnVideo}
-        reactorId={$state.reactorId}
-        reactorDisplayName={$state.reactorDisplayName}
-      />
-      <div class="mt-3 sm:mt-4">
-        <AttributionBlock
-          reactionVideoAuthor={$state.reactionVideoAuthor}
-          reactorDisplayName={$state.reactorDisplayName}
-          reactorId={$state.reactorId}
-        />
-      </div>
+    <div class="mx-auto w-full px-4 pt-6 pb-8 sm:px-6 lg:px-10">
+      <div class="grid grid-cols-1 gap-8 items-start mt-6 w-full {hasOtherReactions && !$state.isEditModeOn ? 'lg:grid-cols-3' : 'lg:grid-cols-2'}">
+        <!-- Column 1: Metadata & Playlist Queue -->
+        <div class="flex flex-col gap-6 order-1 lg:order-1">
+          <div>
+            <CreatorDetails
+              originalVideoAuthor={$state.originalVideoAuthor}
+              originalVideoAuthorUrl={$state.originalVideoAuthorUrl}
+              originalVideoTitle={$state.originalVideoTitle}
+              originalVideoId={$state.originalVideoId}
+              originalVideoUrl={$state.originalVideoUrl}
+              originalVideoDescription={$state.originalVideoDescription}
+              originalVideoPlatform={$state.originalVideoPlatform}
+              reactionVideoAuthor={$state.reactionVideoAuthor}
+              reactionVideoTitle={$state.reactionVideoTitle}
+              reactionVideoId={$state.reactionVideoId}
+              reactionVideoDescription={$state.reactionVideoDescription}
+              pageSlug={$state.pageSlug}
+              isUsersOwnVideo={$state.isUsersOwnVideo}
+              reactorId={$state.reactorId}
+              reactorDisplayName={$state.reactorDisplayName}
+            />
+            <div class="mt-3 sm:mt-4">
+              <AttributionBlock
+                reactionVideoAuthor={$state.reactionVideoAuthor}
+                reactorDisplayName={$state.reactorDisplayName}
+                reactorId={$state.reactorId}
+              />
+            </div>
+          </div>
 
-      {#if $state.originalVideoId && playlistSlug}
-        <div class="mt-8">
-          <PlaylistQueue
-            playlistItems={$state.playlistItems}
-            playlistDocument={$state.playlistDocument ?? playlistDocumentLocal}
-            currentlyViewed={$state.originalVideoId}
-            playlistId={$state.youtubePlaylistId}
-            playlistDocumentId={playlistSlug}
-            currentIndex={$state.currentIndexInPlaylist}
-            isCreation={false}
-            onSelect={handlePlaylistSelect}
-          />
+          {#if $state.originalVideoId && playlistSlug}
+            <div class="w-full">
+              <PlaylistQueue
+                playlistItems={$state.playlistItems}
+                playlistDocument={$state.playlistDocument ?? playlistDocumentLocal}
+                currentlyViewed={$state.originalVideoId}
+                playlistId={$state.youtubePlaylistId}
+                playlistDocumentId={playlistSlug}
+                currentIndex={$state.currentIndexInPlaylist}
+                isCreation={false}
+                onSelect={handlePlaylistSelect}
+              />
+            </div>
+          {/if}
         </div>
-      {/if}
-    </div>
 
-    {#if !$state.isEditModeOn && $state.originalVideoId && $state.reactionVideoId}
-      <OtherReactions
-        originalVideoId={$state.originalVideoId}
-        reactionVideoId={$state.reactionVideoId}
-      />
-    {/if}
+        <!-- Column 2: YouTube Discussion (Comments) -->
+        <div class="flex flex-col gap-6 order-3 lg:order-2">
+          {#if !$state.isEditModeOn}
+            <YouTubeDiscussion
+              reactionVideoId={$state.reactionVideoId}
+              originalVideoId={$state.originalVideoId}
+              originalVideoPlatform={$state.originalVideoPlatform}
+            />
+          {/if}
+        </div>
 
-    {#if !$state.isEditModeOn}
-      <div class="mx-auto w-full px-4 pb-8 pt-4 sm:px-6 lg:px-10">
-        <YouTubeDiscussion
-          reactionVideoId={$state.reactionVideoId}
-          originalVideoId={$state.originalVideoId}
-          originalVideoPlatform={$state.originalVideoPlatform}
-        />
+        <!-- Column 3: Other Reactions -->
+        {#if !$state.isEditModeOn && $state.originalVideoId && $state.reactionVideoId}
+          <div class="flex flex-col gap-6 order-2 lg:order-3 {hasOtherReactions ? 'block' : 'hidden'}">
+            <OtherReactions
+              originalVideoId={$state.originalVideoId}
+              reactionVideoId={$state.reactionVideoId}
+              bind:hasReactions={hasOtherReactions}
+            />
+          </div>
+        {/if}
       </div>
-    {/if}
+    </div>
   {/if}
 </div>
 

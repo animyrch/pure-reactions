@@ -7,6 +7,9 @@
     export let originalVideoId;
     export let reactionVideoId;
     export let originalVideoTitle = "";
+    export let hasReactions = false;
+
+    $: hasReactions = otherReactions.length > 0;
 
     let otherReactions = [];
     let itemRefs = [];
@@ -84,7 +87,12 @@
     }
 
     function handleCarouselKeydown(event) {
-        if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") {
+        if (
+            event.key !== "ArrowRight" &&
+            event.key !== "ArrowLeft" &&
+            event.key !== "ArrowDown" &&
+            event.key !== "ArrowUp"
+        ) {
             return;
         }
 
@@ -105,7 +113,8 @@
         }
 
         event.preventDefault();
-        const direction = event.key === "ArrowRight" ? 1 : -1;
+        const direction =
+            event.key === "ArrowRight" || event.key === "ArrowDown" ? 1 : -1;
         const nextIndex = Math.min(
             Math.max(currentIndex + direction, 0),
             items.length - 1,
@@ -231,6 +240,21 @@
 
         .carousel-item {
             flex: initial;
+        }
+    }
+
+    @media (min-width: 1024px) {
+        .carousel {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            grid-template-columns: none;
+        }
+
+        .carousel-item {
+            flex: initial;
+            max-width: 100%;
+            width: 100%;
         }
     }
 </style>
