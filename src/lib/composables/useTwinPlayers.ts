@@ -63,6 +63,7 @@ type UseTwinPlayersOptions = {
     displayName?: string | null;
   };
   enableAutoPlay?: boolean;
+  momentFeedLoopEnabled?: boolean;
 };
 
 export const CONTROLS_FADE_CLASS = 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100';
@@ -71,7 +72,11 @@ export const CONTROLS_FADE_CLASS = 'opacity-0 group-hover:opacity-100 group-focu
 const ENABLE_GATE_DEBUG = false;
 const ENABLE_WATCHDOG = false;
 
-export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOptions) {
+export function useTwinPlayers({
+  data,
+  enableAutoPlay = true,
+  momentFeedLoopEnabled = false
+}: UseTwinPlayersOptions) {
   const { slug, userId } = data;
 
   if (typeof window !== 'undefined') {
@@ -118,7 +123,8 @@ export function useTwinPlayers({ data, enableAutoPlay = true }: UseTwinPlayersOp
     queueIndex: Number.isFinite(initialUrlState.queueIndex as number) ? (initialUrlState.queueIndex as number) : 0,
     isQueueAutoPlay: Boolean(initialUrlState.queueAutoPlay),
     showCinematicBars: readCinematicBarsCookie(),
-    isFullscreen: initialUrlState.isFullscreen
+    isFullscreen: initialUrlState.isFullscreen,
+    momentFeedLoopEnabled
   });
 
   let initSeq = 0;

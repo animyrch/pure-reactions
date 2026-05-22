@@ -13,6 +13,7 @@ export const COLLECTION_REACTION_BINOMES = readCollectionName(env.PUBLIC_FIREBAS
 export const COLLECTION_USER_DATA = readCollectionName(env.PUBLIC_FIREBASE_COLLECTION_USER_DATA, 'userData_local');
 export const COLLECTION_PLAYLISTS = readCollectionName(env.PUBLIC_FIREBASE_COLLECTION_PLAYLISTS, 'playlists_local');
 export const COLLECTION_QUEUES = readCollectionName(env.PUBLIC_FIREBASE_COLLECTION_QUEUES, 'queues_local');
+export const COLLECTION_MOMENTS = readCollectionName(env.PUBLIC_FIREBASE_COLLECTION_MOMENTS, 'moments_local');
 export const COLLECTION_YOUTUBE_CHANNEL_CLAIMS = readCollectionName(env.PUBLIC_FIREBASE_COLLECTION_YOUTUBE_CHANNEL_CLAIMS, 'youtubeChannelClaims_local');
 const DEFAULT_YOUTUBE_CHANNEL_VERIFICATIONS = COLLECTION_YOUTUBE_CHANNEL_CLAIMS
     ? COLLECTION_YOUTUBE_CHANNEL_CLAIMS.replace('youtubeChannelClaims', 'youtubeChannelVerifications')

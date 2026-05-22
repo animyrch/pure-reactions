@@ -103,6 +103,41 @@ Optional enrichment payloads populated by the server-side metadata enrichment fl
 | `reactorId` | string | No | Reactor's Firebase Auth user ID |
 | `reactorDisplayName` | string | No | Reactor's display name (from Auth profile) |
 
+#### Moments fields (on `reactions`)
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `isMomentReaction` | boolean | No | When true, this reaction is a moment reaction (≤60s subsection) |
+| `momentId` | string | No | Firestore document ID of the parent moment anchor |
+| `momentOriginalTimeSeconds` | number | No | Original-content timestamp (seconds) the moment reaction must reach during its subsection |
+
+**Publishing rule:** moment reactions cannot publish unless subsection duration ≤ 60s and synchronized original playback reaches `momentOriginalTimeSeconds` at least once within `[offsetStartTime, reactionFinishTime]`. Enforced client-side via `validateMomentReaction`.
+
+---
+
+### `moments` (COLLECTION_MOMENTS)
+
+Discoverable emotional/event anchors on original content. A moment is not a clip; it is a shared timestamp reference that many moment reactions can attach to.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `title` | string | Yes | Human-readable moment title (e.g. "Will Ramos Snorting Scream") |
+| `slug` | string | No | URL-friendly identifier (falls back to doc ID in routes) |
+| `originalVideoId` | string | Yes | Platform-native ID of the original video |
+| `originalVideoPlatform` | string | No | `youtube` or `tiktok` (default `youtube`) |
+| `originalVideoTitle` | string | Yes | Snapshot title for discovery UI |
+| `originalVideoAuthor` | string | No | Creator/channel label snapshot |
+| `originalVideoUrl` | string | No | Canonical original URL |
+| `momentTimeSeconds` | number | Yes | Anchor time in original content (seconds) |
+| `tags` | array[string] | No | Discovery tags/categories |
+| `reactionCount` | number | No | Denormalized count of published moment reactions (maintained on publish/unpublish) |
+| `creatorId` | string | Yes | Firebase Auth UID of creator |
+| `creatorDisplayName` | string | No | Creator display name snapshot |
+| `createdAt` | Timestamp | Yes | Creation timestamp |
+| `updatedAt` | Timestamp | Yes | Last update timestamp |
+
+**Note:** Moments do not have `isPublished`; they are visible in discovery immediately after creation.
+
 ---
 
 ### `userData` (COLLECTION_USER_DATA)
@@ -462,6 +497,7 @@ const docRef = await addDoc(collection(db, 'reactions'), {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.8 | 2026-05-22 | Added `moments` collection, moment reaction fields on `reactions`, discovery routes (`/moments`), and Algolia moments index env `PUBLIC_ALGOLIA_MOMENTS_INDEX` |
 | 1.7 | 2026-04-22 | Documented unified overlay snapshot timeline schema (`overlayVisibilityTimeline` now stores `visible` + `primary`) and static `fullscreenPrimaryVideo` fallback semantics |
 | 1.6 | 2026-04-21 | Documented Realtime Database shared-session access pattern, anonymous viewer auth, and aligned shared-session field names with the live implementation |
 | 1.5 | 2026-04-18 | Added YouTube Discussion Mirror API response schema (`/api/youtube/comments/[videoId]`) — see `docs/YOUTUBE_DISCUSSION_MIRROR.md` |

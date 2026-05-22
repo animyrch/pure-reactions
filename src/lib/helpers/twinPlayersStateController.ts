@@ -79,6 +79,10 @@ export type TwinPlayersState = {
   seekMin: number;
   seekMax: number;
   originalVideoPlatform: 'youtube' | 'tiktok';
+  momentId?: string;
+  isMomentReaction: boolean;
+  momentOriginalTimeSeconds?: number;
+  momentFeedLoopEnabled: boolean;
 };
 
 type TwinPlayersContentState = Pick<
@@ -100,6 +104,9 @@ type TwinPlayersContentState = Pick<
   | 'youtubePlaylistId'
   | 'pageSlug'
   | 'originalVideoPlatform'
+  | 'momentId'
+  | 'isMomentReaction'
+  | 'momentOriginalTimeSeconds'
 >;
 
 type TwinPlayersCollectionState = Pick<
@@ -180,6 +187,7 @@ type CreateTwinPlayersStateControllerOptions = {
   isQueueAutoPlay: boolean;
   showCinematicBars: boolean;
   isFullscreen: boolean;
+  momentFeedLoopEnabled?: boolean;
 };
 
 const contentKeys = [
@@ -199,7 +207,11 @@ const contentKeys = [
   'reactorId',
   'youtubePlaylistId',
   'pageSlug',
-  'originalVideoPlatform'
+  'originalVideoPlatform',
+  'momentId',
+  'isMomentReaction',
+  'momentOriginalTimeSeconds',
+  'momentFeedLoopEnabled'
 ] as const;
 
 const collectionKeys = [
@@ -311,7 +323,8 @@ export function createTwinPlayersStateController({
   queueIndex,
   isQueueAutoPlay,
   showCinematicBars,
-  isFullscreen
+  isFullscreen,
+  momentFeedLoopEnabled = false
 }: CreateTwinPlayersStateControllerOptions) {
   const contentState = writable<TwinPlayersContentState>({
     isReactionMissing: false,
@@ -330,7 +343,11 @@ export function createTwinPlayersStateController({
     reactorId: undefined,
     youtubePlaylistId: undefined,
     pageSlug,
-    originalVideoPlatform: 'youtube'
+    originalVideoPlatform: 'youtube',
+    momentId: undefined,
+    isMomentReaction: false,
+    momentOriginalTimeSeconds: undefined,
+    momentFeedLoopEnabled
   });
 
   const collectionState = writable<TwinPlayersCollectionState>({

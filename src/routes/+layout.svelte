@@ -21,9 +21,12 @@
 
   $: isReactionRoute = $page.url.pathname?.startsWith("/reaction/");
   $: isPlaylistRoute = $page.url.pathname?.startsWith("/playlist/");
-  $: isPlaybackRoute = isReactionRoute || isPlaylistRoute;
+  $: isMomentFeedRoute = /^\/moments\/[^/]+$/.test($page.url.pathname || "");
+  $: isPlaybackRoute = isReactionRoute || isPlaylistRoute || isMomentFeedRoute;
   $: hideSpeedDial =
     isPlaybackRoute && ($reactionDial.isFullscreen || isMobileLandscapeTheater);
+  $: hideFooter = isMomentFeedRoute;
+  $: hideHeader = isMomentFeedRoute;
 
   onMount(() => {
     // Register service worker
@@ -70,7 +73,7 @@
 
     // Skip view transitions for reaction routes to prevent DOM instability during YouTube player initialization
     const toPath = navigation.to?.url?.pathname ?? '';
-    if (toPath.startsWith('/reaction/')) {
+    if (toPath.startsWith('/reaction/') || /^\/moments\/[^/]+$/.test(toPath)) {
       return;
     }
 
@@ -92,9 +95,11 @@
 
 <GoogleAnalytics />
 
-<header class="w-full safe-padding-x">
-  <TopNavigation />
-</header>
+{#if !hideHeader}
+  <header class="w-full safe-padding-x">
+    <TopNavigation />
+  </header>
+{/if}
 
 {#each currentToasts as toast (toast.id)}
   <Toast {toast} key={toast.id} />
@@ -118,7 +123,9 @@
   <SpeedDialNavigation />
 {/if}
 
-<Footer />
+{#if !hideFooter}
+  <Footer />
+{/if}
 
 <style>
   @import "../app.pcss";

@@ -34,6 +34,7 @@ import {
     COLLECTION_USER_DATA,
     COLLECTION_PLAYLISTS,
     COLLECTION_QUEUES,
+    COLLECTION_MOMENTS,
     COLLECTION_YOUTUBE_CHANNEL_CLAIMS,
     COLLECTION_YOUTUBE_CHANNEL_VERIFICATIONS,
     app, db, auth, database
@@ -181,6 +182,165 @@ export const createReactionDocument = async ({
     } catch (error) {
         console.error("Error adding document:", error);
         throw error; // Ensure errors are properly propagated
+    }
+};
+
+export const createMomentDocument = async ({
+    title,
+    slug,
+    originalVideoId,
+    originalVideoTitle,
+    originalVideoPlatform = 'youtube',
+    originalVideoAuthor,
+    originalVideoAuthorHandle,
+    originalVideoAuthorUrl,
+    originalVideoDescription,
+    originalVideoThumbnailUrl,
+    originalVideoThumbnailWidth,
+    originalVideoThumbnailHeight,
+    originalVideoProviderName,
+    originalVideoProviderUrl,
+    originalVideoUrl,
+    momentTimeSeconds,
+    tags = [],
+    creatorId,
+    creatorDisplayName = ''
+}) => {
+    try {
+        const momentsCollection = createCollection(db, COLLECTION_MOMENTS, 'createMomentDocument');
+        const dataToAdd = {
+            title: title?.trim?.() || 'Untitled moment',
+            slug: slug?.trim?.() || '',
+            originalVideoId,
+            originalVideoTitle: originalVideoTitle?.trim?.() || '',
+            originalVideoPlatform: originalVideoPlatform || 'youtube',
+            momentTimeSeconds: Number(momentTimeSeconds),
+            tags: Array.isArray(tags) ? tags : [],
+            reactionCount: 0,
+            creatorId,
+            creatorDisplayName: creatorDisplayName?.trim?.() || '',
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+        };
+
+        if (typeof originalVideoAuthor === 'string' && originalVideoAuthor.trim()) {
+            dataToAdd.originalVideoAuthor = originalVideoAuthor.trim();
+        }
+        if (typeof originalVideoAuthorHandle === 'string' && originalVideoAuthorHandle.trim()) {
+            dataToAdd.originalVideoAuthorHandle = originalVideoAuthorHandle.trim();
+        }
+        if (typeof originalVideoAuthorUrl === 'string' && originalVideoAuthorUrl.trim()) {
+            dataToAdd.originalVideoAuthorUrl = originalVideoAuthorUrl.trim();
+        }
+        if (typeof originalVideoDescription === 'string' && originalVideoDescription.trim()) {
+            dataToAdd.originalVideoDescription = originalVideoDescription.trim();
+        }
+        if (typeof originalVideoThumbnailUrl === 'string' && originalVideoThumbnailUrl.trim()) {
+            dataToAdd.originalVideoThumbnailUrl = originalVideoThumbnailUrl.trim();
+        }
+        if (typeof originalVideoThumbnailWidth === 'number' && Number.isFinite(originalVideoThumbnailWidth)) {
+            dataToAdd.originalVideoThumbnailWidth = originalVideoThumbnailWidth;
+        }
+        if (typeof originalVideoThumbnailHeight === 'number' && Number.isFinite(originalVideoThumbnailHeight)) {
+            dataToAdd.originalVideoThumbnailHeight = originalVideoThumbnailHeight;
+        }
+        if (typeof originalVideoProviderName === 'string' && originalVideoProviderName.trim()) {
+            dataToAdd.originalVideoProviderName = originalVideoProviderName.trim();
+        }
+        if (typeof originalVideoProviderUrl === 'string' && originalVideoProviderUrl.trim()) {
+            dataToAdd.originalVideoProviderUrl = originalVideoProviderUrl.trim();
+        }
+        if (typeof originalVideoUrl === 'string' && originalVideoUrl.trim()) {
+            dataToAdd.originalVideoUrl = originalVideoUrl.trim();
+        }
+
+        const documentRef = await addDoc(momentsCollection, dataToAdd);
+        return documentRef.id;
+    } catch (error) {
+        console.error('Error creating moment document:', error);
+        throw error;
+    }
+};
+
+export const createMomentReactionDocument = async ({
+    momentId,
+    momentOriginalTimeSeconds,
+    originalVideoId,
+    userId,
+    originalVideoAuthor,
+    originalVideoAuthorHandle,
+    originalVideoAuthorUrl,
+    originalVideoTitle,
+    originalVideoDescription,
+    originalVideoThumbnailUrl,
+    originalVideoThumbnailWidth,
+    originalVideoThumbnailHeight,
+    originalVideoProviderName,
+    originalVideoProviderUrl,
+    originalVideoUrl,
+    originalVideoPlatform,
+    offsetStartTime = 0
+}) => {
+    try {
+        const reactorDisplayName = auth?.currentUser?.displayName?.trim?.() || '';
+        const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'createMomentReactionDocument');
+        const dataToAdd = {
+            originalVideoId,
+            originalVideoAuthor,
+            originalVideoTitle,
+            originalVideoPlatform: originalVideoPlatform || 'youtube',
+            reactionConfigs: {},
+            playbackRateConfigs: {},
+            reactorId: userId,
+            reactorDisplayName,
+            offsetStartTime,
+            fullscreenPrimaryVideo: 'original',
+            fullscreenOverlayWidthPercent: 35,
+            fullscreenOverlayCorner: 'top-right',
+            isMomentReaction: true,
+            momentId,
+            momentOriginalTimeSeconds: Number(momentOriginalTimeSeconds),
+            isPublished: false,
+            createdAt: serverTimestamp()
+        };
+
+        if (typeof originalVideoAuthorHandle === 'string' && originalVideoAuthorHandle.trim()) {
+            dataToAdd.originalVideoAuthorHandle = originalVideoAuthorHandle.trim();
+        }
+        if (typeof originalVideoAuthorUrl === 'string' && originalVideoAuthorUrl.trim()) {
+            dataToAdd.originalVideoAuthorUrl = originalVideoAuthorUrl.trim();
+        }
+        if (typeof originalVideoDescription === 'string' && originalVideoDescription.trim()) {
+            dataToAdd.originalVideoDescription = originalVideoDescription.trim();
+        }
+        if (typeof originalVideoThumbnailUrl === 'string' && originalVideoThumbnailUrl.trim()) {
+            dataToAdd.originalVideoThumbnailUrl = originalVideoThumbnailUrl.trim();
+        }
+        if (typeof originalVideoThumbnailWidth === 'number' && Number.isFinite(originalVideoThumbnailWidth)) {
+            dataToAdd.originalVideoThumbnailWidth = originalVideoThumbnailWidth;
+        }
+        if (typeof originalVideoThumbnailHeight === 'number' && Number.isFinite(originalVideoThumbnailHeight)) {
+            dataToAdd.originalVideoThumbnailHeight = originalVideoThumbnailHeight;
+        }
+        if (typeof originalVideoProviderName === 'string' && originalVideoProviderName.trim()) {
+            dataToAdd.originalVideoProviderName = originalVideoProviderName.trim();
+        }
+        if (typeof originalVideoProviderUrl === 'string' && originalVideoProviderUrl.trim()) {
+            dataToAdd.originalVideoProviderUrl = originalVideoProviderUrl.trim();
+        }
+        if (typeof originalVideoUrl === 'string' && originalVideoUrl.trim()) {
+            dataToAdd.originalVideoUrl = originalVideoUrl.trim();
+        }
+
+        const documentRef = await addDoc(reactionsCollection, dataToAdd);
+        window.currentReactionDocumentId = documentRef.id;
+        requestReactionEnrichment(documentRef.id).catch((error) => {
+            console.error('Failed to enqueue reaction enrichment', error);
+        });
+        return documentRef.id;
+    } catch (error) {
+        console.error('Error creating moment reaction document:', error);
+        throw error;
     }
 };
 

@@ -338,3 +338,66 @@ export async function getPlaylistBySlug(slug) {
     return null;
   }
 }
+
+/**
+ * Fetch a moment document by id (or stored slug field matching route param).
+ */
+export async function getMomentByRouteId(routeId) {
+  const { COLLECTION_MOMENTS } = await import('$lib/constants/firebase');
+  const { adminDb } = await initializeFirebaseAdmin();
+  if (!adminDb || !routeId) {
+    return null;
+  }
+
+  try {
+    const directRef = adminDb.collection(COLLECTION_MOMENTS).doc(routeId);
+    const directSnap = await directRef.get();
+    if (directSnap.exists) {
+      return { id: directSnap.id, ...serializeFirestoreValue(directSnap.data()) };
+    }
+
+    const slugSnap = await adminDb
+      .collection(COLLECTION_MOMENTS)
+      .where('slug', '==', routeId)
+      .limit(1)
+      .get();
+
+    if (!slugSnap.empty) {
+      const doc = slugSnap.docs[0];
+      return { id: doc.id, ...serializeFirestoreValue(doc.data()) };
+    }
+  } catch (error) {
+    console.error('Failed to fetch moment by route id:', error);
+  }
+
+  return null;
+}
+
+/**
+ * Published moment reactions for feed ordering (newest first).
+ */
+export async function getPublishedMomentReactionsServer(momentId) {
+  const { COLLECTION_REACTION_BINOMES } = await import('$lib/constants/firebase');
+  const { adminDb } = await initializeFirebaseAdmin();
+  if (!adminDb || !momentId) {
+    return [];
+  }
+
+  try {
+    const snapshot = await adminDb
+      .collection(COLLECTION_REACTION_BINOMES)
+      .where('momentId', '==', momentId)
+      .where('isMomentReaction', '==', true)
+      .where('isPublished', '==', true)
+      .orderBy('createdAt', 'desc')
+      .get();
+
+    return snapshot.docs.map((doc) => ({
+      id: doc.id,
+      data: serializeFirestoreValue(doc.data())
+    }));
+  } catch (error) {
+    console.error('Failed to fetch moment reactions (server):', error);
+    return [];
+  }
+}

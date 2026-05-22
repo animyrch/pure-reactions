@@ -172,5 +172,10 @@ export function deriveTwinPlayersReactionData({
     canShowEditModeButton: resolvedReactorId === viewerUserId,
     isReactionMuteModeEnabled: Boolean(reactionData?.muteReactionWhileOriginalPlays),
     isPublished: reactionData?.isPublished,
+    momentId: typeof reactionData?.momentId === 'string' ? reactionData.momentId : undefined,
+    isMomentReaction: Boolean(reactionData?.isMomentReaction),
+    momentOriginalTimeSeconds: Number.isFinite(Number(reactionData?.momentOriginalTimeSeconds))
+      ? Number(reactionData.momentOriginalTimeSeconds)
+      : undefined,
   };
 }
