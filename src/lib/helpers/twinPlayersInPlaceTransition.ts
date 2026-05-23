@@ -109,6 +109,10 @@ export function buildTwinPlayersInPlaceStatePatch({
 
   return {
     isPublished: derived.isPublished,
+    momentId: derived.momentId,
+    isMomentReaction: derived.isMomentReaction,
+    momentOriginalTimeSeconds: derived.momentOriginalTimeSeconds,
+    momentFeedLoopEnabled: snapshotBefore.momentFeedLoopEnabled || derived.isMomentReaction,
     isReactionMissing: derived.isReactionMissing,
     reactorId: derived.resolvedReactorId,
     isUsersOwnVideo: derived.isUsersOwnVideo,

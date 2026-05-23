@@ -999,6 +999,17 @@ export function createTwinPlayersPlaybackSyncController({
       }
 
       if (reactionFinishTime > 0 && reactionCurrentTime > reactionFinishTime) {
+        if (snapshot.momentFeedLoopEnabled) {
+          const loopStart = Number.isFinite(snapshot.offsetStartTime)
+            ? Math.max(0, snapshot.offsetStartTime)
+            : 0;
+          goToSecondsInReactionVideo(loopStart);
+          if (typeof playerReaction?.playVideo === 'function') {
+            playerReaction.playVideo();
+          }
+          return;
+        }
+
         pauseOriginalVideo();
 
         if (!isPlaylistAutoPlay && !isQueueAutoPlay) {

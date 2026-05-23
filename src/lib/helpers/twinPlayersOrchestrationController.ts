@@ -417,6 +417,7 @@ export function createTwinPlayersOrchestrationController({
       reactionVideoDescription,
       nextPlayerOriginal: newPlayerOriginal,
       nextPlayerReaction: newPlayerReaction,
+      momentFeedLoopEnabled: getSnapshot().momentFeedLoopEnabled
     }));
 
     console.debug('[TwinPlayers] state reset after setUpVideos', {

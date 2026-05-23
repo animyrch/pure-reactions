@@ -34,6 +34,8 @@
     "algolia:status": "node scripts/algolia-status.mjs",
     "algolia:index": "cross-env FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/algolia-index.mjs",
     "algolia:index:apply": "cross-env FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/algolia-index.mjs --apply",
+    "algolia:index:moments": "cross-env FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/algolia-index-moments.mjs",
+    "algolia:index:moments:apply": "cross-env FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/algolia-index-moments.mjs --apply",
     "approve:claim": "node scripts/approve-channel-claim.mjs",
     "admin:reassign-reaction": "cross-env FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/reassign-reaction.mjs",
     "admin:reassign-reaction:dry": "cross-env FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/reassign-reaction.mjs --dry",

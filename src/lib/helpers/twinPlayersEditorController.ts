@@ -20,6 +20,9 @@ import {
 } from '$lib/helpers/twinPlayersTimeline';
 import type { TwinPlayersState } from '$lib/helpers/twinPlayersStateController';
 import { downloadBasicVideoDetails, extractYouTubeVideoId } from '$lib/helpers/youtube';
+import { validateMomentReaction } from '$lib/helpers/momentReactionValidation';
+import { showToast } from '$lib/stores/toast';
+import { TOASTS } from '$lib/constants/toasts';
 
 type CreatePlayerConfigParams = {
   timeInReaction: number;
@@ -873,7 +876,41 @@ export function createTwinPlayersEditorController({
   };
 
   const setIsPublished = async () => {
+    const snapshot = getSnapshot();
+
+    if (snapshot.isMomentReaction) {
+      const momentTime = Number(snapshot.momentOriginalTimeSeconds);
+      const validation = validateMomentReaction({
+        momentOriginalTimeSeconds: momentTime,
+        offsetStartTime: snapshot.offsetStartTime,
+        reactionFinishTime: snapshot.reactionFinishTime,
+        reactionDurationSeconds: snapshot.reactionDuration,
+        timeOffset: snapshot.timeOffset,
+        stateTimeline: snapshot.stateTimeline,
+        playbackRateTimeline: snapshot.playbackRateTimeline
+      });
+
+      if (!validation.ok) {
+        const message =
+          validation.errors[0] ??
+          'This moment reaction does not meet publishing requirements yet.';
+        if (typeof window !== 'undefined') {
+          showToast(message, TOASTS.WARNING, 8000);
+        }
+        return;
+      }
+    }
+
+    const wasPublished = Boolean(snapshot.isPublished);
     await updateFirebaseDocument({ isPublished: true });
+
+    if (snapshot.isMomentReaction && snapshot.momentId && !wasPublished) {
+      const { incrementMomentReactionCount } = await import('$lib/helpers/momentsFirestore');
+      incrementMomentReactionCount(snapshot.momentId).catch((error: unknown) => {
+        console.error('Failed to increment moment reaction count', error);
+      });
+    }
+
     const reactionId =
       typeof window !== 'undefined' ? window.currentReactionDocumentId : undefined;
     if (reactionId) {
@@ -887,7 +924,16 @@ export function createTwinPlayersEditorController({
   };
 
   const setIsUnpublished = async () => {
+    const snapshot = getSnapshot();
+    const wasPublished = Boolean(snapshot.isPublished);
     await updateFirebaseDocument({ isPublished: false });
+
+    if (snapshot.isMomentReaction && snapshot.momentId && wasPublished) {
+      const { decrementMomentReactionCount } = await import('$lib/helpers/momentsFirestore');
+      decrementMomentReactionCount(snapshot.momentId).catch((error: unknown) => {
+        console.error('Failed to decrement moment reaction count', error);
+      });
+    }
     if (typeof location !== 'undefined') {
       location.reload();
     }

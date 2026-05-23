@@ -9,6 +9,7 @@ type BuildTwinPlayersSetupStatePatchParams = {
   reactionVideoDescription?: string;
   nextPlayerOriginal: any;
   nextPlayerReaction: any;
+  momentFeedLoopEnabled?: boolean;
 };
 
 export function buildTwinPlayersSetupStatePatch({
@@ -18,6 +19,7 @@ export function buildTwinPlayersSetupStatePatch({
   reactionVideoDescription,
   nextPlayerOriginal,
   nextPlayerReaction,
+  momentFeedLoopEnabled = false,
 }: BuildTwinPlayersSetupStatePatchParams) {
   return {
     isPublished: derived.isPublished,
@@ -69,6 +71,10 @@ export function buildTwinPlayersSetupStatePatch({
     isUserPaused: false,
     currentVolumeReactionVideo: derived.initialReactionVolume,
     reactionCurrentTime: derived.offsetStartTime || 0,
-    reactionDuration: typeof nextPlayerReaction?.getDuration === 'function' ? Number(nextPlayerReaction.getDuration()) || 0 : 0
+    reactionDuration: typeof nextPlayerReaction?.getDuration === 'function' ? Number(nextPlayerReaction.getDuration()) || 0 : 0,
+    momentId: derived.momentId,
+    isMomentReaction: derived.isMomentReaction,
+    momentOriginalTimeSeconds: derived.momentOriginalTimeSeconds,
+    momentFeedLoopEnabled: momentFeedLoopEnabled || derived.isMomentReaction
   };
 }
