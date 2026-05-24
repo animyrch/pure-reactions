@@ -1,5 +1,4 @@
 
-import { error } from '@sveltejs/kit';
 import {
   getMomentByRouteId,
   getPublishedMomentReactionsServer
@@ -11,14 +10,26 @@ export async function load({ params }) {
   console.log('[MOMENT PAGE] Route param (slug):', routeId);
   if (!routeId) {
     console.error('[MOMENT PAGE] No routeId provided');
-    throw error(404, 'Moment not found');
+    return {
+      moment: null,
+      reactions: [],
+      reactionIds: [],
+      firstReactionId: null,
+      slug: null
+    };
   }
 
   const moment = await getMomentByRouteId(routeId);
   console.log('[MOMENT PAGE] getMomentByRouteId result:', moment);
   if (!moment?.id) {
     console.error('[MOMENT PAGE] No moment found for routeId:', routeId);
-    throw error(404, 'Moment not found');
+    return {
+      moment: null,
+      reactions: [],
+      reactionIds: [],
+      firstReactionId: null,
+      slug: routeId
+    };
   }
 
   const reactions = await getPublishedMomentReactionsServer(moment.id);

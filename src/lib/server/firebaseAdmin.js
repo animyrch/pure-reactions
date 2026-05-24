@@ -108,13 +108,16 @@ export async function initializeFirebaseAdmin() {
 export async function getReactionBySlug(slug) {
   const { COLLECTION_REACTION_BINOMES } = await import('$lib/constants/firebase');
   const { adminDb } = await initializeFirebaseAdmin();
+  console.log('[getReactionBySlug] COLLECTION_REACTION_BINOMES:', COLLECTION_REACTION_BINOMES, 'slug:', slug);
   if (!adminDb) {
+    console.error('[getReactionBySlug] Missing adminDb');
     return null;
   }
 
   try {
     const docRef = adminDb.collection(COLLECTION_REACTION_BINOMES).doc(slug);
     const docSnap = await docRef.get();
+    console.log('[getReactionBySlug] docSnap.exists:', docSnap.exists);
     if (!docSnap.exists) {
       return null;
     }
@@ -134,7 +137,7 @@ export async function getReactionBySlug(slug) {
       isPublished: data.isPublished ?? null,
     };
   } catch (error) {
-    console.error('Failed to fetch reaction by slug:', error);
+    console.error('[getReactionBySlug] Error:', error);
     return null;
   }
 }
@@ -345,13 +348,16 @@ export async function getPlaylistBySlug(slug) {
 export async function getMomentByRouteId(routeId) {
   const { COLLECTION_MOMENTS } = await import('$lib/constants/firebase');
   const { adminDb } = await initializeFirebaseAdmin();
+  console.log('[getMomentByRouteId] COLLECTION_MOMENTS:', COLLECTION_MOMENTS, 'routeId:', routeId);
   if (!adminDb || !routeId) {
+    console.error('[getMomentByRouteId] Missing adminDb or routeId');
     return null;
   }
 
   try {
     const directRef = adminDb.collection(COLLECTION_MOMENTS).doc(routeId);
     const directSnap = await directRef.get();
+    console.log('[getMomentByRouteId] directSnap.exists:', directSnap.exists);
     if (directSnap.exists) {
       return { id: directSnap.id, ...serializeFirestoreValue(directSnap.data()) };
     }
@@ -361,13 +367,13 @@ export async function getMomentByRouteId(routeId) {
       .where('slug', '==', routeId)
       .limit(1)
       .get();
-
+    console.log('[getMomentByRouteId] slugSnap.empty:', slugSnap.empty);
     if (!slugSnap.empty) {
       const doc = slugSnap.docs[0];
       return { id: doc.id, ...serializeFirestoreValue(doc.data()) };
     }
   } catch (error) {
-    console.error('Failed to fetch moment by route id:', error);
+    console.error('[getMomentByRouteId] Error:', error);
   }
 
   return null;
