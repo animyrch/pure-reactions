@@ -4,10 +4,12 @@
   import { goto } from '$app/navigation';
   import SEO from '$lib/components/SEO.svelte';
   import SubtleLoader from '$lib/components/design-system/SubtleLoader.svelte';
-  import ReactionStage from '$lib/components/reaction/ReactionStage.svelte';
+  import ReactionView from '$lib/components/reaction/ReactionView.svelte';
+  import CreatorDetails from '$lib/components/Video/CreatorDetails.svelte';
+  import PlaylistQueue from '$lib/components/Video/PlaylistQueue.svelte';
+  import OtherReactions from '$lib/components/Video/OtherReactions.svelte';
+  import YouTubeDiscussion from '$lib/components/Video/YouTubeDiscussion.svelte';
   import AttributionBlock from '$lib/components/reaction/AttributionBlock.svelte';
-  import MomentChrome from '$lib/components/Moments/MomentChrome.svelte';
-  import MomentPlayGate from '$lib/components/Moments/MomentPlayGate.svelte';
   import { useTwinPlayers } from '$lib/composables/useTwinPlayers';
   import { reactionDial } from '$lib/stores/reactionDial';
   import { handlePrivateRoute } from '$lib/helpers/routing';
@@ -22,14 +24,48 @@
     buildAttributionVerificationState
   } from '$lib/helpers/reactionAttribution';
 
-  export let data;
 
-  $: moment = data?.moment;
-  $: momentId = moment?.id;
-  $: reactionIds = data?.reactionIds || [];
-  $: firstReactionId = data?.firstReactionId;
+  import { page } from '$app/stores';
+  import { getMoment, getPublishedMomentReactions } from '$lib/helpers/momentsFirestore';
+  import { get } from 'svelte/store';
 
-  const initialReactionSlug = data?.firstReactionId || '';
+  let moment = null;
+  let momentId = '';
+  let reactions = [];
+  let reactionIds = [];
+  let firstReactionId = '';
+  let loading = true;
+
+  $: slug = get(page).params.slug;
+
+  async function loadMomentAndReactions() {
+    loading = true;
+    moment = await getMoment(slug);
+    momentId = moment?.id || '';
+    reactions = momentId ? await getPublishedMomentReactions(momentId) : [];
+    reactionIds = reactions.map((r) => r.id);
+    firstReactionId = reactionIds[0] || '';
+    loading = false;
+    // Debug logs for visual/logic issues
+    if (typeof window !== 'undefined') {
+      console.log('[MOMENT PAGE] moment:', moment);
+      console.log('[MOMENT PAGE] reactions:', reactions);
+      console.log('[MOMENT PAGE] reactionIds:', reactionIds);
+      console.log('[MOMENT PAGE] firstReactionId:', firstReactionId);
+      console.log('[MOMENT PAGE] loading:', loading);
+    }
+  }
+
+  onMount(() => {
+    loadMomentAndReactions();
+  });
+
+  // If the slug changes (client navigation), reload
+  $: if (browser && slug) {
+    loadMomentAndReactions();
+  }
+
+  const initialReactionSlug = firstReactionId;
 
   let currentIndex = 0;
   let playbackSessionStarted = false;
@@ -41,9 +77,8 @@
 
   const { state, actions } = useTwinPlayers({
     data: {
-      slug: initialReactionSlug,
-      userId: data?.userId,
-      displayName: data?.displayName
+      slug: initialReactionSlug
+      // userId and displayName can be added here from your auth/user store if needed
     },
     enableAutoPlay: false,
     momentFeedLoopEnabled: true
@@ -129,11 +164,7 @@
 
   const handleAddReaction = async () => {
     if (!momentId) return;
-    if (!data?.userId) {
-      handlePrivateRoute();
-      return;
-    }
-
+    // You may want to add user auth logic here if needed
     addReactionLoading = true;
     try {
       const reactionDocumentId = await startMomentReactionDraft({
@@ -157,11 +188,17 @@
     }
   };
 
+
   onMount(async () => {
     if (!firstReactionId) return;
     await tick();
     actions.handleSlugChange(firstReactionId);
   });
+
+  // Keep player state in sync with current reaction
+  $: if (reactions.length && reactions[currentIndex]?.id) {
+    actions.handleSlugChange(reactions[currentIndex].id);
+  }
 
   onDestroy(() => {
     reactionDial.reset();
@@ -171,98 +208,101 @@
 <SEO
   title={moment?.title || 'Moment'}
   description={moment?.originalVideoTitle
-    ? `Reactions synced to “${moment.title}” in ${moment.originalVideoTitle}`
+    ? `Reactions synced to “${moment?.title}” in ${moment?.originalVideoTitle}`
     : 'Binge synchronized reactions for this moment.'}
-  canonical="/moments/{data.slug}"
+  canonical={`/moments/${slug}`}
   robots="index, follow"
 />
 
-{#if !firstReactionId}
-  <div class="mx-auto max-w-lg px-4 py-24 text-center">
-    <h1 class="text-2xl font-semibold text-text-primary">{moment?.title || 'Moment'}</h1>
-    <p class="mt-3 text-text-secondary">No reactions yet. Be the first to sync one to this moment.</p>
-    <button
-      type="button"
-      class="mt-6 rounded-md bg-accent-primary px-4 py-2 text-background"
-      on:click={handleAddReaction}
-      disabled={addReactionLoading}
+<div class="min-h-screen bg-background text-text-primary">
+  {#if loading}
+    <div class="mx-auto max-w-lg px-4 py-24 text-center">
+      <SubtleLoader label="Loading moment…" />
+    </div>
+  {:else if !firstReactionId}
+    <div class="mx-auto max-w-lg px-4 py-24 text-center">
+      <h1 class="text-2xl font-semibold text-text-primary">{moment?.title || 'Moment'}</h1>
+      <p class="mt-3 text-text-secondary">No reactions yet. Be the first to sync one to this moment.</p>
+      <button
+        type="button"
+        class="mt-6 rounded-md bg-accent-primary px-4 py-2 text-background"
+        on:click={handleAddReaction}
+        disabled={addReactionLoading}
+      >
+        {addReactionLoading ? 'Starting…' : 'Add reaction'}
+      </button>
+    </div>
+  {:else}
+    <ReactionView
+      reaction={reactions[currentIndex]}
+      state={$state}
+      actions={actions}
+      overlayRef={overlayRef}
+      extra={{}}
     >
-      {addReactionLoading ? 'Starting…' : 'Add reaction'}
-    </button>
-  </div>
-{:else}
-  <div
-    class="moment-feed fixed inset-0 z-20 bg-black"
-    on:touchstart={handleTouchStart}
-    on:touchend={handleTouchEnd}
-    on:wheel|nonpassive={handleWheel}
-  >
-    {#if $state.isLoading}
-      <div class="absolute inset-0 z-40 flex items-center justify-center bg-background">
-        <SubtleLoader label="Preparing moment reaction" />
-      </div>
-    {/if}
-
-    <MomentChrome
-      {momentId}
-      momentTitle={moment?.title || 'Moment'}
-      {reactionCount}
-      onAddReaction={handleAddReaction}
-      {addReactionLoading}
-    />
-
-    <div class="relative h-full w-full" aria-hidden={$state.isLoading}>
-      <ReactionStage
-        isFullscreen={true}
-        isControlSurfaceVisible={$state.isControlSurfaceVisible}
-        isExitButtonExpanded={false}
-        showCinematicBars={false}
-        isReactionMissing={$state.isReactionMissing}
-        isUsersOwnVideo={$state.isUsersOwnVideo}
-        playerOriginal={$state.playerOriginal}
-        playerReaction={$state.playerReaction}
-        originalVideoPlatform={$state.originalVideoPlatform}
-        stickyControlsClass="opacity-100"
-        bothVideosStarted={$state.bothVideosStarted}
-        isPlaylist={false}
-        isPlaylistAutoPlay={false}
-        reactionCurrentTime={$state.reactionCurrentTime}
-        reactionDuration={$state.reactionDuration}
-        offsetStartTime={$state.offsetStartTime}
-        reactionFinishTime={$state.reactionFinishTime}
-        bind:overlayRef
-        on:playStateChanged={(event) => {
-          if (event.detail?.isPlaying) playbackSessionStarted = true;
-          actions.handlePlayStateChange(event.detail.isPlaying);
-        }}
-      />
-
-      <MomentPlayGate visible={showPlayGate} onPlay={handlePlayGate} />
-
-      <div class="pointer-events-none absolute inset-x-0 bottom-0 z-30 bg-gradient-to-t from-black/80 to-transparent px-4 pb-6 pt-16">
-        <div class="pointer-events-auto max-w-3xl">
-          <AttributionBlock
-            {isVerifiedCreator}
-            reactionVideoAuthor={$state.reactionVideoAuthor}
-            reactorDisplayName={$state.reactorDisplayName}
-            reactorId={$state.reactorId}
-            viewerId={data?.userId}
+      <div class="grid grid-cols-1 gap-8 items-start mt-6 w-full lg:grid-cols-3">
+        <div class="flex flex-col gap-6 lg:col-span-2">
+          <div data-testid="reaction-metadata">
+            <CreatorDetails
+              originalVideoAuthor={$state.originalVideoAuthor}
+              originalVideoAuthorUrl={$state.originalVideoAuthorUrl}
+              originalVideoTitle={$state.originalVideoTitle}
+              originalVideoId={$state.originalVideoId}
+              originalVideoUrl={$state.originalVideoUrl}
+              originalVideoDescription={$state.originalVideoDescription}
+              originalVideoPlatform={$state.originalVideoPlatform}
+              reactionVideoAuthor={$state.reactionVideoAuthor}
+              reactionVideoTitle={$state.reactionVideoTitle}
+              reactionVideoId={$state.reactionVideoId}
+              reactionVideoDescription={$state.reactionVideoDescription}
+              pageSlug={$state.pageSlug}
+              isUsersOwnVideo={$state.isUsersOwnVideo}
+              reactorId={$state.reactorId}
+              reactorDisplayName={$state.reactorDisplayName}
+            />
+            <div class="mt-3 sm:mt-4">
+              <AttributionBlock
+                reactionVideoAuthor={$state.reactionVideoAuthor}
+                reactorDisplayName={$state.reactorDisplayName}
+                reactorId={$state.reactorId}
+                viewerId={undefined}
+              />
+            </div>
+          </div>
+          {#if $state.originalVideoId && $state.playlistDocumentId}
+            <div class="w-full">
+              <PlaylistQueue
+                playlistItems={$state.playlistItems}
+                playlistDocument={$state.playlistDocument}
+                currentlyViewed={$state.originalVideoId}
+                playlistId={$state.youtubePlaylistId}
+                playlistDocumentId={$state.playlistDocumentId}
+                currentIndex={$state.currentIndexInPlaylist}
+                isCreation={false}
+              />
+            </div>
+          {/if}
+        </div>
+        {#if $state.originalVideoId && $state.reactionVideoId}
+          <div class="lg:col-span-1 lg:row-span-2 flex flex-col gap-6">
+            <OtherReactions
+              originalVideoId={$state.originalVideoId}
+              reactionVideoId={$state.reactionVideoId}
+              originalVideoTitle={$state.originalVideoTitle}
+            />
+          </div>
+        {/if}
+        <div class="lg:col-span-2">
+          <YouTubeDiscussion
+            reactionVideoId={$state.reactionVideoId}
+            originalVideoId={$state.originalVideoId}
+            originalVideoPlatform={$state.originalVideoPlatform}
           />
-          <p class="mt-3 text-xs text-white/60">
-            Swipe up or down for the next reaction · {currentIndex + 1} of {reactionIds.length}
-          </p>
         </div>
       </div>
-    </div>
-  </div>
-{/if}
+    </ReactionView>
+  {/if}
+</div>
 
-<style>
-  :global(body:has(.moment-feed)) {
-    overflow: hidden;
-  }
 
-  .moment-feed {
-    touch-action: pan-y;
-  }
-</style>
+

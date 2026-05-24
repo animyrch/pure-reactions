@@ -348,30 +348,41 @@ export async function getPlaylistBySlug(slug) {
 export async function getMomentByRouteId(routeId) {
   const { COLLECTION_MOMENTS } = await import('$lib/constants/firebase');
   const { adminDb } = await initializeFirebaseAdmin();
-  console.log('[getMomentByRouteId] COLLECTION_MOMENTS:', COLLECTION_MOMENTS, 'routeId:', routeId);
-  if (!adminDb || !routeId) {
-    console.error('[getMomentByRouteId] Missing adminDb or routeId');
+  console.log('[getMomentByRouteId] ENTRY', { COLLECTION_MOMENTS, routeId, adminDbType: typeof adminDb });
+  if (!adminDb) {
+    console.error('[getMomentByRouteId] adminDb is null or undefined');
+    return null;
+  }
+  if (!routeId) {
+    console.error('[getMomentByRouteId] routeId is missing');
     return null;
   }
 
   try {
+    console.log('[getMomentByRouteId] Attempting direct doc lookup:', routeId);
     const directRef = adminDb.collection(COLLECTION_MOMENTS).doc(routeId);
     const directSnap = await directRef.get();
-    console.log('[getMomentByRouteId] directSnap.exists:', directSnap.exists);
+    console.log('[getMomentByRouteId] directSnap.exists:', directSnap.exists, 'id:', directSnap.id);
     if (directSnap.exists) {
-      return { id: directSnap.id, ...serializeFirestoreValue(directSnap.data()) };
+      const docData = directSnap.data();
+      console.log('[getMomentByRouteId] directSnap.data:', JSON.stringify(docData, null, 2));
+      return { id: directSnap.id, ...serializeFirestoreValue(docData) };
     }
 
+    console.log('[getMomentByRouteId] Direct doc not found, trying slug query:', routeId);
     const slugSnap = await adminDb
       .collection(COLLECTION_MOMENTS)
       .where('slug', '==', routeId)
       .limit(1)
       .get();
-    console.log('[getMomentByRouteId] slugSnap.empty:', slugSnap.empty);
+    console.log('[getMomentByRouteId] slugSnap.empty:', slugSnap.empty, 'docs:', slugSnap.docs.map(d => d.id));
     if (!slugSnap.empty) {
       const doc = slugSnap.docs[0];
-      return { id: doc.id, ...serializeFirestoreValue(doc.data()) };
+      const docData = doc.data();
+      console.log('[getMomentByRouteId] slugSnap.doc.data:', JSON.stringify(docData, null, 2));
+      return { id: doc.id, ...serializeFirestoreValue(docData) };
     }
+    console.warn('[getMomentByRouteId] No moment found for routeId (direct or slug):', routeId);
   } catch (error) {
     console.error('[getMomentByRouteId] Error:', error);
   }
