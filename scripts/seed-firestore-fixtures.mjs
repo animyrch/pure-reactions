@@ -112,6 +112,16 @@ function loadDotEnvIfPresent(envPath = '.env') {
   }
 }
 
+/**
+ * Read and validate a fixture file. Supports two formats:
+ *
+ * 1. Single-collection (existing):  { version, description, docs: [{ id, data }] }
+ * 2. Multi-collection (prod export): { "collection-name": { version, description, docs }, ... }
+ *
+ * Returns either:
+ *   { mode: 'single', version, description, docs }
+ *   { mode: 'multi',  collections: { [name]: { version, description, docs } } }
+ */
 function readFixture(fixturePath) {
   const abs = path.resolve(process.cwd(), fixturePath);
   const raw = fs.readFileSync(abs, 'utf8');
@@ -121,11 +131,38 @@ function readFixture(fixturePath) {
     throw new Error('Fixture is not a JSON object');
   }
 
-  const docs = Array.isArray(json.docs) ? json.docs : [];
-  if (!docs.length) {
-    throw new Error(`Fixture has no docs: ${fixturePath}`);
+  // ── Single-collection format (has top-level docs array) ──
+  if (Array.isArray(json.docs)) {
+    const docs = json.docs;
+    if (!docs.length) {
+      throw new Error(`Fixture has no docs: ${fixturePath}`);
+    }
+    validateDocs(docs, fixturePath);
+    return { mode: 'single', version: json.version ?? 1, description: json.description ?? '', docs };
   }
 
+  // ── Multi-collection format (keys are collection names) ──
+  const collections = {};
+  for (const [collName, value] of Object.entries(json)) {
+    if (!value || typeof value !== 'object' || !Array.isArray(value.docs)) {
+      throw new Error(`Multi-collection fixture: key "${collName}" is missing a docs array in ${fixturePath}`);
+    }
+    if (!value.docs.length) {
+      console.log(`  [warn] collection "${collName}" has 0 docs — skipping`);
+      continue;
+    }
+    validateDocs(value.docs, fixturePath);
+    collections[collName] = { version: value.version ?? 1, description: value.description ?? '', docs: value.docs };
+  }
+
+  if (!Object.keys(collections).length) {
+    throw new Error(`Fixture has no docs in any collection: ${fixturePath}`);
+  }
+
+  return { mode: 'multi', collections };
+}
+
+function validateDocs(docs, fixturePath) {
   for (const doc of docs) {
     if (!doc?.id || typeof doc.id !== 'string') {
       throw new Error(`Fixture doc missing string id: ${fixturePath}`);
@@ -134,8 +171,6 @@ function readFixture(fixturePath) {
       throw new Error(`Fixture doc missing data object for id=${doc.id}: ${fixturePath}`);
     }
   }
-
-  return { version: json.version ?? 1, description: json.description ?? '', docs };
 }
 
 function ensureAdminApp({ projectId, target }) {
@@ -218,51 +253,73 @@ async function seed() {
 
   const overwrite = args.overwrite || String(process.env.FIREBASE_SEED_OVERWRITE || '').toLowerCase() === 'true';
 
-  let created = 0;
-  let updated = 0;
-  let skipped = 0;
+  // Build the list of (collectionName, docs) pairs to seed.
+  // Single-collection mode uses the --collection flag; multi-collection mode
+  // uses the keys from the fixture file (ignoring --collection).
+  const seedPairs =
+    fixture.mode === 'multi'
+      ? Object.entries(fixture.collections).map(([name, f]) => ({ collection: name, docs: f.docs }))
+      : [{ collection, docs: fixture.docs }];
 
-  for (const entry of fixture.docs) {
-    const ref = db.collection(collection).doc(entry.id);
-    const snap = await ref.get();
+  let totalCreated = 0;
+  let totalUpdated = 0;
+  let totalSkipped = 0;
 
-    if (snap.exists && !overwrite) {
-      skipped += 1;
-      continue;
+  for (const { collection: coll, docs } of seedPairs) {
+    let created = 0;
+    let updated = 0;
+    let skipped = 0;
+
+    for (const entry of docs) {
+      const ref = db.collection(coll).doc(entry.id);
+      const snap = await ref.get();
+
+      if (snap.exists && !overwrite) {
+        skipped += 1;
+        continue;
+      }
+
+      const payload = {
+        ...entry.data,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      };
+
+      await ref.set(payload, { merge: false });
+      if (snap.exists) {
+        updated += 1;
+      } else {
+        created += 1;
+      }
     }
 
-    const payload = {
-      ...entry.data,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
-    };
+    const message = `[seed-firestore-fixtures] target=${target} projectId=${projectId} collection=${coll} fixture=${fixturePath} created=${created} updated=${updated} skipped=${skipped}`;
+    // eslint-disable-next-line no-console
+    console.log(message);
 
-    await ref.set(payload, { merge: false });
-    if (snap.exists) {
-      updated += 1;
-    } else {
-      created += 1;
+    // Verification step
+    if (created > 0 || updated > 0) {
+      const checkId = docs[0].id;
+      const checkRef = db.collection(coll).doc(checkId);
+      const checkSnap = await checkRef.get();
+      if (checkSnap.exists) {
+        console.log(`[seed-firestore-fixtures] VERIFICATION SUCCESS: Found doc ${checkId} in ${coll}`);
+      } else {
+        console.error(`[seed-firestore-fixtures] VERIFICATION FAILED: Could not find doc ${checkId} in ${coll} after write!`);
+      }
     }
+
+    totalCreated += created;
+    totalUpdated += updated;
+    totalSkipped += skipped;
   }
 
-  const message = `[seed-firestore-fixtures] target=${target} projectId=${projectId} collection=${collection} fixture=${fixturePath} created=${created} updated=${updated} skipped=${skipped}`;
-  // eslint-disable-next-line no-console
-  console.log(message);
   console.log(`[seed-firestore-fixtures] FIRESTORE_EMULATOR_HOST=${process.env.FIRESTORE_EMULATOR_HOST}`);
-
-  // Verification step
-  if (created > 0 || updated > 0) {
-    const checkId = fixture.docs[0].id; // Check the first one
-    const checkRef = db.collection(collection).doc(checkId);
-    const checkSnap = await checkRef.get();
-    if (checkSnap.exists) {
-        console.log(`[seed-firestore-fixtures] VERIFICATION SUCCESS: Found doc ${checkId} in ${collection}`);
-    } else {
-        console.error(`[seed-firestore-fixtures] VERIFICATION FAILED: Could not find doc ${checkId} in ${collection} after write!`);
-    }
+  if (fixture.mode === 'multi') {
+    console.log(`[seed-firestore-fixtures] Multi-collection seed complete: ${seedPairs.length} collections, created=${totalCreated} updated=${totalUpdated} skipped=${totalSkipped}`);
   }
 
-  return { created, skipped };
+  return { created: totalCreated, skipped: totalSkipped };
 }
 
 seed().catch((error) => {

@@ -12,3 +12,5 @@ test-results
 /secrets
 **/*-debug.log
 playwright-report/index.html
+# Prod data exports (contain real production data, never commit)
+tests/fixtures/reactions/prod-export.json

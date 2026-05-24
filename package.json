@@ -31,6 +31,7 @@
     "migrate:delete-legacy-timelines": "cross-env FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/migrate-delete-legacy-timelines.mjs",
     "migrate:prod-to-local": "cross-env FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/migrate-prod-to-local.mjs",
     "migrate:prod-to-local:dry": "cross-env FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/migrate-prod-to-local.mjs --dry",
+    "migrate:prod-to-local:export-json": "cross-env FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/migrate-prod-to-local.mjs --export-json tests/fixtures/reactions/prod-export.json",
     "algolia:status": "node scripts/algolia-status.mjs",
     "algolia:index": "cross-env FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/algolia-index.mjs",
     "algolia:index:apply": "cross-env FIREBASE_SERVICE_ACCOUNT=./secrets/pure-reactions-cb457c74bbbf.json node scripts/algolia-index.mjs --apply",
