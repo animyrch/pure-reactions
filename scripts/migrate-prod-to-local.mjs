@@ -26,8 +26,6 @@ import process from 'node:process';
 
 import admin from 'firebase-admin';
 
-console.log('FIREBASE_SERVICE_ACCOUNT:', process.env.FIREBASE_SERVICE_ACCOUNT);
-
 // ─── Helpers (shared pattern with other scripts) ────────────────────────────
 
 function loadDotEnvIfPresent(envPath = '.env') {

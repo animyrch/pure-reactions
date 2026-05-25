@@ -46,14 +46,6 @@
     reactionIds = reactions.map((r) => r.id);
     firstReactionId = reactionIds[0] || '';
     loading = false;
-    // Debug logs for visual/logic issues
-    if (typeof window !== 'undefined') {
-      console.log('[MOMENT PAGE] moment:', moment);
-      console.log('[MOMENT PAGE] reactions:', reactions);
-      console.log('[MOMENT PAGE] reactionIds:', reactionIds);
-      console.log('[MOMENT PAGE] firstReactionId:', firstReactionId);
-      console.log('[MOMENT PAGE] loading:', loading);
-    }
   }
 
   onMount(() => {

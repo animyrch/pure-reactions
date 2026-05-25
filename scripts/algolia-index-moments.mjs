@@ -114,13 +114,11 @@ async function main() {
   }
 
   const db = admin.firestore();
-  console.log(`\n[DEBUG] Using collection: ${collection}`);
+
   const snapshot = await db.collection(collection).get();
-  console.log(`[DEBUG] Firestore returned ${snapshot.size} docs`);
+
   if (snapshot.size > 0) {
     const firstDoc = snapshot.docs[0];
-    console.log(`[DEBUG] First doc id: ${firstDoc.id}`);
-    console.log(`[DEBUG] First doc data:`, JSON.stringify(firstDoc.data(), null, 2));
   }
   const records = snapshot.docs.map((doc) => momentToAlgoliaRecord(doc.id, doc.data()));
 

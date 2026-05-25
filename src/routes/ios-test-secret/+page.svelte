@@ -43,8 +43,6 @@
     });
 
     function initPlayers() {
-        console.log("Initializing players...");
-
         playerOriginal = new YT.Player("player-original", {
             height: "360",
             width: "640",
@@ -105,8 +103,6 @@
         const p2Playing = p2State === 1;
         const p1Paused = p1State === 2;
         const p2Paused = p2State === 2;
-
-        console.log(`State Check: P1=${p1State} P2=${p2State}`);
 
         // Success condition: Both are playing
         if (p1Playing && p2Playing) {
