@@ -2,6 +2,19 @@
   import { buildYouTubeThumbnailUrl } from '$lib/helpers/originalVideo';
   import { buildMomentPagePath } from '$lib/helpers/momentsFirestore';
 
+  // Helper to format seconds as mm:ss or hh:mm:ss
+  function formatTime(seconds) {
+    if (typeof seconds !== 'number' || isNaN(seconds)) return '';
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    if (h > 0) {
+      return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    } else {
+      return `${m}:${s.toString().padStart(2, '0')}`;
+    }
+  }
+
   export let moment = {};
 
   $: momentId = moment.objectID || moment.id;
@@ -14,6 +27,8 @@
     buildYouTubeThumbnailUrl(moment.originalVideoId) ||
     '';
   $: tags = Array.isArray(moment.tags) ? moment.tags.slice(0, 3) : [];
+
+  $: anchorTime = typeof moment.momentTimeSeconds === 'number' ? formatTime(moment.momentTimeSeconds) : '';
 </script>
 
 <article class="group flex h-full flex-col overflow-hidden rounded-2xl border border-border-strong/40 bg-surface/80 shadow-surface transition duration-300 ease-cinematic hover:border-border-strong/70 hover:shadow-elevated">
@@ -36,6 +51,11 @@
     <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-4 py-3">
       <p class="text-xs uppercase tracking-wide text-white/70">Original</p>
       <p class="line-clamp-1 text-sm font-medium text-white">{originalTitle}</p>
+      {#if anchorTime}
+        <p class="mt-1 text-xs text-white/80" aria-label="Moment anchor time">
+          <span class="font-semibold">Anchor:</span> {anchorTime}
+        </p>
+      {/if}
     </div>
   </a>
 
@@ -49,6 +69,12 @@
     <p class="text-sm text-text-secondary">
       {reactionCount} {reactionCount === 1 ? 'reaction' : 'reactions'}
     </p>
+
+    {#if anchorTime}
+      <p class="text-xs text-text-muted" aria-label="Moment anchor time">
+        Anchored at <span class="font-mono">{anchorTime}</span> in original
+      </p>
+    {/if}
 
     {#if tags.length}
       <ul class="flex flex-wrap gap-2" aria-label="Tags">

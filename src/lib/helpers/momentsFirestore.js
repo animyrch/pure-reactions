@@ -126,12 +126,14 @@ export const adjustMomentReactionCount = async (momentId, delta) => {
       updatedAt: serverTimestamp()
     });
   } catch (error) {
-    console.error('Failed to adjust moment reaction count:', error);
+    console.error('Failed to adjust moment reaction count:', error, { momentId, numericDelta });
   }
 };
 
-export const incrementMomentReactionCount = async (momentId) =>
-  adjustMomentReactionCount(momentId, 1);
+
+export const incrementMomentReactionCount = async (momentId) => {
+  return adjustMomentReactionCount(momentId, 1);
+};
 
 export const decrementMomentReactionCount = async (momentId) =>
   adjustMomentReactionCount(momentId, -1);
