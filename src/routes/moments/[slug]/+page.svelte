@@ -238,6 +238,8 @@
       actions={actions}
       overlayRef={overlayRef}
       extra={{}}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
     >
       <div class="flex justify-end mb-4">
         <button
@@ -292,22 +294,7 @@
             </div>
           {/if}
         </div>
-        {#if $state.originalVideoId && $state.reactionVideoId}
-          <div class="lg:col-span-1 lg:row-span-2 flex flex-col gap-6">
-            <OtherReactions
-              originalVideoId={$state.originalVideoId}
-              reactionVideoId={$state.reactionVideoId}
-              originalVideoTitle={$state.originalVideoTitle}
-            />
-          </div>
-        {/if}
-        <div class="lg:col-span-2">
-          <YouTubeDiscussion
-            reactionVideoId={$state.reactionVideoId}
-            originalVideoId={$state.originalVideoId}
-            originalVideoPlatform={$state.originalVideoPlatform}
-          />
-        </div>
+        <!-- OtherReactions and YouTubeDiscussion removed for a simpler moment reaction page layout -->
       </div>
     </ReactionView>
   {/if}

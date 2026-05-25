@@ -10,6 +10,10 @@
   export let extra = {};
   // Optionally pass in extra props for playlist, queue, etc.
   // This component is meant to unify the viewing experience for both normal and moment reactions.
+
+  // Forward touch event handlers for swipe navigation
+  export let onTouchStart = null;
+  export let onTouchEnd = null;
 </script>
 
 <SEO
@@ -67,6 +71,8 @@
     on:toggleCinematicBars={actions.toggleCinematicBars}
     on:enterFullscreen={actions.openWithFullscreen}
     on:seek={extra.handleSeek || ((e) => actions.seekTo(e.detail))}
+    onTouchStart={onTouchStart}
+    onTouchEnd={onTouchEnd}
   />
   {#if !state.isFullscreen}
     <div class="mx-auto w-full px-4 pt-6 pb-8 sm:px-6 lg:px-10" data-testid="reaction-content">
