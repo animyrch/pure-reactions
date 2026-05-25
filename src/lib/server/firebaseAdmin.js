@@ -109,6 +109,7 @@ export async function getReactionBySlug(slug) {
   const { COLLECTION_REACTION_BINOMES } = await import('$lib/constants/firebase');
   const { adminDb } = await initializeFirebaseAdmin();
   if (!adminDb) {
+    console.error('[getReactionBySlug] Missing adminDb');
     return null;
   }
 
@@ -134,7 +135,7 @@ export async function getReactionBySlug(slug) {
       isPublished: data.isPublished ?? null,
     };
   } catch (error) {
-    console.error('Failed to fetch reaction by slug:', error);
+    console.error('[getReactionBySlug] Error:', error);
     return null;
   }
 }
@@ -345,7 +346,12 @@ export async function getPlaylistBySlug(slug) {
 export async function getMomentByRouteId(routeId) {
   const { COLLECTION_MOMENTS } = await import('$lib/constants/firebase');
   const { adminDb } = await initializeFirebaseAdmin();
-  if (!adminDb || !routeId) {
+  if (!adminDb) {
+    console.error('[getMomentByRouteId] adminDb is null or undefined');
+    return null;
+  }
+  if (!routeId) {
+    console.error('[getMomentByRouteId] routeId is missing');
     return null;
   }
 
@@ -353,7 +359,8 @@ export async function getMomentByRouteId(routeId) {
     const directRef = adminDb.collection(COLLECTION_MOMENTS).doc(routeId);
     const directSnap = await directRef.get();
     if (directSnap.exists) {
-      return { id: directSnap.id, ...serializeFirestoreValue(directSnap.data()) };
+      const docData = directSnap.data();
+      return { id: directSnap.id, ...serializeFirestoreValue(docData) };
     }
 
     const slugSnap = await adminDb
@@ -361,13 +368,14 @@ export async function getMomentByRouteId(routeId) {
       .where('slug', '==', routeId)
       .limit(1)
       .get();
-
     if (!slugSnap.empty) {
       const doc = slugSnap.docs[0];
-      return { id: doc.id, ...serializeFirestoreValue(doc.data()) };
+      const docData = doc.data();
+      return { id: doc.id, ...serializeFirestoreValue(docData) };
     }
+    console.warn('[getMomentByRouteId] No moment found for routeId (direct or slug):', routeId);
   } catch (error) {
-    console.error('Failed to fetch moment by route id:', error);
+    console.error('[getMomentByRouteId] Error:', error);
   }
 
   return null;

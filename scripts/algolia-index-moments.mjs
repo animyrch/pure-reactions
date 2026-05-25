@@ -15,7 +15,7 @@ import path from 'node:path';
 import process from 'node:process';
 
 function parseArgs(argv) {
-  const args = { apply: false, batchSize: 500, target: 'prod' };
+  const args = { apply: false, batchSize: 500, target: 'prod', collection: undefined, index: undefined };
   for (let i = 2; i < argv.length; i += 1) {
     const token = argv[i];
     const next = argv[i + 1];
@@ -26,6 +26,14 @@ function parseArgs(argv) {
     }
     if (token === '--batchSize' && next) {
       args.batchSize = Number(next);
+      i += 1;
+    }
+    if (token === '--collection' && next) {
+      args.collection = next;
+      i += 1;
+    }
+    if (token === '--index' && next) {
+      args.index = next;
       i += 1;
     }
   }
@@ -76,17 +84,19 @@ async function main() {
 
   const appId = process.env.PUBLIC_ALGOLIA_APP_ID;
   const adminKey = process.env.ALGOLIA_ADMIN_KEY;
-  const indexName = process.env.PUBLIC_ALGOLIA_MOMENTS_INDEX;
+  // Allow --index to override env/default
+  let indexName = args.index || process.env.PUBLIC_ALGOLIA_MOMENTS_INDEX;
 
   if (!appId || !adminKey || !indexName) {
     throw new Error(
-      'Missing Algolia config: PUBLIC_ALGOLIA_APP_ID, ALGOLIA_ADMIN_KEY, PUBLIC_ALGOLIA_MOMENTS_INDEX'
+      'Missing Algolia config: PUBLIC_ALGOLIA_APP_ID, ALGOLIA_ADMIN_KEY, PUBLIC_ALGOLIA_MOMENTS_INDEX (or --index)'
     );
   }
 
   const projectId =
     process.env.FIREBASE_PROJECT_ID || process.env.PUBLIC_FIREBASE_PROJECT_ID || 'pure-reactions';
-  const collection = process.env.PUBLIC_FIREBASE_COLLECTION_MOMENTS || 'moments_local';
+  // Allow --collection to override env/default
+  const collection = args.collection || process.env.PUBLIC_FIREBASE_COLLECTION_MOMENTS || 'moments_local';
 
   if (!admin.apps.length) {
     if (args.target === 'emulator') {
@@ -104,7 +114,12 @@ async function main() {
   }
 
   const db = admin.firestore();
+
   const snapshot = await db.collection(collection).get();
+
+  if (snapshot.size > 0) {
+    const firstDoc = snapshot.docs[0];
+  }
   const records = snapshot.docs.map((doc) => momentToAlgoliaRecord(doc.id, doc.data()));
 
   console.log(`Prepared ${records.length} moment records for index "${indexName}"`);

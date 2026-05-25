@@ -1,8 +1,12 @@
+import { error } from '@sveltejs/kit';
 /** @type {import('./$types').PageLoad} */
-export function load({ data, parent }) {
-  return parent().then((parentData) => ({
-    ...data,
-    userId: parentData?.userId ?? null,
-    displayName: parentData?.displayName ?? null
-  }));
+
+export function load({ params, data }) {
+    if (params.slug) {
+        return {
+            ...data,
+            slug: params.slug
+        };
+    }
+	throw error(404, 'Not found');
 }

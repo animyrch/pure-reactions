@@ -32,6 +32,10 @@
 
     export let overlayRef;
 
+    // Forward touch event handlers for swipe navigation (optional)
+    export let onTouchStart = null;
+    export let onTouchEnd = null;
+
     const dispatch = createEventDispatcher();
 
     // Mobile landscape detection & control visibility
@@ -264,7 +268,8 @@
     tabindex="0"
     aria-label="Show controls"
     on:click={handleInteraction}
-    on:touchstart={handleInteraction}
+    on:touchstart={(e) => { handleInteraction(e); if (onTouchStart) onTouchStart(e); }}
+    on:touchend={(e) => { if (onTouchEnd) onTouchEnd(e); }}
     on:keydown={(e) => {
         if (e.key === "Enter" || e.key === " ") handleInteraction();
         handleInteraction(); // Any key shows controls? maybe just Enter/Space.
@@ -422,22 +427,6 @@
                 : reactionDuration || 0}
             onSeek={handleSeek}
         />
-        <!-- Debug Helper -->
-        <!-- <div class="debug-info">
-            Wait for layout... if this is red, base styles active.
-            <br />
-            W: <span id="debug-w">-</span> H: <span id="debug-h">-</span>
-        </div> -->
-        <script>
-            const updateDebug = () => {
-                const w = document.getElementById("debug-w");
-                if (w) w.innerText = window.innerWidth;
-                const h = document.getElementById("debug-h");
-                if (h) h.innerText = window.innerHeight;
-            };
-            window.addEventListener("resize", updateDebug);
-            setTimeout(updateDebug, 500);
-        </script>
     {/if}
 </div>
 

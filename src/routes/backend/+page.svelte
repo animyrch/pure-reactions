@@ -187,10 +187,6 @@
             const nextPlaylistDocumentId =
                 params.get("playlistDocumentId") || "";
             if (nextPlaylistDocumentId !== currentPlaylistDocumentId) {
-                console.log(
-                    "setting playlist document id",
-                    nextPlaylistDocumentId,
-                );
                 currentPlaylistDocumentId = nextPlaylistDocumentId;
                 hasInitialisedBackend = false;
             }
@@ -296,7 +292,6 @@
             console.error("Player container node not available.");
             return;
         }
-        console.log("Loading YouTube Player for video ID:", videoIdParam);
         isPlayerOriginalReady = false;
 
         // Create a promise that resolves when onPlayerReady fires
@@ -660,7 +655,6 @@
     }
     // 4. The API will call this function when the video player is ready.
     function onPlayerReady(event) {
-        console.log("player ready");
         if (event?.target === playerOriginal) {
             const playerRates =
                 typeof playerOriginal.getAvailablePlaybackRates === "function"
@@ -1013,7 +1007,6 @@
     function setVolumeForOriginalVideo(volume) {
         if (playerOriginal && typeof playerOriginal.setVolume === "function") {
             playerOriginal.setVolume(volume);
-            console.log("new sound set");
 
             // Update shared session volume
             if (sharedSessionId) {
@@ -1115,7 +1108,6 @@
                 isTikTokOriginal ? "tiktok" : "youtube",
                 originalVideoUrl,
             );
-            console.log("Shared session created:", sharedSessionId);
         } else {
             await updateSessionState(sharedSessionId, {
                 originalVideoId,
@@ -1128,10 +1120,6 @@
                 duration: 0,
                 playbackRate,
             });
-            console.log(
-                "Shared session updated for new playlist video:",
-                sharedSessionId,
-            );
         }
 
         shareUrl = generateShareUrl(sharedSessionId);
@@ -1244,7 +1232,6 @@
             startTime,
             playlistBufferTime || 0,
         );
-        // console.log("finish reaction", reactionVideoTime);
 
         const hasSequenceItems = Array.isArray(playlistSequenceItems) && playlistSequenceItems.length > 0;
         const nextSequenceItem = hasSequenceItems

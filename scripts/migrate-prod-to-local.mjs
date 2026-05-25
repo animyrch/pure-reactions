@@ -2,11 +2,20 @@
 
 // Usage:
 //   node scripts/migrate-prod-to-local.mjs [--dry]
+//   node scripts/migrate-prod-to-local.mjs --export-json <path>
 //
-// Deletes all documents in local Firestore collections and copies
-// the corresponding production documents into them.
+// Default mode: Deletes all documents in local Firestore collections
+// and copies the corresponding production documents into them.
 //
-// --dry   Report what would happen without making changes.
+// --dry              Report what would happen without making changes.
+// --export-json <p>  Instead of writing to Firestore, export each prod
+//                    collection to a JSON file at <p>. The format is
+//                    compatible with seed-firestore-fixtures.mjs so
+//                    the file can be fed to the emulator seed script.
+//                    One file per collection is written, using the
+//                    pattern <p> with the collection name inserted
+//                    (e.g. tests/fixtures/reactions/prod-export.json
+//                    becomes the output path directly).
 //
 // Environment:
 //   FIREBASE_SERVICE_ACCOUNT  Path to service account JSON (set by npm script)
@@ -51,15 +60,18 @@ function ensureAdminApp({ projectId }) {
   if (admin.apps.length) return admin.app();
 
   const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT?.trim();
-  if (serviceAccount?.startsWith('{')) {
-    const parsed = JSON.parse(serviceAccount);
-    return admin.initializeApp({
-      credential: admin.credential.cert(parsed),
-      projectId: projectId || parsed.project_id
-    });
+  if (!serviceAccount) throw new Error('Missing FIREBASE_SERVICE_ACCOUNT');
+  let credentials;
+  if (serviceAccount.startsWith('{')) {
+    credentials = JSON.parse(serviceAccount);
+  } else {
+    // Assume it's a file path
+    credentials = JSON.parse(fs.readFileSync(serviceAccount, 'utf8'));
   }
-
-  return admin.initializeApp({ projectId });
+  return admin.initializeApp({
+    credential: admin.credential.cert(credentials),
+    projectId: projectId || credentials.project_id
+  });
 }
 
 // ─── Collection mapping ─────────────────────────────────────────────────────
@@ -67,6 +79,11 @@ function ensureAdminApp({ projectId }) {
 function buildCollectionPairs() {
   // Read local names from env vars (with defaults), derive prod by suffix swap.
   const pairs = [
+    {
+      envKey: 'PUBLIC_FIREBASE_COLLECTION_MOMENTS',
+      defaultLocal: 'moments-local',
+      defaultProd: 'moments-prod'
+    },
     {
       envKey: 'PUBLIC_FIREBASE_COLLECTION_REACTION_BINOMES',
       defaultLocal: 'reactions-local',
@@ -99,11 +116,11 @@ function buildCollectionPairs() {
     }
   ];
 
-  return pairs.map(({ envKey, defaultLocal, defaultProd }) => {
+  return pairs.map(({ envKey, defaultLocal, defaultProd: fallbackProd }) => {
     const local = process.env[envKey] || defaultLocal;
     // Derive prod name: replace trailing -local / _local with -prod / _prod
     const prod = local.replace(/[-_]local$/, (m) => m[0] + 'prod');
-    return { envKey, local, prod, defaultProd };
+    return { envKey, local, prod, defaultProd: fallbackProd };
   });
 }
 
@@ -170,10 +187,106 @@ async function countCollection(db, collectionName) {
   }
 }
 
+// ─── Serialization helpers ──────────────────────────────────────────────────
+
+/**
+ * Convert Firestore-specific types (Timestamp, GeoPoint, DocumentReference)
+ * into plain JSON-safe values so the exported file can be loaded by
+ * seed-firestore-fixtures.mjs without any special handling.
+ */
+function serializeDocData(data) {
+  if (data === null || data === undefined) return data;
+  if (typeof data !== 'object') return data;
+
+  // Firestore Timestamp → ISO string
+  if (typeof data.toDate === 'function') {
+    return data.toDate().toISOString();
+  }
+
+  // Firestore GeoPoint → { lat, lng }
+  if (typeof data.latitude === 'number' && typeof data.longitude === 'number' && Object.keys(data).length === 2) {
+    return { lat: data.latitude, lng: data.longitude };
+  }
+
+  // Firestore DocumentReference → path string
+  if (typeof data.path === 'string' && typeof data.firestore === 'object') {
+    return data.path;
+  }
+
+  // Array
+  if (Array.isArray(data)) {
+    return data.map(serializeDocData);
+  }
+
+  // Plain object — recurse
+  const out = {};
+  for (const [key, value] of Object.entries(data)) {
+    out[key] = serializeDocData(value);
+  }
+  return out;
+}
+
+// ─── JSON export ────────────────────────────────────────────────────────────
+
+async function readCollectionDocs(db, collectionName) {
+  const docs = [];
+  let lastDoc = null;
+
+  while (true) {
+    let query = db.collection(collectionName).orderBy('__name__').limit(BATCH_SIZE);
+    if (lastDoc) {
+      query = query.startAfter(lastDoc);
+    }
+
+    const snapshot = await query.get();
+    if (snapshot.empty) break;
+
+    for (const doc of snapshot.docs) {
+      docs.push({ id: doc.id, data: serializeDocData(doc.data()) });
+    }
+    lastDoc = snapshot.docs[snapshot.docs.length - 1];
+  }
+
+  return docs;
+}
+
+async function exportCollectionsToJson(db, pairs, outputPath) {
+  const result = {};
+
+  for (const { prod, local } of pairs) {
+    const docs = await readCollectionDocs(db, prod);
+    console.log(`  ${prod}  →  ${docs.length} docs read`);
+
+    // Store under the local collection name so the seed script can target
+    // the correct emulator collection with --collection <name>.
+    result[local] = {
+      version: 1,
+      description: `Prod export from ${prod} (${new Date().toISOString()})`,
+      docs
+    };
+  }
+
+  const dir = path.dirname(outputPath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+
+  fs.writeFileSync(outputPath, JSON.stringify(result, null, 2) + '\n', 'utf8');
+  console.log(`\n  Exported to ${outputPath}\n`);
+}
+
 // ─── Main ───────────────────────────────────────────────────────────────────
 
 async function main() {
   const dry = process.argv.includes('--dry');
+
+  // Parse --export-json <path>
+  const exportIdx = process.argv.indexOf('--export-json');
+  const exportJsonPath = exportIdx !== -1 ? process.argv[exportIdx + 1] : null;
+  if (exportIdx !== -1 && !exportJsonPath) {
+    console.error('--export-json requires a file path argument');
+    process.exit(1);
+  }
 
   loadDotEnvIfPresent('.env');
 
@@ -201,12 +314,19 @@ async function main() {
   const db = admin.firestore();
 
   const pairs = buildCollectionPairs();
-  const mode = dry ? 'DRY RUN' : 'LIVE';
+  const mode = exportJsonPath ? 'EXPORT JSON' : dry ? 'DRY RUN' : 'LIVE';
 
   console.log(`\n  migrate:prod-to-local  [${mode}]`);
   console.log(`  project: ${projectId}`);
   console.log('  ─────────────────────────────────────────\n');
 
+  // ── Export-JSON branch ──────────────────────────────────────────────────
+  if (exportJsonPath) {
+    await exportCollectionsToJson(db, pairs, path.resolve(process.cwd(), exportJsonPath));
+    return;
+  }
+
+  // ── Default: cloud-to-cloud copy ──────────────────────────────────────
   for (const { local, prod } of pairs) {
     const prodCount = await countCollection(db, prod);
     const localCount = await countCollection(db, local);
