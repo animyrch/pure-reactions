@@ -1,5 +1,6 @@
 <script>
   /** @type {import('./$types').PageData} */
+  import "../app.pcss";
   import { toasts } from "$lib/stores/toast";
   import Toast from "$lib/components/Toasts/Toast.svelte";
   import { onNavigate } from "$app/navigation";
@@ -128,7 +129,6 @@
 {/if}
 
 <style>
-  @import "../app.pcss";
   .app-container {
     padding-bottom: 2rem;
     min-height: 800px;

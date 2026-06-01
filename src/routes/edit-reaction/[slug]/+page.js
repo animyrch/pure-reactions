@@ -7,5 +7,5 @@ export function load({ params }) {
       slug: params.slug
     };
   }
-  throw error(404, 'Not found');
+  error(404, 'Not found');
 }

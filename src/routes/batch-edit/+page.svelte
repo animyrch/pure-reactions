@@ -16,7 +16,7 @@
     import {
         CheckCircleSolid,
         ExclamationCircleSolid,
-        ArrowRightSolid,
+        ArrowRightAltSolid,
         FilePenOutline,
     } from "flowbite-svelte-icons";
     import SubtleLoader from "$lib/components/design-system/SubtleLoader.svelte";
@@ -295,7 +295,7 @@
                 class="flex items-center gap-2 rounded-full bg-emerald-500/10 px-6 py-3 font-semibold text-emerald-400 transition hover:bg-emerald-500/20 active:scale-95"
             >
                 <span>Done</span>
-                <ArrowRightSolid class="h-4 w-4" />
+                <ArrowRightAltSolid class="h-4 w-4" />
             </button>
         </header>
 
