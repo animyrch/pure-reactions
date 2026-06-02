@@ -446,8 +446,6 @@
             z-index: 50;
             margin: 0;
             padding: 0;
-            width: 100vw;
-            height: 100vh;
             overflow: hidden;
             border-radius: 0;
             background: black;
@@ -521,16 +519,6 @@
             [data-stage-role="overlay"] {
             bottom: 0;
             right: 0;
-        }
-    }
-
-    @supports (height: 100dvh) {
-        @media (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-width: 1023px),
-            (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-height: 768px),
-            (hover: none) and (pointer: coarse) and (orientation: landscape) and (min-aspect-ratio: 1.5) and (max-height: 900px) {
-            :global(div.theater-wrapper) {
-                height: 100dvh;
-            }
         }
     }
 </style>
