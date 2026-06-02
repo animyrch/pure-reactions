@@ -1,0 +1,39 @@
+name: Integration Tests
+
+on:
+  pull_request:
+
+jobs:
+  integration:
+    name: Run Vitest integration tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run integration tests
+        run: npm run test:integration
+        env:
+          CI: "true"
+
+      - name: Upload integration test artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-artifacts
+          path: |
+            test-results/
+            vitest-report/
+            coverage/
+          retention-days: 30
