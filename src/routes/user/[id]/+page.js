@@ -5,7 +5,7 @@ import { getReactionsByUserId } from '$lib/helpers/firebase';
 export async function load({ params }) {
   const userId = params.id;
   if (!userId) {
-    throw error(404, 'Not found');
+    error(404, 'Not found');
   }
 
   const reactions = await getReactionsByUserId(userId);
