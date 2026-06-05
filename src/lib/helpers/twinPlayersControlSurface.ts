@@ -35,14 +35,32 @@ export function createTwinPlayersControlSurfaceController({
 
   const scheduleHideControls = () => {
     clearTimeout(controlHideTimeout);
-    if (!getSnapshot().isFullscreen) {
-      updateState({ isControlSurfaceVisible: true, isExitButtonExpanded: false });
+
+    // If fullscreen, keep existing behavior (auto-hide after timeout)
+    if (getSnapshot().isFullscreen) {
+      controlHideTimeout = setTimeout(() => {
+        updateState({ isControlSurfaceVisible: false, isExitButtonExpanded: false });
+      }, 3000);
       return;
     }
 
-    controlHideTimeout = setTimeout(() => {
-      updateState({ isControlSurfaceVisible: false, isExitButtonExpanded: false });
-    }, 3000);
+    // Also allow auto-hide on mobile landscape / touch-landscape overlay mode
+    try {
+      const mq = window.matchMedia(
+        "(hover: none) and (pointer: coarse) and (orientation: landscape) and (max-width: 1023px), (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-height: 768px), (hover: none) and (pointer: coarse) and (orientation: landscape) and (min-aspect-ratio: 1.5) and (max-height: 900px)"
+      );
+      if (mq.matches && getSnapshot().bothVideosStarted) {
+        controlHideTimeout = setTimeout(() => {
+          updateState({ isControlSurfaceVisible: false, isExitButtonExpanded: false });
+        }, 3000);
+        return;
+      }
+    } catch (e) {
+      // ignore matchMedia errors and fallthrough to default
+    }
+
+    // Default: keep controls visible for non-fullscreen, non-mobile-landscape
+    updateState({ isControlSurfaceVisible: true, isExitButtonExpanded: false });
   };
 
   const handleFullscreenMouseMove = () => {

@@ -68,10 +68,10 @@
     function showControls() {
         controlsVisible = true;
         if (controlsTimeout) clearTimeout(controlsTimeout);
-        if (!shouldAutoHideMobileDock) return;
+        if (!isMobileLandscape) return;
 
         controlsTimeout = setTimeout(() => {
-            if (shouldAutoHideMobileDock) {
+            if (isMobileLandscape) {
                 controlsVisible = false;
             }
         }, 3000);
@@ -86,7 +86,7 @@
     }
 
     function handleInteraction() {
-        if (shouldAutoHideMobileDock) {
+        if (isMobileLandscape) {
             showControls();
         }
     }
@@ -261,7 +261,7 @@
             ? "relative w-full max-w-[80%] bg-black text-text-primary shadow-none md:shadow-elevated md:mx-auto md:my-10 md:rounded-2xl md:bg-surface/80 md:px-4 md:py-8 md:backdrop-blur sm:px-6 lg:px-10 xl:rounded-3xl"
             : "relative w-full max-w-none bg-black text-text-primary shadow-none md:shadow-elevated md:mx-auto md:my-10 md:rounded-2xl md:bg-surface/80 md:px-4 md:py-8 md:backdrop-blur sm:px-6 lg:px-10 xl:rounded-3xl"
     }`}
-    style={`--control-dock-space: 80px; --overlay-width: ${normalizedOverlayWidth}%;`}
+    style={`--control-dock-space: calc(80px + env(safe-area-inset-bottom)); --overlay-width: ${normalizedOverlayWidth}%;`}
     data-overlay-corner={normalizedOverlayCorner}
     data-fullscreen-primary={isReactionPrimary ? "reaction" : "original"}
     role="button"
@@ -464,7 +464,8 @@
             position: absolute;
             inset: 0;
             width: 100%;
-            height: 100%;
+            /* Reserve space at bottom for control dock so primary stage fits fully in viewport */
+            height: calc(100% - var(--control-dock-space));
             margin: 0;
             z-index: 10;
         }
