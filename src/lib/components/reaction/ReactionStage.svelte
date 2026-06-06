@@ -292,7 +292,7 @@
         class={isFullscreen
             ? "relative h-full w-full"
             : isOverlayLayout
-            ? "relative w-full aspect-video overflow-hidden"
+            ? "relative h-full w-full overflow-hidden"
             : "flex flex-col-reverse gap-0 md:grid md:gap-6 md:grid-cols-2 xl:gap-8"}
     >
         <!-- Original video player container -->
@@ -464,8 +464,8 @@
             position: absolute;
             inset: 0;
             width: 100%;
-            /* Reserve space at bottom for control dock so primary stage fits fully in viewport */
-            height: calc(100% - var(--control-dock-space));
+            /* Let the main stage use the full viewport; the dock overlays it in landscape. */
+            height: 100%;
             margin: 0;
             z-index: 10;
         }
