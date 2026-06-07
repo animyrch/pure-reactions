@@ -255,6 +255,13 @@ service cloud.firestore {
         request.resource.data.userId == resource.data.userId &&
         playlistUpdateHasNoSensitiveKeys();
     }
+    match /playlists_local/{playlistId} {
+      allow read: if true;
+      allow create: if isPlaylistOwnerCreate() && playlistCreateHasNoSensitiveKeys();
+      allow update, delete: if isPlaylistOwner() &&
+        request.resource.data.userId == resource.data.userId &&
+        playlistUpdateHasNoSensitiveKeys();
+    }
     match /playlists-prod/{playlistId} {
       allow read: if true;
       allow create: if isPlaylistOwnerCreate() && playlistCreateHasNoSensitiveKeys();

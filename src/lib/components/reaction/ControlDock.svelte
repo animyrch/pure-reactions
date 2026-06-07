@@ -62,6 +62,7 @@
       left: 0;
       right: 0;
       top: auto;
+      bottom: max(12px, env(safe-area-inset-bottom));
       margin-top: 0;
       padding-left: 12px;
       padding-right: 12px;

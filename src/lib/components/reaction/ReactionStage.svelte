@@ -68,10 +68,10 @@
     function showControls() {
         controlsVisible = true;
         if (controlsTimeout) clearTimeout(controlsTimeout);
-        if (!shouldAutoHideMobileDock) return;
+        if (!isMobileLandscape) return;
 
         controlsTimeout = setTimeout(() => {
-            if (shouldAutoHideMobileDock) {
+            if (isMobileLandscape) {
                 controlsVisible = false;
             }
         }, 3000);
@@ -86,7 +86,7 @@
     }
 
     function handleInteraction() {
-        if (shouldAutoHideMobileDock) {
+        if (isMobileLandscape) {
             showControls();
         }
     }
@@ -261,7 +261,7 @@
             ? "relative w-full max-w-[80%] bg-black text-text-primary shadow-none md:shadow-elevated md:mx-auto md:my-10 md:rounded-2xl md:bg-surface/80 md:px-4 md:py-8 md:backdrop-blur sm:px-6 lg:px-10 xl:rounded-3xl"
             : "relative w-full max-w-none bg-black text-text-primary shadow-none md:shadow-elevated md:mx-auto md:my-10 md:rounded-2xl md:bg-surface/80 md:px-4 md:py-8 md:backdrop-blur sm:px-6 lg:px-10 xl:rounded-3xl"
     }`}
-    style={`--control-dock-space: 80px; --overlay-width: ${normalizedOverlayWidth}%;`}
+    style={`--control-dock-space: calc(80px + env(safe-area-inset-bottom)); --overlay-width: ${normalizedOverlayWidth}%;`}
     data-overlay-corner={normalizedOverlayCorner}
     data-fullscreen-primary={isReactionPrimary ? "reaction" : "original"}
     role="button"
@@ -291,7 +291,9 @@
         data-stage="container"
         class={isFullscreen
             ? "relative h-full w-full"
-            : isOverlayLayout
+            : isMobileLandscape && bothVideosStarted
+            ? "relative h-full w-full overflow-hidden"
+            : isDesktopOverlay
             ? "relative w-full aspect-video overflow-hidden"
             : "flex flex-col-reverse gap-0 md:grid md:gap-6 md:grid-cols-2 xl:gap-8"}
     >
@@ -446,8 +448,6 @@
             z-index: 50;
             margin: 0;
             padding: 0;
-            width: 100vw;
-            height: 100vh;
             overflow: hidden;
             border-radius: 0;
             background: black;
@@ -466,6 +466,7 @@
             position: absolute;
             inset: 0;
             width: 100%;
+            /* Let the main stage use the full viewport; the dock overlays it in landscape. */
             height: 100%;
             margin: 0;
             z-index: 10;
@@ -521,16 +522,6 @@
             [data-stage-role="overlay"] {
             bottom: 0;
             right: 0;
-        }
-    }
-
-    @supports (height: 100dvh) {
-        @media (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-width: 1023px),
-            (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-height: 768px),
-            (hover: none) and (pointer: coarse) and (orientation: landscape) and (min-aspect-ratio: 1.5) and (max-height: 900px) {
-            :global(div.theater-wrapper) {
-                height: 100dvh;
-            }
         }
     }
 </style>

@@ -1858,6 +1858,38 @@
                     </div>
                     {/if}
 
+                    {#if !isTikTokOriginal}
+                    <div
+                        class="rounded-3xl border border-slate-900/60 bg-slate-900/40 p-5"
+                    >
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p
+                                    class="text-xs uppercase tracking-[0.3em] text-slate-500"
+                                >
+                                    Volume
+                                </p>
+                                <p class="text-sm font-semibold text-slate-100">
+                                    {soundLevel}%
+                                </p>
+                            </div>
+                            <span class="text-xs text-slate-500">0% – 100%</span>
+                        </div>
+                        <div class="mt-4 flex items-center gap-3">
+                            <input
+                                type="range"
+                                min="0"
+                                max="100"
+                                step="1"
+                                bind:value={soundLevel}
+                                on:change={() => logVolumeChange(soundLevel)}
+                                class="h-1 flex-1 appearance-none rounded-full bg-slate-800 accent-blue-500"
+                                aria-label="Volume"
+                            />
+                        </div>
+                    </div>
+                    {/if}
+
                     {#if showRecorder}
                         <div
                             class="rounded-3xl border border-slate-900/60 bg-slate-900/40 p-5"
