@@ -291,8 +291,10 @@
         data-stage="container"
         class={isFullscreen
             ? "relative h-full w-full"
-            : isOverlayLayout
+            : isMobileLandscape && bothVideosStarted
             ? "relative h-full w-full overflow-hidden"
+            : isDesktopOverlay
+            ? "relative w-full aspect-video overflow-hidden"
             : "flex flex-col-reverse gap-0 md:grid md:gap-6 md:grid-cols-2 xl:gap-8"}
     >
         <!-- Original video player container -->
