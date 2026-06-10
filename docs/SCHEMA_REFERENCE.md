@@ -30,6 +30,7 @@ The main collection for reaction videos.
 | `originalVideoProviderName` | string | No | Source platform display name (for example `YouTube`, `TikTok`) |
 | `originalVideoProviderUrl` | string | No | Source platform base URL |
 | `originalVideoPlatform` | string | No | Original platform identifier: `youtube` or `tiktok` (defaults to `youtube` when omitted) |
+| `originalVideoSlug` | string | No | URL-friendly identifier for original content (includes slugified title + channel) |
 | `slug` | string | No | URL-friendly identifier (falls back to doc ID) |
 | `isPublished` | boolean | Yes | Visibility status (true = public, false = draft/unlisted) |
 | `createdAt` | Timestamp | Yes | Document creation timestamp |
@@ -497,6 +498,7 @@ const docRef = await addDoc(collection(db, 'reactions'), {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.9 | 2026-06-10 | Added `originalVideoSlug` field to the `reactions` collection for original-content reaction ecosystems (`/reactions/[slug]`) |
 | 1.8 | 2026-05-22 | Added `moments` collection, moment reaction fields on `reactions`, discovery routes (`/moments`), and Algolia moments index env `PUBLIC_ALGOLIA_MOMENTS_INDEX` |
 | 1.7 | 2026-04-22 | Documented unified overlay snapshot timeline schema (`overlayVisibilityTimeline` now stores `visible` + `primary`) and static `fullscreenPrimaryVideo` fallback semantics |
 | 1.6 | 2026-04-21 | Documented Realtime Database shared-session access pattern, anonymous viewer auth, and aligned shared-session field names with the live implementation |

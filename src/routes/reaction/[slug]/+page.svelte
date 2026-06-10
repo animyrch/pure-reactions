@@ -339,6 +339,7 @@
               originalVideoId={$state.originalVideoId}
               reactionVideoId={$state.reactionVideoId}
               originalVideoTitle={$state.originalVideoTitle}
+              originalVideoSlug={$state.originalVideoSlug}
               bind:hasOtherReactions={hasOtherReactions}
             />
           </div>

@@ -129,6 +129,8 @@ export function deriveTwinPlayersReactionData({
   const normalizedOriginalMetadata = normalizeOriginalVideoMetadata(reactionData);
   const originalVideoPlatform = normalizeOriginalVideoPlatform(reactionData?.originalVideoPlatform);
 
+  const originalVideoSlug = typeof reactionData?.originalVideoSlug === 'string' ? reactionData.originalVideoSlug : undefined;
+
   return {
     reactionVideoId,
     originalVideoId,
@@ -167,6 +169,7 @@ export function deriveTwinPlayersReactionData({
     reactionVideoDescription,
     normalizedOriginalMetadata,
     originalVideoPlatform,
+    originalVideoSlug,
     isReactionMissing: !reactionVideoId,
     isUsersOwnVideo: resolvedReactorId === viewerUserId,
     canShowEditModeButton: resolvedReactorId === viewerUserId,

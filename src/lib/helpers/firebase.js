@@ -39,6 +39,8 @@ import {
     COLLECTION_YOUTUBE_CHANNEL_VERIFICATIONS,
     app, db, auth, database
 } from "$lib/constants/firebase";
+import { generateOriginalVideoSlug } from '$lib/helpers/originalVideo';
+
 export { app, db, auth, database };
 import { showToast } from '$lib/stores/toast';
 import { SORTINGS } from '$lib/constants/sortings';
@@ -133,6 +135,7 @@ export const createReactionDocument = async ({
             originalVideoId,
             originalVideoAuthor,
             originalVideoTitle,
+            originalVideoSlug: generateOriginalVideoSlug(originalVideoTitle, originalVideoAuthor),
             originalVideoPlatform: originalVideoPlatform || 'youtube',
             reactionConfigs: {},
             playbackRateConfigs: {},

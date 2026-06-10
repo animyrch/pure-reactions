@@ -47,6 +47,7 @@ export function buildTwinPlayersSetupStatePatch({
     originalVideoAuthorUrl: derived.normalizedOriginalMetadata.authorUrl,
     originalVideoTitle: derived.normalizedOriginalMetadata.title,
     originalVideoDescription: derived.normalizedOriginalMetadata.description,
+    originalVideoSlug: (derived as any).originalVideoSlug,
     youtubePlaylistId: derived.youtubePlaylistId,
     offsetStartTime: derived.offsetStartTime,
     reactionFinishTime: derived.reactionFinishTime,

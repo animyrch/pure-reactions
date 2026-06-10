@@ -7,6 +7,7 @@
     export let originalVideoId;
     export let reactionVideoId;
     export let originalVideoTitle = "";
+    export let originalVideoSlug = "";
     export let hasOtherReactions = false;
 
     $: hasOtherReactions = otherReactions.length > 0;
@@ -17,6 +18,10 @@
     let fetchKey = "";
 
     function viewAllReactions() {
+        if (originalVideoSlug) {
+            goto(`/reactions/${originalVideoSlug}`);
+            return;
+        }
         const query = originalVideoTitle ? originalVideoTitle.trim() : "";
         if (query) {
             goto(`/search?q=${encodeURIComponent(query)}`);

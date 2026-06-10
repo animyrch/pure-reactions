@@ -252,3 +252,53 @@ export const fetchOriginalVideoMetadata = async ({ platform, videoId, videoUrl }
     originalVideoProviderUrl: 'https://www.youtube.com',
   });
 };
+
+const slugifyString = (str) => {
+  if (!str || typeof str !== 'string') return '';
+  return str
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-_]/g, '')
+    .replace(/[\s-_]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+};
+
+const cleanTitleOfNoisySuffixes = (title) => {
+  if (!title || typeof title !== 'string') return '';
+  let cleaned = title.toLowerCase();
+  
+  const patterns = [
+    /\[\s*official\s+music\s+video\s*\]/gi,
+    /\(\s*official\s+music\s+video\s*\)/gi,
+    /\[\s*official\s+video\s*\]/gi,
+    /\(\s*official\s+video\s*\)/gi,
+    /\[\s*official\s+m\/?v\s*\]/gi,
+    /\(\s*official\s+m\/?v\s*\)/gi,
+    /\[\s*m\/?v\s*\]/gi,
+    /\(\s*m\/?v\s*\)/gi,
+    /\bofficial\s+music\s+video\b/gi,
+    /\bofficial\s+video\b/gi,
+    /\bofficial\s+m\/?v\b/gi,
+    /\bm\/?v\b/gi,
+  ];
+  
+  for (const pattern of patterns) {
+    cleaned = cleaned.replace(pattern, '');
+  }
+  
+  if (!cleaned.trim()) {
+    return title;
+  }
+  
+  return cleaned;
+};
+
+export const generateOriginalVideoSlug = (title, author) => {
+  const cleanedTitle = cleanTitleOfNoisySuffixes(title);
+  const titleSlug = slugifyString(cleanedTitle) || slugifyString(title);
+  const authorSlug = slugifyString(author);
+  
+  if (titleSlug && authorSlug) {
+    return `${titleSlug}-${authorSlug}`;
+  }
+  return titleSlug || authorSlug || 'original-video';
+};

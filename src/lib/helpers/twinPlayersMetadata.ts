@@ -3,6 +3,7 @@ import { updateFirebaseDocument } from '$lib/helpers/firebase';
 import {
   fetchOriginalVideoMetadata,
   originalVideoMetadataToFirestoreFields,
+  generateOriginalVideoSlug,
 } from '$lib/helpers/originalVideo';
 import { downloadBasicVideoDetails } from '$lib/helpers/youtube';
 
@@ -23,7 +24,10 @@ type OriginalMetadataField =
 type TwinPlayersMetadataField =
   | OriginalMetadataField
   | 'reactionVideoTitle'
-  | 'reactionVideoAuthor';
+  | 'reactionVideoAuthor'
+  | 'originalVideoSlug';
+  
+
 
 type VerifyVideoDetailsOptions = {
   videoId?: string;
@@ -227,6 +231,21 @@ export async function verifyAndSyncTwinPlayersMetadata({
     ...reactionVerification.updates
   };
 
+  const newTitle = originalVerification.updates.originalVideoTitle !== undefined
+    ? (originalVerification.updates.originalVideoTitle as string)
+    : currentOriginalTitle;
+  
+  const newAuthor = originalVerification.updates.originalVideoAuthor !== undefined
+    ? (originalVerification.updates.originalVideoAuthor as string)
+    : currentOriginalAuthor;
+
+  if (
+    originalVerification.updates.originalVideoTitle !== undefined ||
+    originalVerification.updates.originalVideoAuthor !== undefined
+  ) {
+    metadataUpdates.originalVideoSlug = generateOriginalVideoSlug(newTitle || '', newAuthor || '');
+  }
+
   if (hasKeys(metadataUpdates)) {
     try {
       await updateFirebaseDocument(metadataUpdates, resolvedDocumentId);
@@ -272,6 +291,15 @@ export async function verifyAndSyncTwinPlayersMetadata({
   const nextReactionAuthor = trimString(reactionVerification.author);
   if (nextReactionAuthor && nextReactionAuthor !== normalizedReactionAuthor) {
     statePatch.reactionVideoAuthor = nextReactionAuthor;
+  }
+
+  // If we updated or generated an originalVideoSlug for Firestore, also expose
+  // it in the state patch so the UI can navigate to the original's reactions page.
+  if (typeof metadataUpdates.originalVideoSlug === 'string' && metadataUpdates.originalVideoSlug) {
+    // Ensure the state patch type accepts this key — TwinPlayersMetadataStatePatch
+    // is a Partial<Record<TwinPlayersMetadataField, string>> and we've added
+    // 'originalVideoSlug' to TwinPlayersMetadataField above.
+    (statePatch as any).originalVideoSlug = metadataUpdates.originalVideoSlug as string;
   }
 
   return {

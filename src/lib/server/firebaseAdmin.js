@@ -279,6 +279,49 @@ export async function getReactionsByCreatorServer(name) {
 }
 
 /**
+ * Fetch all published reactions for a given original content slug using Firebase Admin.
+ * Returns an object containing the original video metadata and a list of reactions.
+ *
+ * @param {string} slug - The URL-friendly slug for the original content.
+ * @returns {Promise<{ originalVideo: object, reactions: Array<{ id: string, data: object }> }|null>}
+ */
+export async function getReactionsByOriginalSlug(slug) {
+  if (!slug) return null;
+  const { COLLECTION_REACTION_BINOMES } = await import('$lib/constants/firebase');
+  const { adminDb } = await initializeFirebaseAdmin();
+  if (!adminDb) return null;
+
+  try {
+    const snapshot = await adminDb
+      .collection(COLLECTION_REACTION_BINOMES)
+      .where('originalVideoSlug', '==', slug)
+      .where('isPublished', '==', true)
+      .orderBy('createdAt', 'desc')
+      .get();
+
+    if (snapshot.empty) {
+      return null;
+    }
+
+    const reactions = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      data: serializeFirestoreValue(doc.data())
+    }));
+
+    const firstReactionData = reactions[0].data;
+    const {
+      normalizeOriginalVideoMetadata
+    } = await import('$lib/helpers/originalVideo');
+    const originalVideo = normalizeOriginalVideoMetadata(firstReactionData);
+
+    return { originalVideo, reactions };
+  } catch (error) {
+    console.error('Failed to fetch reactions by original slug (server):', error);
+    return null;
+  }
+}
+
+/**
  * Fetch a playlist document by its slug (document ID) using Firebase Admin.
  * Returns a plain object with the fields needed for SSR/SEO, or null if not found.
  */

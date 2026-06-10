@@ -26,6 +26,7 @@ export type TwinPlayersState = {
   originalVideoTitle?: string;
   originalVideoDescription?: string;
   originalVideoId?: string;
+  originalVideoSlug?: string;
   reactorId?: string;
   youtubePlaylistId?: string;
   playlistDocumentId?: string | null;
@@ -99,6 +100,7 @@ type TwinPlayersContentState = Pick<
   | 'originalVideoAuthorUrl'
   | 'originalVideoTitle'
   | 'originalVideoDescription'
+  | 'originalVideoSlug'
   | 'originalVideoId'
   | 'reactorId'
   | 'youtubePlaylistId'
@@ -203,6 +205,7 @@ const contentKeys = [
   'originalVideoAuthorUrl',
   'originalVideoTitle',
   'originalVideoDescription',
+  'originalVideoSlug',
   'originalVideoId',
   'reactorId',
   'youtubePlaylistId',
