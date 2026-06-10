@@ -279,6 +279,64 @@ export async function getReactionsByCreatorServer(name) {
 }
 
 /**
+ * Fetch all published reactions for a specific original video slug.
+ * Returns an object with original video metadata (from the first matching reaction) and the reactions array.
+ *
+ * @param {string} slug - The originalVideoSlug to query (e.g., 'blackpink-how-you-like-that-blackpink')
+ * @returns {Promise<{ originalVideo: object, reactions: Array<{ id: string, data: object }> } | null>}
+ */
+export async function getReactionsByOriginalSlug(slug) {
+  if (!slug) return null;
+  const { COLLECTION_REACTION_BINOMES } = await import('$lib/constants/firebase');
+  const { adminDb } = await initializeFirebaseAdmin();
+  if (!adminDb) {
+    console.error('[getReactionsByOriginalSlug] Missing adminDb');
+    return null;
+  }
+
+  try {
+    const snapshot = await adminDb
+      .collection(COLLECTION_REACTION_BINOMES)
+      .where('originalVideoSlug', '==', slug)
+      .where('isPublished', '==', true)
+      .orderBy('createdAt', 'desc')
+      .get();
+
+    if (snapshot.empty) {
+      return null;
+    }
+
+    const reactions = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      data: serializeFirestoreValue(doc.data()),
+    }));
+
+    // Extract original video metadata from the first reaction
+    const firstReactionData = snapshot.docs[0]?.data() || {};
+    const originalVideo = {
+      title: firstReactionData.originalVideoTitle ?? null,
+      author: firstReactionData.originalVideoAuthor ?? null,
+      authorHandle: firstReactionData.originalVideoAuthorHandle ?? null,
+      authorUrl: firstReactionData.originalVideoAuthorUrl ?? null,
+      description: firstReactionData.originalVideoDescription ?? null,
+      thumbnailUrl: firstReactionData.originalVideoThumbnailUrl ?? null,
+      thumbnailWidth: firstReactionData.originalVideoThumbnailWidth ?? null,
+      thumbnailHeight: firstReactionData.originalVideoThumbnailHeight ?? null,
+      videoId: firstReactionData.originalVideoId ?? null,
+      platform: firstReactionData.originalVideoPlatform ?? 'youtube',
+      url: firstReactionData.originalVideoUrl ?? null,
+      providerName: firstReactionData.originalVideoProviderName ?? null,
+      providerUrl: firstReactionData.originalVideoProviderUrl ?? null,
+    };
+
+    return { originalVideo, reactions };
+  } catch (error) {
+    console.error('Failed to fetch reactions by original slug (server):', error);
+    return null;
+  }
+}
+
+/**
  * Fetch a playlist document by its slug (document ID) using Firebase Admin.
  * Returns a plain object with the fields needed for SSR/SEO, or null if not found.
  */

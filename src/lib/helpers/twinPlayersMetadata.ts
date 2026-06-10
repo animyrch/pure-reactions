@@ -3,6 +3,7 @@ import { updateFirebaseDocument } from '$lib/helpers/firebase';
 import {
   fetchOriginalVideoMetadata,
   originalVideoMetadataToFirestoreFields,
+  generateOriginalVideoSlug,
 } from '$lib/helpers/originalVideo';
 import { downloadBasicVideoDetails } from '$lib/helpers/youtube';
 
@@ -226,6 +227,20 @@ export async function verifyAndSyncTwinPlayersMetadata({
     ...originalVerification.updates,
     ...reactionVerification.updates
   };
+
+  // If the original video title or author changed, regenerate the slug
+  const hasOriginalTitleOrAuthorChange =
+    'originalVideoTitle' in originalVerification.updates ||
+    'originalVideoAuthor' in originalVerification.updates;
+
+  if (hasOriginalTitleOrAuthorChange) {
+    const updatedTitle = trimString(originalVerification.updates.originalVideoTitle) || trimString(currentOriginalTitle);
+    const updatedAuthor = trimString(originalVerification.updates.originalVideoAuthor) || trimString(currentOriginalAuthor);
+    if (updatedTitle || updatedAuthor) {
+      const newSlug = generateOriginalVideoSlug(updatedTitle, updatedAuthor);
+      metadataUpdates.originalVideoSlug = newSlug;
+    }
+  }
 
   if (hasKeys(metadataUpdates)) {
     try {
