@@ -10,11 +10,24 @@ let adminInitialized = false;
 let adminMissingConfigurationLogged = false;
 
 function isUsingEmulators() {
+  // Prefer SvelteKit private env imports when available, fall back to process.env
+  try {
+    if (env && typeof env.PUBLIC_FIREBASE_USE_EMULATORS !== 'undefined') {
+      return String(env.PUBLIC_FIREBASE_USE_EMULATORS) === 'true';
+    }
+  } catch (e) {
+    // ignore
+  }
   return process.env.PUBLIC_FIREBASE_USE_EMULATORS === 'true';
 }
 
 function getAdminProjectId() {
-  return FIREBASE_CONFIG.projectId || process.env.PUBLIC_FIREBASE_PROJECT_ID || 'demo-pure-reactions';
+  return (
+    FIREBASE_CONFIG.projectId ||
+    env.PUBLIC_FIREBASE_PROJECT_ID ||
+    process.env.PUBLIC_FIREBASE_PROJECT_ID ||
+    'demo-pure-reactions'
+  );
 }
 
 function applyAdminEmulatorEnvironment() {

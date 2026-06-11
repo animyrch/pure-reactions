@@ -2,11 +2,11 @@
   import SEO from '$lib/components/SEO.svelte';
   import ReactionsList from '$lib/components/ReactionsList.svelte';
 
-  export let data;
+  export let data = {};
 
-  $: originalVideo = data.originalVideo ?? {};
-  $: reactions = data.reactions ?? [];
-  $: slug = data.slug ?? '';
+  $: originalVideo = data?.originalVideo ?? {};
+  $: reactions = data?.reactions ?? [];
+  $: slug = data?.slug ?? '';
 
   // Build structured data for the original video
   $: schemaMarkup = (() => {
