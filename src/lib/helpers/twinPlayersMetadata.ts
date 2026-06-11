@@ -244,7 +244,24 @@ export async function verifyAndSyncTwinPlayersMetadata({
 
   if (hasKeys(metadataUpdates)) {
     try {
-      await updateFirebaseDocument(metadataUpdates, resolvedDocumentId);
+      // In production-like environments clients should not write directly to
+      // the production collection. Request server-side enrichment which
+      // performs admin-updates safely with the Admin SDK.
+      if (typeof window !== 'undefined') {
+        try {
+          await fetch('/api/reactions/enrich', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ reactionId: resolvedDocumentId, force: false })
+          });
+        } catch (err) {
+          // Do not attempt client-side writes — keep Firestore rules strict.
+          console.error('Enrichment endpoint call failed; metadata update skipped', err);
+        }
+      } else {
+        // Server-side (non-browser) context: attempt direct update
+        await updateFirebaseDocument(metadataUpdates, resolvedDocumentId);
+      }
     } catch (error) {
       console.error('Failed to update reaction metadata in Firestore', error);
     }
