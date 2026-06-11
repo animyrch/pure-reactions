@@ -14,5 +14,13 @@ export async function load({ params }) {
     throw error(404, 'Reaction hub not found');
   }
 
-  return data;
+  // Ensure the returned payload always contains a `reactions` array and
+  // well-formed `originalVideo` structure so older/compiled bundles that
+  // access `reactions.length` won't throw.
+  return {
+    ...data,
+    reactions: Array.isArray(data.reactions) ? data.reactions : [],
+    originalVideo: data.originalVideo ?? null,
+    slug,
+  };
 }
