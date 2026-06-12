@@ -10,11 +10,24 @@ let adminInitialized = false;
 let adminMissingConfigurationLogged = false;
 
 function isUsingEmulators() {
+  // Prefer SvelteKit private env imports when available, fall back to process.env
+  try {
+    if (env && typeof env.PUBLIC_FIREBASE_USE_EMULATORS !== 'undefined') {
+      return String(env.PUBLIC_FIREBASE_USE_EMULATORS) === 'true';
+    }
+  } catch (e) {
+    // ignore
+  }
   return process.env.PUBLIC_FIREBASE_USE_EMULATORS === 'true';
 }
 
 function getAdminProjectId() {
-  return FIREBASE_CONFIG.projectId || process.env.PUBLIC_FIREBASE_PROJECT_ID || 'demo-pure-reactions';
+  return (
+    FIREBASE_CONFIG.projectId ||
+    env.PUBLIC_FIREBASE_PROJECT_ID ||
+    process.env.PUBLIC_FIREBASE_PROJECT_ID ||
+    'demo-pure-reactions'
+  );
 }
 
 function applyAdminEmulatorEnvironment() {
@@ -275,6 +288,64 @@ export async function getReactionsByCreatorServer(name) {
   } catch (error) {
     console.error('Failed to fetch reactions by creator (server):', error);
     return [];
+  }
+}
+
+/**
+ * Fetch all published reactions for a specific original video slug.
+ * Returns an object with original video metadata (from the first matching reaction) and the reactions array.
+ *
+ * @param {string} slug - The originalVideoSlug to query (e.g., 'blackpink-how-you-like-that-blackpink')
+ * @returns {Promise<{ originalVideo: object, reactions: Array<{ id: string, data: object }> } | null>}
+ */
+export async function getReactionsByOriginalSlug(slug) {
+  if (!slug) return null;
+  const { COLLECTION_REACTION_BINOMES } = await import('$lib/constants/firebase');
+  const { adminDb } = await initializeFirebaseAdmin();
+  if (!adminDb) {
+    console.error('[getReactionsByOriginalSlug] Missing adminDb');
+    return null;
+  }
+
+  try {
+    const snapshot = await adminDb
+      .collection(COLLECTION_REACTION_BINOMES)
+      .where('originalVideoSlug', '==', slug)
+      .where('isPublished', '==', true)
+      .orderBy('createdAt', 'desc')
+      .get();
+
+    if (snapshot.empty) {
+      return null;
+    }
+
+    const reactions = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      data: serializeFirestoreValue(doc.data()),
+    }));
+
+    // Extract original video metadata from the first reaction
+    const firstReactionData = snapshot.docs[0]?.data() || {};
+    const originalVideo = {
+      title: firstReactionData.originalVideoTitle ?? null,
+      author: firstReactionData.originalVideoAuthor ?? null,
+      authorHandle: firstReactionData.originalVideoAuthorHandle ?? null,
+      authorUrl: firstReactionData.originalVideoAuthorUrl ?? null,
+      description: firstReactionData.originalVideoDescription ?? null,
+      thumbnailUrl: firstReactionData.originalVideoThumbnailUrl ?? null,
+      thumbnailWidth: firstReactionData.originalVideoThumbnailWidth ?? null,
+      thumbnailHeight: firstReactionData.originalVideoThumbnailHeight ?? null,
+      videoId: firstReactionData.originalVideoId ?? null,
+      platform: firstReactionData.originalVideoPlatform ?? 'youtube',
+      url: firstReactionData.originalVideoUrl ?? null,
+      providerName: firstReactionData.originalVideoProviderName ?? null,
+      providerUrl: firstReactionData.originalVideoProviderUrl ?? null,
+    };
+
+    return { originalVideo, reactions };
+  } catch (error) {
+    console.error('Failed to fetch reactions by original slug (server):', error);
+    return null;
   }
 }
 

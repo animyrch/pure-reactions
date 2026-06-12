@@ -335,6 +335,8 @@
             <OtherReactions
               originalVideoId={$state.originalVideoId}
               reactionVideoId={$state.reactionVideoId}
+              originalVideoTitle={$state.originalVideoTitle}
+              originalVideoAuthor={$state.originalVideoAuthor}
               bind:hasOtherReactions={hasOtherReactions}
             />
           </div>

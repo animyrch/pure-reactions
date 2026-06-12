@@ -27,6 +27,7 @@ The main collection for reaction videos.
 | `originalVideoThumbnailWidth` | number | No | Thumbnail width when known |
 | `originalVideoThumbnailHeight` | number | No | Thumbnail height when known |
 | `originalVideoUrl` | string | No | Canonical public URL of the original video |
+| `originalVideoSlug` | string | No | SEO-friendly canonical slug for the original video (format: `{title-slugified}-{author-slugified}`) |
 | `originalVideoProviderName` | string | No | Source platform display name (for example `YouTube`, `TikTok`) |
 | `originalVideoProviderUrl` | string | No | Source platform base URL |
 | `originalVideoPlatform` | string | No | Original platform identifier: `youtube` or `tiktok` (defaults to `youtube` when omitted) |
@@ -127,6 +128,7 @@ Discoverable emotional/event anchors on original content. A moment is not a clip
 | `originalVideoPlatform` | string | No | `youtube` or `tiktok` (default `youtube`) |
 | `originalVideoTitle` | string | Yes | Snapshot title for discovery UI |
 | `originalVideoAuthor` | string | No | Creator/channel label snapshot |
+| `originalVideoSlug` | string | No | SEO-friendly canonical slug for the original video (format: `{title-slugified}-{author-slugified}`) |
 | `originalVideoUrl` | string | No | Canonical original URL |
 | `momentTimeSeconds` | number | Yes | Anchor time in original content (seconds) |
 | `tags` | array[string] | No | Discovery tags/categories |
@@ -497,6 +499,7 @@ const docRef = await addDoc(collection(db, 'reactions'), {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.9 | 2026-06-10 | Added `originalVideoSlug` field to `reactions` and `moments` collections for SEO-friendly canonical URLs (format: `{title-slugified}-{author-slugified}`) |
 | 1.8 | 2026-05-22 | Added `moments` collection, moment reaction fields on `reactions`, discovery routes (`/moments`), and Algolia moments index env `PUBLIC_ALGOLIA_MOMENTS_INDEX` |
 | 1.7 | 2026-04-22 | Documented unified overlay snapshot timeline schema (`overlayVisibilityTimeline` now stores `visible` + `primary`) and static `fullscreenPrimaryVideo` fallback semantics |
 | 1.6 | 2026-04-21 | Documented Realtime Database shared-session access pattern, anonymous viewer auth, and aligned shared-session field names with the live implementation |
