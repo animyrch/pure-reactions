@@ -9,7 +9,7 @@ import { deriveTimelines } from '$lib/helpers/reactionPlayer';
 import { buildPlayerEventTimeline } from '$lib/helpers/twinPlayersTimeline';
 
 export type FullscreenPrimaryVideo = 'original' | 'reaction';
-export type FullscreenOverlayCorner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'bottom-center';
+export type FullscreenOverlayCorner = 'top-left' | 'top-center' | 'top-right' | 'middle-left' | 'middle-right' | 'bottom-left' | 'bottom-center' | 'bottom-right';
 
 export const DEFAULT_FULLSCREEN_PRIMARY_VIDEO: FullscreenPrimaryVideo = 'original';
 export const DEFAULT_FULLSCREEN_OVERLAY_WIDTH_PERCENT = 35;
@@ -22,7 +22,11 @@ export const normalizeFullscreenPrimaryVideo = (value: unknown): FullscreenPrima
   value === 'reaction' ? 'reaction' : 'original';
 
 export const normalizeFullscreenOverlayCorner = (value: unknown): FullscreenOverlayCorner => {
-  if (value === 'top-left' || value === 'top-right' || value === 'bottom-left' || value === 'bottom-right' || value === 'bottom-center') {
+  if (
+    value === 'top-left' || value === 'top-center' || value === 'top-right' ||
+    value === 'middle-left' || value === 'middle-right' ||
+    value === 'bottom-left' || value === 'bottom-center' || value === 'bottom-right'
+  ) {
     return value;
   }
   return DEFAULT_FULLSCREEN_OVERLAY_CORNER;

@@ -6,7 +6,7 @@
   export let fullscreenOverlayCorner = "top-right";
   export let onSetFullscreenPrimaryVideo = () => {};
   export let onSetFullscreenOverlayWidthPercent = () => {};
-  export let onSetFullscreenOverlayCorner = () => {};
+  export let onOpenOverlayPositionPanel = () => {};
 
   const OVERLAY_WIDTH_MIN = 5;
   const OVERLAY_WIDTH_MAX = 80;
@@ -49,8 +49,15 @@
     onSetFullscreenPrimaryVideo(value);
   };
 
-  const handleCornerSelect = (value) => {
-    onSetFullscreenOverlayCorner(value);
+  const CORNER_LABELS = {
+    "top-left": "Top left",
+    "top-center": "Top center",
+    "top-right": "Top right",
+    "middle-left": "Middle left",
+    "middle-right": "Middle right",
+    "bottom-left": "Bottom left",
+    "bottom-center": "Bottom center",
+    "bottom-right": "Bottom right",
   };
 </script>
 
@@ -197,176 +204,30 @@
       <h3 class="text-sm font-medium text-text-secondary">
         Smaller video position
       </h3>
-      <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">
+      <div class="flex items-center gap-3">
+        <span class="text-sm text-text-muted">
+          Current: <span class="font-medium text-text-secondary">{CORNER_LABELS[fullscreenOverlayCorner] ?? fullscreenOverlayCorner}</span>
+        </span>
         <button
           type="button"
-          class={`flex flex-col items-center gap-2 rounded-2xl border px-3 py-3 text-sm font-medium transition duration-subtle ease-cinematic focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background ${fullscreenOverlayCorner === "top-left" ? "border-accent-primary bg-accent-primary/10 text-text-primary" : "border-border-subtle bg-background/40 text-text-muted hover:text-text-primary"}`}
-          on:click={() => handleCornerSelect("top-left")}
-          aria-pressed={fullscreenOverlayCorner === "top-left"}
-          aria-label="Place smaller video in the top left"
+          class="flex items-center gap-2 rounded-2xl border border-border-subtle bg-background/40 px-4 py-2 text-sm font-medium text-text-muted transition duration-subtle ease-cinematic hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          on:click={onOpenOverlayPositionPanel}
+          aria-label="Open overlay position picker"
         >
           <svg
-            class="h-10 w-10"
-            viewBox="0 0 40 40"
+            class="h-4 w-4"
+            viewBox="0 0 24 24"
             fill="none"
+            stroke="currentColor"
+            stroke-width="2"
             aria-hidden="true"
           >
-            <rect
-              x="2"
-              y="2"
-              width="36"
-              height="36"
-              rx="6"
-              stroke="currentColor"
-              stroke-width="2"
-            />
-            <rect
-              x="6"
-              y="6"
-              width="12"
-              height="8"
-              rx="2"
-              fill="currentColor"
-              opacity="0.7"
-            />
+            <rect x="3" y="3" width="7" height="7" rx="1" />
+            <rect x="14" y="3" width="7" height="7" rx="1" />
+            <rect x="3" y="14" width="7" height="7" rx="1" />
+            <rect x="14" y="14" width="7" height="7" rx="1" />
           </svg>
-          <span>Top left</span>
-        </button>
-        <button
-          type="button"
-          class={`flex flex-col items-center gap-2 rounded-2xl border px-3 py-3 text-sm font-medium transition duration-subtle ease-cinematic focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background ${fullscreenOverlayCorner === "top-right" ? "border-accent-primary bg-accent-primary/10 text-text-primary" : "border-border-subtle bg-background/40 text-text-muted hover:text-text-primary"}`}
-          on:click={() => handleCornerSelect("top-right")}
-          aria-pressed={fullscreenOverlayCorner === "top-right"}
-          aria-label="Place smaller video in the top right"
-        >
-          <svg
-            class="h-10 w-10"
-            viewBox="0 0 40 40"
-            fill="none"
-            aria-hidden="true"
-          >
-            <rect
-              x="2"
-              y="2"
-              width="36"
-              height="36"
-              rx="6"
-              stroke="currentColor"
-              stroke-width="2"
-            />
-            <rect
-              x="22"
-              y="6"
-              width="12"
-              height="8"
-              rx="2"
-              fill="currentColor"
-              opacity="0.7"
-            />
-          </svg>
-          <span>Top right</span>
-        </button>
-        <button
-          type="button"
-          class={`flex flex-col items-center gap-2 rounded-2xl border px-3 py-3 text-sm font-medium transition duration-subtle ease-cinematic focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background ${fullscreenOverlayCorner === "bottom-left" ? "border-accent-primary bg-accent-primary/10 text-text-primary" : "border-border-subtle bg-background/40 text-text-muted hover:text-text-primary"}`}
-          on:click={() => handleCornerSelect("bottom-left")}
-          aria-pressed={fullscreenOverlayCorner === "bottom-left"}
-          aria-label="Place smaller video in the bottom left"
-        >
-          <svg
-            class="h-10 w-10"
-            viewBox="0 0 40 40"
-            fill="none"
-            aria-hidden="true"
-          >
-            <rect
-              x="2"
-              y="2"
-              width="36"
-              height="36"
-              rx="6"
-              stroke="currentColor"
-              stroke-width="2"
-            />
-            <rect
-              x="6"
-              y="26"
-              width="12"
-              height="8"
-              rx="2"
-              fill="currentColor"
-              opacity="0.7"
-            />
-          </svg>
-          <span>Bottom left</span>
-        </button>
-        <button
-          type="button"
-          class={`flex flex-col items-center gap-2 rounded-2xl border px-3 py-3 text-sm font-medium transition duration-subtle ease-cinematic focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background ${fullscreenOverlayCorner === "bottom-right" ? "border-accent-primary bg-accent-primary/10 text-text-primary" : "border-border-subtle bg-background/40 text-text-muted hover:text-text-primary"}`}
-          on:click={() => handleCornerSelect("bottom-right")}
-          aria-pressed={fullscreenOverlayCorner === "bottom-right"}
-          aria-label="Place smaller video in the bottom right"
-        >
-          <svg
-            class="h-10 w-10"
-            viewBox="0 0 40 40"
-            fill="none"
-            aria-hidden="true"
-          >
-            <rect
-              x="2"
-              y="2"
-              width="36"
-              height="36"
-              rx="6"
-              stroke="currentColor"
-              stroke-width="2"
-            />
-            <rect
-              x="22"
-              y="26"
-              width="12"
-              height="8"
-              rx="2"
-              fill="currentColor"
-              opacity="0.7"
-            />
-          </svg>
-          <span>Bottom right</span>
-        </button>
-        <button
-          type="button"
-          class={`flex flex-col items-center gap-2 rounded-2xl border px-3 py-3 text-sm font-medium transition duration-subtle ease-cinematic focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background ${fullscreenOverlayCorner === "bottom-center" ? "border-accent-primary bg-accent-primary/10 text-text-primary" : "border-border-subtle bg-background/40 text-text-muted hover:text-text-primary"}`}
-          on:click={() => handleCornerSelect("bottom-center")}
-          aria-pressed={fullscreenOverlayCorner === "bottom-center"}
-          aria-label="Place smaller video at the bottom center"
-        >
-          <svg
-            class="h-10 w-10"
-            viewBox="0 0 40 40"
-            fill="none"
-            aria-hidden="true"
-          >
-            <rect
-              x="2"
-              y="2"
-              width="36"
-              height="36"
-              rx="6"
-              stroke="currentColor"
-              stroke-width="2"
-            />
-            <rect
-              x="14"
-              y="26"
-              width="12"
-              height="8"
-              rx="2"
-              fill="currentColor"
-              opacity="0.7"
-            />
-          </svg>
-          <span>Bottom center</span>
+          <span>Change position</span>
         </button>
       </div>
     </div>

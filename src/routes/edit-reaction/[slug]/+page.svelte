@@ -118,6 +118,12 @@
     );
   };
 
+  let isOverlayPositionPanelOpen = false;
+
+  const handleToggleOverlayPositionPanel = () => {
+    isOverlayPositionPanelOpen = !isOverlayPositionPanelOpen;
+  };
+
   const handleExitEditor = () => {
     if ($state.isEditModeOn) {
       actions.closeEditMode();
@@ -286,6 +292,8 @@
           onSetFullscreenOverlayWidthPercent={handleSetFullscreenOverlayWidthPercent}
           onSetFullscreenOverlayCorner={handleSetFullscreenOverlayCorner}
           onToggleFineTuneMode={actions.toggleFineTuneMode}
+          onToggleOverlayPositionPanel={handleToggleOverlayPositionPanel}
+          {isOverlayPositionPanelOpen}
           onSeek={actions.seekTo}
         />
       </div>

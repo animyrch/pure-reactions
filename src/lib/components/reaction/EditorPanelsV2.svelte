@@ -2,6 +2,7 @@
   import AccessibleInput from "$lib/components/design-system/AccessibleInput.svelte";
   import CinematicButton from "$lib/components/design-system/CinematicButton.svelte";
   import FullscreenLayoutPanel from "$lib/components/reaction/FullscreenLayoutPanel.svelte";
+  import OverlayPositionPanel from "$lib/components/reaction/OverlayPositionPanel.svelte";
   import ConfigEditorV2 from "$lib/components/Video/ConfigEditorV2.svelte";
   import { showToast } from "$lib/stores/toast";
   import { TOASTS } from "$lib/constants/toasts";
@@ -9,6 +10,7 @@
   export let isReactionMissing = false;
   export let isEditModeOn = false;
   export let isFineTuneModeOn = false;
+  export let isOverlayPositionPanelOpen = false;
   export let isPlaylist = false;
   export let reactionVideoId = "";
   export let reactionVideoIdError = "";
@@ -61,6 +63,7 @@
   export let onSetFullscreenOverlayWidthPercent = () => {};
   export let onSetFullscreenOverlayCorner = () => {};
   export let onToggleFineTuneMode = () => {};
+  export let onToggleOverlayPositionPanel = () => {};
   export let onSeek = (_time) => {};
 
   $: isTikTokOriginal = originalVideoPlatform === "tiktok";
@@ -752,7 +755,15 @@
       {fullscreenOverlayCorner}
       {onSetFullscreenPrimaryVideo}
       {onSetFullscreenOverlayWidthPercent}
-      {onSetFullscreenOverlayCorner}
+      onOpenOverlayPositionPanel={onToggleOverlayPositionPanel}
+    />
+  {/if}
+
+  {#if isEditModeOn && !isFineTuneModeOn && isOverlayPositionPanelOpen}
+    <OverlayPositionPanel
+      {fullscreenOverlayCorner}
+      onSetFullscreenOverlayCorner={onSetFullscreenOverlayCorner}
+      onClose={onToggleOverlayPositionPanel}
     />
   {/if}
 
