@@ -35,7 +35,10 @@
     return `<script type="application/ld+json">${json}<` + `/script>`;
   })();
 
-  const seoDescription = `Watch ${reactions.length} reactions to "${originalVideo.title}" by ${originalVideo.author}. Synchronized, fair-use-free reactions with twin-player technology on Pure Reactions.`;
+  // Use `data` directly here (it's always defined) so compiled bundles
+  // don't accidentally reference `reactions` / `originalVideo` before
+  // those local variables are initialized.
+  const seoDescription = `Watch ${ (data?.reactions ?? []).length } reactions to "${data?.originalVideo?.title || ''}" by ${data?.originalVideo?.author || ''}. Synchronized, fair-use-free reactions with twin-player technology on Pure Reactions.`;
 </script>
 
 <SEO
