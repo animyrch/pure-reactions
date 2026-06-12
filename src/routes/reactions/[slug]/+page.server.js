@@ -8,17 +8,7 @@ export async function load({ params }) {
     throw error(400, 'Invalid reaction hub slug');
   }
 
-  // Diagnostic log to help verify which build is running on Netlify and
-  // what `load()` received — this will appear in Netlify function logs.
-  try {
-    console.log('reactions-load: start', { slug });
-  } catch (e) {}
-
   const data = await getReactionsByOriginalSlug(slug);
-
-  try {
-    console.log('reactions-load: fetched', { slug, hasData: !!data, reactionsIsArray: Array.isArray(data?.reactions) });
-  } catch (e) {}
 
   if (!data) {
     throw error(404, 'Reaction hub not found');
