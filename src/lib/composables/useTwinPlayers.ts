@@ -124,7 +124,9 @@ export function useTwinPlayers({
     isQueueAutoPlay: Boolean(initialUrlState.queueAutoPlay),
     showCinematicBars: readCinematicBarsCookie(),
     isFullscreen: initialUrlState.isFullscreen,
-    momentFeedLoopEnabled
+    momentFeedLoopEnabled,
+    adHocQueue: initialUrlState.adHocQueue,
+    adHocQueueIndex: initialUrlState.adHocQueueIndex
   });
 
   let initSeq = 0;
@@ -803,7 +805,9 @@ function getInitialUrlState() {
       queueIndex: null as number | null,
       queueAutoPlay: false,
       mobileLazySync: false,
-      syncEngine: null as string | null
+      syncEngine: null as string | null,
+      adHocQueue: null as string[] | null,
+      adHocQueueIndex: null as number | null
     };
   }
   const url = new URL(window.location.href);
@@ -813,6 +817,21 @@ function getInitialUrlState() {
   const queueAutoPlayRaw = params.get('queueAutoPlay');
   const mobileLazySyncRaw = params.get('mobileLazySync') ?? params.get('lazySync');
   const mobileLazySync = mobileLazySyncRaw === 'true' || mobileLazySyncRaw === '1' || params.has('mobileLazySync') || params.has('lazySync');
+
+  // Parse ad-hoc queue
+  let adHocQueue: string[] | null = null;
+  const adHocQueueRaw = params.get('adHocQueue');
+  if (adHocQueueRaw) {
+    try {
+      const parsed = JSON.parse(adHocQueueRaw);
+      if (Array.isArray(parsed) && parsed.every((id: unknown) => typeof id === 'string')) {
+        adHocQueue = parsed;
+      }
+    } catch {
+      // Invalid JSON, ignore
+    }
+  }
+
   return {
     isFullscreen: params.get('isFullscreen') === 'true',
     playlistId: params.get('playlistId'),
@@ -820,6 +839,8 @@ function getInitialUrlState() {
     queueIndex: queueIndexRaw ? Number(queueIndexRaw) : null,
     queueAutoPlay: queueAutoPlayRaw === 'true',
     mobileLazySync,
-    syncEngine: params.get('syncEngine')
+    syncEngine: params.get('syncEngine'),
+    adHocQueue,
+    adHocQueueIndex: adHocQueueRaw ? (params.get('adHocQueueIndex') ? Number(params.get('adHocQueueIndex')) : 0) : null
   };
 }

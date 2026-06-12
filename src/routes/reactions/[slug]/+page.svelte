@@ -1,12 +1,32 @@
 <script>
   import SEO from '$lib/components/SEO.svelte';
   import ReactionsList from '$lib/components/ReactionsList.svelte';
+  import { goto } from '$app/navigation';
+  import { browser } from '$app/environment';
 
   export let data = {};
 
   $: originalVideo = data?.originalVideo ?? {};
   $: reactions = data?.reactions ?? [];
   $: slug = data?.slug ?? '';
+
+  const handlePlayAll = async () => {
+    if (!reactions.length) return;
+
+    // Create an ad-hoc queue with all reactions
+    const reactionIds = reactions.map((r) => r.id);
+    const firstReactionId = reactionIds[0];
+
+    // Build query params for ad-hoc queue mode
+    const params = new URLSearchParams();
+    params.set('adHocQueue', JSON.stringify(reactionIds));
+    params.set('adHocQueueIndex', '0');
+    params.set('queueAutoPlay', 'true');
+
+    if (browser) {
+      await goto(`/reaction/${firstReactionId}?${params.toString()}`);
+    }
+  };
 
   // Build structured data for the original video
   $: schemaMarkup = (() => {
@@ -56,29 +76,45 @@
 </svelte:head>
 
 <div>
-  <header class="mx-auto max-w-6xl px-4 pt-10 pb-4 sm:px-6 lg:px-10">
+  <header class="mx-auto max-w-6xl px-4 pt-10 pb-6 sm:px-6 lg:px-10">
     <p class="text-xs font-semibold uppercase tracking-[0.3em] text-text-muted">
       Reactions to Original Content
     </p>
-    <h1 class="mt-2 text-2xl font-semibold text-text-primary sm:text-3xl">
-      {originalVideo.title || 'Original Video'}
-    </h1>
-    {#if originalVideo.author}
-      <p class="mt-1 text-sm text-text-muted">
-        by
-        {#if originalVideo.authorUrl}
-          <a href={originalVideo.authorUrl} target="_blank" rel="noopener noreferrer" class="hover:text-accent-primary">
-            {originalVideo.author}
-          </a>
-        {:else}
-          {originalVideo.author}
+    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mt-2">
+      <div class="flex-1">
+        <h1 class="text-2xl font-semibold text-text-primary sm:text-3xl">
+          {originalVideo.title || 'Original Video'}
+        </h1>
+        {#if originalVideo.author}
+          <p class="mt-1 text-sm text-text-muted">
+            by
+            {#if originalVideo.authorUrl}
+              <a href={originalVideo.authorUrl} target="_blank" rel="noopener noreferrer" class="hover:text-accent-primary">
+                {originalVideo.author}
+              </a>
+            {:else}
+              {originalVideo.author}
+            {/if}
+          </p>
         {/if}
-      </p>
-    {/if}
-    <p class="mt-3 text-sm text-text-muted">
-      {reactions.length}
-      {reactions.length === 1 ? 'reaction' : 'reactions'}
-    </p>
+        <p class="mt-3 text-sm text-text-muted">
+          {reactions.length}
+          {reactions.length === 1 ? 'reaction' : 'reactions'}
+        </p>
+        <p class="mt-2 text-sm text-text-muted">
+          Watch multiple creators react in sync with the original video.
+        </p>
+      </div>
+      {#if reactions.length > 0}
+        <button
+          on:click={handlePlayAll}
+          class="px-4 py-2 bg-accent-primary text-white font-semibold rounded-lg hover:bg-opacity-90 transition-all duration-200 shrink-0"
+          aria-label="Play all reactions"
+        >
+          Play All
+        </button>
+      {/if}
+    </div>
   </header>
 
   {#if originalVideo.thumbnailUrl}
