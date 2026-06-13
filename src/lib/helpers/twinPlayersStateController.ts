@@ -37,8 +37,6 @@ export type TwinPlayersState = {
   queueSlug?: string | null;
   queueIndex: number;
   isQueueAutoPlay: boolean;
-  adHocQueue: string[] | null;
-  adHocQueueIndex: number | null;
   showCinematicBars: boolean;
   isFullscreen: boolean;
   isControlSurfaceVisible: boolean;
@@ -122,8 +120,6 @@ type TwinPlayersCollectionState = Pick<
   | 'queueSlug'
   | 'queueIndex'
   | 'isQueueAutoPlay'
-  | 'adHocQueue'
-  | 'adHocQueueIndex'
 >;
 
 type TwinPlayersUiState = Pick<
@@ -192,8 +188,6 @@ type CreateTwinPlayersStateControllerOptions = {
   showCinematicBars: boolean;
   isFullscreen: boolean;
   momentFeedLoopEnabled?: boolean;
-  adHocQueue?: string[] | null;
-  adHocQueueIndex?: number | null;
 };
 
 const contentKeys = [
@@ -229,9 +223,7 @@ const collectionKeys = [
   'isPlaylistAutoPlay',
   'queueSlug',
   'queueIndex',
-  'isQueueAutoPlay',
-  'adHocQueue',
-  'adHocQueueIndex'
+  'isQueueAutoPlay'
 ] as const;
 
 const uiKeys = [
@@ -332,9 +324,7 @@ export function createTwinPlayersStateController({
   isQueueAutoPlay,
   showCinematicBars,
   isFullscreen,
-  momentFeedLoopEnabled = false,
-  adHocQueue = null,
-  adHocQueueIndex = null
+  momentFeedLoopEnabled = false
 }: CreateTwinPlayersStateControllerOptions) {
   const contentState = writable<TwinPlayersContentState>({
     isReactionMissing: false,
@@ -369,9 +359,7 @@ export function createTwinPlayersStateController({
     isPlaylistAutoPlay: false,
     queueSlug,
     queueIndex,
-    isQueueAutoPlay,
-    adHocQueue,
-    adHocQueueIndex: adHocQueueIndex ?? 0
+    isQueueAutoPlay
   });
 
   const uiState = writable<TwinPlayersUiState>({

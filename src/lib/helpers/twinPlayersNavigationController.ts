@@ -270,20 +270,8 @@ export function createTwinPlayersNavigationController({
     return typeof queue[nextIndex] === 'string' ? queue[nextIndex] : null;
   };
 
-  const getNextReactionIdInAdHocQueue = (adHocQueue: string[], nextIndex: number) => {
-    return typeof adHocQueue[nextIndex] === 'string' ? adHocQueue[nextIndex] : null;
-  };
-
   const hasNextInQueue = async () => {
     const snapshot = getSnapshot();
-
-    // Handle ad-hoc queue
-    if (snapshot.adHocQueue && snapshot.adHocQueue.length) {
-      const nextIndex = (Number(snapshot.adHocQueueIndex) || 0) + 1;
-      return Boolean(getNextReactionIdInAdHocQueue(snapshot.adHocQueue, nextIndex));
-    }
-
-    // Handle regular queue
     if (!snapshot.queueSlug) {
       return false;
     }
@@ -294,26 +282,6 @@ export function createTwinPlayersNavigationController({
 
   const navigateToNextReactionInQueue = async () => {
     const snapshot = getSnapshot();
-
-    // Handle ad-hoc queue
-    if (snapshot.adHocQueue && snapshot.adHocQueue.length) {
-      const nextIndex = (Number(snapshot.adHocQueueIndex) || 0) + 1;
-      const nextReactionDocumentId = getNextReactionIdInAdHocQueue(snapshot.adHocQueue, nextIndex);
-      if (!nextReactionDocumentId) {
-        return { ok: false as const, reason: 'end-of-queue' as const };
-      }
-
-      const url = new URL(typeof window !== 'undefined' ? window.location.href : 'https://purereactions.com');
-      url.pathname = `/reaction/${nextReactionDocumentId}`;
-      url.searchParams.set('adHocQueue', JSON.stringify(snapshot.adHocQueue));
-      url.searchParams.set('adHocQueueIndex', String(nextIndex));
-      url.searchParams.set('queueAutoPlay', 'true');
-      url.searchParams.delete('isFullscreen');
-      await goto(url.pathname + url.search);
-      return { ok: true as const, reason: 'navigated' as const };
-    }
-
-    // Handle regular queue
     const queueSlug = snapshot.queueSlug;
     if (!queueSlug) {
       return { ok: false as const, reason: 'missing-queue' as const };
@@ -342,31 +310,6 @@ export function createTwinPlayersNavigationController({
 
   const loadNextReactionInQueue = () => {
     const snapshot = getSnapshot();
-
-    // Handle ad-hoc queue
-    if (snapshot.adHocQueue && snapshot.adHocQueue.length && snapshot.isQueueAutoPlay) {
-      const nextIndex = (Number(snapshot.adHocQueueIndex) || 0) + 1;
-      const nextReactionDocumentId = getNextReactionIdInAdHocQueue(snapshot.adHocQueue, nextIndex);
-      if (!nextReactionDocumentId) {
-        return;
-      }
-
-      buildInterface(nextReactionDocumentId, { isUpdate: true }).then(() => {
-        updateState({ adHocQueueIndex: nextIndex });
-        if (typeof window !== 'undefined') {
-          const url = new URL(window.location.href);
-          url.pathname = `/reaction/${nextReactionDocumentId}`;
-          url.searchParams.set('adHocQueue', JSON.stringify(snapshot.adHocQueue));
-          url.searchParams.set('adHocQueueIndex', String(nextIndex));
-          url.searchParams.set('queueAutoPlay', 'true');
-          window.history.pushState(window.history.state, '', url.toString());
-        }
-        onResetStandaloneTransition({ nextReactionDocumentId, source: 'queue' });
-      });
-      return;
-    }
-
-    // Handle regular queue
     const queueSlug = snapshot.queueSlug;
     if (!snapshot.isQueueAutoPlay || !queueSlug) {
       return;
