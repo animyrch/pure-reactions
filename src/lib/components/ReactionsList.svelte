@@ -3,7 +3,15 @@
 
     export let reactions = [];
     export let loading = false;
+    export let heading = 'Featured Reactions';
 </script>
+
+{#if reactions.length > 0 || loading}
+  <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-10">
+    <h2 class="text-xl font-semibold text-text-primary mb-6">{heading}</h2>
+  </div>
+{/if}
+
 <div class="reactions-grid" role="list">
     {#if loading}
         {#each Array(6) as _, index}
@@ -32,6 +40,10 @@
         grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
         gap: 1.5rem;
         padding-inline: 0.5rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
+        margin: 0 auto;
+        max-width: 112rem;
     }
 
     .card-shell {
