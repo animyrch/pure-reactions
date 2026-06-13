@@ -30,10 +30,18 @@
 
   // Build structured data for the original video
   $: schemaMarkup = (() => {
+    const itemListElements = reactions.slice(0, 10).map((reaction, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      url: `https://purereactions.com/reaction/${reaction.id}`,
+      name: reaction.data?.title || 'Reaction Video',
+    }));
+
     const json = JSON.stringify({
       '@context': 'https://schema.org',
       '@type': 'CollectionPage',
-      name: `${originalVideo.title} - Reactions`,
+      name: `Best Reactions to ${originalVideo.title}`,
+      description: `Watch multiple reactions to ${originalVideo.title} in sync with the original video. Compare creators, binge reactions, and explore different perspectives in one place.`,
       url: `https://purereactions.com/reactions/${encodeURIComponent(slug)}`,
       mainEntity: {
         '@type': 'VideoObject',
@@ -50,7 +58,9 @@
         '@type': 'AggregateRating',
         ratingValue: reactions.length,
         ratingCount: reactions.length,
+        name: `${reactions.length} reactions`,
       },
+      itemListElement: itemListElements,
     }).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
     return `<script type="application/ld+json">${json}<` + `/script>`;
   })();
@@ -58,11 +68,11 @@
   // Use `data` directly here (it's always defined) so compiled bundles
   // don't accidentally reference `reactions` / `originalVideo` before
   // those local variables are initialized.
-  const seoDescription = `Watch ${ (data?.reactions ?? []).length } reactions to "${data?.originalVideo?.title || ''}" by ${data?.originalVideo?.author || ''}. Synchronized, fair-use-free reactions with twin-player technology on Pure Reactions.`;
+  const seoDescription = `Watch multiple reactions to ${data?.originalVideo?.title || ''} in sync with the original video. Compare creators, binge reactions, and explore different perspectives in one place.`;
 </script>
 
 <SEO
-  title="{originalVideo.title} - Reactions | Pure Reactions"
+  title="Best Reactions to {originalVideo.title} | PureReactions"
   description={seoDescription}
   canonical="/reactions/{slug}"
   keywords="reactions to {originalVideo.title}, {originalVideo.author}, reaction videos, pure reactions"
@@ -83,35 +93,24 @@
     <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mt-2">
       <div class="flex-1">
         <h1 class="text-2xl font-semibold text-text-primary sm:text-3xl">
-          {originalVideo.title || 'Original Video'}
+          Best Reactions to {originalVideo.title || 'Original Video'}
         </h1>
         {#if originalVideo.author}
-          <p class="mt-1 text-sm text-text-muted">
-            by
-            {#if originalVideo.authorUrl}
-              <a href={originalVideo.authorUrl} target="_blank" rel="noopener noreferrer" class="hover:text-accent-primary">
-                {originalVideo.author}
-              </a>
-            {:else}
-              {originalVideo.author}
-            {/if}
+          <p class="mt-2 text-sm text-text-muted">
+            Watch multiple creators react to {originalVideo.author}'s {originalVideo.title} in sync with the original music video.
           </p>
         {/if}
-        <p class="mt-3 text-sm text-text-muted">
-          {reactions.length}
-          {reactions.length === 1 ? 'reaction' : 'reactions'}
-        </p>
-        <p class="mt-2 text-sm text-text-muted">
-          Watch multiple creators react in sync with the original video.
+        <p class="mt-3 text-sm text-text-muted font-semibold">
+          {reactions.length === 1 ? `${reactions.length} reaction available` : `Watch ${reactions.length} creators react to this video`}
         </p>
       </div>
       {#if reactions.length > 0}
         <button
           on:click={handlePlayAll}
           class="px-4 py-2 bg-accent-primary text-white font-semibold rounded-lg hover:bg-opacity-90 transition-all duration-200 shrink-0"
-          aria-label="Play all reactions"
+          aria-label="Watch all reactions"
         >
-          Play All
+          Watch All Reactions
         </button>
       {/if}
     </div>
@@ -132,12 +131,20 @@
   {#if originalVideo.description}
     <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-10 pb-6">
       <p class="text-sm text-text-muted leading-relaxed">
-        {originalVideo.description}
+        Explore multiple reactions to {originalVideo.author ? `${originalVideo.author}'s` : ''} {originalVideo.title}. Compare how different creators respond to the same moments, choreography, visuals, vocals, and standout highlights throughout the video.
       </p>
     </div>
   {/if}
 
   <ReactionsList reactions={reactions} />
+
+  {#if reactions.length > 0}
+    <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-10 py-10">
+      <p class="text-sm text-text-muted leading-relaxed">
+        Looking for more reactions to {originalVideo.author || 'this video'}? Explore additional reaction collections, compare creators, and discover new perspectives on your favorite music videos.
+      </p>
+    </div>
+  {/if}
 </div>
 
 <style>
