@@ -48,6 +48,7 @@ import {
     createPlaylistDocumentPayload,
     getPlaylistSequenceItems,
 } from '$lib/helpers/reactionSequence';
+import { generateOriginalVideoSlug } from '$lib/helpers/originalVideo';
 
 const createCollection = (db, params, caller) => {
     return collection(db, params);
@@ -129,11 +130,16 @@ export const createReactionDocument = async ({
     try {
         const reactorDisplayName = auth?.currentUser?.displayName?.trim?.() || '';
         const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'createReactionDocument');
+
+        // Generate the original video slug for canonical URLs
+        const originalVideoSlug = generateOriginalVideoSlug(originalVideoTitle, originalVideoAuthor);
+
         const dataToAdd = {
             originalVideoId,
             originalVideoAuthor,
             originalVideoTitle,
             originalVideoPlatform: originalVideoPlatform || 'youtube',
+            originalVideoSlug,
             reactionConfigs: {},
             playbackRateConfigs: {},
             reactorId: userId,
@@ -208,12 +214,17 @@ export const createMomentDocument = async ({
 }) => {
     try {
         const momentsCollection = createCollection(db, COLLECTION_MOMENTS, 'createMomentDocument');
+
+        // Generate the original video slug for canonical URLs
+        const originalVideoSlug = generateOriginalVideoSlug(originalVideoTitle, originalVideoAuthor);
+
         const dataToAdd = {
             title: title?.trim?.() || 'Untitled moment',
             slug: slug?.trim?.() || '',
             originalVideoId,
             originalVideoTitle: originalVideoTitle?.trim?.() || '',
             originalVideoPlatform: originalVideoPlatform || 'youtube',
+            originalVideoSlug,
             momentTimeSeconds: Number(momentTimeSeconds),
             tags: Array.isArray(tags) ? tags : [],
             reactionCount: 0,
@@ -284,11 +295,16 @@ export const createMomentReactionDocument = async ({
     try {
         const reactorDisplayName = auth?.currentUser?.displayName?.trim?.() || '';
         const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'createMomentReactionDocument');
+
+        // Generate the original video slug for canonical URLs
+        const originalVideoSlug = generateOriginalVideoSlug(originalVideoTitle, originalVideoAuthor);
+
         const dataToAdd = {
             originalVideoId,
             originalVideoAuthor,
             originalVideoTitle,
             originalVideoPlatform: originalVideoPlatform || 'youtube',
+            originalVideoSlug,
             reactionConfigs: {},
             playbackRateConfigs: {},
             reactorId: userId,

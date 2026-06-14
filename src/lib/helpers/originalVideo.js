@@ -21,6 +21,57 @@ const firstDefined = (...values) => {
   return undefined;
 };
 
+/**
+ * Generate a canonical slug for the original video.
+ * Format: [original-video-title-slugified]-[original-video-author-slugified]
+ *
+ * This slug is used for SEO-friendly canonical URLs and collision avoidance.
+ *
+ * @param {string} title - Original video title
+ * @param {string} author - Original video author/creator
+ * @returns {string} Generated slug (e.g., 'blackpink-how-you-like-that-blackpink')
+ */
+export const generateOriginalVideoSlug = (title, author) => {
+  const slugifyPart = (part, isTitle = false) => {
+    if (!part || typeof part !== 'string') {
+      return '';
+    }
+
+    // Convert to lowercase
+    let slug = part.toLowerCase();
+
+    // Strip noisy suffixes from title only
+    if (isTitle) {
+      slug = slug
+        .replace(/\s*\(?m\/v\)?|\s*\(?m-v\)?|\s*\(?mv\)?|\s*\[?official\s+video\]?|\s*\[?official\s+music\s+video\]?|\s*\[?official\s+lyric\s+video\]?\s*$/gi, '')
+        .trim();
+    }
+
+    // Remove special characters and replace spaces/separators with hyphens
+    slug = slug.replace(/[^a-z0-9]+/g, '-');
+
+    // Trim leading and trailing hyphens
+    slug = slug.replace(/^-+|-+$/g, '');
+
+    return slug;
+  };
+
+  const titleSlug = slugifyPart(title, true);
+  const authorSlug = slugifyPart(author, false);
+
+  // Build the final slug with safety fallbacks
+  const parts = [];
+  if (titleSlug) parts.push(titleSlug);
+  if (authorSlug) parts.push(authorSlug);
+
+  // Fallback to a generic slug if both parts are empty
+  if (parts.length === 0) {
+    return 'original-content';
+  }
+
+  return parts.join('-');
+};
+
 const compactObject = (value) =>
   Object.fromEntries(
     Object.entries(value).filter(([, entryValue]) => {

@@ -169,10 +169,13 @@
 
     const overlayPositionClasses = {
         "top-left": "left-6 top-6",
+        "top-center": "left-1/2 -translate-x-1/2 top-6",
         "top-right": "right-6 top-6",
+        "middle-left": "left-6 top-1/2 -translate-y-1/2",
+        "middle-right": "right-6 top-1/2 -translate-y-1/2",
         "bottom-left": "left-6 bottom-6",
-        "bottom-right": "right-6 bottom-6",
         "bottom-center": "left-1/2 -translate-x-1/2 bottom-6",
+        "bottom-right": "right-6 bottom-6",
     };
 
     $: normalizedOverlayWidth = normalizeOverlayWidth(
