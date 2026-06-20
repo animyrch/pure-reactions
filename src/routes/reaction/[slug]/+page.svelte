@@ -80,7 +80,8 @@
   };
 
   const handleGoToNextInQueue = async () => {
-    if (!$state.queueSlug) return;
+    // Allow navigation when either a persisted queue or an ad-hoc queue is active
+    if (!($state.queueSlug || ($state.adHocQueue && $state.adHocQueue.length))) return;
     try {
       const result = await actions.navigateToNextReactionInQueue();
       if (!result?.ok && result?.reason === "end-of-queue" && browser) {
