@@ -63,7 +63,8 @@
   let hasOtherReactions = false;
 
   const refreshQueueHasNext = async () => {
-    if (!$state.queueSlug) {
+    // If neither a persisted queue nor an ad-hoc queue is present, nothing to check
+    if (!$state.queueSlug && !($state.adHocQueue && $state.adHocQueue.length)) {
       queueHasNext = false;
       return;
     }
@@ -79,7 +80,8 @@
   };
 
   const handleGoToNextInQueue = async () => {
-    if (!$state.queueSlug) return;
+    // Allow navigation when either a persisted queue or an ad-hoc queue is active
+    if (!($state.queueSlug || ($state.adHocQueue && $state.adHocQueue.length))) return;
     try {
       const result = await actions.navigateToNextReactionInQueue();
       if (!result?.ok && result?.reason === "end-of-queue" && browser) {
@@ -178,7 +180,8 @@
   }
 
   $: if (browser && !$state.isLoading) {
-    const nextKey = `${$state.queueSlug ?? ""}:${$state.queueIndex ?? ""}`;
+    // Include ad-hoc queue identity to re-run checks when ad-hoc params change
+    const nextKey = `${$state.queueSlug ?? ""}:${$state.queueIndex ?? ""}:${$state.adHocQueue ? $state.adHocQueue.join(',') : ''}:${$state.adHocQueueIndex ?? ''}`;
     if (nextKey !== queueHasNextCheckKey) {
       queueHasNextCheckKey = nextKey;
       refreshQueueHasNext();
@@ -262,13 +265,15 @@
   />
   {#if !$state.isFullscreen}
     <div class="mx-auto w-full px-4 pt-6 pb-8 sm:px-6 lg:px-10" data-testid="reaction-content">
-      {#if $state.queueSlug}
+      {#if $state.queueSlug || ($state.adHocQueue && $state.adHocQueue.length)}
         <div class="mb-4 flex items-center justify-between gap-3">
           <div class="min-w-0 overflow-hidden">
-            <QueueProgressPill
-              queueSlug={$state.queueSlug}
-              index={$state.queueIndex}
-            />
+            {#if $state.queueSlug}
+              <QueueProgressPill
+                queueSlug={$state.queueSlug}
+                index={$state.queueIndex}
+              />
+            {/if}
           </div>
           {#if queueHasNext}
             <button
