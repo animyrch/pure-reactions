@@ -91,6 +91,9 @@ function ensureAbsoluteUrl(value, baseUrl) {
 }
 
 function escapeXml(value) {
+  if (typeof value !== 'string') {
+    return '';
+  }
   return value
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -98,6 +101,134 @@ function escapeXml(value) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&apos;');
 }
+
+async function getPublishedReactions(db) {
+  const collectionName = process.env.PUBLIC_FIREBASE_COLLECTION_REACTION_BINOMES || 'reactions';
+  console.log(`Querying collection: ${collectionName}`);
+  const reactionsSnapshot = await db.collection(collectionName).where('isPublished', '==', true).get();
+  if (reactionsSnapshot.empty) {
+    return [];
+  }
+  return reactionsSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+}
+
+function groupReactionsByOriginalVideo(reactions) {
+  return reactions.reduce((acc, reaction) => {
+    const { originalVideoId } = reaction;
+    if (!acc[originalVideoId]) {
+      acc[originalVideoId] = [];
+    }
+    acc[originalVideoId].push(reaction);
+    return acc;
+  }, {});
+}
+
+async function generateSitemap() {
+  loadDotEnvIfPresent();
+  loadDotEnvIfPresent('.env.local');
+
+  const serviceAccount = resolveServiceAccount();
+  const baseUrl = ensureBaseUrl(process.env.PUBLIC_BASE_URL);
+
+  if (admin.apps.length === 0) {
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
+    });
+  }
+
+  const db = admin.firestore();
+
+  const staticRoutes = [
+    { path: '/', priority: '1.0', changefreq: 'daily' },
+    { path: '/privacy', priority: '0.5', changefreq: 'monthly' },
+    { path: '/terms', priority: '0.5', changefreq: 'monthly' },
+    { path: '/about', priority: '0.7', changefreq: 'monthly' },
+    { path: '/search', priority: '0.8', changefreq: 'weekly' }
+  ];
+
+  const allReactions = await getPublishedReactions(db);
+  const reactionsByOriginal = groupReactionsByOriginalVideo(allReactions);
+
+  const reactionUrls = [];
+  for (const originalVideoId in reactionsByOriginal) {
+    const group = reactionsByOriginal[originalVideoId];
+    if (group.length > 1) {
+      for (const reaction of group) {
+        const slug = reaction.slug || reaction.id;
+        const lastMod = reaction.updatedAt?.toDate()?.toISOString() || new Date().toISOString();
+        reactionUrls.push({
+          path: `/reaction/${slug}`,
+          priority: '0.9',
+          changefreq: 'weekly',
+          lastmod: lastMod,
+          image: ensureAbsoluteUrl(reaction.thumbnailUrl || DEFAULT_THUMBNAIL_PATH, baseUrl),
+          video: {
+            thumbnail_loc: ensureAbsoluteUrl(reaction.thumbnailUrl || DEFAULT_THUMBNAIL_PATH, baseUrl),
+            title: reaction.reactionVideoTitle,
+            description: reaction.description || `Reaction to ${reaction.originalVideoTitle}`,
+            player_loc: `${YOUTUBE_EMBED_BASE_URL}${reaction.reactionVideoId}`,
+            duration: reaction.duration,
+            publication_date: reaction.createdAt?.toDate()?.toISOString()
+          }
+        });
+      }
+    }
+  }
+
+  console.log(`Found ${allReactions.length} published reactions.`);
+  console.log(`Grouped into ${Object.keys(reactionsByOriginal).length} original videos.`);
+  console.log(`Adding ${reactionUrls.length} reaction pages to sitemap (from groups with >1 reaction).`);
+
+  const urls = [...staticRoutes, ...reactionUrls].slice(0, MAX_ENTRIES);
+
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+  xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
+        xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">\n`;
+
+  for (const route of urls) {
+    const loc = ensureAbsoluteUrl(route.path, baseUrl);
+    if (!loc) continue;
+
+    xml += `  <url>\n`;
+    xml += `    <loc>${loc}</loc>\n`;
+    if (route.priority) xml += `    <priority>${route.priority}</priority>\n`;
+    if (route.changefreq) xml += `    <changefreq>${route.changefreq}</changefreq>\n`;
+    if (route.lastmod) xml += `    <lastmod>${route.lastmod}</lastmod>\n`;
+
+    if (route.image) {
+      xml += `    <image:image>\n`;
+      xml += `      <image:loc>${escapeXml(route.image)}</image:loc>\n`;
+      xml += `    </image:image>\n`;
+    }
+
+    if (route.video) {
+      xml += `    <video:video>\n`;
+      if (route.video.thumbnail_loc)
+        xml += `      <video:thumbnail_loc>${escapeXml(route.video.thumbnail_loc)}</video:thumbnail_loc>\n`;
+      if (route.video.title) xml += `      <video:title>${escapeXml(route.video.title)}</video:title>\n`;
+      if (route.video.description)
+        xml += `      <video:description>${escapeXml(route.video.description)}</video:description>\n`;
+      if (route.video.player_loc) xml += `      <video:player_loc>${escapeXml(route.video.player_loc)}</video:player_loc>\n`;
+      if (route.video.duration) xml += `      <video:duration>${route.video.duration}</video:duration>\n`;
+      if (route.video.publication_date)
+        xml += `      <video:publication_date>${route.video.publication_date}</video:publication_date>\n`;
+      xml += `    </video:video>\n`;
+    }
+
+    xml += `  </url>\n`;
+  }
+
+  xml += `</urlset>\n`;
+
+  fs.writeFileSync(OUTPUT_PATH, xml);
+  console.log(`Sitemap with ${urls.length} entries written to ${OUTPUT_PATH}`);
+}
+
+generateSitemap().catch((error) => {
+  console.error('Error generating sitemap:', error);
+  process.exit(1);
+});
 
 function wrapCdata(value) {
   const safe = value.replaceAll(']]>', ']]]]><![CDATA[>');
