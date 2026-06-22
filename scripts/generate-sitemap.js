@@ -315,7 +315,6 @@ function buildOriginalVideoEntry({ originalVideoId, originalVideoSlug, reactions
     slug
   );
   const description = buildOriginalVideoSeoDescription(data, reactions) || 'Reaction collection on Pure Reactions.';
-
   const thumbnail = pickOriginalVideoThumbnail(data, baseUrl);
   const lastmod = pickLastmod(
     reactions.flatMap(({ data: reactionData }) => [
