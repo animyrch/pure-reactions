@@ -240,6 +240,55 @@ function pickBestReactionForMetadata(reactions) {
   return bestReaction ?? reactions[0] ?? null;
 }
 
+function pickTopReactorNames(reactions, limit = 3) {
+  const names = [];
+  for (const r of reactions) {
+    const data = r?.data ?? {};
+    const name = pickText(data.reactorDisplayName, data.reactionVideoAuthor);
+    if (!name) continue;
+    if (!names.includes(name)) names.push(name);
+    if (names.length >= limit) break;
+  }
+  return names;
+}
+
+function buildOriginalVideoSeoDescription(data, reactions) {
+  const title = pickText(
+    data.originalVideoTitle,
+    data.originalYoutube?.meta?.title,
+    data.title
+  );
+
+  const author = pickText(
+    data.originalVideoAuthor,
+    data.originalYoutube?.meta?.author,
+    data.originalVideoAuthorHandle
+  );
+
+  const topNames = pickTopReactorNames(reactions, 3);
+  const namesFragment = topNames.length
+    ? ` from creators like ${topNames.join(', ')}${topNames.length === 3 ? '' : ''}`
+    : '';
+
+  // Craft a concise, SEO-friendly description that highlights the original video and a few reactors
+  const base = title
+    ? `Watch reactions to ${title}${author ? ` by ${author}` : ''}.` 
+    : 'Watch a collection of reactions.';
+
+  const extra = ` Energetic reactions, watchalongs, and first-time experiences${namesFragment}.`;
+
+  // Prefer any existing explicit description if present, otherwise use generated text
+  const existing = pickText(
+    data.originalVideoDescription,
+    data.originalYoutube?.meta?.description,
+    data.originalTikTok?.meta?.description
+  );
+
+  const combined = existing || `${base}${extra}`;
+  // Keep description reasonably short
+  return combined.trim();
+}
+
 function buildOriginalVideoEntry({ originalVideoId, originalVideoSlug, reactions, baseUrl }) {
   if (!originalVideoId || !originalVideoSlug || reactions.length < 2) {
     return null;
@@ -265,13 +314,7 @@ function buildOriginalVideoEntry({ originalVideoId, originalVideoSlug, reactions
     data.title,
     slug
   );
-  const description = pickText(
-    data.originalVideoDescription,
-    data.originalYoutube?.meta?.description,
-    data.originalTikTok?.meta?.description,
-    data.description,
-    'Reaction collection on Pure Reactions.'
-  );
+  const description = buildOriginalVideoSeoDescription(data, reactions) || 'Reaction collection on Pure Reactions.';
 
   const thumbnail = pickOriginalVideoThumbnail(data, baseUrl);
   const lastmod = pickLastmod(
