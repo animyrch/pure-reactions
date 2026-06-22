@@ -4,10 +4,11 @@ import admin from 'firebase-admin';
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
+import { pathToFileURL } from 'node:url';
 
 const OUTPUT_PATH = path.resolve(process.cwd(), 'static/sitemap.xml');
 const DEFAULT_THUMBNAIL_PATH = '/icon-512.png';
-const MAX_ENTRIES = 5000;
+const CANONICAL_BASE_URL = 'https://purereactions.com';
 const YOUTUBE_EMBED_BASE_URL = 'https://www.youtube.com/embed/';
 
 function loadDotEnvIfPresent(envPath = '.env') {
@@ -131,6 +132,11 @@ function pickLastmod(values) {
   return dates[0].toISOString();
 }
 
+function buildYoutubePlayerUrl(videoId) {
+  if (!videoId) return null;
+  return `${YOUTUBE_EMBED_BASE_URL}${encodeURIComponent(videoId)}`;
+}
+
 function pickReactionVideoId(data) {
   return pickText(
     data.reactionVideoId,
@@ -140,12 +146,7 @@ function pickReactionVideoId(data) {
   );
 }
 
-function buildYoutubePlayerUrl(videoId) {
-  if (!videoId) return null;
-  return `${YOUTUBE_EMBED_BASE_URL}${encodeURIComponent(videoId)}`;
-}
-
-function buildEntry({ docId, data, baseUrl }) {
+function buildReactionSitemapEntry({ docId, data, baseUrl }) {
   const slug = pickText(data.slug, docId);
   const loc = new URL(`/reaction/${slug}`, baseUrl).toString();
   const reactionVideoId = pickReactionVideoId(data);
@@ -193,13 +194,191 @@ function buildEntry({ docId, data, baseUrl }) {
   }
 
   lines.push('  </url>');
-  return lines.join('\n');
+  return {
+    docId,
+    slug,
+    loc,
+    lines: lines.join('\n')
+  };
+}
+
+function pickOriginalVideoThumbnail(data, baseUrl) {
+  return (
+    ensureAbsoluteUrl(data.originalVideoThumbnailUrl, baseUrl) ||
+    ensureAbsoluteUrl(data.originalYoutube?.meta?.thumbnail, baseUrl) ||
+    ensureAbsoluteUrl(data.originalTikTok?.meta?.thumbnail, baseUrl) ||
+    new URL(DEFAULT_THUMBNAIL_PATH, baseUrl).toString()
+  );
+}
+
+function pickOriginalVideoDurationSeconds(data) {
+  const durationSeconds =
+    data.originalYoutube?.meta?.durationSeconds ?? data.originalTikTok?.meta?.durationSeconds;
+
+  return Number.isFinite(durationSeconds) ? Math.round(durationSeconds) : null;
+}
+
+function pickBestReactionForMetadata(reactions) {
+  let bestReaction = null;
+  let bestTimestamp = -Infinity;
+
+  for (const reaction of reactions) {
+    const lastmod = pickLastmod([
+      reaction.data?.updatedAt,
+      reaction.data?.lastEnrichedAt,
+      reaction.data?.createdAt,
+      reaction.data?.youtube?.meta?.publishedAt
+    ]);
+    const timestamp = lastmod ? new Date(lastmod).valueOf() : -Infinity;
+
+    if (timestamp > bestTimestamp) {
+      bestTimestamp = timestamp;
+      bestReaction = reaction;
+    }
+  }
+
+  return bestReaction ?? reactions[0] ?? null;
+}
+
+function buildOriginalVideoEntry({ originalVideoId, originalVideoSlug, reactions, baseUrl }) {
+  if (!originalVideoId || !originalVideoSlug || reactions.length < 2) {
+    return null;
+  }
+
+  const representativeReaction = pickBestReactionForMetadata(reactions);
+  const data = representativeReaction?.data ?? {};
+  const slug = pickText(originalVideoSlug);
+
+  if (!slug) {
+    return null;
+  }
+
+  const loc = new URL(`/reactions/${encodeURIComponent(slug)}`, baseUrl).toString();
+  const playerLoc =
+    ensureAbsoluteUrl(data.originalVideoUrl, baseUrl) ||
+    buildYoutubePlayerUrl(data.originalVideoId || originalVideoId);
+
+  const title = pickText(
+    data.originalVideoTitle,
+    data.originalYoutube?.meta?.title,
+    data.originalTikTok?.meta?.title,
+    data.title,
+    slug
+  );
+  const description = pickText(
+    data.originalVideoDescription,
+    data.originalYoutube?.meta?.description,
+    data.originalTikTok?.meta?.description,
+    data.description,
+    'Reaction collection on Pure Reactions.'
+  );
+
+  const thumbnail = pickOriginalVideoThumbnail(data, baseUrl);
+  const lastmod = pickLastmod(
+    reactions.flatMap(({ data: reactionData }) => [
+      reactionData?.updatedAt,
+      reactionData?.lastEnrichedAt,
+      reactionData?.createdAt,
+      reactionData?.originalYoutube?.lastEnrichedAt,
+      reactionData?.originalTikTok?.lastEnrichedAt,
+      reactionData?.youtube?.meta?.publishedAt
+    ])
+  );
+  const durationSeconds = pickOriginalVideoDurationSeconds(data);
+  const publicationDate = pickLastmod([
+    data.originalYoutube?.meta?.publishedAt,
+    data.originalTikTok?.meta?.publishedAt,
+    data.youtube?.meta?.publishedAt
+  ]);
+
+  const lines = [];
+  lines.push('  <url>');
+  lines.push(`    <loc>${escapeXml(loc)}</loc>`);
+  if (lastmod) {
+    lines.push(`    <lastmod>${lastmod}</lastmod>`);
+  }
+
+  if (thumbnail && playerLoc) {
+    lines.push('    <video:video>');
+    lines.push(`      <video:thumbnail_loc>${escapeXml(thumbnail)}</video:thumbnail_loc>`);
+    lines.push(`      <video:title>${wrapCdata(title)}</video:title>`);
+    lines.push(`      <video:description>${wrapCdata(description)}</video:description>`);
+    lines.push(`      <video:player_loc>${escapeXml(playerLoc)}</video:player_loc>`);
+    if (durationSeconds && durationSeconds > 0) {
+      lines.push(`      <video:duration>${durationSeconds}</video:duration>`);
+    }
+    if (publicationDate) {
+      lines.push(`      <video:publication_date>${publicationDate}</video:publication_date>`);
+    }
+    lines.push('    </video:video>');
+  }
+
+  lines.push('  </url>');
+  return {
+    originalVideoId,
+    slug,
+    loc,
+    lines: lines.join('\n')
+  };
+}
+
+export function buildOriginalVideoSitemapEntries(reactionDocs, baseUrl) {
+  const groupedReactions = new Map();
+
+  for (const doc of reactionDocs) {
+    const data = doc?.data ?? {};
+    const originalVideoId = pickText(data.originalVideoId);
+    const originalVideoSlug = pickText(data.originalVideoSlug);
+
+    if (!originalVideoId || !originalVideoSlug) {
+      continue;
+    }
+
+    if (!groupedReactions.has(originalVideoId)) {
+      groupedReactions.set(originalVideoId, {
+        originalVideoId,
+        originalVideoSlug,
+        reactions: []
+      });
+    }
+
+    const group = groupedReactions.get(originalVideoId);
+    if (!group.originalVideoSlug && originalVideoSlug) {
+      group.originalVideoSlug = originalVideoSlug;
+    }
+
+    group.reactions.push(doc);
+  }
+
+  return [...groupedReactions.values()]
+    .filter(({ reactions }) => reactions.length >= 2)
+    .map((group) => buildOriginalVideoEntry({ ...group, baseUrl }))
+    .filter(Boolean)
+    .sort((a, b) => a.loc.localeCompare(b.loc));
+}
+
+export function buildReactionSitemapEntries(reactionDocs, baseUrl) {
+  return reactionDocs
+    .map((doc) => buildReactionSitemapEntry({ docId: doc.id, data: doc.data, baseUrl }))
+    .filter(Boolean)
+    .sort((a, b) => a.loc.localeCompare(b.loc));
+}
+
+async function fetchPublishedReactions(db, collection) {
+  let snapshot = await db.collection(collection).where('isPublished', '==', true).get();
+
+  if (snapshot.empty) {
+    snapshot = await db.collection(collection).where('published', '==', true).get();
+  }
+
+  return snapshot.docs.map((doc) => ({ id: doc.id, data: doc.data() }));
 }
 
 async function generate() {
   loadDotEnvIfPresent('.env');
 
-  const baseUrl = ensureBaseUrl(process.env.PUBLIC_BASE_URL);
+  ensureBaseUrl(process.env.PUBLIC_BASE_URL);
+  const baseUrl = CANONICAL_BASE_URL;
   const serviceAccount = resolveServiceAccount();
 
   if (!admin.apps.length) {
@@ -211,13 +390,13 @@ async function generate() {
 
   const db = admin.firestore();
   const collection = process.env.PUBLIC_FIREBASE_COLLECTION_REACTION_BINOMES || 'reactions';
-
-  let snapshot = await db.collection(collection).where('isPublished', '==', true).limit(MAX_ENTRIES).get();
-  if (snapshot.empty) {
-    snapshot = await db.collection(collection).where('published', '==', true).limit(MAX_ENTRIES).get();
-  }
-
-  const entries = snapshot.docs.map((doc) => buildEntry({ docId: doc.id, data: doc.data(), baseUrl }));
+  const reactions = await fetchPublishedReactions(db, collection);
+  const entries = [
+    ...buildReactionSitemapEntries(reactions, baseUrl),
+    ...buildOriginalVideoSitemapEntries(reactions, baseUrl)
+  ]
+    .sort((a, b) => a.loc.localeCompare(b.loc))
+    .map(({ lines }) => lines);
 
   const xml = [
     '<?xml version="1.0" encoding="UTF-8"?>',
@@ -234,7 +413,13 @@ async function generate() {
   console.log(`[generate-sitemap] Wrote ${entries.length} entries to ${OUTPUT_PATH}`);
 }
 
-generate().catch((error) => {
-  console.error('[generate-sitemap] Failed to generate sitemap:', error);
-  process.exitCode = 1;
-});
+const isDirectExecution = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (isDirectExecution) {
+  generate().catch((error) => {
+    console.error('[generate-sitemap] Failed to generate sitemap:', error);
+    process.exitCode = 1;
+  });
+}
+
+export { fetchPublishedReactions, generate, pickBestReactionForMetadata, buildOriginalVideoEntry };
