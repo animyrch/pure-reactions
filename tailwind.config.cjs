@@ -38,6 +38,12 @@ const config = {
         warning: designColors.warning,
         danger: designColors.danger,
         focus: designColors.focusRing,
+        collection: {
+          queue: designColors.collectionQueue,
+          playlist: designColors.collectionPlaylist,
+          moment: designColors.collectionMoment,
+          similar: designColors.collectionSimilar,
+        },
         primary: {
           DEFAULT: designColors.accentPrimary,
           50: '#0b1a26',

@@ -21,6 +21,14 @@ export const colors = {
   borderStrong: '#323845',
   focusRing: '#5cb2ff',
   scrim: 'rgba(7, 9, 12, 0.82)',
+
+  // Collection-type highlight colors — one per list concept so users can
+  // distinguish them at a glance while keeping the cinematic palette cohesive.
+  // Each colour meets WCAG AA (≥ 4.5:1) against `background` (#0f1115).
+  collectionQueue: '#a78bfa',      // soft violet  — queues
+  collectionPlaylist: '#5cb2ff',   // cinematic blue — playlists (matches accent-primary)
+  collectionMoment: '#fbbf24',     // warm amber   — moments
+  collectionSimilar: '#34d399',    // emerald      — similar reactions
 };
 
 export const typography = {
