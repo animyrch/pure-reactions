@@ -1,5 +1,6 @@
 <script>
     import ReactionsListElement from "$lib/components/ReactionsListElement.svelte";
+    import CollectionHeader from "$lib/components/design-system/CollectionHeader.svelte";
     import { onMount } from "svelte";
     import { goto } from "$app/navigation";
     import { getReactionsToOriginalVideo } from "$lib/helpers/firebase";
@@ -125,28 +126,24 @@
 
 {#if otherReactions.length > 0}
     <section class="space-y-4">
-        <div
-            class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between"
+        <CollectionHeader
+            collectionType="similar"
+            title="Other creators reacting to this video"
+            headingLevel="h2"
+            itemCount={otherReactions.length}
+            itemLabel="reaction"
         >
-            <div class="space-y-1 sm:space-y-2">
-                <p
-                    class="text-[0.625rem] uppercase tracking-[0.3em] text-text-muted sm:text-xs"
+            <svelte:fragment slot="actions">
+                <button
+                    class="inline-flex items-center gap-1.5 text-xs font-medium text-accent-primary transition hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:gap-2 sm:text-sm"
+                    type="button"
+                    on:click={viewAllReactions}
                 >
-                    More reactions
-                </p>
-                <h2 class="text-lg font-semibold text-text-primary sm:text-2xl">
-                    Other creators reacting to this video
-                </h2>
-            </div>
-            <button
-                class="inline-flex items-center gap-1.5 text-xs font-medium text-accent-primary transition hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:gap-2 sm:text-sm"
-                type="button"
-                on:click={viewAllReactions}
-            >
-                View all reactions
-                <span aria-hidden="true">→</span>
-            </button>
-        </div>
+                    View all reactions
+                    <span aria-hidden="true">→</span>
+                </button>
+            </svelte:fragment>
+        </CollectionHeader>
 
         <div
             class="carousel"

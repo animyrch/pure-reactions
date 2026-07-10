@@ -4,6 +4,7 @@
     import { goto } from '$app/navigation';
     import QueueBinomeCard from '$lib/components/QueueBinomeCard.svelte';
     import SEO from '$lib/components/SEO.svelte';
+    import CollectionHeader from '$lib/components/design-system/CollectionHeader.svelte';
     import { getReactionsByIds, getPlaylist, getQueueBySlug, updateQueueDocument } from '$lib/helpers/firebase';
     import { handlePrivateRoute } from '$lib/helpers/routing';
     import { readQueueProgress } from '$lib/helpers/queueProgress';
@@ -258,19 +259,15 @@
 
 <main class="set-page bg-background text-text-primary">
     <div class="mx-auto max-w-6xl px-4 py-10 sm:py-14">
-        <div class="mb-8 space-y-3">
-            <p class="text-xs uppercase tracking-[0.35em] text-text-muted">Queue</p>
-            <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-                <div class="space-y-2">
-                    <h1 class="text-3xl font-semibold md:text-4xl">{queueTitle}</h1>
-                    {#if queueDefinition?.data?.description}
-                        <p class="max-w-3xl text-sm text-text-muted">{queueDefinition.data.description}</p>
-                    {/if}
-                </div>
-                <div class="flex items-center gap-3 text-sm text-text-muted">
-                    <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 backdrop-blur">
-                        {queueEntries.length} reaction{queueEntries.length === 1 ? '' : 's'} in queue
-                    </span>
+        <div class="mb-8">
+            <CollectionHeader
+                collectionType="queue"
+                title={queueTitle}
+                description={queueDefinition?.data?.description || ''}
+                itemCount={queueEntries.length}
+                itemLabel="reaction"
+            >
+                <svelte:fragment slot="meta">
                     {#if isOwner}
                          <button 
                             type="button"
@@ -293,42 +290,44 @@
                             {/if}
                         </span>
                     {/if}
-                </div>
-            </div>
+                </svelte:fragment>
 
-            {#if !isLoading && queueDefinition}
-                <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div class="text-sm text-text-muted">
-                        {#if queueIsLoading}
-                            Preparing watch queue
-                        {:else if queueStatusMessage}
-                            {queueStatusMessage}
-                        {/if}
-                    </div>
-                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center" aria-label="Queue playback controls">
-                        <button
-                            class="btn-primary"
-                            type="button"
-                            on:click={handlePlayFromStart}
-                            disabled={queueIsLoading || !queueEntries.length}
-                            aria-label="Play this queue from the beginning"
-                        >
-                            Play queue
-                        </button>
-                        <button
-                            class="btn-secondary"
-                            type="button"
-                            on:click={handleResume}
-                            disabled={queueIsLoading || !queueEntries.length || !canResume}
-                            aria-label={canResume
-                                ? `Resume this queue from item ${resumeIndex + 1}`
-                                : 'Resume is available after you start watching this queue'}
-                        >
-                            Resume{#if canResume} • #{resumeIndex + 1}{/if}
-                        </button>
-                    </div>
-                </div>
-            {/if}
+                <svelte:fragment slot="actions">
+                    {#if !isLoading && queueDefinition}
+                        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div class="text-sm text-text-muted">
+                                {#if queueIsLoading}
+                                    Preparing watch queue
+                                {:else if queueStatusMessage}
+                                    {queueStatusMessage}
+                                {/if}
+                            </div>
+                            <div class="flex flex-col gap-2 sm:flex-row sm:items-center" aria-label="Queue playback controls">
+                                <button
+                                    class="btn-primary"
+                                    type="button"
+                                    on:click={handlePlayFromStart}
+                                    disabled={queueIsLoading || !queueEntries.length}
+                                    aria-label="Play this queue from the beginning"
+                                >
+                                    Play queue
+                                </button>
+                                <button
+                                    class="btn-secondary"
+                                    type="button"
+                                    on:click={handleResume}
+                                    disabled={queueIsLoading || !queueEntries.length || !canResume}
+                                    aria-label={canResume
+                                        ? `Resume this queue from item ${resumeIndex + 1}`
+                                        : 'Resume is available after you start watching this queue'}
+                                >
+                                    Resume{#if canResume} • #{resumeIndex + 1}{/if}
+                                </button>
+                            </div>
+                        </div>
+                    {/if}
+                </svelte:fragment>
+            </CollectionHeader>
         </div>
 
         {#if isLoading}

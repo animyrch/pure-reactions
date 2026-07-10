@@ -4,6 +4,7 @@
   import { goto } from '$app/navigation';
   import { SearchOutline as SearchIcon, PlusOutline } from 'flowbite-svelte-icons';
   import SEO from '$lib/components/SEO.svelte';
+  import CollectionHeader from '$lib/components/design-system/CollectionHeader.svelte';
   import MomentDiscoveryCard from '$lib/components/Moments/MomentDiscoveryCard.svelte';
   import { searchMoments } from '$lib/helpers/momentsSearch';
   import { DEFAULT_MOMENT_SORT, MOMENT_SORT_LABELS } from '$lib/constants/moments';
@@ -27,7 +28,6 @@
   let lastFirestoreDoc = null;
 
   $: hasMore = currentPage < totalPages - 1;
-  $: isSearchMode = query.trim().length > 0;
 
   $: if (sentinel && !observer) {
     observer = new IntersectionObserver(
@@ -142,20 +142,24 @@
 />
 
 <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-  <div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-    <div>
-      <h1 class="text-3xl font-semibold text-text-primary">Moments</h1>
-      <p class="mt-2 max-w-2xl text-base text-text-secondary">
-        Find a shared emotional beat in original content, then swipe through reactions synced to that exact moment.
-      </p>
-    </div>
-    <a
-      href="/moments/new"
-      class="inline-flex items-center justify-center gap-2 rounded-md bg-accent-primary px-md py-sm text-base font-medium text-background shadow-surface transition hover:bg-primary-600"
+  <div class="mb-8">
+    <CollectionHeader
+      collectionType="moment"
+      title="Moments"
+      description="Find a shared emotional beat in original content, then swipe through reactions synced to that exact moment."
+      itemCount={totalHits || results.length}
+      itemLabel="moment"
     >
-      <PlusOutline class="h-5 w-5" aria-hidden="true" />
-      Create moment
-    </a>
+      <svelte:fragment slot="actions">
+        <a
+          href="/moments/new"
+          class="inline-flex items-center justify-center gap-2 rounded-md bg-accent-primary px-md py-sm text-base font-medium text-background shadow-surface transition hover:bg-primary-600"
+        >
+          <PlusOutline class="h-5 w-5" aria-hidden="true" />
+          Create moment
+        </a>
+      </svelte:fragment>
+    </CollectionHeader>
   </div>
 
   <form class="mb-6 space-y-4" on:submit={handleSubmit}>
@@ -204,13 +208,6 @@
       <div class="h-12 w-12 animate-spin rounded-full border-4 border-border-strong border-t-focus"></div>
     </div>
   {:else if results.length}
-    <p class="mb-4 text-sm font-semibold uppercase tracking-wide text-text-secondary">
-      {#if isSearchMode}
-        {totalHits} {totalHits === 1 ? 'result' : 'results'}
-      {:else}
-        {totalHits || results.length} moments
-      {/if}
-    </p>
     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {#each results as moment (moment.objectID || moment.id)}
         <MomentDiscoveryCard {moment} />

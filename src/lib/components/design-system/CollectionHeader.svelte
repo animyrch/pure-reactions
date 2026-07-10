@@ -12,6 +12,7 @@
    * @prop {string}  [description='']
    * @prop {number}  [itemCount=0]
    * @prop {string}  [itemLabel='item']   — singular noun (e.g. "reaction")
+   * @prop {'h1' | 'h2' | 'h3'} [headingLevel='h1'] — semantic heading level
    */
 
   export let collectionType = 'queue';
@@ -19,6 +20,7 @@
   export let description = '';
   export let itemCount = 0;
   export let itemLabel = 'item';
+  export let headingLevel = 'h1';
 
   const labels = {
     queue: 'Queue',
@@ -54,7 +56,7 @@
   <span
     class="absolute left-0 top-0 h-full w-[3px] rounded-full {accentBar}"
     aria-hidden="true"
-  />
+  ></span>
 
   <div class="space-y-2">
     <p class="text-xs font-semibold uppercase tracking-[0.3em] {accent}">
@@ -63,9 +65,9 @@
 
     <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
       <div class="space-y-1.5">
-        <h1 class="text-2xl font-semibold text-text-primary sm:text-3xl md:text-4xl">
+        <svelte:element this={headingLevel} class="text-2xl font-semibold text-text-primary sm:text-3xl md:text-4xl">
           {title}
-        </h1>
+        </svelte:element>
         {#if description}
           <p class="max-w-3xl text-sm text-text-muted">{description}</p>
         {/if}
