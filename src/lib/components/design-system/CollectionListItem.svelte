@@ -26,11 +26,14 @@
   };
 
   $: accentBorder = accentBorderClasses[collectionType] || accentBorderClasses.queue;
+  $: interactiveClasses = interactive
+    ? 'hover:border-border-strong/70 hover:shadow-elevated hover:-translate-y-0.5'
+    : '';
 </script>
 
 <svelte:element
   this={tag}
-  class="collection-list-item rounded-2xl border border-border-strong/40 border-l-[3px] {accentBorder} bg-surface/80 shadow-surface transition duration-300 ease-cinematic {interactive ? 'hover:border-border-strong/70 hover:shadow-elevated hover:-translate-y-0.5' : ''}"
+  class="collection-list-item rounded-2xl border border-border-strong/40 border-l-[3px] {accentBorder} bg-surface/80 shadow-surface transition duration-300 ease-cinematic {interactiveClasses}"
 >
   <slot />
 </svelte:element>
