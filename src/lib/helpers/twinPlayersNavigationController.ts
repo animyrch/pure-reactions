@@ -1,5 +1,6 @@
 import { goto } from '$app/navigation';
 import { getPlaylist, getQueueBySlug, getReaction } from '$lib/helpers/firebase';
+import { writePlaylistProgress } from '$lib/helpers/playlistProgress';
 import { writeQueueProgress } from '$lib/helpers/queueProgress';
 import {
   findPlaylistCurrentIndex,
@@ -214,6 +215,13 @@ export function createTwinPlayersNavigationController({
         window.history.pushState(window.history.state, '', url.toString());
       }
 
+      if (typeof window !== 'undefined' && userId && snapshot.playlistDocumentId) {
+        writePlaylistProgress(userId, snapshot.playlistDocumentId, {
+          reactionId: nextReactionDocumentId,
+          index: nextIndex
+        });
+      }
+
       loadReactionInPlace(nextReactionDocumentId, {
         preserveReactionTime: shouldPreserveReactionTime,
         autoPlay: true
@@ -235,6 +243,12 @@ export function createTwinPlayersNavigationController({
         currentIndexInPlaylist: updatedIndex,
         hasNextIndexInPlaylist: hasNext
       });
+      if (typeof window !== 'undefined' && userId) {
+        writePlaylistProgress(userId, playlistSlug, {
+          reactionId: nextReactionDocumentId,
+          index: nextIndex
+        });
+      }
       if (typeof window !== 'undefined') {
         const url = new URL(window.location.href);
         url.pathname = `/reaction/${nextReactionDocumentId}`;
@@ -383,6 +397,12 @@ export function createTwinPlayersNavigationController({
           updateState({ queueIndex: nextIndex });
           if (typeof window !== 'undefined' && userId) {
             writeQueueProgress(userId, queueSlug, { reactionId: nextReactionDocumentId, index: nextIndex });
+          }
+          if (typeof window !== 'undefined' && userId && getSnapshot().playlistDocumentId) {
+            writePlaylistProgress(userId, getSnapshot().playlistDocumentId as string, {
+              reactionId: nextReactionDocumentId,
+              index: nextIndex
+            });
           }
           if (typeof window !== 'undefined') {
             const url = new URL(window.location.href);

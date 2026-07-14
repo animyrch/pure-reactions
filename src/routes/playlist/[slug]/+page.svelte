@@ -1,8 +1,10 @@
 <script>
   import { page } from "$app/stores";
   import { browser } from "$app/environment";
+  import { goto } from "$app/navigation";
   import { onDestroy, onMount } from "svelte";
   import SEO from "$lib/components/SEO.svelte";
+  import CollectionEntrypointPanel from "$lib/components/design-system/CollectionEntrypointPanel.svelte";
   import CreatorDetails from "$lib/components/Video/CreatorDetails.svelte";
   import PlaylistQueue from "$lib/components/Video/PlaylistQueue.svelte";
   import OtherReactions from "$lib/components/Video/OtherReactions.svelte";
@@ -10,10 +12,13 @@
   import SubtleLoader from "$lib/components/design-system/SubtleLoader.svelte";
   import ReactionStage from "$lib/components/reaction/ReactionStage.svelte";
   import AttributionBlock from "$lib/components/reaction/AttributionBlock.svelte";
+  import { buildYouTubeThumbnailUrl } from "$lib/helpers/originalVideo";
+  import ReactionListGrid from "$lib/components/design-system/ReactionListGrid.svelte";
   import {
     useTwinPlayers,
     CONTROLS_FADE_CLASS,
   } from "$lib/composables/useTwinPlayers";
+  import { readPlaylistProgress, writePlaylistProgress } from "$lib/helpers/playlistProgress";
   import { reactionDial } from "$lib/stores/reactionDial";
   import { showToast } from "$lib/stores/toast";
   import { TOASTS } from "$lib/constants/toasts";
@@ -21,7 +26,7 @@
 
   export let data;
 
-  $: playlist = data?.playlist;
+  $: playlist = playlistDocument ?? playlistDocumentLocal ?? data?.playlist;
   $: seoTitle = playlist?.title || playlist?.firstReactionVideoTitle || "Playlist";
   $: seoDescription = playlist?.description || playlist?.firstReactionDescription || "Watch this playlist on Pure Reactions.";
   $: seoImage =
@@ -54,6 +59,15 @@
   let playlistDocumentLocal = null;
   let playlistInitError = "";
   let hasOtherReactions = false;
+  let playlistDocument = null;
+  let playlistItems = [];
+  let playlistResumeTarget = null;
+  let hasInitializedPlaybackMode = false;
+
+  $: isPlaybackRequested = Boolean($page.url.searchParams.get("item"));
+  $: playlistDocument = $state.playlistDocument ?? playlistDocumentLocal;
+  $: playlistItems = Array.isArray($state.playlistItems) ? $state.playlistItems : [];
+  $: playlistResumeTarget = resolvePlaylistResumeTarget(playlistDocument, playlistItems);
 
   $: playlistOwnerId = ($state.playlistDocument ?? playlistDocumentLocal)
     ?.userId;
@@ -72,6 +86,91 @@
     const index = originals.indexOf(selectedOriginalId);
     if (index >= 0) return { index, originalVideoId: selectedOriginalId };
     return { index: 0, originalVideoId: originals[0] };
+  };
+
+  const buildPlaylistPlaybackUrl = (originalVideoId) => {
+    const params = new URLSearchParams();
+    if (originalVideoId) {
+      params.set("item", originalVideoId);
+    }
+    return `/playlist/${playlistSlug}${params.toString() ? `?${params.toString()}` : ""}`;
+  };
+
+  const getPlaylistItemVideoId = (playlistItem) =>
+    playlistItem?.originalVideoId || playlistItem?.snippet?.resourceId?.videoId || playlistItem?.id || "";
+
+  const getPlaylistItemTitle = (playlistItem) =>
+    playlistItem?.title || playlistItem?.snippet?.title || "Untitled video";
+
+  const getPlaylistItemChannel = (playlistItem) =>
+    playlistItem?.channelTitle || playlistItem?.snippet?.channelTitle || "";
+
+  const resolvePlaylistResumeTarget = (playlistDoc, items = []) => {
+    if (!playlistSlug || !data?.userId || !playlistDoc) return null;
+
+    const saved = readPlaylistProgress(data.userId, playlistSlug);
+    if (!saved) return null;
+
+    const reactionIds = Array.isArray(playlistDoc?.reactionBinomeIds)
+      ? playlistDoc.reactionBinomeIds
+      : [];
+    const originalIds = Array.isArray(playlistDoc?.originalVideoIds)
+      ? playlistDoc.originalVideoIds
+      : [];
+
+    const reactionIndex = saved.reactionId
+      ? reactionIds.findIndex((reactionId) => reactionId === saved.reactionId)
+      : -1;
+    const fallbackIndex = Math.min(
+      Math.max(Number(saved.index) || 0, 0),
+      Math.max(Math.max(reactionIds.length, originalIds.length, items.length) - 1, 0),
+    );
+    const index = reactionIndex >= 0 ? reactionIndex : fallbackIndex;
+
+    const originalVideoId = originalIds[index] || getPlaylistItemVideoId(items[index]);
+    const reactionDocumentId = reactionIds[index] || saved.reactionId;
+
+    if (!originalVideoId || !reactionDocumentId) return null;
+
+    return {
+      index,
+      originalVideoId,
+      reactionDocumentId,
+    };
+  };
+
+  const handleStartPlaylist = async () => {
+    if (!playlistItems.length) return;
+    const target = playlistItems[0];
+    const originalVideoId = getPlaylistItemVideoId(target);
+    if (!originalVideoId) return;
+    if (data?.userId && playlistSlug && playlistDocument) {
+      const reactionIds = Array.isArray(playlistDocument.reactionBinomeIds) ? playlistDocument.reactionBinomeIds : [];
+      const reactionDocumentId = reactionIds[0] || target?.id || "";
+      if (reactionDocumentId) {
+        writePlaylistProgress(data.userId, playlistSlug, { reactionId: reactionDocumentId, index: 0 });
+      }
+    }
+    await goto(buildPlaylistPlaybackUrl(originalVideoId));
+  };
+
+  const handleResumePlaylist = async () => {
+    if (!playlistResumeTarget?.originalVideoId) return;
+    await goto(buildPlaylistPlaybackUrl(playlistResumeTarget.originalVideoId));
+  };
+
+  const handleOpenPlaylistItem = async (index) => {
+    const target = playlistItems[index];
+    const originalVideoId = getPlaylistItemVideoId(target);
+    if (!originalVideoId) return;
+    if (data?.userId && playlistSlug && playlistDocument) {
+      const reactionIds = Array.isArray(playlistDocument.reactionBinomeIds) ? playlistDocument.reactionBinomeIds : [];
+      const reactionDocumentId = reactionIds[index] || target?.id || "";
+      if (reactionDocumentId) {
+        writePlaylistProgress(data.userId, playlistSlug, { reactionId: reactionDocumentId, index });
+      }
+    }
+    await goto(buildPlaylistPlaybackUrl(originalVideoId));
   };
 
   const setUrlSelectedItem = (originalVideoId, { replace = false } = {}) => {
@@ -118,6 +217,12 @@
 
       await actions.setPlaylistDocumentId(playlistSlug);
       setUrlSelectedItem(originalVideoId, { replace: true });
+      if (data?.userId && reactionDocumentId) {
+        writePlaylistProgress(data.userId, playlistSlug, {
+          reactionId: reactionDocumentId,
+          index,
+        });
+      }
       await actions.loadReactionInPlace(reactionDocumentId, {
         preserveReactionTime,
       });
@@ -156,8 +261,13 @@
     playlistSlug = $page.params.slug;
     if (!playlistSlug) return;
 
-    await loadSelectedReaction({ preserveReactionTime: false });
+    await actions.setPlaylistDocumentId(playlistSlug);
   });
+
+  $: if (browser && playlistSlug && isPlaybackRequested && !hasInitializedPlaybackMode) {
+    hasInitializedPlaybackMode = true;
+    loadSelectedReaction({ preserveReactionTime: false });
+  }
 
   $: if (browser && playlistSlug) {
     // Keep dial context in sync as playback state changes.
@@ -226,136 +336,179 @@
   canonical="/playlist/{data.slug}"
 />
 
-<div class={$state.isLoading ? "" : "hidden"}>
+<div class={isPlaybackRequested && $state.isLoading ? "" : "hidden"}>
   <div class="flex justify-center py-24">
     <SubtleLoader label="Loading playlist experience" />
   </div>
 </div>
 
-<div
-  class={`website-inner-container bg-background text-text-primary ${$state.isLoading ? "hidden" : ""}`}
->
-  {#if playlistInitError}
-    <p class="mb-4 rounded-md bg-warning/10 px-4 py-3 text-sm text-warning">
-      {playlistInitError}
-    </p>
-  {/if}
+{#if !isPlaybackRequested}
+  <div class="website-inner-container bg-background text-text-primary">
+    {#if playlistInitError}
+      <p class="mb-4 rounded-md bg-warning/10 px-4 py-3 text-sm text-warning">
+        {playlistInitError}
+      </p>
+    {/if}
 
-  <ReactionStage
-    isFullscreen={$state.isFullscreen}
-    isControlSurfaceVisible={$state.isControlSurfaceVisible}
-    isExitButtonExpanded={$state.isExitButtonExpanded}
-    showCinematicBars={$state.showCinematicBars}
-    isReactionMissing={$state.isReactionMissing}
-    isUsersOwnVideo={isPlaylistOwner}
-    playerOriginal={$state.playerOriginal}
-    playerReaction={$state.playerReaction}
-    {stickyControlsClass}
-    bothVideosStarted={$state.bothVideosStarted}
-    isPlaylist={true}
-    isPlaylistAutoPlay={$state.isPlaylistAutoPlay}
-    reactionCurrentTime={$state.reactionCurrentTime}
-    reactionDuration={$state.reactionDuration}
-    offsetStartTime={$state.offsetStartTime}
-    reactionFinishTime={$state.reactionFinishTime}
-    fullscreenPrimaryVideo={$state.fullscreenPrimaryVideo}
-    fullscreenOverlayWidthPercent={$state.fullscreenOverlayWidthPercent}
-    fullscreenOverlayCorner={$state.fullscreenOverlayCorner}
-    fullscreenOverlayVisible={$state.fullscreenOverlayVisible}
-    missingReactionLoading={false}
-    missingReactionError=""
-    alwaysShowMissingPlaceholder={true}
-    bind:overlayRef
-    on:exitClick={actions.handleExitFullscreenClick}
-    on:exitEnter={actions.handleExitButtonEnter}
-    on:exitLeave={actions.handleExitButtonLeave}
-    on:pointerMove={actions.handleFullscreenPointerMove}
-    on:pointerDown={actions.handleFullscreenPointerDown}
-    on:pointerLeave={actions.scheduleHideControls}
-    on:missingReactionSubmit={handleMissingReactionSubmit}
-    on:playStateChanged={handlePlayStateChanged}
-    on:syncVideos={actions.syncVideos}
-    on:toggleAutoPlaylist={actions.toggleAutoPlaylist}
-    on:toggleCinematicBars={actions.toggleCinematicBars}
-    on:enterFullscreen={actions.openWithFullscreen}
-    on:seek={(e) => actions.seekTo(e.detail)}
-  />
-
-  {#if !$state.isFullscreen}
-    <div class="mx-auto w-full px-4 pt-6 pb-8 sm:px-6 lg:px-10">
-      <div class="grid grid-cols-1 gap-8 items-start mt-6 w-full {hasOtherReactions && !$state.isEditModeOn ? 'lg:grid-cols-3' : ''}">
-        <!-- Row 1, Col 1-2: Metadata & Playlist Queue -->
-        <div class="flex flex-col gap-6 {hasOtherReactions && !$state.isEditModeOn ? 'lg:col-span-2' : ''}">
-          <div>
-            <CreatorDetails
-              originalVideoAuthor={$state.originalVideoAuthor}
-              originalVideoAuthorUrl={$state.originalVideoAuthorUrl}
-              originalVideoTitle={$state.originalVideoTitle}
-              originalVideoId={$state.originalVideoId}
-              originalVideoUrl={$state.originalVideoUrl}
-              originalVideoDescription={$state.originalVideoDescription}
-              originalVideoPlatform={$state.originalVideoPlatform}
-              reactionVideoAuthor={$state.reactionVideoAuthor}
-              reactionVideoTitle={$state.reactionVideoTitle}
-              reactionVideoId={$state.reactionVideoId}
-              reactionVideoDescription={$state.reactionVideoDescription}
-              pageSlug={$state.pageSlug}
-              isUsersOwnVideo={$state.isUsersOwnVideo}
-              reactorId={$state.reactorId}
-              reactorDisplayName={$state.reactorDisplayName}
+    {#if !playlist}
+      <div class="mx-auto flex min-h-[40vh] w-full items-center justify-center px-4 py-10 text-text-muted">
+        <SubtleLoader label="Loading playlist overview" />
+      </div>
+    {:else}
+      <div class="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-10">
+        <CollectionEntrypointPanel
+          collectionType="playlist"
+          title={playlist?.title || playlist?.firstReactionVideoTitle || "Playlist"}
+          description={playlist?.description || playlist?.firstReactionDescription || "Browse the playlist, then start watching from any item."}
+          itemCount={playlistItems.length || playlist?.reactionBinomeIds?.length || 0}
+          itemLabel="reaction"
+          primaryAriaLabel="Start this playlist from the beginning"
+          primaryDisabled={!playlistItems.length}
+          onPrimaryClick={handleStartPlaylist}
+          secondaryLabel="Resume"
+          secondaryAriaLabel={playlistResumeTarget?.originalVideoId
+            ? `Resume playlist from item ${playlistResumeTarget.index + 1}`
+            : 'Resume is available after you start watching this playlist'}
+          secondaryDisabled={!playlistResumeTarget?.originalVideoId}
+          onSecondaryClick={handleResumePlaylist}
+        >
+          {#if playlistItems.length}
+            <ReactionListGrid
+              items={playlistItems}
+              onPlaylistItemClick={handleOpenPlaylistItem}
+              {getPlaylistItemVideoId}
+              {getPlaylistItemTitle}
+              {getPlaylistItemChannel}
             />
-            <div class="mt-3 sm:mt-4">
-              <AttributionBlock
-                reactionVideoAuthor={$state.reactionVideoAuthor}
-                reactorDisplayName={$state.reactorDisplayName}
-                reactorId={$state.reactorId}
-              />
+          {:else}
+            <div class="rounded-2xl border border-border-strong/40 bg-surface/70 p-6 text-sm text-text-muted">
+              This playlist does not have any items yet.
             </div>
+          {/if}
+        </CollectionEntrypointPanel>
+      </div>
+    {/if}
+  </div>
+{:else}
+  <div
+    class={`website-inner-container bg-background text-text-primary ${$state.isLoading ? "hidden" : ""}`}
+  >
+    <ReactionStage
+      isFullscreen={$state.isFullscreen}
+      isControlSurfaceVisible={$state.isControlSurfaceVisible}
+      isExitButtonExpanded={$state.isExitButtonExpanded}
+      showCinematicBars={$state.showCinematicBars}
+      isReactionMissing={$state.isReactionMissing}
+      isUsersOwnVideo={isPlaylistOwner}
+      playerOriginal={$state.playerOriginal}
+      playerReaction={$state.playerReaction}
+      {stickyControlsClass}
+      bothVideosStarted={$state.bothVideosStarted}
+      isPlaylist={true}
+      isPlaylistAutoPlay={$state.isPlaylistAutoPlay}
+      reactionCurrentTime={$state.reactionCurrentTime}
+      reactionDuration={$state.reactionDuration}
+      offsetStartTime={$state.offsetStartTime}
+      reactionFinishTime={$state.reactionFinishTime}
+      fullscreenPrimaryVideo={$state.fullscreenPrimaryVideo}
+      fullscreenOverlayWidthPercent={$state.fullscreenOverlayWidthPercent}
+      fullscreenOverlayCorner={$state.fullscreenOverlayCorner}
+      fullscreenOverlayVisible={$state.fullscreenOverlayVisible}
+      missingReactionLoading={false}
+      missingReactionError=""
+      alwaysShowMissingPlaceholder={true}
+      bind:overlayRef
+      on:exitClick={actions.handleExitFullscreenClick}
+      on:exitEnter={actions.handleExitButtonEnter}
+      on:exitLeave={actions.handleExitButtonLeave}
+      on:pointerMove={actions.handleFullscreenPointerMove}
+      on:pointerDown={actions.handleFullscreenPointerDown}
+      on:pointerLeave={actions.scheduleHideControls}
+      on:missingReactionSubmit={handleMissingReactionSubmit}
+      on:playStateChanged={handlePlayStateChanged}
+      on:syncVideos={actions.syncVideos}
+      on:toggleAutoPlaylist={actions.toggleAutoPlaylist}
+      on:toggleCinematicBars={actions.toggleCinematicBars}
+      on:enterFullscreen={actions.openWithFullscreen}
+      on:seek={(e) => actions.seekTo(e.detail)}
+    />
+
+    {#if !$state.isFullscreen}
+      <div class="mx-auto w-full px-4 pt-6 pb-8 sm:px-6 lg:px-10">
+        <div class="grid grid-cols-1 gap-8 items-start mt-6 w-full {hasOtherReactions && !$state.isEditModeOn ? 'lg:grid-cols-3' : ''}">
+          <!-- Row 1, Col 1-2: Metadata & Playlist Queue -->
+          <div class="flex flex-col gap-6 {hasOtherReactions && !$state.isEditModeOn ? 'lg:col-span-2' : ''}">
+            <div>
+              <CreatorDetails
+                originalVideoAuthor={$state.originalVideoAuthor}
+                originalVideoAuthorUrl={$state.originalVideoAuthorUrl}
+                originalVideoTitle={$state.originalVideoTitle}
+                originalVideoId={$state.originalVideoId}
+                originalVideoUrl={$state.originalVideoUrl}
+                originalVideoDescription={$state.originalVideoDescription}
+                originalVideoPlatform={$state.originalVideoPlatform}
+                reactionVideoAuthor={$state.reactionVideoAuthor}
+                reactionVideoTitle={$state.reactionVideoTitle}
+                reactionVideoId={$state.reactionVideoId}
+                reactionVideoDescription={$state.reactionVideoDescription}
+                pageSlug={$state.pageSlug}
+                isUsersOwnVideo={$state.isUsersOwnVideo}
+                reactorId={$state.reactorId}
+                reactorDisplayName={$state.reactorDisplayName}
+              />
+              <div class="mt-3 sm:mt-4">
+                <AttributionBlock
+                  reactionVideoAuthor={$state.reactionVideoAuthor}
+                  reactorDisplayName={$state.reactorDisplayName}
+                  reactorId={$state.reactorId}
+                />
+              </div>
+            </div>
+
+            {#if $state.originalVideoId && playlistSlug}
+              <div class="w-full">
+                <PlaylistQueue
+                  playlistItems={$state.playlistItems}
+                  playlistDocument={$state.playlistDocument ?? playlistDocumentLocal}
+                  currentlyViewed={$state.originalVideoId}
+                  playlistId={$state.youtubePlaylistId}
+                  playlistDocumentId={playlistSlug}
+                  currentIndex={$state.currentIndexInPlaylist}
+                  isCreation={false}
+                  onSelect={handlePlaylistSelect}
+                />
+              </div>
+            {/if}
           </div>
 
-          {#if $state.originalVideoId && playlistSlug}
-            <div class="w-full">
-              <PlaylistQueue
-                playlistItems={$state.playlistItems}
-                playlistDocument={$state.playlistDocument ?? playlistDocumentLocal}
-                currentlyViewed={$state.originalVideoId}
-                playlistId={$state.youtubePlaylistId}
-                playlistDocumentId={playlistSlug}
-                currentIndex={$state.currentIndexInPlaylist}
-                isCreation={false}
-                onSelect={handlePlaylistSelect}
+          <!-- Row 1-2, Col 3: Other Reactions -->
+          {#if !$state.isEditModeOn && $state.originalVideoId && $state.reactionVideoId}
+            <div class="{hasOtherReactions && !$state.isEditModeOn ? 'lg:col-span-1 lg:row-span-2' : ''} flex flex-col gap-6 {hasOtherReactions ? 'block' : 'hidden'}">
+              <OtherReactions
+                originalVideoId={$state.originalVideoId}
+                reactionVideoId={$state.reactionVideoId}
+                originalVideoTitle={$state.originalVideoTitle}
+                originalVideoAuthor={$state.originalVideoAuthor}
+                bind:hasOtherReactions={hasOtherReactions}
+              />
+            </div>
+          {/if}
+
+          <!-- Row 2, Col 1-2: YouTube Discussion (Comments) -->
+          {#if !$state.isEditModeOn}
+            <div class="{hasOtherReactions && !$state.isEditModeOn ? 'lg:col-span-2' : ''}">
+              <YouTubeDiscussion
+                reactionVideoId={$state.reactionVideoId}
+                originalVideoId={$state.originalVideoId}
+                originalVideoPlatform={$state.originalVideoPlatform}
               />
             </div>
           {/if}
         </div>
-
-        <!-- Row 1-2, Col 3: Other Reactions -->
-        {#if !$state.isEditModeOn && $state.originalVideoId && $state.reactionVideoId}
-          <div class="{hasOtherReactions && !$state.isEditModeOn ? 'lg:col-span-1 lg:row-span-2' : ''} flex flex-col gap-6 {hasOtherReactions ? 'block' : 'hidden'}">
-            <OtherReactions
-              originalVideoId={$state.originalVideoId}
-              reactionVideoId={$state.reactionVideoId}
-              originalVideoTitle={$state.originalVideoTitle}
-              originalVideoAuthor={$state.originalVideoAuthor}
-              bind:hasOtherReactions={hasOtherReactions}
-            />
-          </div>
-        {/if}
-
-        <!-- Row 2, Col 1-2: YouTube Discussion (Comments) -->
-        {#if !$state.isEditModeOn}
-          <div class="{hasOtherReactions && !$state.isEditModeOn ? 'lg:col-span-2' : ''}">
-            <YouTubeDiscussion
-              reactionVideoId={$state.reactionVideoId}
-              originalVideoId={$state.originalVideoId}
-              originalVideoPlatform={$state.originalVideoPlatform}
-            />
-          </div>
-        {/if}
       </div>
-    </div>
-  {/if}
-</div>
+    {/if}
+  </div>
+{/if}
 
 <style>
   .website-inner-container {

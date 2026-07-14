@@ -17,17 +17,15 @@
     export let interactive = false;
     export let linkless = false;
     export let showContextMenu = true;
+    export let compact = false;
 
     const isQueue = itemType === "queue";
     const isPlaylist = itemType === "playlist";
 
-    const playlistQuery = originalVideoId
-        ? `?${new URLSearchParams({ item: originalVideoId }).toString()}`
-        : "";
     const reactionRedirectionPath = isQueue
         ? `/queue/${queueSlug || reactionPageId}`
-        : isPlaylist && playlistId
-          ? `/playlist/${playlistId}${playlistQuery}`
+                : isPlaylist && playlistId
+                    ? `/playlist/${playlistId}`
           : `/reaction/${reactionPageId}${playlistId ? `?playlistId=${playlistId}` : ""}`;
 
     const displayTitle = isQueue
@@ -323,49 +321,51 @@
         </a>
     {/if}
 
-    <div class="thumbnail-content flex items-start gap-md">
-        {#if linkless}
-            <div
-                class="min-w-0 flex-1 rounded-sm"
-                title={displayTitle}
-            >
-                <p class="truncate text-sm font-semibold text-text-primary">
-                    {displayTitle}
-                </p>
-                {#if !isQueue && displayReactorName}
-                    <VideoAuthor
-                        videoAuthor={displayReactorName}
-                        showLinks={false}
-                        isReactor
-                    />
-                {:else if isQueue}
-                    <p class="text-xs text-text-muted">Collection of reactions</p>
-                {/if}
-            </div>
-        {:else}
-            <a
-                class="min-w-0 flex-1 rounded-sm focus-visible:outline-none focus-visible:underline"
-                href={reactionRedirectionPath}
-                title={displayTitle}
-            >
-                <p class="truncate text-sm font-semibold text-text-primary">
-                    {displayTitle}
-                </p>
-                {#if !isQueue && displayReactorName}
-                    <VideoAuthor
-                        videoAuthor={displayReactorName}
-                        showLinks={false}
-                        isReactor
-                    />
-                {:else if isQueue}
-                    <p class="text-xs text-text-muted">Collection of reactions</p>
-                {/if}
-            </a>
-        {/if}
-        {#if !isQueue && showContextMenu}
-            <ThumbnailContext {reactionPageId} {reactionVideoAuthor} />
-        {/if}
-    </div>
+    {#if !compact}
+        <div class="thumbnail-content flex items-start gap-md">
+            {#if linkless}
+                <div
+                    class="min-w-0 flex-1 rounded-sm"
+                    title={displayTitle}
+                >
+                    <p class="truncate text-sm font-semibold text-text-primary">
+                        {displayTitle}
+                    </p>
+                    {#if !isQueue && displayReactorName}
+                        <VideoAuthor
+                            videoAuthor={displayReactorName}
+                            showLinks={false}
+                            isReactor
+                        />
+                    {:else if isQueue}
+                        <p class="text-xs text-text-muted">Collection of reactions</p>
+                    {/if}
+                </div>
+            {:else}
+                <a
+                    class="min-w-0 flex-1 rounded-sm focus-visible:outline-none focus-visible:underline"
+                    href={reactionRedirectionPath}
+                    title={displayTitle}
+                >
+                    <p class="truncate text-sm font-semibold text-text-primary">
+                        {displayTitle}
+                    </p>
+                    {#if !isQueue && displayReactorName}
+                        <VideoAuthor
+                            videoAuthor={displayReactorName}
+                            showLinks={false}
+                            isReactor
+                        />
+                    {:else if isQueue}
+                        <p class="text-xs text-text-muted">Collection of reactions</p>
+                    {/if}
+                </a>
+            {/if}
+            {#if !isQueue && showContextMenu}
+                <ThumbnailContext {reactionPageId} {reactionVideoAuthor} />
+            {/if}
+        </div>
+    {/if}
 </div>
 
 <style>
