@@ -250,6 +250,12 @@ service cloud.firestore {
     match /userdata-prod/{userId} {
       allow read, write: if isUserDataOwner(userId);
     }
+    match /userData_local/{userId} {
+      allow read, write: if isUserDataOwner(userId);
+    }
+    match /userdata_local/{userId} {
+      allow read, write: if isUserDataOwner(userId);
+    }
 
     // Playlists (public read; owner write)
     match /playlists/{playlistId} {
