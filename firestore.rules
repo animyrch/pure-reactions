@@ -219,6 +219,17 @@ service cloud.firestore {
       allow update, delete: if isMomentOwner() &&
         request.resource.data.creatorId == resource.data.creatorId;
     }
+    match /moments_local/{momentId} {
+      allow read: if true;
+      allow create: if isMomentOwnerCreate();
+      allow update: if (
+        isSignedIn() &&
+        request.resource.data.diff(resource.data).changedKeys().hasOnly(['reactionCount', 'updatedAt'])
+      ) || (
+        isMomentOwner() && request.resource.data.creatorId == resource.data.creatorId
+      );
+      // No delete allowed
+    }
 
     // User data (private to the user)
     match /userData/{userId} {
