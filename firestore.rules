@@ -288,6 +288,11 @@ service cloud.firestore {
       allow create: if isQueueOwnerCreate();
       allow update, delete: if isQueueOwner() && request.resource.data.ownerId == resource.data.ownerId;
     }
+    match /queues_local/{queueId} {
+      allow read: if resource == null || isQueueOwner() || resource.data.isPublished == true;
+      allow create: if isQueueOwnerCreate();
+      allow update, delete: if isQueueOwner() && request.resource.data.ownerId == resource.data.ownerId;
+    }
 
     // Youtube channel claims (V1)
     match /youtubeChannelClaims/{claimId} {
