@@ -27,7 +27,6 @@
   $: hideSpeedDial =
     isPlaybackRoute && ($reactionDial.isFullscreen || isMobileLandscapeTheater);
   $: hideFooter = isMomentFeedRoute;
-  $: hideHeader = isMomentFeedRoute;
 
   onMount(() => {
     // Register service worker
