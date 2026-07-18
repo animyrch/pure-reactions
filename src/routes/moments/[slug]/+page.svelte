@@ -241,16 +241,6 @@
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      <div class="flex justify-end mb-4">
-        <button
-          type="button"
-          class="rounded-md bg-accent-primary px-4 py-2 text-background"
-          on:click={handleAddReaction}
-          disabled={addReactionLoading}
-        >
-          {addReactionLoading ? 'Starting…' : 'Add reaction'}
-        </button>
-      </div>
       <div class="grid grid-cols-1 gap-8 items-start mt-6 w-full lg:grid-cols-3">
         <div class="flex flex-col gap-6 lg:col-span-2">
           <div data-testid="reaction-metadata">
