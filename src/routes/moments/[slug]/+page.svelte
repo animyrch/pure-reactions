@@ -24,7 +24,7 @@
   import {
     buildAttributionVerificationState
   } from '$lib/helpers/reactionAttribution';
-  import MomentDiscoveryCard from '$lib/components/Moments/MomentDiscoveryCard.svelte';
+
 
   import { page } from '$app/stores';
   import { getMoment, getPublishedMomentReactions } from '$lib/helpers/momentsFirestore';
@@ -221,15 +221,15 @@
   {:else if !firstReactionId}
     <div class="mx-auto max-w-lg px-4 py-24 text-center">
       <h1 class="text-2xl font-semibold text-text-primary">{moment?.title || 'Moment'}</h1>
-      <div class="mt-8">
-        <MomentDiscoveryCard
-          {moment}
-          showAddReaction={true}
-          addReactionLoading={addReactionLoading}
-          on:addReaction={handleAddReaction}
-        />
-      </div>
-      <p class="mt-8 text-text-secondary">No reactions yet. Be the first to sync one to this moment.</p>
+      <p class="mt-3 text-text-secondary">No reactions yet. Be the first to sync one to this moment.</p>
+      <button
+        type="button"
+        class="mt-6 rounded-md bg-accent-primary px-4 py-2 text-background"
+        on:click={handleAddReaction}
+        disabled={addReactionLoading}
+      >
+        {addReactionLoading ? 'Starting…' : 'Add reaction'}
+      </button>
     </div>
   {:else}
     <ReactionView
@@ -241,13 +241,15 @@
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      <div class="mb-4">
-        <MomentDiscoveryCard
-          {moment}
-          showAddReaction={true}
-          addReactionLoading={addReactionLoading}
-          on:addReaction={handleAddReaction}
-        />
+      <div class="flex justify-end mb-4">
+        <button
+          type="button"
+          class="rounded-md bg-accent-primary px-4 py-2 text-background"
+          on:click={handleAddReaction}
+          disabled={addReactionLoading}
+        >
+          {addReactionLoading ? 'Starting…' : 'Add reaction'}
+        </button>
       </div>
       <div class="grid grid-cols-1 gap-8 items-start mt-6 w-full lg:grid-cols-3">
         <div class="flex flex-col gap-6 lg:col-span-2">

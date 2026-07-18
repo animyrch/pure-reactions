@@ -90,7 +90,10 @@
           type="button"
           class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-accent-primary/10 px-4 py-2.5 text-sm font-semibold text-accent-primary transition hover:bg-accent-primary/20 disabled:opacity-60"
           disabled={addReactionLoading}
-          on:click={() => dispatch('addReaction')}
+          on:click|stopPropagation={(e) => {
+            e.preventDefault();
+            dispatch('addReaction');
+          }}
         >
           <PlusOutline class="h-5 w-5" />
           {addReactionLoading ? 'Starting...' : 'Add Reaction to Moment'}
