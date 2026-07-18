@@ -96,6 +96,13 @@
       >
         See how it works
       </button>
+      <button
+        class="inline-flex items-center gap-2 rounded-lg border border-accent-primary bg-accent-primary/10 px-8 py-3.5 text-base font-medium text-accent-primary shadow-surface backdrop-blur-sm transition duration-subtle ease-cinematic hover:bg-accent-primary/15 hover:border-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        on:click={() => document.getElementById('creator-proof')?.scrollIntoView({ behavior: 'smooth' })}
+        aria-label="Browse reactions"
+      >
+        Browse Reactions
+      </button>
     </div>
 
     <!-- Visual hint: dual-stream preview -->
