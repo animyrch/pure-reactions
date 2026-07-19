@@ -28,7 +28,7 @@
 
   $: slug = get(page).params.slug;
   $: firstReactionId = reactions[0]?.id || '';
-  $: reactionCount = Number(moment?.reactionCount) || reactions.length;
+  $: reactionCount = reactions.length;
   $: anchorTime = Number.isFinite(Number(moment?.momentTimeSeconds))
     ? formatTime(Number(moment.momentTimeSeconds))
     : '';

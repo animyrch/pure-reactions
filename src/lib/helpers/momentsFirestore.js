@@ -123,6 +123,36 @@ export const getPublishedMomentReactions = async (momentId) => {
   }
 };
 
+export const recountMomentReactionCount = async (momentId) => {
+  if (!momentId || !db) {
+    return null;
+  }
+
+  try {
+    const reactionsCollection = createReactionsCollection();
+    const queryRef = query(
+      reactionsCollection,
+      where('momentId', '==', momentId),
+      where('isMomentReaction', '==', true),
+      where('isPublished', '==', true)
+    );
+
+    const snapshot = await getDocs(queryRef);
+    const nextReactionCount = snapshot.size;
+    const momentRef = doc(createMomentsCollection(), momentId);
+
+    await updateDoc(momentRef, {
+      reactionCount: nextReactionCount,
+      updatedAt: serverTimestamp()
+    });
+
+    return nextReactionCount;
+  } catch (error) {
+    console.error('Failed to recount moment reaction count:', error, { momentId });
+    throw error;
+  }
+};
+
 export const adjustMomentReactionCount = async (momentId, delta) => {
   const numericDelta = Number(delta);
   if (!momentId || !db || !Number.isFinite(numericDelta) || numericDelta === 0) {
