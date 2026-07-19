@@ -5,7 +5,6 @@
 
   export let momentId = '';
   export let momentTitle = '';
-  export let reactionCount = 0;
   export let onAddReaction = () => {};
   export let addReactionLoading = false;
 
@@ -23,9 +22,6 @@
       Moments
     </a>
     <h1 class="mt-1 line-clamp-2 text-lg font-semibold text-white sm:text-xl">{momentTitle}</h1>
-    <p class="mt-1 text-sm text-white/70">
-      {reactionCount} synced {reactionCount === 1 ? 'reaction' : 'reactions'}
-    </p>
   </div>
 
   <div class="pointer-events-auto flex shrink-0 flex-col gap-2">

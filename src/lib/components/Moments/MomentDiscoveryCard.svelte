@@ -27,7 +27,6 @@
   $: href = buildMomentPagePath(momentId);
   $: title = moment.title || 'Untitled moment';
   $: originalTitle = moment.originalVideoTitle || 'Original video';
-  $: reactionCount = Number(moment.reactionCount) || 0;
   $: thumbnail =
     moment.originalVideoThumbnailUrl ||
     buildYouTubeThumbnailUrl(moment.originalVideoId) ||
@@ -71,10 +70,6 @@
         {title}
       </h2>
     </a>
-
-    <p class="text-sm text-text-secondary">
-      {reactionCount} {reactionCount === 1 ? 'reaction' : 'reactions'}
-    </p>
 
     {#if tags.length}
       <ul class="flex flex-wrap gap-2" aria-label="Tags">
