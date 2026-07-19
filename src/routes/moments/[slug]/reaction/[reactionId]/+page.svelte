@@ -5,9 +5,7 @@
   import SEO from '$lib/components/SEO.svelte';
   import SubtleLoader from '$lib/components/design-system/SubtleLoader.svelte';
   import ReactionView from '$lib/components/reaction/ReactionView.svelte';
-  import CreatorDetails from '$lib/components/Video/CreatorDetails.svelte';
-  import PlaylistQueue from '$lib/components/Video/PlaylistQueue.svelte';
-  import AttributionBlock from '$lib/components/reaction/AttributionBlock.svelte';
+  import ReactionDetailsSection from '$lib/components/reaction/ReactionDetailsSection.svelte';
   import { useTwinPlayers } from '$lib/composables/useTwinPlayers';
   import { reactionDial } from '$lib/stores/reactionDial';
   import { handlePrivateRoute } from '$lib/helpers/routing';
@@ -229,49 +227,12 @@
           Back to all moment reactions
         </a>
       </div>
-      <div class="mt-6 grid w-full grid-cols-1 items-start gap-8">
-        <div class="flex flex-col gap-6">
-          <div data-testid="reaction-metadata">
-            <CreatorDetails
-              originalVideoAuthor={$state.originalVideoAuthor}
-              originalVideoAuthorUrl={$state.originalVideoAuthorUrl}
-              originalVideoTitle={$state.originalVideoTitle}
-              originalVideoId={$state.originalVideoId}
-              originalVideoUrl={$state.originalVideoUrl}
-              originalVideoDescription={$state.originalVideoDescription}
-              originalVideoPlatform={$state.originalVideoPlatform}
-              reactionVideoAuthor={$state.reactionVideoAuthor}
-              reactionVideoTitle={$state.reactionVideoTitle}
-              reactionVideoId={$state.reactionVideoId}
-              reactionVideoDescription={$state.reactionVideoDescription}
-              pageSlug={$state.pageSlug}
-              isUsersOwnVideo={$state.isUsersOwnVideo}
-              reactorId={$state.reactorId}
-              reactorDisplayName={$state.reactorDisplayName}
-            />
-            <div class="mt-3 sm:mt-4">
-              <AttributionBlock
-                reactionVideoAuthor={$state.reactionVideoAuthor}
-                reactorDisplayName={$state.reactorDisplayName}
-                reactorId={$state.reactorId}
-                viewerId={undefined}
-              />
-            </div>
-          </div>
-          {#if $state.originalVideoId && $state.playlistDocumentId}
-            <div class="w-full">
-              <PlaylistQueue
-                playlistItems={$state.playlistItems}
-                playlistDocument={$state.playlistDocument}
-                currentlyViewed={$state.originalVideoId}
-                playlistId={$state.youtubePlaylistId}
-                playlistDocumentId={$state.playlistDocumentId}
-                currentIndex={$state.currentIndexInPlaylist}
-                isCreation={false}
-              />
-            </div>
-          {/if}
-        </div>
+      <div class="mt-6 w-full">
+        <ReactionDetailsSection
+          reactionState={$state}
+          isEditModeOn={$state.isEditModeOn}
+          includeOtherReactions={false}
+        />
       </div>
     </ReactionView>
   {/if}
