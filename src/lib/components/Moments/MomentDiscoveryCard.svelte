@@ -1,6 +1,10 @@
 <script>
   import { buildYouTubeThumbnailUrl } from '$lib/helpers/originalVideo';
   import { buildMomentPagePath } from '$lib/helpers/momentsFirestore';
+  import { createEventDispatcher } from 'svelte';
+  import { PlusOutline } from 'flowbite-svelte-icons';
+
+  const dispatch = createEventDispatcher();
 
   // Helper to format seconds as mm:ss or hh:mm:ss
   function formatTime(seconds) {
@@ -16,6 +20,8 @@
   }
 
   export let moment = {};
+  export let showAddReaction = false;
+  export let addReactionLoading = false;
 
   $: momentId = moment.objectID || moment.id;
   $: href = buildMomentPagePath(momentId);
@@ -70,18 +76,29 @@
       {reactionCount} {reactionCount === 1 ? 'reaction' : 'reactions'}
     </p>
 
-    {#if anchorTime}
-      <p class="text-xs text-text-muted" aria-label="Moment anchor time">
-        Anchored at <span class="font-mono">{anchorTime}</span> in original
-      </p>
-    {/if}
-
     {#if tags.length}
       <ul class="flex flex-wrap gap-2" aria-label="Tags">
         {#each tags as tag}
           <li class="rounded-full bg-background/80 px-2.5 py-0.5 text-xs text-text-muted">{tag}</li>
         {/each}
       </ul>
+    {/if}
+
+    {#if showAddReaction}
+      <div class="mt-auto pt-4">
+        <button
+          type="button"
+          class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-accent-primary/10 px-4 py-2.5 text-sm font-semibold text-accent-primary transition hover:bg-accent-primary/20 disabled:opacity-60"
+          disabled={addReactionLoading}
+          on:click|stopPropagation={(e) => {
+            e.preventDefault();
+            dispatch('addReaction');
+          }}
+        >
+          <PlusOutline class="h-5 w-5" />
+          {addReactionLoading ? 'Starting...' : 'Add Reaction to Moment'}
+        </button>
+      </div>
     {/if}
   </div>
 </article>

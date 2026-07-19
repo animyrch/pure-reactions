@@ -27,7 +27,6 @@
   $: hideSpeedDial =
     isPlaybackRoute && ($reactionDial.isFullscreen || isMobileLandscapeTheater);
   $: hideFooter = isMomentFeedRoute;
-  $: hideHeader = isMomentFeedRoute;
 
   onMount(() => {
     // Register service worker
@@ -96,11 +95,9 @@
 
 <GoogleAnalytics />
 
-{#if !hideHeader}
-  <header class="w-full safe-padding-x">
-    <TopNavigation />
-  </header>
-{/if}
+<header class="w-full safe-padding-x">
+  <TopNavigation />
+</header>
 
 {#each currentToasts as toast (toast.id)}
   <Toast {toast} key={toast.id} />

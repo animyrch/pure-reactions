@@ -7,6 +7,11 @@
   import MomentDiscoveryCard from '$lib/components/Moments/MomentDiscoveryCard.svelte';
   import { searchMoments } from '$lib/helpers/momentsSearch';
   import { DEFAULT_MOMENT_SORT, MOMENT_SORT_LABELS } from '$lib/constants/moments';
+  import { currentUser } from '$lib/stores/user';
+  import { handlePrivateRoute } from '$lib/helpers/routing';
+  import { showToast } from '$lib/stores/toast';
+  import { TOASTS } from '$lib/constants/toasts';
+  import { startMomentReactionDraft } from '$lib/helpers/momentsFirestore';
 
   const HITS_PER_PAGE = 12;
   const DEBOUNCE_DELAY = 600;
@@ -25,6 +30,7 @@
   let sentinel;
   let observer;
   let lastFirestoreDoc = null;
+  let addReactionLoadingFor = '';
 
   $: hasMore = currentPage < totalPages - 1;
   $: isSearchMode = query.trim().length > 0;
@@ -132,6 +138,38 @@
     tagFilter = event.currentTarget.value;
     applyFilters();
   }
+
+  const handleAddReaction = async (moment) => {
+    if (!moment || !moment.objectID) return;
+    let user;
+    currentUser.subscribe((value) => (user = value))();
+    if (!user || !user.uid) {
+      handlePrivateRoute();
+      showToast('You must be logged in to add a reaction.', TOASTS.WARNING);
+      return;
+    }
+    addReactionLoadingFor = moment.objectID;
+    try {
+      const reactionDocumentId = await startMomentReactionDraft({
+        momentId: moment.objectID,
+        momentOriginalTimeSeconds: Number(moment.momentTimeSeconds),
+        originalVideoId: moment.originalVideoId,
+        originalVideoPlatform: moment.originalVideoPlatform,
+        originalVideoTitle: moment.originalVideoTitle,
+        originalVideoAuthor: moment.originalVideoAuthor,
+        originalVideoUrl: moment.originalVideoUrl,
+        originalVideoThumbnailUrl: moment.originalVideoThumbnailUrl,
+        originalVideoThumbnailWidth: moment.originalVideoThumbnailWidth,
+        originalVideoThumbnailHeight: moment.originalVideoThumbnailHeight
+      });
+      await goto(`/edit-reaction/${reactionDocumentId}?momentId=${moment.objectID}`);
+    } catch (error) {
+      console.error('Failed to start moment reaction draft', error);
+      showToast(error?.message || 'Unable to start a new reaction.', TOASTS.WARNING);
+    } finally {
+      addReactionLoadingFor = '';
+    }
+  };
 </script>
 
 <SEO
@@ -213,7 +251,12 @@
     </p>
     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {#each results as moment (moment.objectID || moment.id)}
-        <MomentDiscoveryCard {moment} />
+        <MomentDiscoveryCard
+          {moment}
+          showAddReaction={true}
+          addReactionLoading={addReactionLoadingFor === moment.objectID}
+          on:addReaction={() => handleAddReaction(moment)}
+        />
       {/each}
     </div>
     {#if loadingMore}
