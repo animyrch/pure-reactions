@@ -22,6 +22,16 @@ const createReactionsCollection = () => collection(db, COLLECTION_REACTION_BINOM
 
 export const buildMomentPagePath = (momentId) => `/moments/${momentId}`;
 
+export const buildMomentReactionPath = (momentId, reactionId) => {
+  if (!momentId) {
+    return '/moments';
+  }
+  if (!reactionId) {
+    return buildMomentPagePath(momentId);
+  }
+  return `/moments/${momentId}/reaction/${reactionId}`;
+};
+
 export const resolveMomentRouteId = (moment) => moment?.slug?.trim?.() || moment?.id || '';
 
 export const getMoment = async (momentId) => {
