@@ -229,8 +229,8 @@
           Back to all moment reactions
         </a>
       </div>
-      <div class="mt-6 grid w-full grid-cols-1 items-start gap-8 lg:grid-cols-3">
-        <div class="flex flex-col gap-6 lg:col-span-2">
+      <div class="mt-6 grid w-full grid-cols-1 items-start gap-8">
+        <div class="flex flex-col gap-6">
           <div data-testid="reaction-metadata">
             <CreatorDetails
               originalVideoAuthor={$state.originalVideoAuthor}
