@@ -219,7 +219,7 @@
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      <div class="mt-6 w-full">
+      <div class="mt-6 w-full flex justify-end">
         <a
           class="inline-flex rounded-sm text-sm text-text-muted transition hover:text-text-primary focus-visible:outline-none focus-visible:underline"
           href={`/moments/${slug}`}
