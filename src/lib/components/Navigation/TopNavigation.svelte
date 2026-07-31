@@ -54,12 +54,6 @@
 
     <!-- Desktop Navigation Links -->
     <div class="hidden items-center gap-6 md:flex">
-      <a
-        href="/moments"
-        class="text-sm font-medium text-text-secondary transition-colors hover:text-text-primary"
-      >
-        Moments
-      </a>
       <button
         type="button"
         class="inline-flex items-center gap-2 rounded-full border border-border-strong/60 bg-surface/70 px-4 py-2 text-sm font-medium text-text-primary shadow-surface transition-all duration-300 ease-cinematic hover:bg-surface/90 hover:shadow-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
@@ -69,6 +63,12 @@
         <SearchIcon class="h-5 w-5" aria-hidden="true" />
         <span>Search</span>
       </button>
+      <a
+        href="/moments"
+        class="text-sm font-medium text-text-secondary transition-colors hover:text-text-primary"
+      >
+        Moments
+      </a>
       <a
         href="/how-it-works"
         class="text-sm font-medium text-text-secondary transition-colors hover:text-text-primary"
