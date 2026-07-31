@@ -220,12 +220,15 @@
       onTouchEnd={handleTouchEnd}
     >
       <div class="mt-6 w-full flex justify-end">
-        <a
-          class="inline-flex rounded-sm text-sm text-text-muted transition hover:text-text-primary focus-visible:outline-none focus-visible:underline"
-          href={`/moments/${slug}`}
+        <button
+          type="button"
+          class="inline-flex rounded-sm text-sm text-text-muted transition hover:text-text-primary focus-visible:outline-none focus-visible:underline disabled:opacity-50 disabled:cursor-not-allowed"
+          on:click={() => goToReactionIndex(currentIndex + 1)}
+          disabled={currentIndex >= reactionIds.length - 1}
+          aria-disabled={currentIndex >= reactionIds.length - 1}
         >
-          Back to all moment reactions
-        </a>
+          Next reaction
+        </button>
       </div>
       <div class="mt-6 w-full">
         <ReactionDetailsSection
