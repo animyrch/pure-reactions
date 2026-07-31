@@ -19,14 +19,18 @@
 
   let reduceMotion = false;
   let isMobileLandscapeTheater = false;
+  const momentReactionPlaybackPathPattern = /^\/moments\/[^/]+\/reaction\/[^/]+$/;
 
   $: isReactionRoute = $page.url.pathname?.startsWith("/reaction/");
   $: isPlaylistRoute = $page.url.pathname?.startsWith("/playlist/");
-  $: isMomentFeedRoute = /^\/moments\/[^/]+$/.test($page.url.pathname || "");
-  $: isPlaybackRoute = isReactionRoute || isPlaylistRoute || isMomentFeedRoute;
+  $: isMomentReactionPlaybackRoute = momentReactionPlaybackPathPattern.test(
+    $page.url.pathname || "",
+  );
+  $: isPlaybackRoute =
+    isReactionRoute || isPlaylistRoute || isMomentReactionPlaybackRoute;
   $: hideSpeedDial =
     isPlaybackRoute && ($reactionDial.isFullscreen || isMobileLandscapeTheater);
-  $: hideFooter = isMomentFeedRoute;
+  $: hideFooter = isMomentReactionPlaybackRoute;
 
   onMount(() => {
     // Register service worker
@@ -73,7 +77,10 @@
 
     // Skip view transitions for reaction routes to prevent DOM instability during YouTube player initialization
     const toPath = navigation.to?.url?.pathname ?? '';
-    if (toPath.startsWith('/reaction/') || /^\/moments\/[^/]+$/.test(toPath)) {
+    if (
+      toPath.startsWith('/reaction/') ||
+      momentReactionPlaybackPathPattern.test(toPath)
+    ) {
       return;
     }
 

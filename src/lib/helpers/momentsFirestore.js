@@ -22,6 +22,16 @@ const createReactionsCollection = () => collection(db, COLLECTION_REACTION_BINOM
 
 export const buildMomentPagePath = (momentId) => `/moments/${momentId}`;
 
+export const buildMomentReactionPath = (momentId, reactionId) => {
+  if (!momentId) {
+    return '/moments';
+  }
+  if (!reactionId) {
+    return buildMomentPagePath(momentId);
+  }
+  return `/moments/${momentId}/reaction/${reactionId}`;
+};
+
 export const resolveMomentRouteId = (moment) => moment?.slug?.trim?.() || moment?.id || '';
 
 export const getMoment = async (momentId) => {
@@ -110,6 +120,36 @@ export const getPublishedMomentReactions = async (momentId) => {
   } catch (error) {
     console.error('Error loading moment reactions:', error);
     return [];
+  }
+};
+
+export const recountMomentReactionCount = async (momentId) => {
+  if (!momentId || !db) {
+    return null;
+  }
+
+  try {
+    const reactionsCollection = createReactionsCollection();
+    const queryRef = query(
+      reactionsCollection,
+      where('momentId', '==', momentId),
+      where('isMomentReaction', '==', true),
+      where('isPublished', '==', true)
+    );
+
+    const snapshot = await getDocs(queryRef);
+    const nextReactionCount = snapshot.size;
+    const momentRef = doc(createMomentsCollection(), momentId);
+
+    await updateDoc(momentRef, {
+      reactionCount: nextReactionCount,
+      updatedAt: serverTimestamp()
+    });
+
+    return nextReactionCount;
+  } catch (error) {
+    console.error('Failed to recount moment reaction count:', error, { momentId });
+    throw error;
   }
 };
 

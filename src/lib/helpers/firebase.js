@@ -68,6 +68,25 @@ const shouldRequestReactionEnrichment = (data) => {
     ].some((value) => typeof value === 'string' && value.trim());
 };
 
+const hasOwnField = (obj, field) => Object.prototype.hasOwnProperty.call(obj, field);
+
+const normalizeMomentId = (value) => {
+    if (typeof value !== 'string') {
+        return '';
+    }
+
+    const trimmed = value.trim();
+    return trimmed || '';
+};
+
+const shouldEvaluateMomentReactionCountSync = (dataToUpdate) => {
+    if (!dataToUpdate || typeof dataToUpdate !== 'object') {
+        return false;
+    }
+
+    return ['isPublished', 'isMomentReaction', 'momentId'].some((field) => hasOwnField(dataToUpdate, field));
+};
+
 export const requestReactionEnrichment = async (reactionId, { force = false } = {}) => {
     if (!reactionId || typeof fetch !== 'function') {
         return false;
@@ -625,8 +644,70 @@ export const updateFirebaseDocument = async (dataToUpdate, documentId) => {
             console.error('Error updating document: missing reaction document id');
             return false;
         }
+
         const documentRef = doc(reactionsCollection, targetDocumentId);
+        const shouldSyncMomentReactionCount = shouldEvaluateMomentReactionCountSync(dataToUpdate);
+        let previousData = null;
+
+        if (shouldSyncMomentReactionCount) {
+            try {
+                const previousSnapshot = await getDoc(documentRef);
+                if (previousSnapshot.exists()) {
+                    previousData = previousSnapshot.data() || {};
+                }
+            } catch (error) {
+                console.error('Failed to load reaction document before update for moment count sync:', error);
+            }
+        }
+
         await updateDoc(documentRef, dataToUpdate);
+
+        if (shouldSyncMomentReactionCount && previousData) {
+            try {
+                const previousMomentId = normalizeMomentId(previousData.momentId);
+                const nextMomentId = normalizeMomentId(
+                    hasOwnField(dataToUpdate, 'momentId') ? dataToUpdate.momentId : previousData.momentId
+                );
+
+                const previousIsMomentReaction = Boolean(previousData.isMomentReaction);
+                const nextIsMomentReaction = hasOwnField(dataToUpdate, 'isMomentReaction')
+                    ? Boolean(dataToUpdate.isMomentReaction)
+                    : previousIsMomentReaction;
+
+                const previousIsPublished = Boolean(previousData.isPublished);
+                const nextIsPublished = hasOwnField(dataToUpdate, 'isPublished')
+                    ? Boolean(dataToUpdate.isPublished)
+                    : previousIsPublished;
+
+                const publishStateChanged = previousIsPublished !== nextIsPublished;
+                const momentReactionFlagChanged = previousIsMomentReaction !== nextIsMomentReaction;
+                const momentIdChanged = previousMomentId !== nextMomentId;
+
+                if (publishStateChanged || momentReactionFlagChanged || momentIdChanged) {
+                    const affectedMomentIds = new Set();
+
+                    if (previousIsMomentReaction && previousMomentId) {
+                        affectedMomentIds.add(previousMomentId);
+                    }
+
+                    if (nextIsMomentReaction && nextMomentId) {
+                        affectedMomentIds.add(nextMomentId);
+                    }
+
+                    if (affectedMomentIds.size > 0) {
+                        const { recountMomentReactionCount } = await import('$lib/helpers/momentsFirestore');
+                        await Promise.all(
+                            Array.from(affectedMomentIds).map((momentId) => recountMomentReactionCount(momentId))
+                        );
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to sync moment reaction count after reaction update:', error, {
+                    targetDocumentId
+                });
+            }
+        }
+
         if (shouldRequestReactionEnrichment(dataToUpdate)) {
             await requestReactionEnrichment(targetDocumentId);
         }

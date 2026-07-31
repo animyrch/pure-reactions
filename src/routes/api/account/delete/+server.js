@@ -8,7 +8,8 @@ async function deleteUserData(userId, adminDb) {
 		COLLECTION_REACTION_BINOMES,
 		COLLECTION_USER_DATA,
 		COLLECTION_PLAYLISTS,
-		COLLECTION_QUEUES
+		COLLECTION_QUEUES,
+		COLLECTION_MOMENTS
 	} = await import('$lib/constants/firebase');
 	if (!adminDb) {
 		throw new Error('Firestore not initialized');
@@ -16,6 +17,7 @@ async function deleteUserData(userId, adminDb) {
 
 	const batch = adminDb.batch();
 	let deletionCount = 0;
+	const impactedMomentIds = new Set();
 
 	// Delete user profile document
 	const userDocRef = adminDb.collection(COLLECTION_USER_DATA).doc(userId);
@@ -29,6 +31,16 @@ async function deleteUserData(userId, adminDb) {
 		.get();
 
 	reactionsSnapshot.docs.forEach(doc => {
+		const reactionData = doc.data() || {};
+		if (
+			reactionData.isMomentReaction === true &&
+			reactionData.isPublished === true &&
+			typeof reactionData.momentId === 'string' &&
+			reactionData.momentId.trim()
+		) {
+			impactedMomentIds.add(reactionData.momentId.trim());
+		}
+
 		batch.delete(doc.ref);
 		deletionCount++;
 	});
@@ -77,6 +89,30 @@ async function deleteUserData(userId, adminDb) {
 
 	// Commit all deletions
 	await batch.commit();
+
+	if (impactedMomentIds.size > 0) {
+		await Promise.all(
+			Array.from(impactedMomentIds).map(async (momentId) => {
+				try {
+					const remainingPublishedMomentReactions = await adminDb
+						.collection(COLLECTION_REACTION_BINOMES)
+						.where('momentId', '==', momentId)
+						.where('isMomentReaction', '==', true)
+						.where('isPublished', '==', true)
+						.get();
+
+					await adminDb
+						.collection(COLLECTION_MOMENTS)
+						.doc(momentId)
+						.update({ reactionCount: remainingPublishedMomentReactions.size });
+				} catch (error) {
+					console.error('Failed to recount moment reaction count during account deletion:', error, {
+						momentId
+					});
+				}
+			})
+		);
+	}
 
 	return deletionCount;
 }

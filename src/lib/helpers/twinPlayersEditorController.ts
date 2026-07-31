@@ -902,13 +902,16 @@ export function createTwinPlayersEditorController({
     }
 
     const wasPublished = Boolean(snapshot.isPublished);
-    await updateFirebaseDocument({ isPublished: true });
+    if (wasPublished) {
+      return;
+    }
 
-    if (snapshot.isMomentReaction && snapshot.momentId && !wasPublished) {
-      const { incrementMomentReactionCount } = await import('$lib/helpers/momentsFirestore');
-      incrementMomentReactionCount(snapshot.momentId).catch((error: unknown) => {
-        console.error('Failed to increment moment reaction count', error);
-      });
+    const didUpdate = await updateFirebaseDocument({ isPublished: true });
+    if (!didUpdate) {
+      if (typeof window !== 'undefined') {
+        showToast('Failed to publish reaction. Please try again.', TOASTS.WARNING);
+      }
+      return;
     }
 
     const reactionId =
@@ -926,13 +929,16 @@ export function createTwinPlayersEditorController({
   const setIsUnpublished = async () => {
     const snapshot = getSnapshot();
     const wasPublished = Boolean(snapshot.isPublished);
-    await updateFirebaseDocument({ isPublished: false });
+    if (!wasPublished) {
+      return;
+    }
 
-    if (snapshot.isMomentReaction && snapshot.momentId && wasPublished) {
-      const { decrementMomentReactionCount } = await import('$lib/helpers/momentsFirestore');
-      decrementMomentReactionCount(snapshot.momentId).catch((error: unknown) => {
-        console.error('Failed to decrement moment reaction count', error);
-      });
+    const didUpdate = await updateFirebaseDocument({ isPublished: false });
+    if (!didUpdate) {
+      if (typeof window !== 'undefined') {
+        showToast('Failed to unpublish reaction. Please try again.', TOASTS.WARNING);
+      }
+      return;
     }
     if (typeof location !== 'undefined') {
       location.reload();

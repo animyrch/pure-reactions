@@ -1,14 +1,10 @@
 <script>
   import { page } from "$app/stores";
   import SEO from "$lib/components/SEO.svelte";
-  import CreatorDetails from "$lib/components/Video/CreatorDetails.svelte";
-  import PlaylistQueue from "$lib/components/Video/PlaylistQueue.svelte";
-  import OtherReactions from "$lib/components/Video/OtherReactions.svelte";
-  import YouTubeDiscussion from "$lib/components/Video/YouTubeDiscussion.svelte";
   import SubtleLoader from "$lib/components/design-system/SubtleLoader.svelte";
   import QueueProgressPill from "$lib/components/reaction/QueueProgressPill.svelte";
   import ReactionStage from "$lib/components/reaction/ReactionStage.svelte";
-  import AttributionBlock from "$lib/components/reaction/AttributionBlock.svelte";
+  import ReactionDetailsSection from "$lib/components/reaction/ReactionDetailsSection.svelte";
   import {
     useTwinPlayers,
     CONTROLS_FADE_CLASS,
@@ -60,7 +56,6 @@
   let queueHasNext = false;
   let queueHasNextLoading = false;
   let queueHasNextCheckKey = "";
-  let hasOtherReactions = false;
 
   const refreshQueueHasNext = async () => {
     // If neither a persisted queue nor an ad-hoc queue is present, nothing to check
@@ -291,75 +286,12 @@
         </div>
       {/if}
 
-      <div class="grid grid-cols-1 gap-8 items-start mt-6 w-full {hasOtherReactions && !$state.isEditModeOn ? 'lg:grid-cols-3' : ''}">
-        <!-- Row 1, Col 1-2: Metadata & Playlist Queue -->
-        <div class="flex flex-col gap-6 {hasOtherReactions && !$state.isEditModeOn ? 'lg:col-span-2' : ''}">
-          <div data-testid="reaction-metadata">
-            <CreatorDetails
-              originalVideoAuthor={$state.originalVideoAuthor}
-              originalVideoAuthorUrl={$state.originalVideoAuthorUrl}
-              originalVideoTitle={$state.originalVideoTitle}
-              originalVideoId={$state.originalVideoId}
-              originalVideoUrl={$state.originalVideoUrl}
-              originalVideoDescription={$state.originalVideoDescription}
-              originalVideoPlatform={$state.originalVideoPlatform}
-              reactionVideoAuthor={$state.reactionVideoAuthor}
-              reactionVideoTitle={$state.reactionVideoTitle}
-              reactionVideoId={$state.reactionVideoId}
-              reactionVideoDescription={$state.reactionVideoDescription}
-              pageSlug={$state.pageSlug}
-              isUsersOwnVideo={$state.isUsersOwnVideo}
-              reactorId={$state.reactorId}
-              reactorDisplayName={$state.reactorDisplayName}
-            />
-            <div class="mt-3 sm:mt-4">
-              <AttributionBlock
-                reactionVideoAuthor={$state.reactionVideoAuthor}
-                reactorDisplayName={$state.reactorDisplayName}
-                reactorId={$state.reactorId}
-                viewerId={data?.userId}
-              />
-            </div>
-          </div>
-
-          {#if $state.originalVideoId && $state.playlistDocumentId}
-            <div class="w-full">
-              <PlaylistQueue
-                playlistItems={$state.playlistItems}
-                playlistDocument={$state.playlistDocument}
-                currentlyViewed={$state.originalVideoId}
-                playlistId={$state.youtubePlaylistId}
-                playlistDocumentId={$state.playlistDocumentId}
-                currentIndex={$state.currentIndexInPlaylist}
-                isCreation={false}
-              />
-            </div>
-          {/if}
-        </div>
-
-        <!-- Row 1-2, Col 3: Other Reactions -->
-        {#if !$state.isEditModeOn && $state.originalVideoId && $state.reactionVideoId}
-          <div class="{hasOtherReactions && !$state.isEditModeOn ? 'lg:col-span-1 lg:row-span-2' : ''} flex flex-col gap-6 {hasOtherReactions ? 'block' : 'hidden'}">
-            <OtherReactions
-              originalVideoId={$state.originalVideoId}
-              reactionVideoId={$state.reactionVideoId}
-              originalVideoTitle={$state.originalVideoTitle}
-              originalVideoAuthor={$state.originalVideoAuthor}
-              bind:hasOtherReactions={hasOtherReactions}
-            />
-          </div>
-        {/if}
-
-        <!-- Row 2, Col 1-2: YouTube Discussion (Comments) -->
-        {#if !$state.isEditModeOn}
-          <div class="{hasOtherReactions && !$state.isEditModeOn ? 'lg:col-span-2' : ''}">
-            <YouTubeDiscussion
-              reactionVideoId={$state.reactionVideoId}
-              originalVideoId={$state.originalVideoId}
-              originalVideoPlatform={$state.originalVideoPlatform}
-            />
-          </div>
-        {/if}
+      <div class="mt-6 w-full">
+        <ReactionDetailsSection
+          reactionState={$state}
+          viewerId={data?.userId}
+          isEditModeOn={$state.isEditModeOn}
+        />
       </div>
     </div>
   {/if}
