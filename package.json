@@ -50,7 +50,7 @@
     "@sveltejs/adapter-netlify": "^3.0.0",
     "@sveltejs/enhanced-img": "^0.3.9",
     "@sveltejs/kit": "^2.5.27",
-    "@sveltejs/vite-plugin-svelte": "^4.0.0",
+    "@sveltejs/vite-plugin-svelte": "^7.2.0",
     "@vite-pwa/sveltekit": "^1.1.0",
     "autoprefixer": "^10.4.16",
     "cross-env": "^7.0.3",
@@ -64,7 +64,7 @@
     "postcss-load-config": "^5.0.2",
     "svelte": "^5.0.0",
     "tailwindcss": "^3.3.6",
-    "vite": "^5.4.4",
+    "vite": "^8.2.0",
     "vitest": "^4.1.8",
     "workbox-window": "^7.4.0"
   },
