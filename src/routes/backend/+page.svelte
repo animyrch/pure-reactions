@@ -19,6 +19,7 @@
         buildRecorderStateConfigs,
         RECORDER_PLAYER_STATES,
     } from "$lib/helpers/recorderState";
+    import BackendActionDock from "$lib/components/Video/BackendActionDock.svelte";
     import PlaylistQueue from "$lib/components/Video/PlaylistQueue.svelte";
     import { isLoggedIn } from "$lib/stores/user";
     import { page } from "$app/stores";
@@ -31,6 +32,7 @@
         BullhornSolid,
         PauseSolid,
         PlaySolid,
+        ExpandOutline,
         VideoCameraOutline,
         DownloadSolid,
         UsersSolid,
@@ -125,6 +127,12 @@
         displayIndex: String(index + 1).padStart(2, "0"),
     }));
     let stageActions = [];
+    const ACTION_DOCK_HIDE_DELAY_MS = 3000;
+    let playerFullscreenHostNode;
+    let isPlayerFullscreen = false;
+    let isActionDockVisible = false;
+    let isActionDockDismissed = false;
+    let actionDockHideTimeout;
 
     let timer;
     let startTime;
@@ -1391,6 +1399,147 @@
         }
     };
 
+    const clearActionDockHideTimeout = () => {
+        if (actionDockHideTimeout) {
+            clearTimeout(actionDockHideTimeout);
+            actionDockHideTimeout = undefined;
+        }
+    };
+
+    const scheduleActionDockHide = () => {
+        clearActionDockHideTimeout();
+        if (!isPlayerFullscreen || isActionDockDismissed) {
+            return;
+        }
+
+        actionDockHideTimeout = setTimeout(() => {
+            if (isPlayerFullscreen && !isActionDockDismissed) {
+                isActionDockVisible = false;
+            }
+        }, ACTION_DOCK_HIDE_DELAY_MS);
+    };
+
+    const syncPlayerFullscreenUiState = (isFullscreen) => {
+        isPlayerFullscreen = isFullscreen;
+        if (isFullscreen) {
+            isActionDockDismissed = false;
+            isActionDockVisible = true;
+            scheduleActionDockHide();
+            return;
+        }
+
+        clearActionDockHideTimeout();
+        isActionDockVisible = false;
+        isActionDockDismissed = false;
+    };
+
+    const getCurrentFullscreenElement = () => {
+        if (typeof document === "undefined") {
+            return null;
+        }
+
+        return (
+            document.fullscreenElement ||
+            document.webkitFullscreenElement ||
+            document.msFullscreenElement ||
+            null
+        );
+    };
+
+    const handleDocumentFullscreenChange = () => {
+        if (typeof document === "undefined") {
+            return;
+        }
+
+        const fullscreenElement = getCurrentFullscreenElement();
+        const isHostFullscreen =
+            Boolean(fullscreenElement) &&
+            (fullscreenElement === playerFullscreenHostNode ||
+                playerFullscreenHostNode?.contains(fullscreenElement));
+        syncPlayerFullscreenUiState(isHostFullscreen);
+    };
+
+    const enterPlayerFullscreen = async () => {
+        if (!playerFullscreenHostNode) {
+            return;
+        }
+
+        try {
+            if (
+                typeof playerFullscreenHostNode.requestFullscreen ===
+                "function"
+            ) {
+                await playerFullscreenHostNode.requestFullscreen();
+            } else if (
+                typeof playerFullscreenHostNode.webkitRequestFullscreen ===
+                "function"
+            ) {
+                playerFullscreenHostNode.webkitRequestFullscreen();
+            }
+        } catch (error) {
+            console.error("Failed to enter fullscreen mode:", error);
+        }
+    };
+
+    const exitPlayerFullscreen = async () => {
+        if (typeof document === "undefined") {
+            return;
+        }
+
+        try {
+            if (
+                document.fullscreenElement &&
+                typeof document.exitFullscreen === "function"
+            ) {
+                await document.exitFullscreen();
+            } else if (typeof document.webkitExitFullscreen === "function") {
+                document.webkitExitFullscreen();
+            } else {
+                syncPlayerFullscreenUiState(false);
+            }
+        } catch (error) {
+            console.error("Failed to exit fullscreen mode:", error);
+            syncPlayerFullscreenUiState(false);
+        }
+    };
+
+    const togglePlayerFullscreen = async () => {
+        if (isPlayerFullscreen) {
+            await exitPlayerFullscreen();
+            return;
+        }
+
+        await enterPlayerFullscreen();
+    };
+
+    const revealActionDock = () => {
+        if (!isPlayerFullscreen || isActionDockDismissed) {
+            return;
+        }
+
+        isActionDockVisible = true;
+        scheduleActionDockHide();
+    };
+
+    const keepActionDockVisible = () => {
+        if (!isPlayerFullscreen || isActionDockDismissed) {
+            return;
+        }
+
+        isActionDockVisible = true;
+        clearActionDockHideTimeout();
+    };
+
+    const dismissActionDock = () => {
+        if (!isPlayerFullscreen) {
+            return;
+        }
+
+        isActionDockDismissed = true;
+        isActionDockVisible = false;
+        clearActionDockHideTimeout();
+    };
+
     $: stageActions = [
         {
             id: "start-reaction",
@@ -1443,6 +1592,19 @@
             disabled: currentButtonGroupState !== BUTTON_GROUP_STATES.RECORDING,
         },
         {
+            id: "toggle-fullscreen",
+            label: isPlayerFullscreen ? "Exit Fullscreen" : "Fullscreen",
+            shortcutLabel: isPlayerFullscreen ? "Esc" : "F",
+            shortcutAria: isPlayerFullscreen ? "Escape" : "F",
+            description: isPlayerFullscreen
+                ? "Return to the full backend workspace."
+                : "Focus the player in an immersive fullscreen stage.",
+            icon: ExpandOutline,
+            onClick: togglePlayerFullscreen,
+            disabled: !playerContainerNode,
+            active: isPlayerFullscreen,
+        },
+        {
             id: "finish-reaction",
             label: "Finish Reaction",
             description: "Lock the timeline and move into review.",
@@ -1457,6 +1619,21 @@
     onMount(() => {
         if (isMobileDevice()) {
             handlePrivateRoute();
+        }
+
+        if (typeof document !== "undefined") {
+            document.addEventListener(
+                "fullscreenchange",
+                handleDocumentFullscreenChange,
+            );
+            document.addEventListener(
+                "webkitfullscreenchange",
+                handleDocumentFullscreenChange,
+            );
+            document.addEventListener(
+                "msfullscreenchange",
+                handleDocumentFullscreenChange,
+            );
         }
 
         isLoggedInSnapshot = get(isLoggedIn);
@@ -1485,10 +1662,25 @@
     });
 
     onDestroy(() => {
+        clearActionDockHideTimeout();
         loginUnsubscribe?.();
         loginUnsubscribe = undefined;
         afterNavigateUnsubscribe?.();
         afterNavigateUnsubscribe = undefined;
+        if (typeof document !== "undefined") {
+            document.removeEventListener(
+                "fullscreenchange",
+                handleDocumentFullscreenChange,
+            );
+            document.removeEventListener(
+                "webkitfullscreenchange",
+                handleDocumentFullscreenChange,
+            );
+            document.removeEventListener(
+                "msfullscreenchange",
+                handleDocumentFullscreenChange,
+            );
+        }
         if (cleanupIntervalId) {
             clearInterval(cleanupIntervalId);
             cleanupIntervalId = undefined;
@@ -1551,6 +1743,22 @@
         originalVideoProviderUrl = metadata.providerUrl || "";
         originalVideoUrl = metadata.canonicalUrl || originalVideoUrl;
     };
+
+    const isFormFieldTarget = (event) => {
+        const target = event?.target;
+        if (!(target instanceof HTMLElement)) {
+            return false;
+        }
+
+        const tagName = target.tagName;
+        return (
+            tagName === "INPUT" ||
+            tagName === "TEXTAREA" ||
+            tagName === "SELECT" ||
+            target.isContentEditable
+        );
+    };
+
     function handleKeydown(event) {
         if (
             event.key === "Enter" &&
@@ -1574,6 +1782,16 @@
         ) {
             event.preventDefault();
             onClickFocusReact();
+        }
+        if (
+            (event.key === "f" || event.key === "F") &&
+            !event.metaKey &&
+            !event.ctrlKey &&
+            !event.altKey &&
+            !isFormFieldTarget(event)
+        ) {
+            event.preventDefault();
+            togglePlayerFullscreen();
         }
     }
     function handleKeyup(event) {
@@ -1681,18 +1899,36 @@
             <main class="grid flex-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
                 <section class="flex flex-col gap-6">
                     <div
-                        class="overflow-hidden rounded-3xl border border-slate-900/60 bg-slate-900/60 shadow-[0_30px_60px_-40px_rgba(15,23,42,0.8)]"
+                        bind:this={playerFullscreenHostNode}
+                        class={`relative overflow-hidden rounded-3xl border border-slate-900/60 bg-slate-900/60 shadow-[0_30px_60px_-40px_rgba(15,23,42,0.8)] ${
+                            isPlayerFullscreen
+                                ? "h-full w-full rounded-none border-0 bg-black shadow-none"
+                                : ""
+                        }`}
+                        role="region"
+                        aria-label="Reaction player surface"
+                        on:mousemove={revealActionDock}
+                        on:pointerdown={revealActionDock}
+                        on:touchstart={revealActionDock}
                     >
                         {#if isTikTokOriginal}
                             <!-- TikTok: keep the same height as the YouTube player (aspect-video),
                                  then centre a narrow 9:16 strip inside it. -->
                             <div
-                                class="relative aspect-video w-full bg-black"
+                                class={`relative w-full bg-black ${
+                                    isPlayerFullscreen
+                                        ? "h-full"
+                                        : "aspect-video"
+                                }`}
                                 aria-busy={isBuffering}
                             >
                                 <div class="absolute inset-0 flex items-center justify-center">
                                     <div
-                                        class="relative h-full overflow-hidden rounded-2xl bg-black"
+                                        class={`relative h-full overflow-hidden bg-black ${
+                                            isPlayerFullscreen
+                                                ? "rounded-none"
+                                                : "rounded-2xl"
+                                        }`}
                                         style="aspect-ratio: 9/16;"
                                     >
                                         <div
@@ -1704,7 +1940,11 @@
                             </div>
                         {:else}
                             <div
-                                class="relative aspect-video w-full bg-black"
+                                class={`relative w-full bg-black ${
+                                    isPlayerFullscreen
+                                        ? "h-full"
+                                        : "aspect-video"
+                                }`}
                                 aria-busy={isBuffering}
                             >
                                 {#if isBuffering}
@@ -1720,6 +1960,16 @@
                                     class="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/70 via-slate-950/10 to-transparent"
                                 ></div>
                             </div>
+                        {/if}
+
+                        {#if isPlayerFullscreen}
+                            <BackendActionDock
+                                actions={stageActions}
+                                visible={isActionDockVisible}
+                                on:dismiss={dismissActionDock}
+                                on:dockinteractstart={keepActionDockVisible}
+                                on:dockinteractend={scheduleActionDockHide}
+                            />
                         {/if}
                     </div>
 
