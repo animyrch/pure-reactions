@@ -1395,6 +1395,8 @@
         {
             id: "start-reaction",
             label: isStartingReaction ? "Preparing Session..." : "Start Reaction",
+            shortcutLabel: "Enter",
+            shortcutAria: "Enter",
             description: isStartingReaction
                 ? "Setting up the reaction document and session."
                 : "Create your synced session and prep the recorder.",
@@ -1408,6 +1410,8 @@
         {
             id: "start-video",
             label: "Start Video",
+            shortcutLabel: "Space",
+            shortcutAria: "Space",
             description: "Kick off playback for everyone in the session.",
             icon: PlaySolid,
             onClick: onClickStartVideo,
@@ -1418,6 +1422,8 @@
         {
             id: "focus-react",
             label: isFocusReactOn ? "Release Focus" : "Focus React",
+            shortcutLabel: "Hold Ctrl",
+            shortcutAria: "Control",
             description: isFocusReactOn
                 ? "Restore the original track to full volume."
                 : "Duck the original audio so the mic takes lead.",
@@ -1429,6 +1435,8 @@
         {
             id: "stop-video",
             label: "Pause Video",
+            shortcutLabel: "Space",
+            shortcutAria: "Space",
             description: "Pause playback to regroup or add notes.",
             icon: PauseSolid,
             onClick: onClickStopVideo,
@@ -1743,7 +1751,7 @@
                     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                         {#each stageActions as action}
                             <button
-                                class={`flex h-full items-start gap-3 rounded-3xl border px-4 py-4 text-left transition focus:outline-none focus-visible:outline-none focus:ring-2 focus:ring-blue-500/60 ${
+                                class={`group flex h-full items-start gap-3 rounded-3xl border px-4 py-4 text-left transition focus:outline-none focus-visible:outline-none focus:ring-2 focus:ring-blue-500/60 ${
                                     action.active
                                         ? "border-emerald-500/70 bg-emerald-500/10 text-emerald-100"
                                         : action.tone === "accent"
@@ -1755,6 +1763,7 @@
                                 aria-busy={action.id === "start-reaction"
                                     ? isStartingReaction
                                     : undefined}
+                                aria-keyshortcuts={action.shortcutAria}
                             >
                                 <div
                                     class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-950/60"
@@ -1770,11 +1779,25 @@
                                         }`}
                                     />
                                 </div>
-                                <div class="flex flex-col">
-                                    <span
-                                        class="text-sm font-semibold leading-tight text-inherit"
-                                        >{action.label}</span
-                                    >
+                                <div class="flex w-full flex-col">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span
+                                            class="text-sm font-semibold leading-tight text-inherit"
+                                            >{action.label}</span
+                                        >
+                                        {#if action.shortcutLabel}
+                                            <span
+                                                class={`pointer-events-none inline-flex rounded-md border border-slate-700/80 bg-slate-950/80 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] text-slate-300 transition-opacity duration-200 ${
+                                                    action.disabled
+                                                        ? "opacity-0"
+                                                        : "opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"
+                                                }`}
+                                                aria-hidden="true"
+                                            >
+                                                {action.shortcutLabel}
+                                            </span>
+                                        {/if}
+                                    </div>
                                     <span class="mt-1 text-xs text-slate-400"
                                         >{action.description}</span
                                     >
