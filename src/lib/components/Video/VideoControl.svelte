@@ -31,6 +31,9 @@
 
     let pendingSeekTime = null;
     let pendingSeekTimeout;
+    let pendingSeekSettledAt = 0;
+
+    const PENDING_SEEK_STABLE_MS = 320;
 
     let seekRaf = 0;
     let queuedSeekTime = null;
@@ -44,12 +47,14 @@
 
     const clearPendingSeek = () => {
         pendingSeekTime = null;
+        pendingSeekSettledAt = 0;
         if (pendingSeekTimeout) clearTimeout(pendingSeekTimeout);
         pendingSeekTimeout = null;
     };
 
     const armPendingSeek = (time) => {
         pendingSeekTime = time;
+        pendingSeekSettledAt = 0;
         if (pendingSeekTimeout) clearTimeout(pendingSeekTimeout);
         pendingSeekTimeout = setTimeout(clearPendingSeek, 1200);
     };
@@ -146,9 +151,17 @@
     }
 
     $: if (pendingSeekTime != null && Number.isFinite(currentTime)) {
-        // Clear once the parent/video time "catches up" to the user's requested seek.
+        // Only unlock once player time stays near the target briefly; this avoids
+        // short stale-time rebounds while YouTube settles a seek.
         if (Math.abs(currentTime - pendingSeekTime) <= 0.25) {
-            clearPendingSeek();
+            if (!pendingSeekSettledAt) {
+                pendingSeekSettledAt = Date.now();
+            }
+            if (Date.now() - pendingSeekSettledAt >= PENDING_SEEK_STABLE_MS) {
+                clearPendingSeek();
+            }
+        } else {
+            pendingSeekSettledAt = 0;
         }
     }
 

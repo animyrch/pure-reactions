@@ -19,23 +19,24 @@
         buildRecorderStateConfigs,
         RECORDER_PLAYER_STATES,
     } from "$lib/helpers/recorderState";
+    import BackendActionDock from "$lib/components/Video/BackendActionDock.svelte";
     import PlaylistQueue from "$lib/components/Video/PlaylistQueue.svelte";
     import { isLoggedIn } from "$lib/stores/user";
     import { page } from "$app/stores";
     import { get } from "svelte/store";
     import { afterNavigate } from "$app/navigation";
-    import { Progressbar, Modal } from "flowbite-svelte";
+    import { Modal } from "flowbite-svelte";
     import { showToast } from "$lib/stores/toast";
     import { TOASTS } from "$lib/constants/toasts";
     import {
         BullhornSolid,
         PauseSolid,
         PlaySolid,
+        ExpandOutline,
         VideoCameraOutline,
         DownloadSolid,
         UsersSolid,
     } from "flowbite-svelte-icons";
-    import { sineOut } from "svelte/easing";
     import { fetchFirstPlaylistVideos } from "$lib/helpers/youtube";
     import {
         getPlaylistSequenceItems,
@@ -125,13 +126,35 @@
         displayIndex: String(index + 1).padStart(2, "0"),
     }));
     let stageActions = [];
+    const ACTION_DOCK_HIDE_DELAY_MS = 3000;
+    let playerFullscreenHostNode;
+    let isPlayerFullscreen = false;
+    let isActionDockVisible = false;
+    let isActionDockDismissed = false;
+    let actionDockHideTimeout;
 
     let timer;
     let startTime;
     let playerOriginal;
     let isPlayerOriginalReady = false;
     let shouldStartWhenReady = false;
-    let progress = 0;
+    let scrubCurrentTime = 0;
+    let scrubDuration = 0;
+    let isScrubbing = false;
+    let pendingScrubTime = null;
+    let pendingScrubTimeout;
+    let pendingScrubSettledAt = 0;
+    // Last confirmed seek target — blocks stale raw-player reads after the lock clears
+    let scrubLastTarget = null;
+    let queuedScrubTime = null;
+    let queuedScrubShouldSyncSession = false;
+    let scrubSeekRaf = 0;
+    let scrubSeekMin = 0;
+    let scrubSeekMax = 0;
+    let scrubSafeSeekMax = 0;
+    let scrubDisplayTime = 0;
+    let isScrubberSeekable = false;
+    const PENDING_SCRUB_STABLE_MS = 320;
     let startRecording = false;
     let stopRecording = false;
     let currentButtonGroupState = BUTTON_GROUP_STATES.INITIAL;
@@ -739,13 +762,16 @@
     }
     const getCurrentTimeForOriginalVideo = () => {
         if (
-            !playerOriginal ||
-            typeof playerOriginal.getDuration !== "function"
+            playerOriginal &&
+            typeof playerOriginal.getCurrentTime === "function"
         ) {
-            return "0.00";
+            const currentTime = Number(playerOriginal.getCurrentTime());
+            if (Number.isFinite(currentTime)) {
+                return currentTime.toFixed(2);
+            }
         }
-        const seekTime = (progress / 100) * playerOriginal.getDuration();
-        return seekTime.toFixed(2);
+
+        return Number(scrubDisplayTime || 0).toFixed(2);
     };
     function logStateChange(originalVideoTime, stateCode) {
         if (startTime) {
@@ -975,16 +1001,55 @@
         ) {
             return;
         }
-        const duration = playerOriginal.getDuration();
-        if (!duration) {
+        const duration = Number(playerOriginal.getDuration());
+        if (!Number.isFinite(duration) || duration <= 0) {
+            scrubDuration = 0;
+            scrubCurrentTime = 0;
             requestAnimationFrame(updateSeekBar);
             return;
         }
-        const currentTime = playerOriginal.getCurrentTime();
+        const currentTime = Number(playerOriginal.getCurrentTime());
 
-        progress = (currentTime / duration) * 100;
-        currentTimeDisplay =
-            formatTime(currentTime) + " / " + formatTime(duration);
+        scrubDuration = duration;
+
+        if (
+            !isScrubbing &&
+            pendingScrubTime == null &&
+            Number.isFinite(currentTime)
+        ) {
+            // Only accept player time if it is near our last seek target.
+            // YouTube's IFrame API can briefly report the pre-seek position in the
+            // first frame(s) after the pending lock clears; reject those to prevent
+            // the one-frame flash back to the old time.
+            if (
+                scrubLastTarget === null ||
+                Math.abs(currentTime - scrubLastTarget) <= 1.0
+            ) {
+                scrubCurrentTime = clampNumber(
+                    currentTime,
+                    scrubSeekMin,
+                    duration,
+                );
+                scrubLastTarget = null;
+            }
+        } else if (
+            pendingScrubTime != null &&
+            Number.isFinite(currentTime)
+        ) {
+            if (Math.abs(currentTime - pendingScrubTime) <= 0.25) {
+                if (!pendingScrubSettledAt) {
+                    pendingScrubSettledAt = Date.now();
+                }
+                if (
+                    Date.now() - pendingScrubSettledAt >=
+                    PENDING_SCRUB_STABLE_MS
+                ) {
+                    clearPendingScrub();
+                }
+            } else {
+                pendingScrubSettledAt = 0;
+            }
+        }
 
         requestAnimationFrame(updateSeekBar);
     }
@@ -995,6 +1060,126 @@
         const seconds = Math.floor(time % 60);
         return minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
     }
+
+    const clampNumber = (value, min, max) => {
+        const normalized = Number(value);
+        if (!Number.isFinite(normalized)) {
+            return min;
+        }
+        return Math.min(Math.max(normalized, min), max);
+    };
+
+    const clearPendingScrub = () => {
+        pendingScrubTime = null;
+        pendingScrubSettledAt = 0;
+        if (pendingScrubTimeout) {
+            clearTimeout(pendingScrubTimeout);
+        }
+        pendingScrubTimeout = null;
+    };
+
+    const armPendingScrub = (time) => {
+        pendingScrubTime = time;
+        pendingScrubSettledAt = 0;
+        scrubLastTarget = time;
+        if (pendingScrubTimeout) {
+            clearTimeout(pendingScrubTimeout);
+        }
+        pendingScrubTimeout = setTimeout(clearPendingScrub, 1200);
+    };
+
+    const applyScrubSeek = (time, { syncSession = false } = {}) => {
+        if (
+            !playerOriginal ||
+            typeof playerOriginal.seekTo !== "function" ||
+            !isScrubberSeekable
+        ) {
+            return;
+        }
+
+        const clampedTime = clampNumber(time, scrubSeekMin, scrubSafeSeekMax);
+        playerOriginal.seekTo(clampedTime, true);
+        scrubCurrentTime = clampedTime;
+
+        if (syncSession && sharedSessionId) {
+            updateSessionState(sharedSessionId, {
+                currentTime: clampedTime,
+                playbackRate,
+            });
+        }
+    };
+
+    const queueScrubSeek = (time, { syncSession = false } = {}) => {
+        queuedScrubTime = time;
+        queuedScrubShouldSyncSession =
+            queuedScrubShouldSyncSession || Boolean(syncSession);
+
+        if (scrubSeekRaf) {
+            return;
+        }
+
+        scrubSeekRaf = requestAnimationFrame(() => {
+            scrubSeekRaf = 0;
+
+            const nextTime = queuedScrubTime;
+            const shouldSyncSession = queuedScrubShouldSyncSession;
+
+            queuedScrubTime = null;
+            queuedScrubShouldSyncSession = false;
+
+            if (!Number.isFinite(nextTime)) {
+                return;
+            }
+
+            applyScrubSeek(nextTime, {
+                syncSession: shouldSyncSession,
+            });
+        });
+    };
+
+    const handleScrubInput = (event) => {
+        if (!isScrubberSeekable) {
+            return;
+        }
+
+        const rawValue = Number.parseFloat(event.currentTarget?.value);
+        const nextTime = clampNumber(rawValue, scrubSeekMin, scrubSafeSeekMax);
+
+        isScrubbing = true;
+        scrubCurrentTime = nextTime;
+        armPendingScrub(nextTime);
+        queueScrubSeek(nextTime);
+    };
+
+    const handleScrubCommit = (event) => {
+        if (!isScrubberSeekable) {
+            return;
+        }
+
+        const rawValue = Number.parseFloat(event.currentTarget?.value);
+        const nextTime = clampNumber(rawValue, scrubSeekMin, scrubSafeSeekMax);
+
+        isScrubbing = false;
+        scrubCurrentTime = nextTime;
+        armPendingScrub(nextTime);
+        queueScrubSeek(nextTime, { syncSession: true });
+    };
+
+    $: scrubSeekMin = 0;
+    $: scrubSeekMax =
+        Number.isFinite(scrubDuration) && scrubDuration > 0 ? scrubDuration : 0;
+    $: scrubSafeSeekMax =
+        scrubSeekMax >= scrubSeekMin ? scrubSeekMax : scrubSeekMin;
+    $: scrubDisplayTime =
+        scrubSafeSeekMax > scrubSeekMin
+            ? clampNumber(scrubCurrentTime, scrubSeekMin, scrubSafeSeekMax)
+            : scrubSeekMin;
+    $: isScrubberSeekable = Boolean(
+        playerOriginal &&
+            typeof playerOriginal.getDuration === "function" &&
+            typeof playerOriginal.seekTo === "function" &&
+            scrubSafeSeekMax > scrubSeekMin,
+    );
 
     let soundLevel = 100;
 
@@ -1021,7 +1206,6 @@
         }
     }
 
-    let currentTimeDisplay = "0:00 / 0:00";
     let isFocusReactOn = false;
 
     const isDegradedQueueTitle = (title, videoId, platform) => {
@@ -1365,36 +1549,153 @@
         }
     };
 
-    const onClickProgress = (event) => {
-        const progressBar = event.currentTarget;
-        const clickX = event.clientX - progressBar.getBoundingClientRect().left;
-        const progressBarWidth = progressBar.clientWidth;
+    const clearActionDockHideTimeout = () => {
+        if (actionDockHideTimeout) {
+            clearTimeout(actionDockHideTimeout);
+            actionDockHideTimeout = undefined;
+        }
+    };
 
-        const clickPercentage = (clickX / progressBarWidth) * 100;
-        progress = clickPercentage;
-        if (
-            !playerOriginal ||
-            typeof playerOriginal.getDuration !== "function" ||
-            typeof playerOriginal.seekTo !== "function"
-        ) {
+    const scheduleActionDockHide = () => {
+        clearActionDockHideTimeout();
+        if (!isPlayerFullscreen || isActionDockDismissed) {
             return;
         }
-        const seekTime = (progress / 100) * playerOriginal.getDuration();
-        playerOriginal.seekTo(parseFloat(seekTime), true);
 
-        // Update shared session with new time
-        if (sharedSessionId) {
-            updateSessionState(sharedSessionId, {
-                currentTime: parseFloat(seekTime),
-                playbackRate,
-            });
+        actionDockHideTimeout = setTimeout(() => {
+            if (isPlayerFullscreen && !isActionDockDismissed) {
+                isActionDockVisible = false;
+            }
+        }, ACTION_DOCK_HIDE_DELAY_MS);
+    };
+
+    const syncPlayerFullscreenUiState = (isFullscreen) => {
+        isPlayerFullscreen = isFullscreen;
+        if (isFullscreen) {
+            isActionDockDismissed = false;
+            isActionDockVisible = true;
+            scheduleActionDockHide();
+            return;
         }
+
+        clearActionDockHideTimeout();
+        isActionDockVisible = false;
+        isActionDockDismissed = false;
+    };
+
+    const getCurrentFullscreenElement = () => {
+        if (typeof document === "undefined") {
+            return null;
+        }
+
+        return (
+            document.fullscreenElement ||
+            document.webkitFullscreenElement ||
+            document.msFullscreenElement ||
+            null
+        );
+    };
+
+    const handleDocumentFullscreenChange = () => {
+        if (typeof document === "undefined") {
+            return;
+        }
+
+        const fullscreenElement = getCurrentFullscreenElement();
+        const isHostFullscreen =
+            Boolean(fullscreenElement) &&
+            (fullscreenElement === playerFullscreenHostNode ||
+                playerFullscreenHostNode?.contains(fullscreenElement));
+        syncPlayerFullscreenUiState(isHostFullscreen);
+    };
+
+    const enterPlayerFullscreen = async () => {
+        if (!playerFullscreenHostNode) {
+            return;
+        }
+
+        try {
+            if (
+                typeof playerFullscreenHostNode.requestFullscreen ===
+                "function"
+            ) {
+                await playerFullscreenHostNode.requestFullscreen();
+            } else if (
+                typeof playerFullscreenHostNode.webkitRequestFullscreen ===
+                "function"
+            ) {
+                playerFullscreenHostNode.webkitRequestFullscreen();
+            }
+        } catch (error) {
+            console.error("Failed to enter fullscreen mode:", error);
+        }
+    };
+
+    const exitPlayerFullscreen = async () => {
+        if (typeof document === "undefined") {
+            return;
+        }
+
+        try {
+            if (
+                document.fullscreenElement &&
+                typeof document.exitFullscreen === "function"
+            ) {
+                await document.exitFullscreen();
+            } else if (typeof document.webkitExitFullscreen === "function") {
+                document.webkitExitFullscreen();
+            } else {
+                syncPlayerFullscreenUiState(false);
+            }
+        } catch (error) {
+            console.error("Failed to exit fullscreen mode:", error);
+            syncPlayerFullscreenUiState(false);
+        }
+    };
+
+    const togglePlayerFullscreen = async () => {
+        if (isPlayerFullscreen) {
+            await exitPlayerFullscreen();
+            return;
+        }
+
+        await enterPlayerFullscreen();
+    };
+
+    const revealActionDock = () => {
+        if (!isPlayerFullscreen || isActionDockDismissed) {
+            return;
+        }
+
+        isActionDockVisible = true;
+        scheduleActionDockHide();
+    };
+
+    const keepActionDockVisible = () => {
+        if (!isPlayerFullscreen || isActionDockDismissed) {
+            return;
+        }
+
+        isActionDockVisible = true;
+        clearActionDockHideTimeout();
+    };
+
+    const dismissActionDock = () => {
+        if (!isPlayerFullscreen) {
+            return;
+        }
+
+        isActionDockDismissed = true;
+        isActionDockVisible = false;
+        clearActionDockHideTimeout();
     };
 
     $: stageActions = [
         {
             id: "start-reaction",
             label: isStartingReaction ? "Preparing Session..." : "Start Reaction",
+            shortcutLabel: "Enter",
+            shortcutAria: "Enter",
             description: isStartingReaction
                 ? "Setting up the reaction document and session."
                 : "Create your synced session and prep the recorder.",
@@ -1408,6 +1709,8 @@
         {
             id: "start-video",
             label: "Start Video",
+            shortcutLabel: "Space",
+            shortcutAria: "Space",
             description: "Kick off playback for everyone in the session.",
             icon: PlaySolid,
             onClick: onClickStartVideo,
@@ -1418,6 +1721,8 @@
         {
             id: "focus-react",
             label: isFocusReactOn ? "Release Focus" : "Focus React",
+            shortcutLabel: "Hold Ctrl",
+            shortcutAria: "Control",
             description: isFocusReactOn
                 ? "Restore the original track to full volume."
                 : "Duck the original audio so the mic takes lead.",
@@ -1429,10 +1734,25 @@
         {
             id: "stop-video",
             label: "Pause Video",
+            shortcutLabel: "Space",
+            shortcutAria: "Space",
             description: "Pause playback to regroup or add notes.",
             icon: PauseSolid,
             onClick: onClickStopVideo,
             disabled: currentButtonGroupState !== BUTTON_GROUP_STATES.RECORDING,
+        },
+        {
+            id: "toggle-fullscreen",
+            label: isPlayerFullscreen ? "Exit Fullscreen" : "Fullscreen",
+            shortcutLabel: isPlayerFullscreen ? "Esc" : "F",
+            shortcutAria: isPlayerFullscreen ? "Escape" : "F",
+            description: isPlayerFullscreen
+                ? "Return to the full backend workspace."
+                : "Focus the player in an immersive fullscreen stage.",
+            icon: ExpandOutline,
+            onClick: togglePlayerFullscreen,
+            disabled: !playerContainerNode,
+            active: isPlayerFullscreen,
         },
         {
             id: "finish-reaction",
@@ -1449,6 +1769,21 @@
     onMount(() => {
         if (isMobileDevice()) {
             handlePrivateRoute();
+        }
+
+        if (typeof document !== "undefined") {
+            document.addEventListener(
+                "fullscreenchange",
+                handleDocumentFullscreenChange,
+            );
+            document.addEventListener(
+                "webkitfullscreenchange",
+                handleDocumentFullscreenChange,
+            );
+            document.addEventListener(
+                "msfullscreenchange",
+                handleDocumentFullscreenChange,
+            );
         }
 
         isLoggedInSnapshot = get(isLoggedIn);
@@ -1477,10 +1812,30 @@
     });
 
     onDestroy(() => {
+        clearActionDockHideTimeout();
+        clearPendingScrub();
+        if (scrubSeekRaf) {
+            cancelAnimationFrame(scrubSeekRaf);
+            scrubSeekRaf = 0;
+        }
         loginUnsubscribe?.();
         loginUnsubscribe = undefined;
         afterNavigateUnsubscribe?.();
         afterNavigateUnsubscribe = undefined;
+        if (typeof document !== "undefined") {
+            document.removeEventListener(
+                "fullscreenchange",
+                handleDocumentFullscreenChange,
+            );
+            document.removeEventListener(
+                "webkitfullscreenchange",
+                handleDocumentFullscreenChange,
+            );
+            document.removeEventListener(
+                "msfullscreenchange",
+                handleDocumentFullscreenChange,
+            );
+        }
         if (cleanupIntervalId) {
             clearInterval(cleanupIntervalId);
             cleanupIntervalId = undefined;
@@ -1543,7 +1898,50 @@
         originalVideoProviderUrl = metadata.providerUrl || "";
         originalVideoUrl = metadata.canonicalUrl || originalVideoUrl;
     };
+
+    const isFormFieldTarget = (event) => {
+        const target = event?.target;
+        if (!(target instanceof HTMLElement)) {
+            return false;
+        }
+
+        const tagName = target.tagName;
+        return (
+            tagName === "INPUT" ||
+            tagName === "TEXTAREA" ||
+            tagName === "SELECT" ||
+            target.isContentEditable
+        );
+    };
+
     function handleKeydown(event) {
+        if (
+            (event.key === "ArrowRight" || event.key === "ArrowLeft") &&
+            !event.metaKey &&
+            !event.ctrlKey &&
+            !event.altKey &&
+            !isFormFieldTarget(event) &&
+            isScrubberSeekable
+        ) {
+            event.preventDefault();
+
+            const delta = event.key === "ArrowRight" ? 5 : -5;
+            const baseTime = Number.isFinite(scrubDisplayTime)
+                ? scrubDisplayTime
+                : 0;
+            const nextTime = clampNumber(
+                baseTime + delta,
+                scrubSeekMin,
+                scrubSafeSeekMax,
+            );
+
+            isScrubbing = false;
+            scrubCurrentTime = nextTime;
+            armPendingScrub(nextTime);
+            queueScrubSeek(nextTime, { syncSession: true });
+            return;
+        }
+
         if (
             event.key === "Enter" &&
             currentButtonGroupState === BUTTON_GROUP_STATES.INITIAL
@@ -1566,6 +1964,16 @@
         ) {
             event.preventDefault();
             onClickFocusReact();
+        }
+        if (
+            (event.key === "f" || event.key === "F") &&
+            !event.metaKey &&
+            !event.ctrlKey &&
+            !event.altKey &&
+            !isFormFieldTarget(event)
+        ) {
+            event.preventDefault();
+            togglePlayerFullscreen();
         }
     }
     function handleKeyup(event) {
@@ -1673,18 +2081,36 @@
             <main class="grid flex-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
                 <section class="flex flex-col gap-6">
                     <div
-                        class="overflow-hidden rounded-3xl border border-slate-900/60 bg-slate-900/60 shadow-[0_30px_60px_-40px_rgba(15,23,42,0.8)]"
+                        bind:this={playerFullscreenHostNode}
+                        class={`relative overflow-hidden rounded-3xl border border-slate-900/60 bg-slate-900/60 shadow-[0_30px_60px_-40px_rgba(15,23,42,0.8)] ${
+                            isPlayerFullscreen
+                                ? "h-full w-full rounded-none border-0 bg-black shadow-none"
+                                : ""
+                        }`}
+                        role="region"
+                        aria-label="Reaction player surface"
+                        on:mousemove={revealActionDock}
+                        on:pointerdown={revealActionDock}
+                        on:touchstart={revealActionDock}
                     >
                         {#if isTikTokOriginal}
                             <!-- TikTok: keep the same height as the YouTube player (aspect-video),
                                  then centre a narrow 9:16 strip inside it. -->
                             <div
-                                class="relative aspect-video w-full bg-black"
+                                class={`relative w-full bg-black ${
+                                    isPlayerFullscreen
+                                        ? "h-full"
+                                        : "aspect-video"
+                                }`}
                                 aria-busy={isBuffering}
                             >
                                 <div class="absolute inset-0 flex items-center justify-center">
                                     <div
-                                        class="relative h-full overflow-hidden rounded-2xl bg-black"
+                                        class={`relative h-full overflow-hidden bg-black ${
+                                            isPlayerFullscreen
+                                                ? "rounded-none"
+                                                : "rounded-2xl"
+                                        }`}
                                         style="aspect-ratio: 9/16;"
                                     >
                                         <div
@@ -1696,7 +2122,11 @@
                             </div>
                         {:else}
                             <div
-                                class="relative aspect-video w-full bg-black"
+                                class={`relative w-full bg-black ${
+                                    isPlayerFullscreen
+                                        ? "h-full"
+                                        : "aspect-video"
+                                }`}
                                 aria-busy={isBuffering}
                             >
                                 {#if isBuffering}
@@ -1713,11 +2143,20 @@
                                 ></div>
                             </div>
                         {/if}
+
+                        {#if isPlayerFullscreen}
+                            <BackendActionDock
+                                actions={stageActions}
+                                visible={isActionDockVisible}
+                                on:dismiss={dismissActionDock}
+                                on:dockinteractstart={keepActionDockVisible}
+                                on:dockinteractend={scheduleActionDockHide}
+                            />
+                        {/if}
                     </div>
 
-                    <button
-                        class="group relative overflow-hidden rounded-3xl border border-slate-900/60 bg-slate-900/40 px-6 py-5 text-left transition hover:border-slate-800 hover:bg-slate-900/60 focus:outline-none focus:ring-2 focus:ring-blue-500/60"
-                        on:click={onClickProgress}
+                    <div
+                        class="group relative overflow-hidden rounded-3xl border border-slate-900/60 bg-slate-900/40 px-6 py-5 text-left transition hover:border-slate-800 hover:bg-slate-900/60"
                     >
                         <div class="flex items-baseline justify-between">
                             <span
@@ -1725,25 +2164,39 @@
                                 >Scrub</span
                             >
                             <span class="font-mono text-sm text-slate-200"
-                                >{currentTimeDisplay}</span
+                                >{formatTime(scrubDisplayTime)} / {formatTime(
+                                    scrubSafeSeekMax,
+                                )}</span
                             >
                         </div>
-                        <Progressbar
-                            {progress}
-                            animate
-                            precision={2}
-                            tweenDuration={400}
-                            easing={sineOut}
-                            size="h-2"
-                            labelInsideClass="hidden"
-                            class="mt-4"
-                        />
-                    </button>
+                        <div class="mt-4 flex items-center gap-3">
+                            <span
+                                class="hidden min-w-[32px] text-right font-mono text-xs text-slate-400 sm:block"
+                                >{formatTime(scrubDisplayTime)}</span
+                            >
+                            <input
+                                type="range"
+                                min={scrubSeekMin}
+                                max={scrubSafeSeekMax}
+                                step="0.1"
+                                value={scrubDisplayTime}
+                                class="backend-scrubber-range w-full cursor-pointer"
+                                on:input={handleScrubInput}
+                                on:change={handleScrubCommit}
+                                disabled={!isScrubberSeekable}
+                                aria-label="Seek original video"
+                            />
+                            <span
+                                class="hidden min-w-[32px] font-mono text-xs text-slate-400 sm:block"
+                                >{formatTime(scrubSafeSeekMax)}</span
+                            >
+                        </div>
+                    </div>
 
                     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                         {#each stageActions as action}
                             <button
-                                class={`flex h-full items-start gap-3 rounded-3xl border px-4 py-4 text-left transition focus:outline-none focus-visible:outline-none focus:ring-2 focus:ring-blue-500/60 ${
+                                class={`group flex h-full items-start gap-3 rounded-3xl border px-4 py-4 text-left transition focus:outline-none focus-visible:outline-none focus:ring-2 focus:ring-blue-500/60 ${
                                     action.active
                                         ? "border-emerald-500/70 bg-emerald-500/10 text-emerald-100"
                                         : action.tone === "accent"
@@ -1755,6 +2208,7 @@
                                 aria-busy={action.id === "start-reaction"
                                     ? isStartingReaction
                                     : undefined}
+                                aria-keyshortcuts={action.shortcutAria}
                             >
                                 <div
                                     class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-950/60"
@@ -1770,11 +2224,25 @@
                                         }`}
                                     />
                                 </div>
-                                <div class="flex flex-col">
-                                    <span
-                                        class="text-sm font-semibold leading-tight text-inherit"
-                                        >{action.label}</span
-                                    >
+                                <div class="flex w-full flex-col">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span
+                                            class="text-sm font-semibold leading-tight text-inherit"
+                                            >{action.label}</span
+                                        >
+                                        {#if action.shortcutLabel}
+                                            <span
+                                                class={`pointer-events-none inline-flex rounded-md border border-slate-700/80 bg-slate-950/80 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] text-slate-300 transition-opacity duration-200 ${
+                                                    action.disabled
+                                                        ? "opacity-0"
+                                                        : "opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"
+                                                }`}
+                                                aria-hidden="true"
+                                            >
+                                                {action.shortcutLabel}
+                                            </span>
+                                        {/if}
+                                    </div>
                                     <span class="mt-1 text-xs text-slate-400"
                                         >{action.description}</span
                                     >
@@ -2052,3 +2520,59 @@
 {:else}
     {handlePrivateRoute()}
 {/if}
+
+<style lang="postcss">
+    .backend-scrubber-range {
+        -webkit-appearance: none;
+        appearance: none;
+        background: transparent;
+        height: 28px;
+        touch-action: manipulation;
+    }
+
+    .backend-scrubber-range:focus {
+        outline: none;
+    }
+
+    .backend-scrubber-range::-webkit-slider-runnable-track {
+        height: 4px;
+        border-radius: 999px;
+        background: rgba(100, 116, 139, 0.45);
+    }
+
+    .backend-scrubber-range::-moz-range-track {
+        height: 4px;
+        border-radius: 999px;
+        background: rgba(100, 116, 139, 0.45);
+    }
+
+    .backend-scrubber-range::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        height: 12px;
+        width: 12px;
+        margin-top: -4px;
+        border-radius: 999px;
+        border: 1px solid rgba(226, 232, 240, 0.5);
+        background: rgb(226, 232, 240);
+        transition: transform 0.1s ease;
+    }
+
+    .backend-scrubber-range::-moz-range-thumb {
+        height: 12px;
+        width: 12px;
+        border: 1px solid rgba(226, 232, 240, 0.5);
+        border-radius: 999px;
+        background: rgb(226, 232, 240);
+        transition: transform 0.1s ease;
+    }
+
+    .backend-scrubber-range:hover::-webkit-slider-thumb,
+    .backend-scrubber-range:hover::-moz-range-thumb {
+        transform: scale(1.08);
+    }
+
+    .backend-scrubber-range:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+</style>
