@@ -25,7 +25,7 @@
     import { page } from "$app/stores";
     import { get } from "svelte/store";
     import { afterNavigate } from "$app/navigation";
-    import { Progressbar, Modal } from "flowbite-svelte";
+    import { Modal } from "flowbite-svelte";
     import { showToast } from "$lib/stores/toast";
     import { TOASTS } from "$lib/constants/toasts";
     import {
@@ -37,7 +37,6 @@
         DownloadSolid,
         UsersSolid,
     } from "flowbite-svelte-icons";
-    import { sineOut } from "svelte/easing";
     import { fetchFirstPlaylistVideos } from "$lib/helpers/youtube";
     import {
         getPlaylistSequenceItems,
@@ -139,7 +138,23 @@
     let playerOriginal;
     let isPlayerOriginalReady = false;
     let shouldStartWhenReady = false;
-    let progress = 0;
+    let scrubCurrentTime = 0;
+    let scrubDuration = 0;
+    let isScrubbing = false;
+    let pendingScrubTime = null;
+    let pendingScrubTimeout;
+    let pendingScrubSettledAt = 0;
+    // Last confirmed seek target — blocks stale raw-player reads after the lock clears
+    let scrubLastTarget = null;
+    let queuedScrubTime = null;
+    let queuedScrubShouldSyncSession = false;
+    let scrubSeekRaf = 0;
+    let scrubSeekMin = 0;
+    let scrubSeekMax = 0;
+    let scrubSafeSeekMax = 0;
+    let scrubDisplayTime = 0;
+    let isScrubberSeekable = false;
+    const PENDING_SCRUB_STABLE_MS = 320;
     let startRecording = false;
     let stopRecording = false;
     let currentButtonGroupState = BUTTON_GROUP_STATES.INITIAL;
@@ -747,13 +762,16 @@
     }
     const getCurrentTimeForOriginalVideo = () => {
         if (
-            !playerOriginal ||
-            typeof playerOriginal.getDuration !== "function"
+            playerOriginal &&
+            typeof playerOriginal.getCurrentTime === "function"
         ) {
-            return "0.00";
+            const currentTime = Number(playerOriginal.getCurrentTime());
+            if (Number.isFinite(currentTime)) {
+                return currentTime.toFixed(2);
+            }
         }
-        const seekTime = (progress / 100) * playerOriginal.getDuration();
-        return seekTime.toFixed(2);
+
+        return Number(scrubDisplayTime || 0).toFixed(2);
     };
     function logStateChange(originalVideoTime, stateCode) {
         if (startTime) {
@@ -983,16 +1001,55 @@
         ) {
             return;
         }
-        const duration = playerOriginal.getDuration();
-        if (!duration) {
+        const duration = Number(playerOriginal.getDuration());
+        if (!Number.isFinite(duration) || duration <= 0) {
+            scrubDuration = 0;
+            scrubCurrentTime = 0;
             requestAnimationFrame(updateSeekBar);
             return;
         }
-        const currentTime = playerOriginal.getCurrentTime();
+        const currentTime = Number(playerOriginal.getCurrentTime());
 
-        progress = (currentTime / duration) * 100;
-        currentTimeDisplay =
-            formatTime(currentTime) + " / " + formatTime(duration);
+        scrubDuration = duration;
+
+        if (
+            !isScrubbing &&
+            pendingScrubTime == null &&
+            Number.isFinite(currentTime)
+        ) {
+            // Only accept player time if it is near our last seek target.
+            // YouTube's IFrame API can briefly report the pre-seek position in the
+            // first frame(s) after the pending lock clears; reject those to prevent
+            // the one-frame flash back to the old time.
+            if (
+                scrubLastTarget === null ||
+                Math.abs(currentTime - scrubLastTarget) <= 1.0
+            ) {
+                scrubCurrentTime = clampNumber(
+                    currentTime,
+                    scrubSeekMin,
+                    duration,
+                );
+                scrubLastTarget = null;
+            }
+        } else if (
+            pendingScrubTime != null &&
+            Number.isFinite(currentTime)
+        ) {
+            if (Math.abs(currentTime - pendingScrubTime) <= 0.25) {
+                if (!pendingScrubSettledAt) {
+                    pendingScrubSettledAt = Date.now();
+                }
+                if (
+                    Date.now() - pendingScrubSettledAt >=
+                    PENDING_SCRUB_STABLE_MS
+                ) {
+                    clearPendingScrub();
+                }
+            } else {
+                pendingScrubSettledAt = 0;
+            }
+        }
 
         requestAnimationFrame(updateSeekBar);
     }
@@ -1003,6 +1060,126 @@
         const seconds = Math.floor(time % 60);
         return minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
     }
+
+    const clampNumber = (value, min, max) => {
+        const normalized = Number(value);
+        if (!Number.isFinite(normalized)) {
+            return min;
+        }
+        return Math.min(Math.max(normalized, min), max);
+    };
+
+    const clearPendingScrub = () => {
+        pendingScrubTime = null;
+        pendingScrubSettledAt = 0;
+        if (pendingScrubTimeout) {
+            clearTimeout(pendingScrubTimeout);
+        }
+        pendingScrubTimeout = null;
+    };
+
+    const armPendingScrub = (time) => {
+        pendingScrubTime = time;
+        pendingScrubSettledAt = 0;
+        scrubLastTarget = time;
+        if (pendingScrubTimeout) {
+            clearTimeout(pendingScrubTimeout);
+        }
+        pendingScrubTimeout = setTimeout(clearPendingScrub, 1200);
+    };
+
+    const applyScrubSeek = (time, { syncSession = false } = {}) => {
+        if (
+            !playerOriginal ||
+            typeof playerOriginal.seekTo !== "function" ||
+            !isScrubberSeekable
+        ) {
+            return;
+        }
+
+        const clampedTime = clampNumber(time, scrubSeekMin, scrubSafeSeekMax);
+        playerOriginal.seekTo(clampedTime, true);
+        scrubCurrentTime = clampedTime;
+
+        if (syncSession && sharedSessionId) {
+            updateSessionState(sharedSessionId, {
+                currentTime: clampedTime,
+                playbackRate,
+            });
+        }
+    };
+
+    const queueScrubSeek = (time, { syncSession = false } = {}) => {
+        queuedScrubTime = time;
+        queuedScrubShouldSyncSession =
+            queuedScrubShouldSyncSession || Boolean(syncSession);
+
+        if (scrubSeekRaf) {
+            return;
+        }
+
+        scrubSeekRaf = requestAnimationFrame(() => {
+            scrubSeekRaf = 0;
+
+            const nextTime = queuedScrubTime;
+            const shouldSyncSession = queuedScrubShouldSyncSession;
+
+            queuedScrubTime = null;
+            queuedScrubShouldSyncSession = false;
+
+            if (!Number.isFinite(nextTime)) {
+                return;
+            }
+
+            applyScrubSeek(nextTime, {
+                syncSession: shouldSyncSession,
+            });
+        });
+    };
+
+    const handleScrubInput = (event) => {
+        if (!isScrubberSeekable) {
+            return;
+        }
+
+        const rawValue = Number.parseFloat(event.currentTarget?.value);
+        const nextTime = clampNumber(rawValue, scrubSeekMin, scrubSafeSeekMax);
+
+        isScrubbing = true;
+        scrubCurrentTime = nextTime;
+        armPendingScrub(nextTime);
+        queueScrubSeek(nextTime);
+    };
+
+    const handleScrubCommit = (event) => {
+        if (!isScrubberSeekable) {
+            return;
+        }
+
+        const rawValue = Number.parseFloat(event.currentTarget?.value);
+        const nextTime = clampNumber(rawValue, scrubSeekMin, scrubSafeSeekMax);
+
+        isScrubbing = false;
+        scrubCurrentTime = nextTime;
+        armPendingScrub(nextTime);
+        queueScrubSeek(nextTime, { syncSession: true });
+    };
+
+    $: scrubSeekMin = 0;
+    $: scrubSeekMax =
+        Number.isFinite(scrubDuration) && scrubDuration > 0 ? scrubDuration : 0;
+    $: scrubSafeSeekMax =
+        scrubSeekMax >= scrubSeekMin ? scrubSeekMax : scrubSeekMin;
+    $: scrubDisplayTime =
+        scrubSafeSeekMax > scrubSeekMin
+            ? clampNumber(scrubCurrentTime, scrubSeekMin, scrubSafeSeekMax)
+            : scrubSeekMin;
+    $: isScrubberSeekable = Boolean(
+        playerOriginal &&
+            typeof playerOriginal.getDuration === "function" &&
+            typeof playerOriginal.seekTo === "function" &&
+            scrubSafeSeekMax > scrubSeekMin,
+    );
 
     let soundLevel = 100;
 
@@ -1029,7 +1206,6 @@
         }
     }
 
-    let currentTimeDisplay = "0:00 / 0:00";
     let isFocusReactOn = false;
 
     const isDegradedQueueTitle = (title, videoId, platform) => {
@@ -1373,32 +1549,6 @@
         }
     };
 
-    const onClickProgress = (event) => {
-        const progressBar = event.currentTarget;
-        const clickX = event.clientX - progressBar.getBoundingClientRect().left;
-        const progressBarWidth = progressBar.clientWidth;
-
-        const clickPercentage = (clickX / progressBarWidth) * 100;
-        progress = clickPercentage;
-        if (
-            !playerOriginal ||
-            typeof playerOriginal.getDuration !== "function" ||
-            typeof playerOriginal.seekTo !== "function"
-        ) {
-            return;
-        }
-        const seekTime = (progress / 100) * playerOriginal.getDuration();
-        playerOriginal.seekTo(parseFloat(seekTime), true);
-
-        // Update shared session with new time
-        if (sharedSessionId) {
-            updateSessionState(sharedSessionId, {
-                currentTime: parseFloat(seekTime),
-                playbackRate,
-            });
-        }
-    };
-
     const clearActionDockHideTimeout = () => {
         if (actionDockHideTimeout) {
             clearTimeout(actionDockHideTimeout);
@@ -1663,6 +1813,11 @@
 
     onDestroy(() => {
         clearActionDockHideTimeout();
+        clearPendingScrub();
+        if (scrubSeekRaf) {
+            cancelAnimationFrame(scrubSeekRaf);
+            scrubSeekRaf = 0;
+        }
         loginUnsubscribe?.();
         loginUnsubscribe = undefined;
         afterNavigateUnsubscribe?.();
@@ -1760,6 +1915,33 @@
     };
 
     function handleKeydown(event) {
+        if (
+            (event.key === "ArrowRight" || event.key === "ArrowLeft") &&
+            !event.metaKey &&
+            !event.ctrlKey &&
+            !event.altKey &&
+            !isFormFieldTarget(event) &&
+            isScrubberSeekable
+        ) {
+            event.preventDefault();
+
+            const delta = event.key === "ArrowRight" ? 5 : -5;
+            const baseTime = Number.isFinite(scrubDisplayTime)
+                ? scrubDisplayTime
+                : 0;
+            const nextTime = clampNumber(
+                baseTime + delta,
+                scrubSeekMin,
+                scrubSafeSeekMax,
+            );
+
+            isScrubbing = false;
+            scrubCurrentTime = nextTime;
+            armPendingScrub(nextTime);
+            queueScrubSeek(nextTime, { syncSession: true });
+            return;
+        }
+
         if (
             event.key === "Enter" &&
             currentButtonGroupState === BUTTON_GROUP_STATES.INITIAL
@@ -1973,9 +2155,8 @@
                         {/if}
                     </div>
 
-                    <button
-                        class="group relative overflow-hidden rounded-3xl border border-slate-900/60 bg-slate-900/40 px-6 py-5 text-left transition hover:border-slate-800 hover:bg-slate-900/60 focus:outline-none focus:ring-2 focus:ring-blue-500/60"
-                        on:click={onClickProgress}
+                    <div
+                        class="group relative overflow-hidden rounded-3xl border border-slate-900/60 bg-slate-900/40 px-6 py-5 text-left transition hover:border-slate-800 hover:bg-slate-900/60"
                     >
                         <div class="flex items-baseline justify-between">
                             <span
@@ -1983,20 +2164,34 @@
                                 >Scrub</span
                             >
                             <span class="font-mono text-sm text-slate-200"
-                                >{currentTimeDisplay}</span
+                                >{formatTime(scrubDisplayTime)} / {formatTime(
+                                    scrubSafeSeekMax,
+                                )}</span
                             >
                         </div>
-                        <Progressbar
-                            {progress}
-                            animate
-                            precision={2}
-                            tweenDuration={400}
-                            easing={sineOut}
-                            size="h-2"
-                            labelInsideClass="hidden"
-                            class="mt-4"
-                        />
-                    </button>
+                        <div class="mt-4 flex items-center gap-3">
+                            <span
+                                class="hidden min-w-[32px] text-right font-mono text-xs text-slate-400 sm:block"
+                                >{formatTime(scrubDisplayTime)}</span
+                            >
+                            <input
+                                type="range"
+                                min={scrubSeekMin}
+                                max={scrubSafeSeekMax}
+                                step="0.1"
+                                value={scrubDisplayTime}
+                                class="backend-scrubber-range w-full cursor-pointer"
+                                on:input={handleScrubInput}
+                                on:change={handleScrubCommit}
+                                disabled={!isScrubberSeekable}
+                                aria-label="Seek original video"
+                            />
+                            <span
+                                class="hidden min-w-[32px] font-mono text-xs text-slate-400 sm:block"
+                                >{formatTime(scrubSafeSeekMax)}</span
+                            >
+                        </div>
+                    </div>
 
                     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                         {#each stageActions as action}
@@ -2325,3 +2520,59 @@
 {:else}
     {handlePrivateRoute()}
 {/if}
+
+<style lang="postcss">
+    .backend-scrubber-range {
+        -webkit-appearance: none;
+        appearance: none;
+        background: transparent;
+        height: 28px;
+        touch-action: manipulation;
+    }
+
+    .backend-scrubber-range:focus {
+        outline: none;
+    }
+
+    .backend-scrubber-range::-webkit-slider-runnable-track {
+        height: 4px;
+        border-radius: 999px;
+        background: rgba(100, 116, 139, 0.45);
+    }
+
+    .backend-scrubber-range::-moz-range-track {
+        height: 4px;
+        border-radius: 999px;
+        background: rgba(100, 116, 139, 0.45);
+    }
+
+    .backend-scrubber-range::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        height: 12px;
+        width: 12px;
+        margin-top: -4px;
+        border-radius: 999px;
+        border: 1px solid rgba(226, 232, 240, 0.5);
+        background: rgb(226, 232, 240);
+        transition: transform 0.1s ease;
+    }
+
+    .backend-scrubber-range::-moz-range-thumb {
+        height: 12px;
+        width: 12px;
+        border: 1px solid rgba(226, 232, 240, 0.5);
+        border-radius: 999px;
+        background: rgb(226, 232, 240);
+        transition: transform 0.1s ease;
+    }
+
+    .backend-scrubber-range:hover::-webkit-slider-thumb,
+    .backend-scrubber-range:hover::-moz-range-thumb {
+        transform: scale(1.08);
+    }
+
+    .backend-scrubber-range:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+</style>
