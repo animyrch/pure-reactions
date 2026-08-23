@@ -71,6 +71,7 @@
   "type": "module",
   "dependencies": {
     "@popperjs/core": "^2.11.8",
+    "@svelteuidev/composables": "^0.15.7",
     "@svelteuidev/core": "^0.15.4",
     "algoliasearch": "^4.22.1",
     "firebase": "^10.4.0",
