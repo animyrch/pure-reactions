@@ -516,6 +516,16 @@ export function createTwinPlayersOrchestrationController({
 
       assignTimelineSourcesToWindow(timelineSources);
 
+      if (normalizedReactionVideoId && !document.getElementById('player-reaction')) {
+        log('loadReactionInPlace fallback to buildInterface: missing reaction container', {
+          nextReactionDocumentId,
+          reactionVideoId: normalizedReactionVideoId
+        });
+        await navigationHooks.buildInterface(nextReactionDocumentId, { isUpdate: true });
+        syncCurrentReactionDocumentId(nextReactionDocumentId, updateState);
+        return;
+      }
+
       const isPlaylistPage = window.location?.pathname?.startsWith('/playlist/');
       const platformChanged = snapshotBefore.originalVideoPlatform !== nextOriginalVideoPlatform;
       if (isPlaylistPage && platformChanged) {

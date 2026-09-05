@@ -102,6 +102,9 @@
       await actions.editActionEntryPoint(() =>
         actions.setReactionVideoId(trimmed),
       );
+      await actions.loadReactionInPlace($state.pageSlug, {
+        autoPlay: false,
+      });
     } catch (error) {
       console.error("Failed to set reaction video ID", error);
       reactionVideoIdError =
