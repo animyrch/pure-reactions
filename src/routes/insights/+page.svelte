@@ -123,6 +123,26 @@
       </span>
     </a>
 
+    <!-- Getting Started Guide -->
+    <a
+      href="/insights/create-your-first-reaction"
+      class="group rounded-lg border border-border-strong bg-elevated p-6 transition-all duration-subtle hover:border-accent-primary/50 hover:bg-surface"
+    >
+      <div class="mb-4 inline-flex rounded-md bg-accent-primary/20 px-3 py-1 text-xs font-medium text-accent-primary">
+        Getting Started
+      </div>
+      <h2 class="mb-3 text-xl font-semibold text-text-primary group-hover:text-accent-primary transition-colors">
+        Create Your First Reaction
+      </h2>
+      <p class="mb-4 text-text-secondary">
+        Step-by-step walkthrough: paste an original URL, record with your own camera, link the YouTube upload, and publish your first synced reaction.
+      </p>
+      <span class="inline-flex items-center gap-2 text-sm text-accent-primary">
+        Read guide
+        <span aria-hidden="true">→</span>
+      </span>
+    </a>
+
   </div>
 
   <!-- CTA Section -->
