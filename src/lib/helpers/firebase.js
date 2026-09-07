@@ -1512,3 +1512,58 @@ export const getUserExtraData = async (userId) => {
         console.error("Error getting userdata: ", error);
     }
 };
+
+/**
+ * Mark a walkalong clue as seen for a user.
+ * Stores the clue ID in `userData.seenWalkalongClues` (array of strings).
+ * Also updates localStorage as an optimistic cache.
+ *
+ * @param {string} userId
+ * @param {string} clueId
+ */
+export const markWalkalongClueSeen = async (userId, clueId) => {
+    if (!userId || !clueId) return;
+    try {
+        // Optimistic local cache
+        if (typeof localStorage !== 'undefined') {
+            const cached = JSON.parse(localStorage.getItem('seenWalkalongClues') || '[]');
+            if (!cached.includes(clueId)) {
+                cached.push(clueId);
+                localStorage.setItem('seenWalkalongClues', JSON.stringify(cached));
+            }
+        }
+        const userExtraData = await getUserExtraData(userId);
+        const seen = userExtraData?.seenWalkalongClues ? [...userExtraData.seenWalkalongClues] : [];
+        if (!seen.includes(clueId)) {
+            seen.push(clueId);
+        }
+        const userExtraDataCollection = createCollection(db, COLLECTION_USER_DATA, 'markWalkalongClueSeen');
+        const userExtraDataRef = doc(userExtraDataCollection, userId);
+        await setDoc(userExtraDataRef, {
+            ...userExtraData,
+            seenWalkalongClues: seen,
+        });
+    } catch (error) {
+        console.error('Error marking walkalong clue seen:', error);
+    }
+};
+
+/**
+ * Returns the list of seen walkalong clue IDs for a user.
+ * Falls back to localStorage when the Firestore data is not yet loaded.
+ *
+ * @param {string|null} userId
+ * @param {string[]|null} [storeSeenClues] — already-loaded value from userExtraDataStore
+ * @returns {string[]}
+ */
+export const getSeenWalkalongClues = (userId, storeSeenClues) => {
+    if (Array.isArray(storeSeenClues)) return storeSeenClues;
+    if (typeof localStorage !== 'undefined') {
+        try {
+            return JSON.parse(localStorage.getItem('seenWalkalongClues') || '[]');
+        } catch {
+            return [];
+        }
+    }
+    return [];
+};

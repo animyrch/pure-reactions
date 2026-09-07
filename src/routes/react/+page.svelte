@@ -13,6 +13,8 @@
         parseReactionSourceInput,
         shouldCreatePlaylistDocumentForSequence,
     } from '$lib/helpers/reactionSequence';
+    import WalkalongClue from '$lib/components/design-system/WalkalongClue.svelte';
+    import { userExtraDataStore } from '$lib/stores/userExtraData';
 
     const steps = [
         {
@@ -252,12 +254,27 @@
         }
     };
 
+    let seenClues = [];
+    let reactUserId = '';
+
+    const handleClueDismiss = ({ detail }) => {
+        userExtraDataStore.markClueSeen($userExtraDataStore.userExtraData, detail.userId, detail.clueId);
+        seenClues = [...seenClues, detail.clueId];
+    };
+
     onMount(async () => {
         const currentUser = auth.currentUser;
         if (!currentUser) {
             handlePrivateRoute();
             return;
         }
+
+        reactUserId = currentUser.uid;
+        // Load seen clues from store (already populated by layout) or from localStorage
+        const storeData = $userExtraDataStore.userExtraData;
+        seenClues = storeData?.seenWalkalongClues ?? (() => {
+            try { return JSON.parse(localStorage.getItem('seenWalkalongClues') || '[]'); } catch { return []; }
+        })();
 
         originalVideoInput?.focus();
     });
@@ -334,7 +351,24 @@
                             {/if}
                         </div>
 
+                        <WalkalongClue
+                            clueId="react.paste-original"
+                            message="Paste the YouTube video you want to react to. One video is enough for a first reaction."
+                            helpHref="/insights/create-your-first-reaction"
+                            {seenClues}
+                            userId={reactUserId}
+                            on:dismiss={handleClueDismiss}
+                        />
+
                         {#if isSequenceModeVisible}
+                            <WalkalongClue
+                                clueId="react.skip-sequence"
+                                message="Sequence tools are for reacting to several originals in one sitting. Skip them for a test reaction."
+                                helpHref="/insights/create-your-first-reaction"
+                                {seenClues}
+                                userId={reactUserId}
+                                on:dismiss={handleClueDismiss}
+                            />
                             <div class="space-y-4 rounded-2xl border border-slate-800/80 bg-slate-950/30 p-4">
                                 <div class="space-y-1">
                                     <div class="flex items-center justify-between gap-4">
