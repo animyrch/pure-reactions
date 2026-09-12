@@ -15,11 +15,29 @@ const createUserExtraDataStore = () => {
     userExtraData: null,
   });
 
+    const syncSeenCluesCache = (seenWalkalongClues) => {
+        if (typeof localStorage === 'undefined') {
+            return;
+        }
+
+        try {
+            if (Array.isArray(seenWalkalongClues)) {
+                localStorage.setItem('seenWalkalongClues', JSON.stringify(seenWalkalongClues));
+                return;
+            }
+
+            localStorage.removeItem('seenWalkalongClues');
+        } catch (error) {
+            console.warn('Failed to sync seen walkalong clues cache', error);
+        }
+    };
+
   return {
     subscribe,
     fetchUserData: async (userId) => {
       try {
         const userExtraDataFetched = await getUserExtraData(userId);
+                syncSeenCluesCache(userExtraDataFetched?.seenWalkalongClues);
         set({
             userExtraData: userExtraDataFetched,
         });
@@ -132,6 +150,7 @@ const createUserExtraDataStore = () => {
         const seen = userExtraData?.seenWalkalongClues ? [...userExtraData.seenWalkalongClues] : [];
         if (!seen.includes(clueId)) {
             seen.push(clueId);
+            syncSeenCluesCache(seen);
             set({
                 userExtraData: {
                     ...userExtraData,

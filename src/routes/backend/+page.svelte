@@ -77,7 +77,11 @@
 
     const loadSeenClues = () => {
         const storeData = $userExtraDataStore.userExtraData;
-        return storeData?.seenWalkalongClues ?? (() => {
+        if (storeData && typeof storeData === 'object') {
+            return Array.isArray(storeData.seenWalkalongClues) ? storeData.seenWalkalongClues : [];
+        }
+
+        return (() => {
             try {
                 return JSON.parse(localStorage.getItem("seenWalkalongClues") || "[]");
             } catch {
@@ -87,9 +91,9 @@
     };
 
     $: {
-        const storeSeenClues = $userExtraDataStore.userExtraData?.seenWalkalongClues;
-        if (Array.isArray(storeSeenClues)) {
-            seenClues = storeSeenClues;
+        const storeData = $userExtraDataStore.userExtraData;
+        if (backendUserId && storeData && typeof storeData === 'object') {
+            seenClues = Array.isArray(storeData.seenWalkalongClues) ? storeData.seenWalkalongClues : [];
         }
     }
 
