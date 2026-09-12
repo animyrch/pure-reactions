@@ -9,7 +9,9 @@
         addToPlaylistDocument,
         getPlaylist,
         firestoreDeleteField,
+        getSeenWalkalongClues,
     } from "$lib/helpers/firebase";
+    import { browser } from "$app/environment";
     import { handlePrivateRoute, goToRoute } from "$lib/helpers/routing";
     import { isMobileDevice } from "$lib/helpers/system";
     import { getCompensatedReactionTime } from "$lib/helpers/reaction";
@@ -75,9 +77,16 @@
     let seenClues = [];
     let backendUserId = '';
 
+    $: if (browser) {
+        seenClues = getSeenWalkalongClues(
+            backendUserId,
+            $userExtraDataStore.userExtraData?.seenWalkalongClues,
+        );
+    }
+
     const handleClueDismiss = ({ detail }) => {
         userExtraDataStore.markClueSeen($userExtraDataStore.userExtraData, detail.userId, detail.clueId);
-        seenClues = [...seenClues, detail.clueId];
+        seenClues = [...new Set([...seenClues, detail.clueId])];
     };
 
     const playerOptions = {
@@ -1801,11 +1810,6 @@
             triggerBackendInitialisation("mount");
         }
 
-        // Load seen walkalong clues
-        const storeData = $userExtraDataStore.userExtraData;
-        seenClues = storeData?.seenWalkalongClues ?? (() => {
-            try { return JSON.parse(localStorage.getItem('seenWalkalongClues') || '[]'); } catch { return []; }
-        })();
         backendUserId = data?.userId ?? '';
 
         loginUnsubscribe = isLoggedIn.subscribe((value) => {

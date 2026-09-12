@@ -1557,13 +1557,15 @@ export const markWalkalongClueSeen = async (userId, clueId) => {
  * @returns {string[]}
  */
 export const getSeenWalkalongClues = (userId, storeSeenClues) => {
-    if (Array.isArray(storeSeenClues)) return storeSeenClues;
+    let cached = [];
     if (typeof localStorage !== 'undefined') {
         try {
-            return JSON.parse(localStorage.getItem('seenWalkalongClues') || '[]');
+            const parsed = JSON.parse(localStorage.getItem('seenWalkalongClues') || '[]');
+            cached = Array.isArray(parsed) ? parsed : [];
         } catch {
-            return [];
+            cached = [];
         }
     }
-    return [];
+    const fromStore = Array.isArray(storeSeenClues) ? storeSeenClues : [];
+    return [...new Set([...fromStore, ...cached])];
 };

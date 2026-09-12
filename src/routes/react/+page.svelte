@@ -3,7 +3,8 @@
     import { ArrowLeftOutline } from 'flowbite-svelte-icons';
     import { fade } from 'svelte/transition';
     import { onMount } from 'svelte';
-    import { createPlaylistDocument, auth } from '$lib/helpers/firebase';
+    import { createPlaylistDocument, auth, getSeenWalkalongClues } from '$lib/helpers/firebase';
+    import { browser } from '$app/environment';
     import { fetchOriginalVideoMetadata } from '$lib/helpers/originalVideo';
     import { goToRoute, handlePrivateRoute } from '$lib/helpers/routing';
     import { fetchAllPlaylistVideos, fetchPlaylistPreviewMetadata } from '$lib/helpers/youtube';
@@ -257,9 +258,16 @@
     let seenClues = [];
     let reactUserId = '';
 
+    $: if (browser) {
+        seenClues = getSeenWalkalongClues(
+            reactUserId,
+            $userExtraDataStore.userExtraData?.seenWalkalongClues,
+        );
+    }
+
     const handleClueDismiss = ({ detail }) => {
         userExtraDataStore.markClueSeen($userExtraDataStore.userExtraData, detail.userId, detail.clueId);
-        seenClues = [...seenClues, detail.clueId];
+        seenClues = [...new Set([...seenClues, detail.clueId])];
     };
 
     onMount(async () => {
@@ -270,12 +278,6 @@
         }
 
         reactUserId = currentUser.uid;
-        // Load seen clues from store (already populated by layout) or from localStorage
-        const storeData = $userExtraDataStore.userExtraData;
-        seenClues = storeData?.seenWalkalongClues ?? (() => {
-            try { return JSON.parse(localStorage.getItem('seenWalkalongClues') || '[]'); } catch { return []; }
-        })();
-
         originalVideoInput?.focus();
     });
 </script>

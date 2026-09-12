@@ -20,6 +20,7 @@
   import { showToast } from "$lib/stores/toast";
   import { TOASTS } from "$lib/constants/toasts";
   import { userExtraDataStore } from "$lib/stores/userExtraData";
+  import { getSeenWalkalongClues } from "$lib/helpers/firebase";
 
   export let data;
   const { state, actions } = useTwinPlayers({ data, enableAutoPlay: false });
@@ -30,15 +31,15 @@
   let editUserId = data?.userId ?? '';
 
   $: if (browser) {
-    const storeData = $userExtraDataStore.userExtraData;
-    seenClues = storeData?.seenWalkalongClues ?? (() => {
-      try { return JSON.parse(localStorage.getItem('seenWalkalongClues') || '[]'); } catch { return []; }
-    })();
+    seenClues = getSeenWalkalongClues(
+      editUserId,
+      $userExtraDataStore.userExtraData?.seenWalkalongClues,
+    );
   }
 
   const handleClueDismiss = ({ detail }) => {
     userExtraDataStore.markClueSeen($userExtraDataStore.userExtraData, detail.userId, detail.clueId);
-    seenClues = [...seenClues, detail.clueId];
+    seenClues = [...new Set([...seenClues, detail.clueId])];
   };
 
   const handlePlaylistQueueSelect = async ({ targetReactionDocumentId }) => {

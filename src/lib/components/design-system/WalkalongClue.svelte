@@ -12,8 +12,7 @@
    * Events:
    *   dismiss     — fired after the user clicks "Got it"
    */
-  import { createEventDispatcher } from 'svelte';
-  import { prefersReducedMotion } from '$lib/stores/motion';
+  import { createEventDispatcher, onMount } from 'svelte';
 
   export let clueId;
   export let message;
@@ -23,9 +22,42 @@
 
   const dispatch = createEventDispatcher();
 
-  $: visible = Array.isArray(seenClues) && !seenClues.includes(clueId);
+  // Stay hidden until the client cache is read so dismissed tips never flash on reload.
+  let hydrated = false;
+  let locallySeen = [];
+
+  const readLocalSeen = () => {
+    if (typeof localStorage === 'undefined') return [];
+    try {
+      const parsed = JSON.parse(localStorage.getItem('seenWalkalongClues') || '[]');
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const persistLocalSeen = (id) => {
+    if (typeof localStorage === 'undefined' || !id) return;
+    const next = readLocalSeen();
+    if (!next.includes(id)) {
+      next.push(id);
+      localStorage.setItem('seenWalkalongClues', JSON.stringify(next));
+    }
+    locallySeen = next;
+  };
+
+  onMount(() => {
+    locallySeen = readLocalSeen();
+    hydrated = true;
+  });
+
+  $: visible =
+    hydrated &&
+    !(Array.isArray(seenClues) && seenClues.includes(clueId)) &&
+    !locallySeen.includes(clueId);
 
   const dismiss = () => {
+    persistLocalSeen(clueId);
     dispatch('dismiss', { clueId, userId });
   };
 </script>
