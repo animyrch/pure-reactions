@@ -254,12 +254,29 @@
         }
     };
 
-    let seenClues = [];
+    let seenClues = null;
     let reactUserId = '';
+
+    const loadSeenClues = () => {
+        const storeData = $userExtraDataStore.userExtraData;
+        return storeData?.seenWalkalongClues ?? (() => {
+            try { return JSON.parse(localStorage.getItem('seenWalkalongClues') || '[]'); } catch { return []; }
+        })();
+    };
+
+    $: {
+        const storeSeenClues = $userExtraDataStore.userExtraData?.seenWalkalongClues;
+        if (Array.isArray(storeSeenClues)) {
+            seenClues = storeSeenClues;
+        }
+    }
 
     const handleClueDismiss = ({ detail }) => {
         userExtraDataStore.markClueSeen($userExtraDataStore.userExtraData, detail.userId, detail.clueId);
-        seenClues = [...seenClues, detail.clueId];
+        const nextSeenClues = Array.isArray(seenClues) ? seenClues : [];
+        if (!nextSeenClues.includes(detail.clueId)) {
+            seenClues = [...nextSeenClues, detail.clueId];
+        }
     };
 
     onMount(async () => {
@@ -271,10 +288,7 @@
 
         reactUserId = currentUser.uid;
         // Load seen clues from store (already populated by layout) or from localStorage
-        const storeData = $userExtraDataStore.userExtraData;
-        seenClues = storeData?.seenWalkalongClues ?? (() => {
-            try { return JSON.parse(localStorage.getItem('seenWalkalongClues') || '[]'); } catch { return []; }
-        })();
+        seenClues = loadSeenClues();
 
         originalVideoInput?.focus();
     });

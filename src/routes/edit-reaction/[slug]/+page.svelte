@@ -26,19 +26,31 @@
 
   let overlayRef;
 
-  let seenClues = [];
+  let seenClues = null;
   let editUserId = data?.userId ?? '';
 
-  $: if (browser) {
+  const loadSeenClues = () => {
     const storeData = $userExtraDataStore.userExtraData;
-    seenClues = storeData?.seenWalkalongClues ?? (() => {
+    return storeData?.seenWalkalongClues ?? (() => {
       try { return JSON.parse(localStorage.getItem('seenWalkalongClues') || '[]'); } catch { return []; }
     })();
+  };
+
+  $: if (browser) {
+    const storeSeenClues = $userExtraDataStore.userExtraData?.seenWalkalongClues;
+    if (Array.isArray(storeSeenClues)) {
+      seenClues = storeSeenClues;
+    } else if (seenClues === null) {
+      seenClues = loadSeenClues();
+    }
   }
 
   const handleClueDismiss = ({ detail }) => {
     userExtraDataStore.markClueSeen($userExtraDataStore.userExtraData, detail.userId, detail.clueId);
-    seenClues = [...seenClues, detail.clueId];
+    const nextSeenClues = Array.isArray(seenClues) ? seenClues : [];
+    if (!nextSeenClues.includes(detail.clueId)) {
+      seenClues = [...nextSeenClues, detail.clueId];
+    }
   };
 
   const handlePlaylistQueueSelect = async ({ targetReactionDocumentId }) => {

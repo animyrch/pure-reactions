@@ -72,12 +72,33 @@
     let sharedSessionId = "";
     let isStartingReaction = false;
 
-    let seenClues = [];
+    let seenClues = null;
     let backendUserId = '';
+
+    const loadSeenClues = () => {
+        const storeData = $userExtraDataStore.userExtraData;
+        return storeData?.seenWalkalongClues ?? (() => {
+            try {
+                return JSON.parse(localStorage.getItem("seenWalkalongClues") || "[]");
+            } catch {
+                return [];
+            }
+        })();
+    };
+
+    $: {
+        const storeSeenClues = $userExtraDataStore.userExtraData?.seenWalkalongClues;
+        if (Array.isArray(storeSeenClues)) {
+            seenClues = storeSeenClues;
+        }
+    }
 
     const handleClueDismiss = ({ detail }) => {
         userExtraDataStore.markClueSeen($userExtraDataStore.userExtraData, detail.userId, detail.clueId);
-        seenClues = [...seenClues, detail.clueId];
+        const nextSeenClues = Array.isArray(seenClues) ? seenClues : [];
+        if (!nextSeenClues.includes(detail.clueId)) {
+            seenClues = [...nextSeenClues, detail.clueId];
+        }
     };
 
     const playerOptions = {
@@ -1802,10 +1823,7 @@
         }
 
         // Load seen walkalong clues
-        const storeData = $userExtraDataStore.userExtraData;
-        seenClues = storeData?.seenWalkalongClues ?? (() => {
-            try { return JSON.parse(localStorage.getItem('seenWalkalongClues') || '[]'); } catch { return []; }
-        })();
+        seenClues = loadSeenClues();
         backendUserId = data?.userId ?? '';
 
         loginUnsubscribe = isLoggedIn.subscribe((value) => {
