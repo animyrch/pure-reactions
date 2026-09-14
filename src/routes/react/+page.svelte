@@ -13,6 +13,9 @@
         parseReactionSourceInput,
         shouldCreatePlaylistDocumentForSequence,
     } from '$lib/helpers/reactionSequence';
+    import HelpfulTip from '$lib/components/design-system/HelpfulTip.svelte';
+
+    const REACT_ORIGINAL_VIDEO_TIP_STORAGE_KEY = 'pureReactions:helpfulTip:react-original-video';
 
     const steps = [
         {
@@ -332,6 +335,12 @@
                                     {createReactForm.errors.originalVideoId}
                                 </p>
                             {/if}
+                            <HelpfulTip
+                                dismissible
+                                storageKey={REACT_ORIGINAL_VIDEO_TIP_STORAGE_KEY}
+                            >
+                                Please copy the URL of the original video you want to react to. Currently, YouTube and TikTok videos are supported. Sequence tools below allow you to react to multiple videos one after another, but for a first test reaction, we recommend reacting to a single video.
+                            </HelpfulTip>
                         </div>
 
                         {#if isSequenceModeVisible}
