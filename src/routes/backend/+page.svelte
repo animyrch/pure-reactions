@@ -1993,10 +1993,11 @@
                     title="Recording tips"
                 >
                     <ol class="mt-1 ml-5 list-decimal space-y-1">
-                        <li>Use Start Reaction when you start recording your reaction with your camera and microphone.</li>
-                        <li>Use Start Video to begin playback.</li>
-                        <li>Hold Ctrl for Focus React to duck the original's audio so your mic leads (on mobile, Focus React mutes the original).</li>
-                        <li>Use Finish Reaction when you’re done to send the take to the editor.</li>
+                        <li>Hit Start Reaction when you’re ready to record — intros and warm-up chatter count.</li>
+                        <li>Hit Start Video when you actually want the original to roll.</li>
+                        <li>Hold Ctrl for Focus React so your mic leads (Watch out, on mobile, this will mute the original).</li>
+                        <li>Pause Video, say your bit, then Start Video again — that’s the easy way to drop commentary in (no muting on mobile needed)</li>
+                        <li>Finish Reaction when you’re done — that sends the take to the editor.</li>
                     </ol>
                 </HelpfulTip>
             </header>
