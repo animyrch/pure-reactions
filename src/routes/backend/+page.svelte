@@ -19,6 +19,7 @@
         buildRecorderStateConfigs,
         RECORDER_PLAYER_STATES,
     } from "$lib/helpers/recorderState";
+    import HelpfulTip from "$lib/components/design-system/HelpfulTip.svelte";
     import BackendActionDock from "$lib/components/Video/BackendActionDock.svelte";
     import PlaylistQueue from "$lib/components/Video/PlaylistQueue.svelte";
     import { isLoggedIn } from "$lib/stores/user";
@@ -86,45 +87,9 @@
         FINALISED: "finalised",
     };
 
-    const stageSequence = [
-        {
-            id: "setup",
-            title: "Setup",
-            description: "Prep your camera, playlist and session links.",
-        },
-        {
-            id: "record",
-            title: "Record",
-            description: "Capture reactions while keeping playback in sync.",
-        },
-        {
-            id: "review",
-            title: "Review",
-            description: "Wrap up and push the reaction to the editor.",
-        },
-    ];
+    const BACKEND_PLAYER_TIP_STORAGE_KEY =
+        "pureReactions:helpfulTip:backend-player";
 
-    const mapButtonStateToStageIndex = (state) => {
-        switch (state) {
-            case BUTTON_GROUP_STATES.INITIAL:
-            case BUTTON_GROUP_STATES.READY:
-                return 0;
-            case BUTTON_GROUP_STATES.RECORDING:
-            case BUTTON_GROUP_STATES.PAUSED:
-                return 1;
-            case BUTTON_GROUP_STATES.FINALISED:
-                return 2;
-            default:
-                return 0;
-        }
-    };
-
-    let currentStageIndex = 0;
-    let stageProgress = stageSequence.map((stage, index) => ({
-        ...stage,
-        status: index === 0 ? "active" : "upcoming",
-        displayIndex: String(index + 1).padStart(2, "0"),
-    }));
     let stageActions = [];
     const ACTION_DOCK_HIDE_DELAY_MS = 3000;
     let playerFullscreenHostNode;
@@ -261,19 +226,6 @@
             triggerBackendInitialisation("after-navigate");
         });
     }
-
-    $: currentStageIndex = mapButtonStateToStageIndex(currentButtonGroupState);
-
-    $: stageProgress = stageSequence.map((stage, index) => ({
-        ...stage,
-        status:
-            index < currentStageIndex
-                ? "complete"
-                : index === currentStageIndex
-                  ? "active"
-                  : "upcoming",
-        displayIndex: String(index + 1).padStart(2, "0"),
-    }));
 
     $: viewerLabel = viewerCount === 1 ? "viewer" : "viewers";
 
@@ -2035,47 +1987,16 @@
                         </button>
                     </div>
                 </div>
-                <div class="flex flex-wrap items-center gap-4">
-                    {#each stageProgress as stage, idx}
-                        <div class="flex items-center gap-4">
-                            <div
-                                class={`flex h-16 min-w-[12rem] items-center gap-3 rounded-2xl border px-4 transition ${
-                                    stage.status === "complete"
-                                        ? "border-emerald-500/80 bg-emerald-500/10 text-emerald-100"
-                                        : stage.status === "active"
-                                          ? "border-blue-500/80 bg-blue-500/10 text-blue-100"
-                                          : "border-slate-800 bg-slate-900/40 text-slate-400"
-                                }`}
-                            >
-                                <span
-                                    class={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold ${
-                                        stage.status === "complete"
-                                            ? "bg-emerald-500 text-slate-950"
-                                            : stage.status === "active"
-                                              ? "bg-blue-500 text-white"
-                                              : "bg-slate-800 text-slate-400"
-                                    }`}
-                                >
-                                    {stage.displayIndex}
-                                </span>
-                                <div class="flex flex-col">
-                                    <span
-                                        class="text-sm font-semibold text-inherit"
-                                        >{stage.title}</span
-                                    >
-                                    <span class="text-xs text-slate-400">
-                                        {stage.description}
-                                    </span>
-                                </div>
-                            </div>
-                            {#if idx < stageProgress.length - 1}
-                                <span
-                                    class="hidden h-px w-10 bg-slate-800 md:block"
-                                ></span>
-                            {/if}
-                        </div>
-                    {/each}
-                </div>
+                <HelpfulTip
+                    dismissible
+                    storageKey={BACKEND_PLAYER_TIP_STORAGE_KEY}
+                    title="Recording tips"
+                >
+                    Use Start Reaction button when you start recording your reaction,
+                    then Start Video begins playback. Hold Ctrl for Focus React to
+                    duck the original's audio so your mic leads (on mobile, Focus React mutes the original).
+                    Finish Reaction when you’re done to send the take to the editor.
+                </HelpfulTip>
             </header>
 
             <main class="grid flex-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
