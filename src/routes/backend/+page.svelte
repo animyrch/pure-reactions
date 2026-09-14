@@ -1992,10 +1992,12 @@
                     storageKey={BACKEND_PLAYER_TIP_STORAGE_KEY}
                     title="Recording tips"
                 >
-                    Use Start Reaction button when you start recording your reaction,
-                    then Start Video begins playback. Hold Ctrl for Focus React to
-                    duck the original's audio so your mic leads (on mobile, Focus React mutes the original).
-                    Finish Reaction when you’re done to send the take to the editor.
+                    <ol class="mt-1 ml-5 list-decimal space-y-1">
+                        <li>Use Start Reaction when you start recording your reaction with your camera and microphone.</li>
+                        <li>Use Start Video to begin playback.</li>
+                        <li>Hold Ctrl for Focus React to duck the original's audio so your mic leads (on mobile, Focus React mutes the original).</li>
+                        <li>Use Finish Reaction when you’re done to send the take to the editor.</li>
+                    </ol>
                 </HelpfulTip>
             </header>
 
