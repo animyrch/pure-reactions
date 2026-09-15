@@ -35,6 +35,13 @@ export const getAuthorFromAuthorUrl = (authorUrl) => {
   }
 };
 
+const YOUTUBE_HOSTNAMES = new Set([
+  'youtube.com',
+  'www.youtube.com',
+  'm.youtube.com',
+  'youtu.be',
+]);
+
 const YOUTUBE_VIDEO_ID_REGEX = /^[a-zA-Z0-9_-]{11}$/;
 
 // Paths under youtube.com that refer to non-video pages
@@ -78,10 +85,9 @@ export const parseYouTubeUrl = (input) => {
   }
 
   const { hostname, pathname, searchParams } = url;
-  const isYouTube = hostname === 'youtube.com' || hostname === 'www.youtube.com' || hostname === 'm.youtube.com';
   const isYouTuBe = hostname === 'youtu.be';
 
-  if (!isYouTube && !isYouTuBe) {
+  if (!YOUTUBE_HOSTNAMES.has(hostname)) {
     return { videoId: null, error: 'Only YouTube URLs are supported.' };
   }
 
@@ -122,6 +128,22 @@ export const parseYouTubeUrl = (input) => {
 };
 
 /**
+ * Returns true when `input` is a URL whose hostname is a known YouTube domain.
+ * Uses proper URL parsing — never plain string substring matching.
+ *
+ * @param {string} input
+ * @returns {boolean}
+ */
+export const isYouTubeInput = (input) => {
+  if (!input || typeof input !== 'string') return false;
+  try {
+    return YOUTUBE_HOSTNAMES.has(new URL(input.trim()).hostname);
+  } catch {
+    return false;
+  }
+};
+
+/**
  * Extracts the YouTube video ID from a URL or bare ID string.
  * Returns the video ID string on success, or null when extraction fails.
  *
@@ -140,12 +162,13 @@ export const extractYouTubeVideoId = (originalUrl) => {
 };
 
 export const extractYoutubePlaylistId = (originalUrl) => {
-    let playlistId = null;
-    if (originalUrl.includes('youtube.com') || originalUrl.includes('youtu.be')) {
-        const urlParams = new URLSearchParams(new URL(originalUrl).search);
-        playlistId = urlParams.get('list');
+    try {
+        const url = new URL(originalUrl);
+        if (!YOUTUBE_HOSTNAMES.has(url.hostname)) return null;
+        return new URLSearchParams(url.search).get('list');
+    } catch {
+        return null;
     }
-    return playlistId;
 }
 
 export async function fetchFirstPlaylistVideos(playlistId) {

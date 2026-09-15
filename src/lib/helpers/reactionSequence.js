@@ -8,7 +8,7 @@ import {
     extractTikTokVideoId,
     normalizeOriginalVideoPlatform,
 } from '$lib/helpers/platform';
-import { parseYouTubeUrl, extractYoutubePlaylistId } from '$lib/helpers/youtube';
+import { parseYouTubeUrl, isYouTubeInput, extractYoutubePlaylistId } from '$lib/helpers/youtube';
 
 export const REACTION_SOURCE_TYPES = /** @type {const} */ ({
     YOUTUBE_VIDEO: 'youtube-video',
@@ -108,7 +108,7 @@ export const parseReactionSourceInput = (rawValue) => {
 
     // If the input looks like a YouTube URL but we couldn't extract a video ID,
     // surface the specific error instead of falling through to TikTok detection.
-    if (youtubeError && (value.includes('youtube.com') || value.includes('youtu.be'))) {
+    if (youtubeError && isYouTubeInput(value)) {
         return { ok: false, error: youtubeError };
     }
 
