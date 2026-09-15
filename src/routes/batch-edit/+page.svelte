@@ -8,7 +8,7 @@
         updateFirebaseDocument,
     } from "$lib/helpers/firebase";
     import {
-        extractYouTubeVideoId,
+        parseYouTubeUrl,
         downloadBasicVideoDetails,
     } from "$lib/helpers/youtube";
     import { showToast } from "$lib/stores/toast";
@@ -106,8 +106,8 @@
 
         isApplying = true;
         try {
-            const videoId = extractYouTubeVideoId(batchReactionInput);
-            if (!videoId) throw new Error("Invalid YouTube ID");
+            const { videoId, error: parseError } = parseYouTubeUrl(batchReactionInput);
+            if (!videoId) throw new Error(parseError ?? "Invalid YouTube URL or video ID.");
 
             // Optional: Fetch details to ensure it exists and get title/author
             // This is good UX to verify the video before saving
