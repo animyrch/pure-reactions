@@ -85,13 +85,13 @@ export const parseYouTubeUrl = (input) => {
   }
 
   const { hostname, pathname, searchParams } = url;
-  const isYouTuBe = hostname === 'youtu.be';
+  const isYoutuBe = hostname === 'youtu.be';
 
   if (!YOUTUBE_HOSTNAMES.has(hostname)) {
     return { videoId: null, error: 'Only YouTube URLs are supported.' };
   }
 
-  if (isYouTuBe) {
+  if (isYoutuBe) {
     // https://youtu.be/VIDEO_ID
     const id = pathname.slice(1).split('/')[0];
     if (YOUTUBE_VIDEO_ID_REGEX.test(id)) {
