@@ -35,18 +35,108 @@ export const getAuthorFromAuthorUrl = (authorUrl) => {
   }
 };
 
+const YOUTUBE_VIDEO_ID_REGEX = /^[a-zA-Z0-9_-]{11}$/;
+
+// Paths under youtube.com that refer to non-video pages
+const UNSUPPORTED_YOUTUBE_PATHS = /^\/(channel|c|user|playlist|feed|results|gaming|live|hashtag|post|clip)(\/|$|\?)/i;
+
 /**
- *  // Examples
- * 'https://youtu.be/LEv2fMoVvXE?si=SNxsWCJfigFYILvg';
- * 'https://www.youtube.com/watch?v=LEv2fMoVvXE&ab_channel=AsmongoldTV';
- * 'https://www.youtube.com/watch?v=LEv2fMoVvXE';
- * 'https://www.youtube.com/shorts/3JnmAl_8W5k'
- * 'LEv2fMoVvXE';
+ * Parses a YouTube URL (or bare video ID) and returns the canonical video ID
+ * together with a user-friendly error when extraction fails.
+ *
+ * Supported formats:
+ *   https://www.youtube.com/watch?v=VIDEO_ID
+ *   https://youtu.be/VIDEO_ID
+ *   https://www.youtube.com/embed/VIDEO_ID
+ *   https://www.youtube.com/shorts/VIDEO_ID
+ *   https://www.youtube.com/v/VIDEO_ID
+ *   VIDEO_ID (bare 11-character ID)
+ *
+ * @param {string} input
+ * @returns {{ videoId: string, error: null } | { videoId: null, error: string }}
+ */
+export const parseYouTubeUrl = (input) => {
+  if (!input || typeof input !== 'string') {
+    return { videoId: null, error: 'Please enter a YouTube URL or video ID.' };
+  }
+
+  const trimmed = input.trim();
+  if (!trimmed) {
+    return { videoId: null, error: 'Please enter a YouTube URL or video ID.' };
+  }
+
+  // Bare 11-character video ID
+  if (YOUTUBE_VIDEO_ID_REGEX.test(trimmed)) {
+    return { videoId: trimmed, error: null };
+  }
+
+  let url;
+  try {
+    url = new URL(trimmed);
+  } catch {
+    return { videoId: null, error: 'That doesn\'t look like a valid URL. Please check and try again.' };
+  }
+
+  const { hostname, pathname, searchParams } = url;
+  const isYouTube = hostname === 'youtube.com' || hostname === 'www.youtube.com' || hostname === 'm.youtube.com';
+  const isYouTuBe = hostname === 'youtu.be';
+
+  if (!isYouTube && !isYouTuBe) {
+    return { videoId: null, error: 'Only YouTube URLs are supported.' };
+  }
+
+  if (isYouTuBe) {
+    // https://youtu.be/VIDEO_ID
+    const id = pathname.slice(1).split('/')[0];
+    if (YOUTUBE_VIDEO_ID_REGEX.test(id)) {
+      return { videoId: id, error: null };
+    }
+    return { videoId: null, error: 'Could not find a valid video ID in that YouTube URL.' };
+  }
+
+  // youtube.com — check for unsupported path patterns first
+  if (UNSUPPORTED_YOUTUBE_PATHS.test(pathname)) {
+    return { videoId: null, error: 'That YouTube URL points to a channel or page, not a specific video. Please use a video URL.' };
+  }
+
+  // /watch?v=VIDEO_ID
+  if (pathname === '/watch') {
+    const id = searchParams.get('v');
+    if (id && YOUTUBE_VIDEO_ID_REGEX.test(id)) {
+      return { videoId: id, error: null };
+    }
+    return { videoId: null, error: 'Could not find a valid video ID in that YouTube URL.' };
+  }
+
+  // /embed/VIDEO_ID, /shorts/VIDEO_ID, /v/VIDEO_ID
+  const pathMatch = pathname.match(/^\/(embed|shorts|v)\/([^/?]+)/);
+  if (pathMatch) {
+    const id = pathMatch[2];
+    if (YOUTUBE_VIDEO_ID_REGEX.test(id)) {
+      return { videoId: id, error: null };
+    }
+    return { videoId: null, error: 'Could not find a valid video ID in that YouTube URL.' };
+  }
+
+  return { videoId: null, error: 'Unsupported YouTube URL format. Please use a standard video link.' };
+};
+
+/**
+ * Extracts the YouTube video ID from a URL or bare ID string.
+ * Returns the video ID string on success, or null when extraction fails.
+ *
+ * Prefer `parseYouTubeUrl` when you need a user-facing error message.
+ *
+ * Supported formats:
+ *   https://www.youtube.com/watch?v=VIDEO_ID
+ *   https://youtu.be/VIDEO_ID
+ *   https://www.youtube.com/embed/VIDEO_ID
+ *   https://www.youtube.com/shorts/VIDEO_ID
+ *   VIDEO_ID (bare 11-character ID)
  */
 export const extractYouTubeVideoId = (originalUrl) => {
-  const regex = /^([a-zA-Z0-9_-]{11})$|(youtu\.be\/|youtube\.com\/(watch\?(.*&)?v=|(embed|v|shorts)\/))([^?&"'>]+)/;
-  const matches = originalUrl.match(regex);
-  return matches ? (matches[1] || matches[6]) : null;
+  const { videoId } = parseYouTubeUrl(originalUrl);
+  return videoId;
 };
 
 export const extractYoutubePlaylistId = (originalUrl) => {

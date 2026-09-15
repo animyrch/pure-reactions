@@ -19,7 +19,7 @@ import {
   volumeTimelineArrayToMap
 } from '$lib/helpers/twinPlayersTimeline';
 import type { TwinPlayersState } from '$lib/helpers/twinPlayersStateController';
-import { downloadBasicVideoDetails, extractYouTubeVideoId } from '$lib/helpers/youtube';
+import { downloadBasicVideoDetails, extractYouTubeVideoId, parseYouTubeUrl } from '$lib/helpers/youtube';
 import { validateMomentReaction } from '$lib/helpers/momentReactionValidation';
 import { showToast } from '$lib/stores/toast';
 import { TOASTS } from '$lib/constants/toasts';
@@ -289,7 +289,10 @@ export function createTwinPlayersEditorController({
   };
 
   const setReactionVideoId = async (value: string) => {
-    const cleanedId = extractYouTubeVideoId(value);
+    const { videoId: cleanedId, error } = parseYouTubeUrl(value);
+    if (!cleanedId) {
+      throw new Error(error ?? 'Could not extract a valid YouTube video ID.');
+    }
     const { videoAuthor, videoTitle } = await getBasicDetailsReaction(cleanedId);
     await updateFirebaseDocument({
       reactionVideoId: cleanedId,
