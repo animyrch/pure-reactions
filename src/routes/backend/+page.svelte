@@ -1988,7 +1988,7 @@
                     </div>
                 </div>
                 <HelpfulTip
-                    dismissible
+                    collapsible
                     storageKey={BACKEND_PLAYER_TIP_STORAGE_KEY}
                     title="Recording tips"
                 >

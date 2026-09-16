@@ -459,7 +459,7 @@
             Reaction video source
           </h2>
           <p class="text-sm text-text-muted">
-            Link the YouTube video you reacted to so we can load it in the
+            Link the YouTube video you reacted to so we can load it in our online
             editor.
           </p>
         </div>

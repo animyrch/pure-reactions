@@ -7,54 +7,79 @@
   export let label = 'More information';
   export let id;
   export let dismissible = false;
+  export let collapsible = false;
   export let dismissLabel = 'Got it';
+  export let expandLabel = 'Show tip';
   export let storageKey = '';
 
   const dispatch = createEventDispatcher();
-  const DISMISSED_VALUE = '1';
+  const STORED_VALUE = '1';
   const generatedId = `helpful-tip-${Math.random().toString(36).slice(2, 9)}`;
   const isBrowser = () => typeof window !== 'undefined' && typeof localStorage !== 'undefined';
 
   let dismissed = false;
+  let collapsed = false;
   let ready = !storageKey;
 
   $: tipId = id ?? generatedId;
   $: titleId = `${tipId}-title`;
   $: isTooltip = variant === 'tooltip';
-  $: showCallout = !isTooltip && ready && !dismissed;
+  $: showCallout = !isTooltip && ready && !dismissed && !collapsed;
+  $: showCollapsed = !isTooltip && ready && !dismissed && collapsible && collapsed;
 
-  const readDismissed = () => {
+  const readStored = () => {
     if (!storageKey || !isBrowser()) {
       return false;
     }
 
     try {
-      return localStorage.getItem(storageKey) === DISMISSED_VALUE;
+      return localStorage.getItem(storageKey) === STORED_VALUE;
     } catch {
       return false;
     }
   };
 
-  const persistDismissed = () => {
+  const persistStored = (value) => {
     if (!storageKey || !isBrowser()) {
       return;
     }
 
     try {
-      localStorage.setItem(storageKey, DISMISSED_VALUE);
+      if (value) {
+        localStorage.setItem(storageKey, STORED_VALUE);
+      } else {
+        localStorage.removeItem(storageKey);
+      }
     } catch {
-      // Ignore quota / privacy-mode failures; the tip stays dismissed for this session.
+      // Ignore quota / privacy-mode failures; session state still applies.
     }
   };
 
   const handleDismiss = () => {
     dismissed = true;
-    persistDismissed();
+    persistStored(true);
     dispatch('dismiss');
   };
 
+  const handleCollapse = () => {
+    collapsed = true;
+    persistStored(true);
+    dispatch('collapse');
+  };
+
+  const handleExpand = () => {
+    collapsed = false;
+    persistStored(false);
+    dispatch('expand');
+  };
+
   onMount(() => {
-    dismissed = readDismissed();
+    const stored = readStored();
+    if (collapsible) {
+      collapsed = stored;
+    } else {
+      dismissed = stored;
+    }
     ready = true;
   });
 
@@ -86,6 +111,17 @@
       <slot />
     </span>
   </span>
+{:else if showCollapsed}
+  <button
+    type="button"
+    class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-accent-tertiary/40 text-[0.65rem] font-medium text-accent-tertiary transition duration-subtle ease-cinematic hover:border-accent-tertiary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+    aria-label={expandLabel}
+    aria-expanded="false"
+    aria-controls={tipId}
+    on:click={handleExpand}
+  >
+    ?
+  </button>
 {:else if showCallout}
   <aside
     id={tipId}
@@ -108,7 +144,17 @@
       <div class="text-sm leading-relaxed text-text-secondary">
         <slot />
       </div>
-      {#if dismissible}
+      {#if collapsible}
+        <div class="mt-sm">
+          <button
+            type="button"
+            class="inline-flex items-center justify-center rounded-md px-sm py-xs text-sm font-medium text-accent-primary transition duration-subtle ease-cinematic hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            on:click={handleCollapse}
+          >
+            {dismissLabel}
+          </button>
+        </div>
+      {:else if dismissible}
         <div class="mt-sm">
           <button
             type="button"
