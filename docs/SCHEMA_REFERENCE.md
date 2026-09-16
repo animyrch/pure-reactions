@@ -159,8 +159,28 @@ User-specific data and preferences.
 | `lastExportAt` | Timestamp | No | Last self-service export timestamp |
 | `createdAt` | Timestamp | No | Optional creation timestamp |
 | `updatedAt` | Timestamp | No | Optional last update timestamp |
+| `seenWalkalongClues` | array[string] | No | IDs of first-run walkalong clues the user has dismissed. Once a clue ID is in this list it is never shown again. See [Walkalong Clue IDs](#walkalong-clue-ids) below. |
 
 **Note**: Core account profile data (email, display name) primarily lives in Firebase Authentication.
+
+#### Walkalong Clue IDs
+
+The following clue IDs are used by the first-run walkalong system. Each ID appears at most once in `seenWalkalongClues`.
+
+| Clue ID | Screen | Description |
+|---------|--------|-------------|
+| `react.paste-original` | `/react` | Shown next to the original video URL field |
+| `react.skip-sequence` | `/react` (when sequence panel is open) | Reminds users to skip sequence tools for a test reaction |
+| `backend.start-reaction` | `/backend` Setup stage | Explains that Start Reaction does not start the video yet |
+| `backend.record-separately` | `/backend` Setup stage | Explains external-camera model |
+| `backend.start-video` | `/backend` Ready stage | Explains the Start Video button |
+| `backend.focus-react` | `/backend` Recording/Paused stage | Explains Focus React (optional) |
+| `backend.finish` | `/backend` Recording/Paused stage | Explains what Finish does and what comes next |
+| `editor.link-reaction` | `/edit-reaction/[id]` (reaction missing) | Explains YouTube upload + paste flow |
+| `editor.preview` | `/edit-reaction/[id]` (reaction linked) | Encourages preview and explains offset/buffer |
+| `publish.first` | `/edit-reaction/[id]` (reaction linked, unpublished) | Points to speed-dial Publish |
+
+Persistence: clue IDs are stored server-side in `userData.seenWalkalongClues` (Firestore) and cached in `localStorage` key `seenWalkalongClues` (JSON array) as an optimistic layer. The localStorage cache is updated immediately on dismiss; Firestore is updated asynchronously.
 
 ---
 
@@ -499,6 +519,7 @@ const docRef = await addDoc(collection(db, 'reactions'), {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.0 | 2026-09-07 | Added `seenWalkalongClues` field to `userData` for first-run walkalong clue persistence; documented all 10 clue IDs and localStorage cache strategy |
 | 1.9 | 2026-06-10 | Added `originalVideoSlug` field to `reactions` and `moments` collections for SEO-friendly canonical URLs (format: `{title-slugified}-{author-slugified}`) |
 | 1.8 | 2026-05-22 | Added `moments` collection, moment reaction fields on `reactions`, discovery routes (`/moments`), and Algolia moments index env `PUBLIC_ALGOLIA_MOMENTS_INDEX` |
 | 1.7 | 2026-04-22 | Documented unified overlay snapshot timeline schema (`overlayVisibilityTimeline` now stores `visible` + `primary`) and static `fullscreenPrimaryVideo` fallback semantics |

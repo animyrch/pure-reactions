@@ -5,7 +5,8 @@ import {
     addBookmarkWrapper,
     removeBookmarkWrapper,
     addFollowWrapper,
-    removeFollowWrapper
+    removeFollowWrapper,
+    markWalkalongClueSeen,
 } from '$lib/helpers/firebase';
 import { handlePrivateRoute } from '$lib/helpers/routing';
 
@@ -117,6 +118,28 @@ const createUserExtraDataStore = () => {
         } catch (error) {
             console.error("Error removing user follows: ", error);
         }
+    },
+    /**
+     * Mark a walkalong clue as seen both in the store and in Firestore.
+     * Call this when a clue is dismissed (not when it first appears).
+     *
+     * @param {object} userExtraData - current store value
+     * @param {string} userId
+     * @param {string} clueId
+     */
+    markClueSeen: async (userExtraData, userId, clueId) => {
+        if (!userId || !clueId) return;
+        const seen = userExtraData?.seenWalkalongClues ? [...userExtraData.seenWalkalongClues] : [];
+        if (!seen.includes(clueId)) {
+            seen.push(clueId);
+            set({
+                userExtraData: {
+                    ...userExtraData,
+                    seenWalkalongClues: seen,
+                },
+            });
+        }
+        await markWalkalongClueSeen(userId, clueId);
     },
   };
 };

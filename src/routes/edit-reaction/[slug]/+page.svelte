@@ -7,6 +7,7 @@
   import PlaylistQueue from "$lib/components/Video/PlaylistQueue.svelte";
   import SubtleLoader from "$lib/components/design-system/SubtleLoader.svelte";
   import CinematicButton from "$lib/components/design-system/CinematicButton.svelte";
+  import WalkalongClue from "$lib/components/design-system/WalkalongClue.svelte";
   import FullscreenChrome from "$lib/components/reaction/FullscreenChrome.svelte";
   import ControlDock from "$lib/components/reaction/ControlDock.svelte";
   import EditorPanelsV2 from "$lib/components/reaction/EditorPanelsV2.svelte";
@@ -18,11 +19,27 @@
   import { reactionDial } from "$lib/stores/reactionDial";
   import { showToast } from "$lib/stores/toast";
   import { TOASTS } from "$lib/constants/toasts";
+  import { userExtraDataStore } from "$lib/stores/userExtraData";
 
   export let data;
   const { state, actions } = useTwinPlayers({ data, enableAutoPlay: false });
 
   let overlayRef;
+
+  let seenClues = [];
+  let editUserId = data?.userId ?? '';
+
+  $: if (browser) {
+    const storeData = $userExtraDataStore.userExtraData;
+    seenClues = storeData?.seenWalkalongClues ?? (() => {
+      try { return JSON.parse(localStorage.getItem('seenWalkalongClues') || '[]'); } catch { return []; }
+    })();
+  }
+
+  const handleClueDismiss = ({ detail }) => {
+    userExtraDataStore.markClueSeen($userExtraDataStore.userExtraData, detail.userId, detail.clueId);
+    seenClues = [...seenClues, detail.clueId];
+  };
 
   const handlePlaylistQueueSelect = async ({ targetReactionDocumentId }) => {
     if (!targetReactionDocumentId) return;
@@ -297,6 +314,18 @@
           onSeek={actions.seekTo}
         />
       </div>
+      {#if !$state.isReactionMissing && !$state.isPublished}
+        <div class="mt-4">
+          <WalkalongClue
+            clueId="publish.first"
+            message="Publish makes this reaction visible publicly. It stays private until you publish. Use the speed dial (bottom-right) to publish."
+            helpHref="/insights/create-your-first-reaction"
+            {seenClues}
+            userId={editUserId}
+            on:dismiss={handleClueDismiss}
+          />
+        </div>
+      {/if}
     </div>
   {/if}
 
@@ -375,7 +404,23 @@
               ></div>
             </div>
           </div>
+          <WalkalongClue
+            clueId="editor.preview"
+            message="Play to confirm the faces and original stay in sync. Offset and buffer are optional fine-tuning — most reactions work without them."
+            helpHref="/insights/create-your-first-reaction"
+            {seenClues}
+            userId={editUserId}
+            on:dismiss={handleClueDismiss}
+          />
         {:else}
+          <WalkalongClue
+            clueId="editor.link-reaction"
+            message="Upload your recording to YouTube (unlisted is fine), then paste the URL here. The two videos stay separate — Pure Reactions only syncs the playback."
+            helpHref="/insights/create-your-first-reaction"
+            {seenClues}
+            userId={editUserId}
+            on:dismiss={handleClueDismiss}
+          />
           <MissingReactionPlaceholder
             loading={isSettingReactionVideoId}
             error={reactionVideoIdError}
