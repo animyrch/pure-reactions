@@ -50,8 +50,6 @@
         cleanupInactiveSessions,
         listenToSession,
     } from "$lib/helpers/sharedSession";
-    import WalkalongClue from "$lib/components/design-system/WalkalongClue.svelte";
-    import { userExtraDataStore } from "$lib/stores/userExtraData";
 
     export let data;
 
@@ -71,14 +69,6 @@
     let playlistElements;
     let sharedSessionId = "";
     let isStartingReaction = false;
-
-    let seenClues = [];
-    let backendUserId = '';
-
-    const handleClueDismiss = ({ detail }) => {
-        userExtraDataStore.markClueSeen($userExtraDataStore.userExtraData, detail.userId, detail.clueId);
-        seenClues = [...seenClues, detail.clueId];
-    };
 
     const playerOptions = {
         autoplay: 0,
@@ -1801,13 +1791,6 @@
             triggerBackendInitialisation("mount");
         }
 
-        // Load seen walkalong clues
-        const storeData = $userExtraDataStore.userExtraData;
-        seenClues = storeData?.seenWalkalongClues ?? (() => {
-            try { return JSON.parse(localStorage.getItem('seenWalkalongClues') || '[]'); } catch { return []; }
-        })();
-        backendUserId = data?.userId ?? '';
-
         loginUnsubscribe = isLoggedIn.subscribe((value) => {
             const wasLoggedIn = isLoggedInSnapshot;
             isLoggedInSnapshot = value;
@@ -2268,55 +2251,6 @@
                         {/each}
                     </div>
                 </section>
-
-                <div class="flex flex-col gap-3">
-                    {#if currentButtonGroupState === BUTTON_GROUP_STATES.INITIAL}
-                        <WalkalongClue
-                            clueId="backend.start-reaction"
-                            message="Start Reaction creates your synced session. It does not start the original video yet."
-                            helpHref="/insights/create-your-first-reaction"
-                            {seenClues}
-                            userId={backendUserId}
-                            on:dismiss={handleClueDismiss}
-                        />
-                        <WalkalongClue
-                            clueId="backend.record-separately"
-                            message="Record with your own camera or phone. Pure Reactions tracks how you watch — it does not mix the original into your recording."
-                            helpHref="/insights/create-your-first-reaction"
-                            {seenClues}
-                            userId={backendUserId}
-                            on:dismiss={handleClueDismiss}
-                        />
-                    {/if}
-                    {#if currentButtonGroupState === BUTTON_GROUP_STATES.READY}
-                        <WalkalongClue
-                            clueId="backend.start-video"
-                            message="Start Video begins the original. React as you watch."
-                            helpHref="/insights/create-your-first-reaction"
-                            {seenClues}
-                            userId={backendUserId}
-                            on:dismiss={handleClueDismiss}
-                        />
-                    {/if}
-                    {#if currentButtonGroupState === BUTTON_GROUP_STATES.RECORDING || currentButtonGroupState === BUTTON_GROUP_STATES.PAUSED}
-                        <WalkalongClue
-                            clueId="backend.focus-react"
-                            message="Focus React ducks the original audio when you talk. Hold Ctrl or tap the button. Optional."
-                            helpHref="/insights/create-your-first-reaction"
-                            {seenClues}
-                            userId={backendUserId}
-                            on:dismiss={handleClueDismiss}
-                        />
-                        <WalkalongClue
-                            clueId="backend.finish"
-                            message="Finish locks the timeline. Next you will attach the YouTube upload of your recording."
-                            helpHref="/insights/create-your-first-reaction"
-                            {seenClues}
-                            userId={backendUserId}
-                            on:dismiss={handleClueDismiss}
-                        />
-                    {/if}
-                </div>
 
                 <aside class="flex w-full flex-col gap-4">
                     {#if isTikTokOriginal}
