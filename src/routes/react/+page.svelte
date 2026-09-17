@@ -2,7 +2,7 @@
     import { GradientButton } from 'flowbite-svelte';
     import { ArrowLeftOutline } from 'flowbite-svelte-icons';
     import { fade } from 'svelte/transition';
-    import { onMount } from 'svelte';
+    import { tick } from 'svelte';
     import { createPlaylistDocument, auth } from '$lib/helpers/firebase';
     import { fetchOriginalVideoMetadata } from '$lib/helpers/originalVideo';
     import { goToRoute, handlePrivateRoute } from '$lib/helpers/routing';
@@ -14,6 +14,7 @@
         shouldCreatePlaylistDocumentForSequence,
     } from '$lib/helpers/reactionSequence';
     import HelpfulTip from '$lib/components/design-system/HelpfulTip.svelte';
+    import { isLoggedIn } from '$lib/stores/user';
 
     const REACT_ORIGINAL_VIDEO_TIP_STORAGE_KEY = 'pureReactions:helpfulTip:react-original-video';
 
@@ -255,17 +256,17 @@
         }
     };
 
-    onMount(async () => {
-        const currentUser = auth.currentUser;
-        if (!currentUser) {
-            handlePrivateRoute();
-            return;
-        }
-
+    const focusOriginalVideoInput = async () => {
+        await tick();
         originalVideoInput?.focus();
-    });
+    };
+
+    $: if ($isLoggedIn) {
+        void focusOriginalVideoInput();
+    }
 </script>
 
+{#if $isLoggedIn}
 <div class="min-h-screen bg-slate-950 text-slate-100">
     <div class="mx-auto flex min-h-screen max-w-2xl flex-col px-4 py-14 sm:py-20">
         <div class="flex items-center justify-between gap-6">
@@ -447,6 +448,9 @@
         </div>
     </div>
 </div>
+{:else}
+    {handlePrivateRoute()}
+{/if}
 
 <style>
     .sr-only {
