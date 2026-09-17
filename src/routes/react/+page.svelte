@@ -2,7 +2,7 @@
     import { GradientButton } from 'flowbite-svelte';
     import { ArrowLeftOutline } from 'flowbite-svelte-icons';
     import { fade } from 'svelte/transition';
-    import { onMount } from 'svelte';
+    import { tick } from 'svelte';
     import { createPlaylistDocument, auth } from '$lib/helpers/firebase';
     import { fetchOriginalVideoMetadata } from '$lib/helpers/originalVideo';
     import { goToRoute, handlePrivateRoute } from '$lib/helpers/routing';
@@ -13,6 +13,10 @@
         parseReactionSourceInput,
         shouldCreatePlaylistDocumentForSequence,
     } from '$lib/helpers/reactionSequence';
+    import HelpfulTip from '$lib/components/design-system/HelpfulTip.svelte';
+    import { isLoggedIn } from '$lib/stores/user';
+
+    const REACT_ORIGINAL_VIDEO_TIP_STORAGE_KEY = 'pureReactions:helpfulTip:react-original-video';
 
     const steps = [
         {
@@ -252,17 +256,17 @@
         }
     };
 
-    onMount(async () => {
-        const currentUser = auth.currentUser;
-        if (!currentUser) {
-            handlePrivateRoute();
-            return;
-        }
-
+    const focusOriginalVideoInput = async () => {
+        await tick();
         originalVideoInput?.focus();
-    });
+    };
+
+    $: if ($isLoggedIn) {
+        void focusOriginalVideoInput();
+    }
 </script>
 
+{#if $isLoggedIn}
 <div class="min-h-screen bg-slate-950 text-slate-100">
     <div class="mx-auto flex min-h-screen max-w-2xl flex-col px-4 py-14 sm:py-20">
         <div class="flex items-center justify-between gap-6">
@@ -310,6 +314,12 @@
                         </div>
 
                         <div class="space-y-2">
+                            <HelpfulTip
+                                collapsible
+                                storageKey={REACT_ORIGINAL_VIDEO_TIP_STORAGE_KEY}
+                            >
+                                Please copy the URL of the original video you want to react to. Currently, YouTube and TikTok videos are supported. Sequence tools below allow you to react to multiple videos one after another, but for a first test reaction, we recommend reacting to a single video.
+                            </HelpfulTip>
                             <label class="text-sm font-medium text-slate-200" for="original-video-id">
                                 Original video URL
                             </label>
@@ -438,6 +448,9 @@
         </div>
     </div>
 </div>
+{:else}
+    {handlePrivateRoute()}
+{/if}
 
 <style>
     .sr-only {

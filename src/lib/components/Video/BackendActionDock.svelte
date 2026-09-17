@@ -1,5 +1,6 @@
 <script>
     import { createEventDispatcher } from "svelte";
+    import HelpfulTip from "$lib/components/design-system/HelpfulTip.svelte";
 
     export let actions = [];
     export let visible = false;
@@ -70,8 +71,22 @@
 
         <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {#each actions as action}
+                <div class="relative">
+                    {#if action.id === "start-reaction" && !action.disabled}
+                        <div class="absolute right-2 top-2 z-10">
+                            <HelpfulTip
+                                variant="tooltip"
+                                placement="bottom"
+                                label="When to start recording"
+                            >
+                                Hit Start Reaction when you’re ready to record.
+                            </HelpfulTip>
+                        </div>
+                    {/if}
                 <button
-                    class={`group flex items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
+                    class={`group flex w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
+                        action.id === "start-reaction" ? "pr-8" : ""
+                    } ${
                         action.active
                             ? "border-emerald-500/70 bg-emerald-500/15 text-emerald-100"
                             : action.tone === "accent"
@@ -120,6 +135,7 @@
                         </span>
                     </div>
                 </button>
+                </div>
             {/each}
         </div>
 

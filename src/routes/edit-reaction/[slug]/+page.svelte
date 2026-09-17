@@ -7,6 +7,7 @@
   import PlaylistQueue from "$lib/components/Video/PlaylistQueue.svelte";
   import SubtleLoader from "$lib/components/design-system/SubtleLoader.svelte";
   import CinematicButton from "$lib/components/design-system/CinematicButton.svelte";
+  import HelpfulTip from "$lib/components/design-system/HelpfulTip.svelte";
   import FullscreenChrome from "$lib/components/reaction/FullscreenChrome.svelte";
   import ControlDock from "$lib/components/reaction/ControlDock.svelte";
   import EditorPanelsV2 from "$lib/components/reaction/EditorPanelsV2.svelte";
@@ -211,7 +212,13 @@
     >
       <h1 class="text-xl font-semibold text-text-primary">Edit Reaction</h1>
       <div class="flex items-center gap-2">
-        
+        <HelpfulTip
+          variant="tooltip"
+          placement="bottom"
+          label="About fine-tune mode"
+        >
+          Cues from your recording are already on the timeline. Click a track to add or fix pauses, volume, speed, or overlay. To zoom into a section, press and drag across any track, then release.
+        </HelpfulTip>
         <CinematicButton
           type="button"
           size="sm"
