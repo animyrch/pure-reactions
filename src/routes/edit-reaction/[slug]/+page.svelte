@@ -212,6 +212,13 @@
     >
       <h1 class="text-xl font-semibold text-text-primary">Edit Reaction</h1>
       <div class="flex items-center gap-2">
+        <HelpfulTip
+          variant="tooltip"
+          placement="bottom"
+          label="About fine-tune mode"
+        >
+          Cues from your recording are already on the timeline. Click a track to add or fix pauses, volume, speed, or overlay. To zoom into a section, press and drag across any track, then release.
+        </HelpfulTip>
         <CinematicButton
           type="button"
           size="sm"
@@ -224,13 +231,6 @@
               : "Enable fine-tune mode"}</span
           >
         </CinematicButton>
-        <HelpfulTip
-          variant="tooltip"
-          placement="bottom"
-          label="About fine-tune mode"
-        >
-          Cues from your recording are already on the timeline. Click a track to add or fix pauses, volume, speed, or overlay.
-        </HelpfulTip>
         <CinematicButton
           variant="secondary"
           size="sm"

@@ -780,13 +780,6 @@
             <h2 class="text-lg font-semibold text-text-primary">
               Fine-tune mode
             </h2>
-            <HelpfulTip
-              variant="tooltip"
-              placement="bottom"
-              label="How to use fine-tune"
-            >
-              Cues from your recording are already on this timeline. Click a track to add or fix pauses, volume, speed, or overlay.
-            </HelpfulTip>
           </div>
           <p class="text-sm text-text-muted">
             Adjust precise playback, volume, and state timelines when you need
