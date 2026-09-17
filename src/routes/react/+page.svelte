@@ -313,6 +313,12 @@
                         </div>
 
                         <div class="space-y-2">
+                            <HelpfulTip
+                                collapsible
+                                storageKey={REACT_ORIGINAL_VIDEO_TIP_STORAGE_KEY}
+                            >
+                                Please copy the URL of the original video you want to react to. Currently, YouTube and TikTok videos are supported. Sequence tools below allow you to react to multiple videos one after another, but for a first test reaction, we recommend reacting to a single video.
+                            </HelpfulTip>
                             <label class="text-sm font-medium text-slate-200" for="original-video-id">
                                 Original video URL
                             </label>
@@ -335,12 +341,6 @@
                                     {createReactForm.errors.originalVideoId}
                                 </p>
                             {/if}
-                            <HelpfulTip
-                                collapsible
-                                storageKey={REACT_ORIGINAL_VIDEO_TIP_STORAGE_KEY}
-                            >
-                                Please copy the URL of the original video you want to react to. Currently, YouTube and TikTok videos are supported. Sequence tools below allow you to react to multiple videos one after another, but for a first test reaction, we recommend reacting to a single video.
-                            </HelpfulTip>
                         </div>
 
                         {#if isSequenceModeVisible}

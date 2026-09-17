@@ -1949,57 +1949,40 @@
 {#if $isLoggedIn}
     <div class="min-h-screen bg-slate-950 text-slate-100">
         <div class="mx-auto flex h-full max-w-6xl flex-col gap-6 px-4 py-8">
-            <header class="space-y-6">
-                <div
-                    class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
-                >
-                    <div class="space-y-1">
-                        <p
-                            class="text-xs uppercase tracking-[0.3em] text-slate-500"
-                        >
-                            Now Recording
-                        </p>
-                        <h1 class="text-xl font-semibold text-white">
-                            {originalVideoTitle ?? "Loading reaction details…"}
-                        </h1>
-                        <p
-                            class="text-xs uppercase tracking-[0.3em] text-slate-600"
-                        >
-                            {originalVideoAuthor
-                                ? `Original by ${originalVideoAuthor}`
-                                : ""}
-                        </p>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <div
-                            class="hidden items-center gap-2 rounded-full border border-slate-800 bg-slate-900/80 px-4 py-2 text-sm font-medium text-slate-300 sm:flex"
-                        >
-                            <UsersSolid class="h-4 w-4 text-slate-400" />
-                            <span>{viewerCount} {viewerLabel}</span>
-                        </div>
-                        <button
-                            class="flex items-center gap-2 rounded-full border border-blue-500/50 bg-blue-500/10 px-4 py-2 text-sm font-semibold text-blue-200 transition hover:bg-blue-500/20 focus:outline-none focus:ring-2 focus:ring-blue-400/70 disabled:border-slate-700 disabled:bg-slate-800/60 disabled:text-slate-500 disabled:focus:ring-0"
-                            on:click={onClickShareSession}
-                            disabled={!sharedSessionId}
-                        >
-                            <UsersSolid class="h-4 w-4" />
-                            Share Session
-                        </button>
-                    </div>
+            <header class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div class="space-y-1">
+                    <p
+                        class="text-xs uppercase tracking-[0.3em] text-slate-500"
+                    >
+                        Now Recording
+                    </p>
+                    <h1 class="text-xl font-semibold text-white">
+                        {originalVideoTitle ?? "Loading reaction details…"}
+                    </h1>
+                    <p
+                        class="text-xs uppercase tracking-[0.3em] text-slate-600"
+                    >
+                        {originalVideoAuthor
+                            ? `Original by ${originalVideoAuthor}`
+                            : ""}
+                    </p>
                 </div>
-                <HelpfulTip
-                    collapsible
-                    storageKey={BACKEND_PLAYER_TIP_STORAGE_KEY}
-                    title="Recording tips"
-                >
-                    <ol class="mt-1 ml-5 list-decimal space-y-1">
-                        <li>Hit Start Reaction when you’re ready to record — intros and warm-up chatter count.</li>
-                        <li>Hit Start Video when you actually want the original to roll.</li>
-                        <li>Hold Ctrl for Focus React so your mic leads (Watch out, on mobile, this will mute the original).</li>
-                        <li>Pause Video, say your bit, then Start Video again — that’s the easy way to drop commentary in (no muting on mobile needed)</li>
-                        <li>Finish Reaction when you’re done — that sends the take to the editor.</li>
-                    </ol>
-                </HelpfulTip>
+                <div class="flex items-center gap-3">
+                    <div
+                        class="hidden items-center gap-2 rounded-full border border-slate-800 bg-slate-900/80 px-4 py-2 text-sm font-medium text-slate-300 sm:flex"
+                    >
+                        <UsersSolid class="h-4 w-4 text-slate-400" />
+                        <span>{viewerCount} {viewerLabel}</span>
+                    </div>
+                    <button
+                        class="flex items-center gap-2 rounded-full border border-blue-500/50 bg-blue-500/10 px-4 py-2 text-sm font-semibold text-blue-200 transition hover:bg-blue-500/20 focus:outline-none focus:ring-2 focus:ring-blue-400/70 disabled:border-slate-700 disabled:bg-slate-800/60 disabled:text-slate-500 disabled:focus:ring-0"
+                        on:click={onClickShareSession}
+                        disabled={!sharedSessionId}
+                    >
+                        <UsersSolid class="h-4 w-4" />
+                        Share Session
+                    </button>
+                </div>
             </header>
 
             <main class="grid flex-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -2119,59 +2102,74 @@
 
                     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                         {#each stageActions as action}
-                            <button
-                                class={`group flex h-full items-start gap-3 rounded-3xl border px-4 py-4 text-left transition focus:outline-none focus-visible:outline-none focus:ring-2 focus:ring-blue-500/60 ${
-                                    action.active
-                                        ? "border-emerald-500/70 bg-emerald-500/10 text-emerald-100"
-                                        : action.tone === "accent"
-                                          ? "border-blue-500/60 bg-blue-500/10 text-blue-100"
-                                          : "border-slate-900/60 bg-slate-900/40 text-slate-200"
-                                } disabled:cursor-not-allowed disabled:border-slate-800 disabled:bg-slate-900/20 disabled:text-slate-500`}
-                                on:click={action.onClick}
-                                disabled={action.disabled}
-                                aria-busy={action.id === "start-reaction"
-                                    ? isStartingReaction
-                                    : undefined}
-                                aria-keyshortcuts={action.shortcutAria}
-                            >
-                                <div
-                                    class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-950/60"
-                                >
-                                    <svelte:component
-                                        this={action.icon}
-                                        class={`h-4 w-4 ${
-                                            action.active
-                                                ? "text-emerald-300"
-                                                : action.tone === "accent"
-                                                  ? "text-blue-300"
-                                                  : "text-slate-300"
-                                        }`}
-                                    />
-                                </div>
-                                <div class="flex w-full flex-col">
-                                    <div class="flex items-center justify-between gap-2">
-                                        <span
-                                            class="text-sm font-semibold leading-tight text-inherit"
-                                            >{action.label}</span
+                            <div class="relative h-full">
+                                {#if action.id === "start-reaction" && !action.disabled}
+                                    <div class="absolute right-3 top-3 z-10">
+                                        <HelpfulTip
+                                            variant="tooltip"
+                                            placement="bottom"
+                                            label="When to start recording"
                                         >
-                                        {#if action.shortcutLabel}
-                                            <span
-                                                class={`pointer-events-none inline-flex rounded-md border border-slate-700/80 bg-slate-950/80 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] text-slate-300 transition-opacity duration-200 ${
-                                                    action.disabled
-                                                        ? "opacity-0"
-                                                        : "opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"
-                                                }`}
-                                                aria-hidden="true"
-                                            >
-                                                {action.shortcutLabel}
-                                            </span>
-                                        {/if}
+                                            Hit Start Reaction when you’re ready to record.
+                                        </HelpfulTip>
                                     </div>
-                                    <span class="mt-1 text-xs text-slate-400"
-                                        >{action.description}</span
+                                {/if}
+                                <button
+                                    class={`group flex h-full w-full items-start gap-3 rounded-3xl border px-4 py-4 text-left transition focus:outline-none focus-visible:outline-none focus:ring-2 focus:ring-blue-500/60 ${
+                                        action.id === "start-reaction" ? "pr-10" : ""
+                                    } ${
+                                        action.active
+                                            ? "border-emerald-500/70 bg-emerald-500/10 text-emerald-100"
+                                            : action.tone === "accent"
+                                              ? "border-blue-500/60 bg-blue-500/10 text-blue-100"
+                                              : "border-slate-900/60 bg-slate-900/40 text-slate-200"
+                                    } disabled:cursor-not-allowed disabled:border-slate-800 disabled:bg-slate-900/20 disabled:text-slate-500`}
+                                    on:click={action.onClick}
+                                    disabled={action.disabled}
+                                    aria-busy={action.id === "start-reaction"
+                                        ? isStartingReaction
+                                        : undefined}
+                                    aria-keyshortcuts={action.shortcutAria}
+                                >
+                                    <div
+                                        class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-950/60"
                                     >
-                                </div>
-                            </button>
+                                        <svelte:component
+                                            this={action.icon}
+                                            class={`h-4 w-4 ${
+                                                action.active
+                                                    ? "text-emerald-300"
+                                                    : action.tone === "accent"
+                                                      ? "text-blue-300"
+                                                      : "text-slate-300"
+                                            }`}
+                                        />
+                                    </div>
+                                    <div class="flex w-full flex-col">
+                                        <div class="flex items-center justify-between gap-2">
+                                            <span
+                                                class="text-sm font-semibold leading-tight text-inherit"
+                                                >{action.label}</span
+                                            >
+                                            {#if action.shortcutLabel}
+                                                <span
+                                                    class={`pointer-events-none inline-flex rounded-md border border-slate-700/80 bg-slate-950/80 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] text-slate-300 transition-opacity duration-200 ${
+                                                        action.disabled
+                                                            ? "opacity-0"
+                                                            : "opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"
+                                                    }`}
+                                                    aria-hidden="true"
+                                                >
+                                                    {action.shortcutLabel}
+                                                </span>
+                                            {/if}
+                                        </div>
+                                        <span class="mt-1 text-xs text-slate-400"
+                                            >{action.description}</span
+                                        >
+                                    </div>
+                                </button>
+                            </div>
                         {/each}
                     </div>
                 </section>
@@ -2315,6 +2313,20 @@
                             {playlistBufferTime}
                         />
                     </div>
+
+                    <HelpfulTip
+                        collapsible
+                        storageKey={BACKEND_PLAYER_TIP_STORAGE_KEY}
+                        title="Recording tips"
+                    >
+                        <ol class="mt-1 ml-5 list-decimal space-y-1">
+                            <li>Hit Start Reaction when you’re ready to record — intros and warm-up chatter count.</li>
+                            <li>Hit Start Video when you actually want the original to roll.</li>
+                            <li>Hold Ctrl for Focus React so your mic leads (Watch out, on mobile, this will mute the original).</li>
+                            <li>Pause Video, say your bit, then Start Video again — that’s the easy way to drop commentary in (no muting on mobile needed)</li>
+                            <li>Finish Reaction when you’re done — that sends the take to the editor.</li>
+                        </ol>
+                    </HelpfulTip>
 
                     {#if debugMode && currentButtonGroupState !== BUTTON_GROUP_STATES.INITIAL}
                         <div

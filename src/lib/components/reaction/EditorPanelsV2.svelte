@@ -1,6 +1,7 @@
 <script>
   import AccessibleInput from "$lib/components/design-system/AccessibleInput.svelte";
   import CinematicButton from "$lib/components/design-system/CinematicButton.svelte";
+  import HelpfulTip from "$lib/components/design-system/HelpfulTip.svelte";
   import FullscreenLayoutPanel from "$lib/components/reaction/FullscreenLayoutPanel.svelte";
   import OverlayPositionPanel from "$lib/components/reaction/OverlayPositionPanel.svelte";
   import ConfigEditorV2 from "$lib/components/Video/ConfigEditorV2.svelte";
@@ -775,9 +776,18 @@
         class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
       >
         <div>
-          <h2 class="text-lg font-semibold text-text-primary">
-            Fine-tune mode
-          </h2>
+          <div class="flex items-center gap-2">
+            <h2 class="text-lg font-semibold text-text-primary">
+              Fine-tune mode
+            </h2>
+            <HelpfulTip
+              variant="tooltip"
+              placement="bottom"
+              label="How to use fine-tune"
+            >
+              Cues from your recording are already on this timeline. Click a track to add or fix pauses, volume, speed, or overlay.
+            </HelpfulTip>
+          </div>
           <p class="text-sm text-text-muted">
             Adjust precise playback, volume, and state timelines when you need
             full control.
