@@ -975,9 +975,8 @@ export function createTwinPlayersPlaybackSyncController({
         return;
       }
 
-      // If the reaction video has naturally ended, stop the sync cycle so the
-      // original video can continue playing freely until it finishes on its own.
-      // Playlist/queue transitions and mid-playlist pause are handled by the
+      // If the reaction video has naturally ended, stop the sync cycle.
+      // Playlist/queue transitions and pause-original are handled by the
       // ENDED event handler in onStateChangeReaction.
       if (newReactionState === YT?.PlayerState?.ENDED) {
         return;
@@ -1698,7 +1697,8 @@ export function createTwinPlayersPlaybackSyncController({
         stopSyncScheduler();
       } else {
         // Individual reaction, or last item in playlist/queue:
-        // stop the sync scheduler so the original can finish naturally.
+        // pause the original so it does not keep playing after the take ends.
+        pauseOriginalVideo();
         stopSyncScheduler();
       }
     }

@@ -42,7 +42,37 @@ const YOUTUBE_HOSTNAMES = new Set([
   'youtu.be',
 ]);
 
+const HAS_HTTP_SCHEME = /^https?:\/\//i;
+const PROTOCOL_LESS_YOUTUBE_HOST =
+  /^(?:www\.|m\.)?(?:youtube\.com|youtu\.be)(?:[/?:#]|$)/i;
+
 const YOUTUBE_VIDEO_ID_REGEX = /^[a-zA-Z0-9_-]{11}$/;
+
+/**
+ * Address-bar pastes often omit https://. Prepend it only when the host is
+ * clearly a YouTube domain so unrelated strings keep the generic URL error.
+ *
+ * @param {string} input
+ * @returns {string}
+ */
+const coerceAbsoluteUrl = (input) => {
+  const trimmed = input.trim();
+  if (HAS_HTTP_SCHEME.test(trimmed)) return trimmed;
+
+  if (trimmed.startsWith('//')) {
+    const withoutSlashes = trimmed.slice(2);
+    if (PROTOCOL_LESS_YOUTUBE_HOST.test(withoutSlashes)) {
+      return `https:${trimmed}`;
+    }
+    return trimmed;
+  }
+
+  if (PROTOCOL_LESS_YOUTUBE_HOST.test(trimmed)) {
+    return `https://${trimmed}`;
+  }
+
+  return trimmed;
+};
 
 // Paths under youtube.com that refer to non-video pages
 const UNSUPPORTED_YOUTUBE_PATHS = /^\/(channel|c|user|playlist|feed|results|gaming|live|hashtag|post|clip)(\/|$|\?)/i;
@@ -53,6 +83,7 @@ const UNSUPPORTED_YOUTUBE_PATHS = /^\/(channel|c|user|playlist|feed|results|gami
  *
  * Supported formats:
  *   https://www.youtube.com/watch?v=VIDEO_ID
+ *   youtube.com/watch?v=VIDEO_ID (scheme optional)
  *   https://youtu.be/VIDEO_ID
  *   https://www.youtube.com/embed/VIDEO_ID
  *   https://www.youtube.com/shorts/VIDEO_ID
@@ -79,7 +110,7 @@ export const parseYouTubeUrl = (input) => {
 
   let url;
   try {
-    url = new URL(trimmed);
+    url = new URL(coerceAbsoluteUrl(trimmed));
   } catch {
     return { videoId: null, error: 'That doesn\'t look like a valid URL. Please check and try again.' };
   }
@@ -137,7 +168,7 @@ export const parseYouTubeUrl = (input) => {
 export const isYouTubeInput = (input) => {
   if (!input || typeof input !== 'string') return false;
   try {
-    return YOUTUBE_HOSTNAMES.has(new URL(input.trim()).hostname);
+    return YOUTUBE_HOSTNAMES.has(new URL(coerceAbsoluteUrl(input)).hostname);
   } catch {
     return false;
   }
@@ -151,6 +182,7 @@ export const isYouTubeInput = (input) => {
  *
  * Supported formats:
  *   https://www.youtube.com/watch?v=VIDEO_ID
+ *   youtube.com/watch?v=VIDEO_ID (scheme optional)
  *   https://youtu.be/VIDEO_ID
  *   https://www.youtube.com/embed/VIDEO_ID
  *   https://www.youtube.com/shorts/VIDEO_ID
@@ -163,7 +195,7 @@ export const extractYouTubeVideoId = (originalUrl) => {
 
 export const extractYoutubePlaylistId = (originalUrl) => {
     try {
-        const url = new URL(originalUrl);
+        const url = new URL(coerceAbsoluteUrl(originalUrl));
         if (!YOUTUBE_HOSTNAMES.has(url.hostname)) return null;
         return new URLSearchParams(url.search).get('list');
     } catch {

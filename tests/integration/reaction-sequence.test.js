@@ -36,6 +36,15 @@ describe('reaction sequence helpers', () => {
         });
     });
 
+    it('parses protocol-less YouTube watch URLs with extra query params', () => {
+        expect(
+            parseReactionSourceInput('youtube.com/watch?v=y3tUjCRxfls&themeRefresh=1').sourceItem,
+        ).toMatchObject({
+            type: REACTION_SOURCE_TYPES.YOUTUBE_VIDEO,
+            originalVideoId: 'y3tUjCRxfls',
+        });
+    });
+
     it('flattens mixed sources into an ordered sequence while preserving duplicates', async () => {
         const sourceItems = [
             parseReactionSourceInput('https://youtu.be/AAAAAAAAAAA').sourceItem,
