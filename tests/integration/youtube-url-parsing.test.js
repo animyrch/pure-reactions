@@ -35,6 +35,28 @@ describe('parseYouTubeUrl', () => {
       const result = parseYouTubeUrl(`https://m.youtube.com/watch?v=${VALID_ID}`);
       expect(result).toEqual({ videoId: VALID_ID, error: null });
     });
+
+    it('extracts ID from a protocol-less watch URL', () => {
+      const result = parseYouTubeUrl(`youtube.com/watch?v=${VALID_ID}`);
+      expect(result).toEqual({ videoId: VALID_ID, error: null });
+    });
+
+    it('extracts ID from a protocol-less watch URL with UI query params', () => {
+      const result = parseYouTubeUrl(
+        `youtube.com/watch?v=${VALID_ID}&themeRefresh=1`
+      );
+      expect(result).toEqual({ videoId: VALID_ID, error: null });
+    });
+
+    it('extracts ID from a protocol-less www watch URL', () => {
+      const result = parseYouTubeUrl(`www.youtube.com/watch?v=${VALID_ID}`);
+      expect(result).toEqual({ videoId: VALID_ID, error: null });
+    });
+
+    it('extracts ID from a protocol-relative watch URL', () => {
+      const result = parseYouTubeUrl(`//www.youtube.com/watch?v=${VALID_ID}`);
+      expect(result).toEqual({ videoId: VALID_ID, error: null });
+    });
   });
 
   describe('short URLs (youtu.be)', () => {
@@ -50,6 +72,11 @@ describe('parseYouTubeUrl', () => {
 
     it('extracts ID from youtu.be URL with t param', () => {
       const result = parseYouTubeUrl(`https://youtu.be/${VALID_ID}?t=30`);
+      expect(result).toEqual({ videoId: VALID_ID, error: null });
+    });
+
+    it('extracts ID from a protocol-less youtu.be URL', () => {
+      const result = parseYouTubeUrl(`youtu.be/${VALID_ID}`);
       expect(result).toEqual({ videoId: VALID_ID, error: null });
     });
   });
