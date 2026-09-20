@@ -75,7 +75,7 @@
     onTouchEnd={onTouchEnd}
   />
   {#if !state.isFullscreen}
-    <div class="mx-auto w-full px-4 pt-6 pb-8 sm:px-6 lg:px-10" data-testid="reaction-content">
+    <div class="mx-auto w-full px-4 pt-2 pb-8 sm:px-6 lg:px-10" data-testid="reaction-content">
       <slot />
     </div>
   {/if}

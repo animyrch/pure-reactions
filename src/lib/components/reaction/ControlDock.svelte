@@ -24,7 +24,7 @@
 </script>
 
 <div
-  class={`controls-dock group pointer-events-none ${isFullscreen ? "controls-dock--fullscreen fixed inset-x-0 z-50 flex w-full px-3 sm:px-6" : "relative z-10 mt-4 w-full px-4 md:mt-8 md:px-4 sm:px-6 lg:px-10"}`}
+  class={`controls-dock group pointer-events-none ${isFullscreen ? "controls-dock--fullscreen fixed inset-x-0 z-50 flex w-full px-3 sm:px-6" : "relative z-10 mt-3 w-full px-4 md:mt-4 md:px-4 sm:px-6 lg:px-10"}`}
 >
   <div
     class={`controls-surface pointer-events-auto mx-auto w-full max-w-[920px] transition-opacity duration-slow ease-cinematic ${stickyControlsClass} ${isFullscreen ? "max-w-[720px]" : ""}`}

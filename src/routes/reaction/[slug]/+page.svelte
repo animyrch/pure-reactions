@@ -262,7 +262,7 @@
     on:seek={(e) => actions.seekTo(e.detail)}
   />
   {#if !$state.isFullscreen}
-    <div class="mx-auto w-full px-4 pt-6 pb-8 sm:px-6 lg:px-10" data-testid="reaction-content">
+    <div class="mx-auto w-full px-4 pt-2 pb-8 sm:px-6 lg:px-10" data-testid="reaction-content">
       {#if $state.queueSlug || ($state.adHocQueue && $state.adHocQueue.length)}
         <div class="mb-4 flex items-center justify-between gap-3">
           <div class="min-w-0 overflow-hidden">
@@ -289,7 +289,7 @@
         </div>
       {/if}
 
-      <div class="mt-6 w-full">
+      <div class="mt-2 w-full">
         <ReactionDetailsSection
           reactionState={$state}
           viewerId={data?.userId}

@@ -72,7 +72,7 @@ test.describe('Twin Video Playback (Smoke)', () => {
             return Boolean(s.bothVideosStarted) && isActive(s.originalPlayerState) && isActive(s.reactionPlayerState);
         }, { timeout: 15000 }).toBe(true);
 
-        await expect(page.getByText(/Tap or click each video once to sync playback/i)).toBeHidden();
+        await expect(page.getByText(/Click each video to sync playback/i)).toBeHidden();
         await expect(page.getByRole('toolbar', { name: 'Reaction playback controls' })).toBeVisible();
 
         const snapshot = await readTwinPlayersSnapshot(page);

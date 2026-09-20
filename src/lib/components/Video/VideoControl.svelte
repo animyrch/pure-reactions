@@ -341,12 +341,26 @@
     on:focusout={handleFocusOut}
 >
     {#if !bothVideosStarted}
-        <p
-            class="max-w-lg rounded-md bg-overlay/80 px-md py-sm text-center text-sm text-text-secondary backdrop-blur"
+        <div
+            class="click-gate-prompt w-full max-w-xl rounded-2xl border border-border-subtle/80 bg-elevated/95 px-5 py-3.5 text-center shadow-surface backdrop-blur-sm sm:px-8 sm:py-4"
+            role="status"
+            data-testid="click-gate-prompt"
         >
-            Tap or click each video once to sync playback, then use the controls
-            here.
-        </p>
+            <p
+                class="flex items-center justify-center gap-2.5 text-sm font-semibold text-text-primary sm:text-base"
+            >
+                <span
+                    class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#ee3e38] text-xs font-bold text-white"
+                    aria-hidden="true"
+                >
+                    !
+                </span>
+                <span>Click each video to sync playback</span>
+            </p>
+            <p class="mt-1 text-xs text-text-muted sm:text-sm">
+                Once both videos are playing, shared controls will appear here. Use them instead of in-video controls.
+            </p>
+        </div>
     {:else}
         <div
             class={`controls-surface flex w-full items-center justify-between gap-3 rounded-full border border-border-subtle/70 bg-surface/70 px-3 py-2 backdrop-blur-sm transition-opacity duration-subtle ease-cinematic sm:px-4 ${controlsClasses}`}

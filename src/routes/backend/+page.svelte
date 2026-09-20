@@ -19,6 +19,11 @@
         buildRecorderStateConfigs,
         RECORDER_PLAYER_STATES,
     } from "$lib/helpers/recorderState";
+    import {
+        AUDIO_LEAD,
+        buildReactionEndPauseCue,
+        getAudioLeadVolumes,
+    } from "$lib/helpers/audioLead";
     import HelpfulTip from "$lib/components/design-system/HelpfulTip.svelte";
     import BackendActionDock from "$lib/components/Video/BackendActionDock.svelte";
     import PlaylistQueue from "$lib/components/Video/PlaylistQueue.svelte";
@@ -56,6 +61,7 @@
 
     const reactionConfigs = new Map();
     const volumeConfigs = new Map();
+    const reactionVolumeConfigs = new Map();
     const playbackRateConfigs = new Map();
     let originalVideoId = "";
     let playlistId = "";
@@ -126,6 +132,7 @@
     let isPlaying = false;
     let reactionConfigsArray = [];
     let volumeConfigsArray = [];
+    let reactionVolumeConfigsArray = [];
     let playbackRateConfigsArray = [];
     let availablePlaybackRates = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
     let playbackRateIndex =
@@ -765,6 +772,90 @@
         }
     }
 
+    function logPairedVolumes({ originalVolume, reactionVolume }) {
+        if (!startTime) {
+            return;
+        }
+
+        const reactionVideoTime = getCompensatedReactionTime(
+            startTime,
+            playlistBufferTime || 0,
+        );
+        const nextOriginalVolume = Number(originalVolume);
+        const nextReactionVolume = Number(reactionVolume);
+        if (Number.isFinite(nextOriginalVolume)) {
+            volumeConfigs.set(reactionVideoTime, { volume: nextOriginalVolume });
+            volumeConfigsArray = Array.from(volumeConfigs.entries());
+            soundLevel = nextOriginalVolume;
+        }
+        if (Number.isFinite(nextReactionVolume)) {
+            reactionVolumeConfigs.set(reactionVideoTime, {
+                volume: nextReactionVolume,
+            });
+            reactionVolumeConfigsArray = Array.from(
+                reactionVolumeConfigs.entries(),
+            );
+        }
+
+        updateFirebaseDocument({
+            volumeConfigs: Object.fromEntries(volumeConfigs),
+            reactionVolumeConfigs: Object.fromEntries(reactionVolumeConfigs),
+        });
+    }
+
+    function logAudioLeadChange(lead) {
+        logPairedVolumes(
+            getAudioLeadVolumes({
+                lead,
+                isTikTokOriginal,
+            }),
+        );
+    }
+
+    function applyReactionEndPauseCue() {
+        if (!startTime) {
+            return;
+        }
+
+        const reactionDurationSeconds = parseFloat(
+            getCompensatedReactionTime(startTime, playlistBufferTime || 0),
+        );
+        const existingStateEvents = Array.from(reactionConfigs.entries()).map(
+            ([t, config]) => ({
+                t: parseFloat(t),
+                state: config?.state,
+            }),
+        );
+        const cue = buildReactionEndPauseCue({
+            reactionDurationSeconds,
+            originalTime: getCurrentTimeForOriginalVideo(),
+            existingStateEvents,
+            isTikTokOriginal,
+        });
+        if (!cue) {
+            return;
+        }
+
+        const cueTimeKey = Number(cue.t).toFixed(1);
+        const nextStateConfigs = buildRecorderStateConfigs({
+            existingConfigs: reactionConfigs,
+            reactionVideoTime: cueTimeKey,
+            originalVideoTime: Number(cue.targetTime).toFixed(2),
+            stateCode: cue.state,
+        });
+        reactionConfigs.clear();
+        nextStateConfigs.map.forEach((value, key) => {
+            reactionConfigs.set(key, value);
+        });
+        reactionConfigsArray = nextStateConfigs.entries;
+
+        volumeConfigs.set(cueTimeKey, { volume: cue.originalVolume });
+        reactionVolumeConfigs.set(cueTimeKey, { volume: cue.reactionVolume });
+        volumeConfigsArray = Array.from(volumeConfigs.entries());
+        reactionVolumeConfigsArray = Array.from(reactionVolumeConfigs.entries());
+        soundLevel = cue.originalVolume;
+    }
+
     const formatPlaybackRate = (rate) => {
         const numeric = Number(rate ?? 1);
         return Math.abs(numeric - Math.round(numeric)) < 1e-3
@@ -871,6 +962,7 @@
             isPlayerOriginalReady = true;
             isPlaying = true;
             currentButtonGroupState = BUTTON_GROUP_STATES.RECORDING;
+            logAudioLeadChange(AUDIO_LEAD.ORIGINAL);
             if (sharedSessionId) {
                 // Note: TikTok does not expose a JS playback API, so currentTime is
                 // always reported as 0. Shared-session viewers will see the TikTok
@@ -896,6 +988,7 @@
         isPlayerOriginalReady = true;
         isPlaying = true;
         currentButtonGroupState = BUTTON_GROUP_STATES.RECORDING;
+        logAudioLeadChange(AUDIO_LEAD.ORIGINAL);
         // Update shared session state
         if (sharedSessionId) {
             const currentTime =
@@ -1325,6 +1418,7 @@
 
             startTime = new Date().getTime();
             logPlaybackRateChange(playbackRate);
+            logAudioLeadChange(AUDIO_LEAD.REACTION);
         } catch (error) {
             console.error("Failed to start reaction:", error);
             showToast(
@@ -1347,20 +1441,22 @@
 
     const onClickFocusReact = () => {
         isFocusReactOn = !isFocusReactOn;
-        const soundLevel = isFocusReactOn ? (isTikTokOriginal ? 0 : 20) : 100;
-        logVolumeChange(soundLevel);
+        logAudioLeadChange(
+            isFocusReactOn ? AUDIO_LEAD.REACTION : AUDIO_LEAD.ORIGINAL,
+        );
     };
 
     const onClickStopVideo = () => {
         isPlaying = false;
         pauseOriginalVideo();
         currentButtonGroupState = BUTTON_GROUP_STATES.READY;
+        logAudioLeadChange(AUDIO_LEAD.REACTION);
     };
 
     const goToReactionConfiguration = () => {
         currentButtonGroupState = BUTTON_GROUP_STATES.FINALISED;
         clearInterval(timer);
-        goToRoute(`/reaction/${window.currentReactionDocumentId}`);
+        goToRoute(`/edit-reaction/${window.currentReactionDocumentId}`);
     };
 
     const onClickFinishReaction = async () => {
@@ -1395,6 +1491,7 @@
 
         // Also persist array-based timelines for efficient playback
         try {
+            applyReactionEndPauseCue();
             const stateTimeline = Array.from(reactionConfigs.entries())
                 .map(([t, v]) => ({
                     t: parseFloat(t),
@@ -1403,6 +1500,11 @@
                 }))
                 .sort((a, b) => a.t - b.t);
             const volumeTimeline = Array.from(volumeConfigs.entries())
+                .map(([t, v]) => ({ t: parseFloat(t), volume: v.volume }))
+                .sort((a, b) => a.t - b.t);
+            const reactionVolumeTimeline = Array.from(
+                reactionVolumeConfigs.entries(),
+            )
                 .map(([t, v]) => ({ t: parseFloat(t), volume: v.volume }))
                 .sort((a, b) => a.t - b.t);
             const playbackTimeline = Array.from(playbackRateConfigs.entries())
@@ -1414,10 +1516,12 @@
             await updateFirebaseDocument({
                 stateTimeline,
                 volumeTimeline,
+                reactionVolumeTimeline,
                 playbackTimeline,
                 // Remove legacy object-map formats now that arrays are saved
                 reactionConfigs: firestoreDeleteField(),
                 volumeConfigs: firestoreDeleteField(),
+                reactionVolumeConfigs: firestoreDeleteField(),
                 playbackRateConfigs: firestoreDeleteField(),
             });
         } catch (e) {
@@ -2359,6 +2463,9 @@
                                     Volume Configs: {volumeConfigsArray.length}
                                 </li>
                                 <li>
+                                    Reaction Volume Configs: {reactionVolumeConfigsArray.length}
+                                </li>
+                                <li>
                                     Playback Rate Configs: {playbackRateConfigsArray.length}
                                 </li>
                                 <li>
@@ -2394,6 +2501,20 @@
                                     {:else}
                                         {#each volumeConfigsArray.slice(-5) as [time, config]}
                                             <p>V: {time} → {config.volume}</p>
+                                        {/each}
+                                    {/if}
+                                </div>
+                                <div>
+                                    <p class="font-semibold text-slate-200">
+                                        Recent Reaction Volume Changes
+                                    </p>
+                                    {#if reactionVolumeConfigsArray.length === 0}
+                                        <p class="text-slate-500">
+                                            No entries yet.
+                                        </p>
+                                    {:else}
+                                        {#each reactionVolumeConfigsArray.slice(-5) as [time, config]}
+                                            <p>RV: {time} → {config.volume}</p>
                                         {/each}
                                     {/if}
                                 </div>

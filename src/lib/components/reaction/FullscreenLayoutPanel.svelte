@@ -202,7 +202,7 @@
 
     <div class="flex flex-col gap-3">
       <h3 class="text-sm font-medium text-text-secondary">
-        Smaller video position
+        Smaller video position (You can change the position by clicking the button below)
       </h3>
       <div class="flex items-center gap-3">
         <span class="text-sm text-text-muted">

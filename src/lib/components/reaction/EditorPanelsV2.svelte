@@ -460,7 +460,7 @@
             Reaction video source
           </h2>
           <p class="text-sm text-text-muted">
-            Link the YouTube video you reacted to so we can load it in our online
+            Link your YouTube reaction video so we can load it in our online
             editor.
           </p>
         </div>
@@ -509,8 +509,7 @@
             Playback tuning
           </h2>
           <p class="text-sm text-text-muted">
-            Dial in intro buffer and original audio balance for smoother
-            reactions.
+            Use below configuration if the reaction video is supposed to start and finish at specific times. Especially useful in playlist reactions where the reaction to the original content is limited to a subsection of a big reaction each time.
           </p>
         </div>
       </header>
@@ -640,7 +639,7 @@
               min="0"
               step="0.1"
               bind:value={introBufferTimeValue}
-              helperText="How long to play the original clip before your reaction starts."
+              helperText="How long to play the original clip before your reaction starts. Negative values and fractional values are permitted. Especially useful if your reaction recording starts out of sync compared to the time you clikced 'start reaction' on our platform. All configurations are moved by the number of seconds you specify here."
               required
             />
           </div>
