@@ -1456,7 +1456,7 @@
     const goToReactionConfiguration = () => {
         currentButtonGroupState = BUTTON_GROUP_STATES.FINALISED;
         clearInterval(timer);
-        goToRoute(`/reaction/${window.currentReactionDocumentId}`);
+        goToRoute(`/edit-reaction/${window.currentReactionDocumentId}`);
     };
 
     const onClickFinishReaction = async () => {
