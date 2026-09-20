@@ -277,8 +277,8 @@
   />
 
   {#if !$state.isFullscreen}
-    <div class="mx-auto w-full px-4 pt-3 pb-8 sm:px-6 lg:px-10">
-      <div class="mt-3 w-full">
+    <div class="mx-auto w-full px-4 pt-2 pb-8 sm:px-6 lg:px-10">
+      <div class="mt-2 w-full">
         <ReactionDetailsSection
           reactionState={$state}
           isEditModeOn={$state.isEditModeOn}
