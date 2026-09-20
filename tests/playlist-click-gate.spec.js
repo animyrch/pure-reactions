@@ -59,7 +59,7 @@ test.describe('Playlist Click-Gate Carry-Over', () => {
 
         // 4. Verify the "click both videos" warning is visible
         await expect(
-            page.getByText(/tap or click each video once to sync playback/i)
+            page.getByText(/click each video to sync playback/i)
         ).toBeVisible({ timeout: 10000 });
 
         // 5. Navigate to the second playlist item WITHOUT clicking either video
@@ -106,7 +106,7 @@ test.describe('Playlist Click-Gate Carry-Over', () => {
 
         // 8. The warning must still be visible
         await expect(
-            page.getByText(/tap or click each video once to sync playback/i)
+            page.getByText(/click each video to sync playback/i)
         ).toBeVisible({ timeout: 10000 });
 
         // 9. Verify neither player is in a playing state
