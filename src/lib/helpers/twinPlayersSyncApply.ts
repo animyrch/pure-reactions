@@ -24,7 +24,7 @@ export type TwinPlayersSyncApplyDeps = {
     previousState: number,
     nextState: number,
     targetTime: number,
-    options?: { allowSeekAhead?: boolean; throttleMs?: number; forceSeek?: boolean }
+    options?: { allowSeekAhead?: boolean; throttleMs?: number; forceSeek?: boolean; skipSeek?: boolean }
   ) => void;
 
   muteReactionAudio: (player?: any) => boolean;

@@ -846,7 +846,7 @@ export function createTwinPlayersPlaybackSyncController({
     previousState: number,
     nextState: number,
     targetTime: number,
-    options: { allowSeekAhead?: boolean; throttleMs?: number; forceSeek?: boolean } = {}
+    options: { allowSeekAhead?: boolean; throttleMs?: number; forceSeek?: boolean; skipSeek?: boolean } = {}
   ) => {
     const resolvedState = typeof nextState === 'number' ? nextState : -1;
     const normalizedTarget = Number(targetTime);
@@ -861,7 +861,7 @@ export function createTwinPlayersPlaybackSyncController({
       isMobileLazySyncEnabled
       && originalStateNow === YT?.PlayerState?.BUFFERING;
 
-    if (targetChanged && !shouldSuppressSeek) {
+    if (!options.skipSeek && targetChanged && !shouldSuppressSeek) {
       goToSecondsInOriginalVideo(normalizedTarget, {
         allowSeekAhead: options.allowSeekAhead,
         throttleMs: options.throttleMs,
@@ -891,6 +891,7 @@ export function createTwinPlayersPlaybackSyncController({
       allowSeekAhead?: boolean;
       throttleMs?: number;
       forceSeek?: boolean;
+      skipSeek?: boolean;
     } = {}
   ) => {
     const { desiredState, targetTime } = getDesiredOriginalPlaybackAtReactionTime(reactionTime, snapshot);
@@ -906,7 +907,8 @@ export function createTwinPlayersPlaybackSyncController({
       handleStateChangeInOriginalVideo(snapshot.currentStateOriginalVideo, desiredState, targetTime, {
         allowSeekAhead: options.allowSeekAhead,
         throttleMs: options.throttleMs,
-        forceSeek: options.forceSeek
+        forceSeek: options.forceSeek,
+        skipSeek: options.skipSeek
       });
     }
 
