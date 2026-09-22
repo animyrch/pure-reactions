@@ -128,9 +128,9 @@ const upperBoundByT = (timeline: any[], time: number): number => {
   return low;
 };
 
-// While the original is already playing on mobile, a YouTube seek stutters.
-// Hard-seek only once the gap is several seconds. Soft-sync covers the band
-// under its own max (~2s). The slice between those two is left alone.
+// While the original is already playing on mobile, both a YouTube seek and a
+// playback-rate nudge stutter. Leave the playhead alone until the gap is
+// several seconds, then hard-seek.
 const MOBILE_PLAYING_HARD_SEEK_SECONDS = 3;
 
 const hasAnyConfig = (configs: any) => {
@@ -514,19 +514,17 @@ export function computeTwinPlayersSyncTick(
   // Soft-sync is calibrated to apply ±10 % rate tweaks around a 1× base rate.
   // When the desired rate is not 1×, those tweaks are wrong and would push the
   // original player away from its intended speed, so we skip soft-sync entirely.
+  // Mobile playback leaves sub-threshold drift alone. A rate nudge stutters there.
   const canUseSoftSync = isPlaying && !isBuffering && !shouldApplyState && Number.isFinite(driftAbs)
-    && Math.abs(desiredPlaybackRate - 1.0) < 0.001;
+    && Math.abs(desiredPlaybackRate - 1.0) < 0.001
+    && !(isMobilePlayback && configWantsToPlay);
   
   // Decide sync mode
   const syncMode = canUseSoftSync ? decideSyncMode(drift, DEFAULT_SOFT_SYNC_CONFIG) : 'hard-sync';
   const isSoftSyncCooledDown = isSoftSyncAllowed(nextTracking.lastSoftSyncAt, now, DEFAULT_SOFT_SYNC_CONFIG);
   
-  // Desktop still requires the quantized mismatch before a rate nudge.
-  // On mobile, any in-band drift (including sub-second) tries soft-sync first.
-  const softSyncDriftQualifies = isMobilePlayback && configWantsToPlay ? true : targetMismatch;
-
   // Apply soft-sync for small drift if cooled down
-  if (canUseSoftSync && syncMode === 'soft-sync' && softSyncDriftQualifies && isSoftSyncCooledDown) {
+  if (canUseSoftSync && syncMode === 'soft-sync' && targetMismatch && isSoftSyncCooledDown) {
     const rate = computePlaybackRate(drift, DEFAULT_SOFT_SYNC_CONFIG);
     const durationMs = computeSoftSyncDuration(drift, DEFAULT_SOFT_SYNC_CONFIG);
     

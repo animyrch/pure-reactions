@@ -837,27 +837,27 @@ describe('computeTwinPlayersSyncTick — mobile playing sync', () => {
         ...overrides
     });
 
-    it('soft-syncs sub-second drift while the original is already playing', () => {
+    it('leaves sub-second drift alone while the original is already playing', () => {
         const result = computeTwinPlayersSyncTick(
             mobilePlayingInput({ originalCurrentTime: 10.4 }),
             makeTracking({ lastSoftSyncAt: 0, lastOriginalSeekAt: 0 })
         );
 
-        expect(result.actions.some(a => a.type === 'applySoftSync')).toBe(true);
+        expect(result.actions.some(a => a.type === 'applySoftSync')).toBe(false);
         expect(result.actions.some(a => a.type === 'applyOriginalStateChange')).toBe(false);
     });
 
-    it('soft-syncs a low-second drift instead of hard-seeking after the seek cooldown', () => {
+    it('leaves a low-second drift alone instead of nudging or hard-seeking', () => {
         const result = computeTwinPlayersSyncTick(
             mobilePlayingInput({ originalCurrentTime: 11.2 }),
             makeTracking({ lastSoftSyncAt: 0, lastOriginalSeekAt: 0 })
         );
 
-        expect(result.actions.some(a => a.type === 'applySoftSync')).toBe(true);
+        expect(result.actions.some(a => a.type === 'applySoftSync')).toBe(false);
         expect(result.actions.some(a => a.type === 'applyOriginalStateChange')).toBe(false);
     });
 
-    it('does not hard-seek a low-second drift when soft-sync is cooling down', () => {
+    it('does not hard-seek a low-second drift when a previous soft-sync is cooling down', () => {
         const result = computeTwinPlayersSyncTick(
             mobilePlayingInput({ originalCurrentTime: 11.2 }),
             makeTracking({ lastSoftSyncAt: 19_900, lastOriginalSeekAt: 0 })
