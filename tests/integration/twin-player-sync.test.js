@@ -819,3 +819,164 @@ describe('computeTwinPlayersSyncTick — non-1x playback rate', () => {
         expect(hasSoftSync).toBe(false);
     });
 });
+
+describe('computeTwinPlayersSyncTick — mobile playing sync', () => {
+    const playingConfigs = { '0.0': { time: '0.00', state: YT_PLAYING } };
+    const playingTimeline = [{ t: 0, state: YT_PLAYING, targetTime: 0 }];
+
+    const mobilePlayingInput = (overrides = {}) => makeInput({
+        isMobilePlaybackDevice: true,
+        reactionCurrentTime: 10,
+        previousReactionTime: 10,
+        currentStateOriginalVideo: YT_PLAYING,
+        originalPlayerState: YT_PLAYING,
+        originalCurrentTime: 10,
+        playerConfigs: playingConfigs,
+        stateTimeline: playingTimeline,
+        now: 20_000,
+        ...overrides
+    });
+
+    it('soft-syncs sub-second drift while the original is already playing', () => {
+        const result = computeTwinPlayersSyncTick(
+            mobilePlayingInput({ originalCurrentTime: 10.4 }),
+            makeTracking({ lastSoftSyncAt: 0, lastOriginalSeekAt: 0 })
+        );
+
+        expect(result.actions.some(a => a.type === 'applySoftSync')).toBe(true);
+        expect(result.actions.some(a => a.type === 'applyOriginalStateChange')).toBe(false);
+    });
+
+    it('soft-syncs a low-second drift instead of hard-seeking after the seek cooldown', () => {
+        const result = computeTwinPlayersSyncTick(
+            mobilePlayingInput({ originalCurrentTime: 11.2 }),
+            makeTracking({ lastSoftSyncAt: 0, lastOriginalSeekAt: 0 })
+        );
+
+        expect(result.actions.some(a => a.type === 'applySoftSync')).toBe(true);
+        expect(result.actions.some(a => a.type === 'applyOriginalStateChange')).toBe(false);
+    });
+
+    it('does not hard-seek a low-second drift when soft-sync is cooling down', () => {
+        const result = computeTwinPlayersSyncTick(
+            mobilePlayingInput({ originalCurrentTime: 11.2 }),
+            makeTracking({ lastSoftSyncAt: 19_900, lastOriginalSeekAt: 0 })
+        );
+
+        expect(result.actions.some(a => a.type === 'applySoftSync')).toBe(false);
+        expect(result.actions.some(a => a.type === 'applyOriginalStateChange')).toBe(false);
+    });
+
+    it('hard-seeks while playing only when drift is several seconds', () => {
+        const result = computeTwinPlayersSyncTick(
+            mobilePlayingInput({ originalCurrentTime: 14 }),
+            makeTracking({ lastSoftSyncAt: 0, lastOriginalSeekAt: 0 })
+        );
+
+        const stateAction = result.actions.find(a => a.type === 'applyOriginalStateChange');
+        expect(stateAction).toBeDefined();
+        expect(stateAction.options?.skipSeek).not.toBe(true);
+        expect(result.actions.some(a => a.type === 'applySoftSync')).toBe(false);
+    });
+
+    it('plays without seeking when a resume cue is already near the pause frame', () => {
+        const result = computeTwinPlayersSyncTick(
+            mobilePlayingInput({
+                reactionCurrentTime: 15.2,
+                previousReactionTime: 14.8,
+                currentStateOriginalVideo: YT_PAUSED,
+                originalPlayerState: YT_PAUSED,
+                originalCurrentTime: 10.3,
+                playerConfigs: {
+                    '0.0': { time: '0.00', state: YT_PAUSED },
+                    '15.0': { time: '10.00', state: YT_PLAYING }
+                },
+                stateTimeline: [
+                    { t: 0, state: YT_PAUSED, targetTime: 0 },
+                    { t: 15, state: YT_PLAYING, targetTime: 10 }
+                ]
+            }),
+            makeTracking({ stateTimelineIndex: 1 })
+        );
+
+        const stateActions = result.actions.filter(a => a.type === 'applyOriginalStateChange');
+        expect(stateActions).toHaveLength(1);
+        expect(stateActions[0].nextState).toBe(YT_PLAYING);
+        expect(stateActions[0].options?.skipSeek).toBe(true);
+    });
+
+    it('seeks on resume when the original is several seconds off the play cue', () => {
+        const result = computeTwinPlayersSyncTick(
+            mobilePlayingInput({
+                reactionCurrentTime: 15.2,
+                previousReactionTime: 14.8,
+                currentStateOriginalVideo: YT_PAUSED,
+                originalPlayerState: YT_PAUSED,
+                originalCurrentTime: 0.4,
+                playerConfigs: {
+                    '0.0': { time: '0.00', state: YT_PAUSED },
+                    '15.0': { time: '10.00', state: YT_PLAYING }
+                },
+                stateTimeline: [
+                    { t: 0, state: YT_PAUSED, targetTime: 0 },
+                    { t: 15, state: YT_PLAYING, targetTime: 10 }
+                ]
+            }),
+            makeTracking({ stateTimelineIndex: 1 })
+        );
+
+        const stateActions = result.actions.filter(a => a.type === 'applyOriginalStateChange');
+        expect(stateActions).toHaveLength(1);
+        expect(stateActions[0].nextState).toBe(YT_PLAYING);
+        expect(stateActions[0].options?.skipSeek).not.toBe(true);
+        expect(stateActions[0].options?.forceSeek).toBe(true);
+    });
+
+    it('still seeks to the recorded pause time when a pause cue fires', () => {
+        const result = computeTwinPlayersSyncTick(
+            mobilePlayingInput({
+                reactionCurrentTime: 10.2,
+                previousReactionTime: 9.8,
+                currentStateOriginalVideo: YT_PLAYING,
+                originalPlayerState: YT_PLAYING,
+                originalCurrentTime: 10.4,
+                playerConfigs: {
+                    '0.0': { time: '0.00', state: YT_PLAYING },
+                    '10.0': { time: '10.00', state: YT_PAUSED }
+                },
+                stateTimeline: [
+                    { t: 0, state: YT_PLAYING, targetTime: 0 },
+                    { t: 10, state: YT_PAUSED, targetTime: 10 }
+                ]
+            }),
+            makeTracking({ stateTimelineIndex: 1 })
+        );
+
+        const stateActions = result.actions.filter(a => a.type === 'applyOriginalStateChange');
+        expect(stateActions).toHaveLength(1);
+        expect(stateActions[0].nextState).toBe(YT_PAUSED);
+        expect(stateActions[0].targetTime).toBe(10);
+        expect(stateActions[0].options?.skipSeek).not.toBe(true);
+    });
+
+    it('does not re-issue play when a play cue fires while the original is already playing', () => {
+        const result = computeTwinPlayersSyncTick(
+            mobilePlayingInput({
+                reactionCurrentTime: 15.2,
+                previousReactionTime: 14.8,
+                originalCurrentTime: 10.2,
+                playerConfigs: {
+                    '0.0': { time: '0.00', state: YT_PLAYING },
+                    '15.0': { time: '10.00', state: YT_PLAYING }
+                },
+                stateTimeline: [
+                    { t: 0, state: YT_PLAYING, targetTime: 0 },
+                    { t: 15, state: YT_PLAYING, targetTime: 10 }
+                ]
+            }),
+            makeTracking({ stateTimelineIndex: 1, lastOriginalSeekAt: 0 })
+        );
+
+        expect(result.actions.some(a => a.type === 'applyOriginalStateChange')).toBe(false);
+    });
+});

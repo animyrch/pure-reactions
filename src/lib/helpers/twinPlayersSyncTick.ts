@@ -92,7 +92,7 @@ export type TwinPlayersSyncAction =
       type: 'applyOriginalStateChange';
       nextState: number;
       targetTime: number;
-      options?: { allowSeekAhead?: boolean; throttleMs?: number; forceSeek?: boolean };
+      options?: { allowSeekAhead?: boolean; throttleMs?: number; forceSeek?: boolean; skipSeek?: boolean };
     }
   | { type: 'pauseOriginal' };
 
@@ -127,6 +127,11 @@ const upperBoundByT = (timeline: any[], time: number): number => {
 
   return low;
 };
+
+// While the original is already playing on mobile, a YouTube seek stutters.
+// Hard-seek only once the gap is several seconds. Soft-sync covers the band
+// under its own max (~2s). The slice between those two is left alone.
+const MOBILE_PLAYING_HARD_SEEK_SECONDS = 3;
 
 const hasAnyConfig = (configs: any) => {
   if (!configs) {
@@ -339,6 +344,7 @@ export function computeTwinPlayersSyncTick(
   const movingForward = currentEffective >= previousEffective - 0.0001;
 
   let workingState = input.currentStateOriginalVideo;
+  const isMobilePlayback = input.isMobilePlaybackDevice === true;
 
   if (movingForward && timeline.length) {
     let idx = Number.isFinite(nextTracking.stateTimelineIndex) ? Number(nextTracking.stateTimelineIndex) : 0;
@@ -370,12 +376,35 @@ export function computeTwinPlayersSyncTick(
           desiredState = yt.PAUSED;
         }
         const desiredTarget = Number(entry?.targetTime ?? entry?.time ?? 0);
-        actions.push({
-          type: 'applyOriginalStateChange',
-          nextState: desiredState,
-          targetTime: desiredTarget
-        });
-        workingState = desiredState;
+        const liveOriginalState = input.originalPlayerState;
+        const mobilePlayAlreadyRunning = isMobilePlayback
+          && desiredState === yt.PLAYING
+          && workingState === yt.PLAYING
+          && (liveOriginalState === yt.PLAYING || liveOriginalState === yt.BUFFERING);
+
+        // A play cue while the original is already playing must not seek or
+        // re-issue play. Pause cues still seek so the freeze frame is exact.
+        if (!mobilePlayAlreadyRunning) {
+          const originalNow = Number(input.originalCurrentTime);
+          const cueDrift = Number.isFinite(originalNow) && Number.isFinite(desiredTarget)
+            ? Math.abs(originalNow - desiredTarget)
+            : Number.POSITIVE_INFINITY;
+          const skipSeek = isMobilePlayback
+            && desiredState === yt.PLAYING
+            && cueDrift < MOBILE_PLAYING_HARD_SEEK_SECONDS;
+          const forcePlaySeek = isMobilePlayback
+            && desiredState === yt.PLAYING
+            && !skipSeek;
+          actions.push({
+            type: 'applyOriginalStateChange',
+            nextState: desiredState,
+            targetTime: desiredTarget,
+            ...((skipSeek || forcePlaySeek)
+              ? { options: { ...(skipSeek ? { skipSeek: true } : { forceSeek: true }) } }
+              : {})
+          });
+          workingState = desiredState;
+        }
       }
 
       idx += 1;
@@ -492,8 +521,12 @@ export function computeTwinPlayersSyncTick(
   const syncMode = canUseSoftSync ? decideSyncMode(drift, DEFAULT_SOFT_SYNC_CONFIG) : 'hard-sync';
   const isSoftSyncCooledDown = isSoftSyncAllowed(nextTracking.lastSoftSyncAt, now, DEFAULT_SOFT_SYNC_CONFIG);
   
+  // Desktop still requires the quantized mismatch before a rate nudge.
+  // On mobile, any in-band drift (including sub-second) tries soft-sync first.
+  const softSyncDriftQualifies = isMobilePlayback && configWantsToPlay ? true : targetMismatch;
+
   // Apply soft-sync for small drift if cooled down
-  if (canUseSoftSync && syncMode === 'soft-sync' && targetMismatch && isSoftSyncCooledDown) {
+  if (canUseSoftSync && syncMode === 'soft-sync' && softSyncDriftQualifies && isSoftSyncCooledDown) {
     const rate = computePlaybackRate(drift, DEFAULT_SOFT_SYNC_CONFIG);
     const durationMs = computeSoftSyncDuration(drift, DEFAULT_SOFT_SYNC_CONFIG);
     
@@ -515,16 +548,31 @@ export function computeTwinPlayersSyncTick(
     // If we're now in sync and soft-sync is active, we'll let the orchestrator reset it
     // No action needed here
   } else {
-    // Hard-sync: use existing seek logic for large drift or when soft-sync not applicable
-    const shouldApplySeek = targetMismatch && (
-      isMobileLazySyncEnabled
-        ? (Number.isFinite(driftAbs)
-            && driftAbs > 2.0
-            && now - nextTracking.lastOriginalSeekAt > 3500)
-        : (Number.isFinite(driftAbs) && (driftAbs > 2.5 || now - nextTracking.lastOriginalSeekAt > 3500))
-    );
+    // Hard-sync: use existing seek logic for large drift or when soft-sync not applicable.
+    // Mobile playback only hard-seeks once the gap is several seconds, and not merely
+    // because the seek cooldown elapsed. Pause keeps the tight seek-to-frame behavior.
+    const mobilePlayingHardSeek = isMobilePlayback
+      && configWantsToPlay
+      && Number.isFinite(driftAbs)
+      && driftAbs >= MOBILE_PLAYING_HARD_SEEK_SECONDS;
+    const shouldApplySeek = isMobilePlayback && configWantsToPlay
+      ? (mobilePlayingHardSeek && now - nextTracking.lastOriginalSeekAt > 3500)
+      : targetMismatch && (
+        isMobileLazySyncEnabled
+          ? (Number.isFinite(driftAbs)
+              && driftAbs > 2.0
+              && now - nextTracking.lastOriginalSeekAt > 3500)
+          : (Number.isFinite(driftAbs) && (driftAbs > 2.5 || now - nextTracking.lastOriginalSeekAt > 3500))
+      );
 
-    if (shouldApplySync && configIsInRange && (shouldApplyState || shouldApplySeek)) {
+    const mobileAlreadyAppliedState = isMobilePlayback
+      && actions.some((action) => action.type === 'applyOriginalStateChange');
+    const seekOnThisPlay = !isMobilePlayback
+      || !configWantsToPlay
+      || !Number.isFinite(driftAbs)
+      || driftAbs >= MOBILE_PLAYING_HARD_SEEK_SECONDS;
+
+    if (shouldApplySync && configIsInRange && !mobileAlreadyAppliedState && (shouldApplyState || shouldApplySeek)) {
       if (
         reactionCurrentTime >= input.seekMin
         && (!Number.isFinite(input.seekMax) || reactionCurrentTime <= input.seekMax)
@@ -536,7 +584,8 @@ export function computeTwinPlayersSyncTick(
           options: {
             throttleMs: 3500,
             allowSeekAhead: !(Number.isFinite(driftAbs) && driftAbs < 1.25),
-            forceSeek: shouldApplyState
+            forceSeek: shouldApplyState && seekOnThisPlay,
+            skipSeek: isMobilePlayback && configWantsToPlay && !seekOnThisPlay
           }
         });
 
