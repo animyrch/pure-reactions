@@ -215,7 +215,6 @@
       state={$state}
       actions={actions}
       overlayRef={overlayRef}
-      extra={{}}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
