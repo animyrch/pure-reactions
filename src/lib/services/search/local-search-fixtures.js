@@ -7,6 +7,8 @@
  * without any remote credentials.
  *
  * Keep this list in sync with tests/fixtures/reactions/local-dev-seed.json.
+ * `local-moment-reaction-001` is an extra stand-in so local search can show a
+ * published moment reaction card without Algolia. It is not in that seed.
  */
 
 /** @type {Array<Object>} */
