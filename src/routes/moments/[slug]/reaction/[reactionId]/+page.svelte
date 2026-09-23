@@ -38,6 +38,7 @@
   $: slug = params.slug;
   $: selectedReactionId = params.reactionId;
   $: currentReaction = reactions[currentIndex] || null;
+  $: hasNextMomentReaction = currentIndex < reactionIds.length - 1;
 
   const initialReactionSlug = get(page).params.reactionId || '';
 
@@ -217,18 +218,9 @@
       overlayRef={overlayRef}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
+      onNext={hasNextMomentReaction ? () => goToReactionIndex(currentIndex + 1) : null}
+      nextAriaLabel="Next reaction"
     >
-      <div class="mt-6 w-full flex justify-end">
-        <button
-          type="button"
-          class="inline-flex rounded-sm text-sm text-text-muted transition hover:text-text-primary focus-visible:outline-none focus-visible:underline disabled:opacity-50 disabled:cursor-not-allowed"
-          on:click={() => goToReactionIndex(currentIndex + 1)}
-          disabled={currentIndex >= reactionIds.length - 1}
-          aria-disabled={currentIndex >= reactionIds.length - 1}
-        >
-          Next reaction
-        </button>
-      </div>
       <div class="mt-6 w-full">
         <ReactionDetailsSection
           reactionState={$state}

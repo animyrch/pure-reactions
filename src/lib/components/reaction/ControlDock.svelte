@@ -8,6 +8,9 @@
   export let isPlaylistAutoPlay = false;
   export let showAutoPlayButton = true;
   export let showCinematicBars = false;
+  export let onNext = null;
+  export let nextDisabled = false;
+  export let nextAriaLabel = "Next reaction";
 
   export let onPlayStateChanged = () => {};
   export let onSyncVideos = () => {};
@@ -36,6 +39,9 @@
       {showAutoPlayButton}
       {showCinematicBars}
       {isFullscreen}
+      {onNext}
+      {nextDisabled}
+      {nextAriaLabel}
       {currentTime}
       {duration}
       {seekMin}

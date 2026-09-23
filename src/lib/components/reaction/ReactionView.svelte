@@ -10,6 +10,9 @@
   // Forward touch event handlers for swipe navigation
   export let onTouchStart = null;
   export let onTouchEnd = null;
+  export let onNext = null;
+  export let nextDisabled = false;
+  export let nextAriaLabel = "Next reaction";
 
   // ReactionStage forwards { isPlaying }. handlePlayStateChange only pauses when that flag is false.
   const handlePlayStateChanged = (event) => {
@@ -68,6 +71,9 @@
     on:seek={(e) => actions.seekTo(e.detail)}
     onTouchStart={onTouchStart}
     onTouchEnd={onTouchEnd}
+    {onNext}
+    {nextDisabled}
+    {nextAriaLabel}
   />
   {#if !state.isFullscreen}
     <div class="mx-auto w-full px-4 pt-2 pb-8 sm:px-6 lg:px-10" data-testid="reaction-content">
