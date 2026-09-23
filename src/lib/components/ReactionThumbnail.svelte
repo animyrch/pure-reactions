@@ -2,6 +2,7 @@
     import { onMount } from "svelte";
     import VideoAuthor from "$lib/components/VideoAuthor.svelte";
     import ThumbnailContext from "$lib/components/Video/ThumbnailContext.svelte";
+    import { buildReactionCardHref } from "$lib/helpers/reactionListItem";
 
     export let reactionPageId;
     export let reactionVideoId;
@@ -11,6 +12,7 @@
     export let reactionVideoAuthor;
     export let reactorDisplayName;
     export let playlistId;
+    export let momentId = "";
     export let itemType = "reaction";
     export let queueTitle = "";
     export let queueSlug = "";
@@ -18,36 +20,41 @@
     export let linkless = false;
     export let showContextMenu = true;
 
-    const isQueue = itemType === "queue";
-    const isPlaylist = itemType === "playlist";
+    $: isQueue = itemType === "queue";
+    $: isPlaylist = itemType === "playlist";
+    $: isMoment = itemType === "moment";
 
-    const playlistQuery = originalVideoId
-        ? `?${new URLSearchParams({ item: originalVideoId }).toString()}`
-        : "";
-    const reactionRedirectionPath = isQueue
-        ? `/queue/${queueSlug || reactionPageId}`
-        : isPlaylist && playlistId
-          ? `/playlist/${playlistId}${playlistQuery}`
-          : `/reaction/${reactionPageId}${playlistId ? `?playlistId=${playlistId}` : ""}`;
+    $: reactionRedirectionPath = buildReactionCardHref({
+        itemType,
+        reactionPageId,
+        playlistId,
+        momentId,
+        originalVideoId,
+        queueSlug,
+    });
 
-    const displayTitle = isQueue
+    $: displayTitle = isQueue
         ? queueTitle
         : reactionVideoTitle || originalVideoTitle || "Untitled Reaction";
-    const thumbnailAlt = reactionVideoTitle
-        ? `Reaction: ${reactionVideoTitle}`
-        : originalVideoTitle
-          ? `Original: ${originalVideoTitle}`
-          : "Reaction thumbnail";
+    $: thumbnailAlt = isMoment
+        ? `Moment reaction: ${reactionVideoTitle || originalVideoTitle || "Moment"}`
+        : reactionVideoTitle
+          ? `Reaction: ${reactionVideoTitle}`
+          : originalVideoTitle
+            ? `Original: ${originalVideoTitle}`
+            : "Reaction thumbnail";
 
-    const linkLabel = isQueue
+    $: linkLabel = isQueue
         ? `Open queue: ${queueTitle}`
         : isPlaylist
           ? `Open playlist: ${reactionVideoTitle || "Playlist"}`
-          : reactionVideoTitle
-            ? `Open reaction: ${reactionVideoTitle}`
-            : originalVideoTitle
-              ? `Open reaction: ${originalVideoTitle}`
-              : undefined;
+          : isMoment
+            ? `Open moment reaction: ${reactionVideoTitle || originalVideoTitle || "Moment"}`
+            : reactionVideoTitle
+              ? `Open reaction: ${reactionVideoTitle}`
+              : originalVideoTitle
+                ? `Open reaction: ${originalVideoTitle}`
+                : undefined;
 
     const thumbnailVariants = [
         { key: "mqdefault", width: 320 },
@@ -104,6 +111,8 @@
     data-interactive={interactive ? "true" : undefined}
     class:is-queue={isQueue}
     class:is-playlist={isPlaylist}
+    class:is-moment={isMoment}
+    data-item-type={itemType}
 >
     {#if linkless}
         <div class="thumbnail-link block" aria-hidden="true">
@@ -150,6 +159,25 @@
                             <line x1="3" y1="18" x2="3.01" y2="18"></line>
                         </svg>
                         <span>PLAYLIST</span>
+                    </div>
+                {:else if isMoment}
+                    <div class="moment-badge">
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            aria-hidden="true"
+                        >
+                            <path d="M12 3l1.6 4.8L18.5 9.5l-4.9 1.7L12 16l-1.6-4.8L5.5 9.5l4.9-1.7L12 3z" />
+                            <path d="M18.5 15.5l.5 1.4 1.5.5-1.5.5-.5 1.6-.5-1.6-1.5-.5 1.5-.5.5-1.4z" />
+                        </svg>
+                        <span>MOMENT</span>
                     </div>
                 {/if}
                 {#if isQueue}
@@ -260,6 +288,25 @@
                             <line x1="3" y1="18" x2="3.01" y2="18"></line>
                         </svg>
                         <span>PLAYLIST</span>
+                    </div>
+                {:else if isMoment}
+                    <div class="moment-badge">
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            aria-hidden="true"
+                        >
+                            <path d="M12 3l1.6 4.8L18.5 9.5l-4.9 1.7L12 16l-1.6-4.8L5.5 9.5l4.9-1.7L12 3z" />
+                            <path d="M18.5 15.5l.5 1.4 1.5.5-1.5.5-.5 1.6-.5-1.6-1.5-.5 1.5-.5.5-1.4z" />
+                        </svg>
+                        <span>MOMENT</span>
                     </div>
                 {/if}
                 {#if isQueue}
@@ -432,6 +479,38 @@
         border-radius: 999px;
     }
     .playlist-badge svg {
+        width: 14px;
+        height: 14px;
+    }
+    .thumbnail-card.is-moment {
+        border: 2px solid rgba(251, 191, 36, 0.38);
+        background: linear-gradient(
+            135deg,
+            rgba(251, 191, 36, 0.07),
+            rgba(217, 119, 6, 0.06)
+        );
+    }
+    .thumbnail-card.is-moment:hover {
+        border-color: rgba(251, 191, 36, 0.62);
+        box-shadow: 0 8px 32px rgba(217, 119, 6, 0.18);
+    }
+    .moment-badge {
+        position: absolute;
+        top: 0.5rem;
+        left: 0.5rem;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.375rem 0.625rem;
+        background: rgba(180, 83, 9, 0.95);
+        color: white;
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        border-radius: 999px;
+    }
+    .moment-badge svg {
         width: 14px;
         height: 14px;
     }

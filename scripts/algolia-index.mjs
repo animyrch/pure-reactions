@@ -142,6 +142,8 @@ function reactionToAlgoliaRecord(docId, data) {
     originalVideoId: data.originalVideoId || '',
     originalVideoTitle: data.originalVideoTitle || '',
     playlistId: data.playlistId || '',
+    isMomentReaction: data.isMomentReaction === true,
+    momentId: typeof data.momentId === 'string' ? data.momentId.trim() : '',
     
     // Reactor/channel information
     reactionVideoAuthor: data.reactionVideoAuthor || '',
@@ -282,6 +284,8 @@ async function indexReactions() {
       'originalVideoId',
       'originalVideoTitle',
       'playlistId',
+      'isMomentReaction',
+      'momentId',
       'reactionVideoAuthor',
       'tags',
       'slug',

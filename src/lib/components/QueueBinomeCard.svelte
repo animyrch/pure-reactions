@@ -1,5 +1,6 @@
 <script>
     import ReactionThumbnail from '$lib/components/ReactionThumbnail.svelte';
+    import { isMomentReactionData, momentIdFromReactionData } from '$lib/helpers/reactionListItem';
 
     export let item;
     export let index = 0;
@@ -18,6 +19,10 @@
     $: reactionVideoAuthor = reactionData?.reactionVideoAuthor;
     $: reactorDisplayName = reactionData?.reactorDisplayName;
     $: playlistId = isPlaylist ? item?.playlist?.id : reactionData?.playlistId;
+    $: momentId = !isPlaylist && isMomentReactionData(reactionData)
+        ? momentIdFromReactionData(reactionData)
+        : '';
+    $: itemType = isPlaylist ? 'playlist' : momentId ? 'moment' : 'reaction';
 
     $: hasData = Boolean(reactionPageId && reactionData);
 </script>
@@ -38,6 +43,8 @@
             {reactionVideoAuthor}
             {reactorDisplayName}
             {playlistId}
+            {momentId}
+            {itemType}
             linkless={linkless}
             showContextMenu={!linkless}
             interactive

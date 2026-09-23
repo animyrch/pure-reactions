@@ -1,14 +1,15 @@
 <script>
     import ReactionThumbnail from '$lib/components/ReactionThumbnail.svelte';
+    import {
+        momentIdFromReactionData,
+        resolveReactionListItemType
+    } from '$lib/helpers/reactionListItem';
 
     export let reaction;
 
     const playlistId = reaction?.data?.playlistId;
-    const itemType = reaction?.type === 'queue'
-        ? 'queue'
-        : playlistId
-          ? 'playlist'
-          : reaction?.type || 'reaction';
+    const itemType = resolveReactionListItemType(reaction);
+    const momentId = itemType === 'moment' ? momentIdFromReactionData(reaction?.data) : '';
     const reactionPageId = reaction?.id;
     const reactionVideoId = reaction?.data?.reactionVideoId;
     const originalVideoId = reaction?.data?.originalVideoId;
@@ -30,6 +31,7 @@
         {reactionVideoAuthor}
         {reactorDisplayName}
         {playlistId}
+        {momentId}
         {itemType}
         queueTitle={queueTitle}
         queueSlug={queueSlug}
