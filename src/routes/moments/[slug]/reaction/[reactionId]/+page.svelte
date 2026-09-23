@@ -29,6 +29,9 @@
 
   let currentIndex = 0;
   let playbackSessionStarted = false;
+  // Set while next/prev loads through the existing players. The slug effect must
+  // not rebuild those players for the same id.
+  let inPlaceReactionId = '';
   let addReactionLoading = false;
   let touchStartY = 0;
   let overlayRef;
@@ -100,7 +103,7 @@
   }
 
   $: overlayRef && actions.registerOverlayRef(overlayRef);
-  $: if (currentReaction?.id) {
+  $: if (currentReaction?.id && currentReaction.id !== inPlaceReactionId) {
     actions.handleSlugChange(currentReaction.id);
   }
 
@@ -108,8 +111,9 @@
     if (nextIndex < 0 || nextIndex >= reactionIds.length) return;
     if (nextIndex === currentIndex) return;
 
-    currentIndex = nextIndex;
     const nextId = reactionIds[nextIndex];
+    inPlaceReactionId = nextId;
+    currentIndex = nextIndex;
     await actions.loadReactionInPlace(nextId, {
       autoPlay: playbackSessionStarted
     });

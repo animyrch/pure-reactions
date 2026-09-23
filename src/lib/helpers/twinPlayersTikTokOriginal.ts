@@ -26,6 +26,39 @@ export const restoreEmbeddedPlayerContainer = (containerId: string) => {
   }
 };
 
+// YouTube's player constructor swaps the host div for an iframe. destroy() puts the
+// div back when it still has that node, and removes the iframe when it does not.
+// Either way the next YT.Player(id) needs a live div or the slot stays black.
+export const ensureEmbeddedPlayerHost = (
+  containerId: string,
+  parent: HTMLElement | null,
+  className = ''
+) => {
+  const existing = document.getElementById(containerId);
+  if (existing?.tagName === 'DIV') {
+    return existing;
+  }
+
+  if (existing?.tagName === 'IFRAME' && existing.parentElement) {
+    const fresh = document.createElement('div');
+    fresh.id = containerId;
+    fresh.className = existing.className || className;
+    existing.removeAttribute('id');
+    existing.parentElement.replaceChild(fresh, existing);
+    return fresh;
+  }
+
+  if (existing || !parent) {
+    return existing;
+  }
+
+  const fresh = document.createElement('div');
+  fresh.id = containerId;
+  fresh.className = className;
+  parent.appendChild(fresh);
+  return fresh;
+};
+
 export function createTikTokOriginalPlayerAdapter({
   containerId = 'player-original',
   markPlayerReady,

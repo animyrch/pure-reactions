@@ -32,12 +32,15 @@ export function buildTwinPlayersInPlaceTransitionPlan({
   hasOriginalElement
 }: BuildTwinPlayersInPlaceTransitionPlanParams) {
   const isSameReactionVideo = derived.reactionVideoId === previousReactionVideoId;
+  const canLoadReactionById = typeof snapshotBefore.playerReaction?.loadVideoById === 'function';
 
+  // A different reaction video still uses the existing player. Destroying it removes
+  // the iframe YouTube swapped in for the host div, and the replacement stays black.
   const canReuseReactionPlayer =
     Boolean(snapshotBefore.playerReaction) &&
     Boolean(derived.reactionVideoId) &&
-    isSameReactionVideo &&
-    hasReactionElement;
+    hasReactionElement &&
+    (isSameReactionVideo || canLoadReactionById);
 
   const canReuseOriginalPlayer =
     Boolean(snapshotBefore.playerOriginal) &&

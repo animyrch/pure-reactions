@@ -32,6 +32,7 @@ type CreateTwinPlayersNavigationControllerOptions = {
   onResetStandaloneTransition: (params: { nextReactionDocumentId: string; source: 'playlist' | 'queue' }) => void;
   debugClickGate: TwinPlayersDebugClickGate;
   log: TwinPlayersLog;
+  isSwitchingReactionInPlace?: () => boolean;
 };
 
 export function createTwinPlayersNavigationController({
@@ -42,7 +43,8 @@ export function createTwinPlayersNavigationController({
   loadReactionInPlace,
   onResetStandaloneTransition,
   debugClickGate,
-  log
+  log,
+  isSwitchingReactionInPlace = () => false
 }: CreateTwinPlayersNavigationControllerOptions) {
   let playlistFetchPromise: Promise<void> | undefined;
   let buildInterfaceSeq = 0;
@@ -402,6 +404,12 @@ export function createTwinPlayersNavigationController({
   };
 
   const handleSlugChange = async (nextSlug: string) => {
+    // An in-place switch already owns both players. Rebuilding here destroys the
+    // reaction iframe and leaves a black box until the next full page load.
+    if (isSwitchingReactionInPlace()) {
+      return;
+    }
+
     const snapshot = getSnapshot();
     if (nextSlug === snapshot.pageSlug) {
       return;

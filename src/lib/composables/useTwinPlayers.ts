@@ -507,7 +507,8 @@ export function useTwinPlayers({
     loadReactionInPlace,
     onResetStandaloneTransition: resetStandaloneTransition,
     debugClickGate,
-    log
+    log,
+    isSwitchingReactionInPlace: () => isSwitchingReactionInPlace
   });
 
   navigationHooks = {
