@@ -7,6 +7,8 @@
  * without any remote credentials.
  *
  * Keep this list in sync with tests/fixtures/reactions/local-dev-seed.json.
+ * `local-moment-reaction-001` is an extra stand-in so local search can show a
+ * published moment reaction card without Algolia. It is not in that seed.
  */
 
 /** @type {Array<Object>} */
@@ -21,9 +23,27 @@ export const LOCAL_SEARCH_FIXTURES = [
 		originalVideoAuthor: '@the_animaniace',
 		reactorDisplayName: 'Local Reactor',
 		playlistId: '',
+		isMomentReaction: false,
+		momentId: '',
 		isPublished: true,
 		createdAt: 1735725600000,
 		updatedAt: 1735725600000,
+	},
+	{
+		objectID: 'local-moment-reaction-001',
+		reactionVideoId: '8-3PahRtgF4',
+		originalVideoId: '8-3PahRtgF4',
+		reactionVideoTitle: 'Moment reaction to the original Dragon Ball hunt',
+		originalVideoTitle: 'The original Dragon Ball was UNHINGED 💀 | Mercenary Tao HUNTS down Goku',
+		reactionVideoAuthor: '@localreactor',
+		originalVideoAuthor: '@the_animaniace',
+		reactorDisplayName: 'Local Reactor',
+		playlistId: '',
+		isMomentReaction: true,
+		momentId: 'local-moment-001',
+		isPublished: true,
+		createdAt: 1735768800000,
+		updatedAt: 1735768800000,
 	},
 	{
 		objectID: 'local-sample-002',

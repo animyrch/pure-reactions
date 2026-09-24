@@ -15,6 +15,9 @@
     export let bothVideosStarted = false;
     export let isPlaylist = false;
     export let isPlaylistAutoPlay = false;
+    export let onNext = null;
+    export let nextDisabled = false;
+    export let nextAriaLabel = "Next reaction";
     export let reactionCurrentTime = 0;
     export let reactionDuration = 0;
     export let offsetStartTime = 0;
@@ -418,6 +421,9 @@
             {isPlaylist}
             {isPlaylistAutoPlay}
             {showCinematicBars}
+            {onNext}
+            {nextDisabled}
+            {nextAriaLabel}
             onPlayStateChanged={handlePlayStateChanged}
             onSyncVideos={handleSyncVideos}
             onToggleAutoPlaylist={handleToggleAutoPlaylist}

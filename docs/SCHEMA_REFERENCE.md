@@ -269,6 +269,8 @@ Minimal, cost-optimized search index for reactions.
 | `originalVideoId` | string | No | Yes | YouTube video ID (original) |
 | `originalVideoTitle` | string | Yes | Yes | Title of original video (secondary search field) |
 | `playlistId` | string | No | Yes | Playlist document ID when the reaction belongs to a playlist, used to preserve playlist navigation semantics in search results |
+| `isMomentReaction` | boolean | No | Yes | True when the published reaction is a moment reaction, so search cards can use moment theming instead of a normal reaction card |
+| `momentId` | string | No | Yes | Parent moment document ID. Search and home cards link moment reactions to `/moments/{momentId}/reaction/{reactionId}` |
 | `reactionVideoAuthor` | string | Yes | Yes | Reactor's YouTube channel handle (tertiary search field) |
 | `tags` | array[string] | Yes | Yes | Categorization tags (filterable) |
 | `slug` | string | No | Yes | URL-friendly identifier |
@@ -304,6 +306,8 @@ To minimize cost and payload size:
 - `duration` - Derivable from YouTube API
 
 `playlistId` is intentionally retained even though it is not searchable because shared card components use it to route playlist-backed reactions into the playlist playback experience.
+
+`isMomentReaction` and `momentId` are retained for the same reason. Published moment reactions stay in the reactions index, and shared cards use these fields to badge them as moments and open `/moments/{momentId}/reaction/{reactionId}` instead of `/reaction/{reactionId}`.
 
 #### Indexing Rules
 
@@ -499,6 +503,7 @@ const docRef = await addDoc(collection(db, 'reactions'), {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.10 | 2026-09-23 | Reactions index now retrieves `isMomentReaction` and `momentId` so published moment reactions can be badged and linked to `/moments/{momentId}/reaction/{reactionId}` |
 | 1.9 | 2026-06-10 | Added `originalVideoSlug` field to `reactions` and `moments` collections for SEO-friendly canonical URLs (format: `{title-slugified}-{author-slugified}`) |
 | 1.8 | 2026-05-22 | Added `moments` collection, moment reaction fields on `reactions`, discovery routes (`/moments`), and Algolia moments index env `PUBLIC_ALGOLIA_MOMENTS_INDEX` |
 | 1.7 | 2026-04-22 | Documented unified overlay snapshot timeline schema (`overlayVisibilityTimeline` now stores `visible` + `primary`) and static `fullscreenPrimaryVideo` fallback semantics |

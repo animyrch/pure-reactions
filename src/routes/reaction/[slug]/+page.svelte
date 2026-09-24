@@ -90,6 +90,17 @@
     }
   };
 
+  $: inSequenceQueue = Boolean(
+    $state.queueSlug || ($state.adHocQueue && $state.adHocQueue.length),
+  );
+  $: showQueueNext = inSequenceQueue && (queueHasNext || queueHasNextLoading);
+  $: sequenceOnNext = showQueueNext
+    ? handleGoToNextInQueue
+    : !inSequenceQueue && $state.hasNextIndexInPlaylist
+      ? actions.loadNextReactionInPlaylist
+      : null;
+  $: sequenceNextAriaLabel = inSequenceQueue ? "Next in queue" : "Next in playlist";
+
   const handleSetReactionVideoId = async (value) => {
     const trimmed = value?.trim?.() ?? "";
     if (!trimmed) {
@@ -236,6 +247,9 @@
     bothVideosStarted={$state.bothVideosStarted}
     isPlaylist={Boolean($state.playlistDocumentId)}
     isPlaylistAutoPlay={$state.isPlaylistAutoPlay}
+    onNext={sequenceOnNext}
+    nextDisabled={inSequenceQueue && queueHasNextLoading}
+    nextAriaLabel={sequenceNextAriaLabel}
     reactionCurrentTime={$state.reactionCurrentTime}
     reactionDuration={$state.reactionDuration}
     offsetStartTime={$state.offsetStartTime}
@@ -263,29 +277,12 @@
   />
   {#if !$state.isFullscreen}
     <div class="mx-auto w-full px-4 pt-2 pb-8 sm:px-6 lg:px-10" data-testid="reaction-content">
-      {#if $state.queueSlug || ($state.adHocQueue && $state.adHocQueue.length)}
-        <div class="mb-4 flex items-center justify-between gap-3">
-          <div class="min-w-0 overflow-hidden">
-            {#if $state.queueSlug}
-              <QueueProgressPill
-                queueSlug={$state.queueSlug}
-                index={$state.queueIndex}
-              />
-            {/if}
-          </div>
-          {#if queueHasNext}
-            <button
-              type="button"
-              class="shrink-0 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-text-primary backdrop-blur transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 disabled:cursor-not-allowed disabled:opacity-50"
-              on:click={handleGoToNextInQueue}
-              disabled={queueHasNextLoading}
-              aria-label="Go to next item in queue"
-              title="Next in queue"
-            >
-              Next
-              <span class="text-text-muted" aria-hidden="true">→</span>
-            </button>
-          {/if}
+      {#if $state.queueSlug}
+        <div class="mb-4 min-w-0 overflow-hidden">
+          <QueueProgressPill
+            queueSlug={$state.queueSlug}
+            index={$state.queueIndex}
+          />
         </div>
       {/if}
 

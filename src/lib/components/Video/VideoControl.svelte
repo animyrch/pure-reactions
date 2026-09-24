@@ -7,6 +7,7 @@
         ArrowsRepeatOutline,
         VideoCameraOutline,
         ExpandOutline,
+        ForwardStepSolid,
     } from "flowbite-svelte-icons";
 
     export let bothVideosStarted;
@@ -15,6 +16,9 @@
     export let showAutoPlayButton = true;
     export let showCinematicBars = false;
     export let isFullscreen = false;
+    export let onNext = null;
+    export let nextDisabled = false;
+    export let nextAriaLabel = "Next reaction";
     export let currentTime = 0;
     export let duration = 0;
     export let seekMin = 0;
@@ -44,6 +48,13 @@
         "inline-flex h-11 w-11 items-center justify-center rounded-full transition duration-subtle ease-cinematic focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] sm:h-12 sm:w-12";
     const iconButtonBase =
         "inline-flex h-9 w-9 items-center justify-center rounded-full text-text-primary/90 transition duration-subtle ease-cinematic hover:bg-elevated/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98]";
+    const nextButtonClass =
+        "inline-flex h-9 shrink-0 items-center gap-1 rounded-full bg-accent-primary/15 px-2.5 text-xs font-semibold text-accent-primary transition duration-subtle ease-cinematic hover:bg-accent-primary/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 sm:gap-1.5 sm:px-3";
+
+    const handleNext = () => {
+        if (nextDisabled || typeof onNext !== "function") return;
+        onNext();
+    };
 
     const clearPendingSeek = () => {
         pendingSeekTime = null;
@@ -360,6 +371,20 @@
             <p class="mt-1 text-xs text-text-muted sm:text-sm">
                 Once both videos are playing, shared controls will appear here. Use them instead of in-video controls.
             </p>
+            {#if onNext}
+                <div class="mt-3 flex justify-end">
+                    <button
+                        type="button"
+                        class={nextButtonClass}
+                        on:click={handleNext}
+                        disabled={nextDisabled}
+                        aria-label={nextAriaLabel}
+                    >
+                        <span>Next</span>
+                        <ForwardStepSolid class="h-3.5 w-3.5" />
+                    </button>
+                </div>
+            {/if}
         </div>
     {:else}
         <div
@@ -488,6 +513,22 @@
                                 <path d="M5 9V5h4V3H3v6h2zm14-6h-6v2h4v4h2V3zm-6 18h6v-6h-2v4h-4v2zM5 15H3v6h6v-2H5v-4z" />
                             </svg>
                             <span class="sr-only">Exit fullscreen</span>
+                        </button>
+                    </div>
+                {/if}
+
+                {#if onNext}
+                    <div class="ml-0.5 flex items-center border-l border-border-subtle pl-2">
+                        <button
+                            type="button"
+                            class={nextButtonClass}
+                            on:click={handleNext}
+                            disabled={nextDisabled}
+                            aria-label={nextAriaLabel}
+                        >
+                            <span class="hidden sm:inline">Next</span>
+                            <ForwardStepSolid class="h-3.5 w-3.5" />
+                            <span class="sr-only sm:hidden">Next</span>
                         </button>
                     </div>
                 {/if}

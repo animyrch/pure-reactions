@@ -146,6 +146,13 @@
     >
       <div class="flex flex-col gap-3">
         <a
+          href="/moments"
+          class="rounded-lg px-4 py-2.5 text-sm font-medium text-text-secondary transition-colors hover:bg-elevated hover:text-text-primary"
+          on:click={() => (showMenu = false)}
+        >
+          Moments
+        </a>
+        <a
           href="/how-it-works"
           class="rounded-lg px-4 py-2.5 text-sm font-medium text-text-secondary transition-colors hover:bg-elevated hover:text-text-primary"
           on:click={() => (showMenu = false)}

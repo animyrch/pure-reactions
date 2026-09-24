@@ -29,6 +29,9 @@
 
   let currentIndex = 0;
   let playbackSessionStarted = false;
+  // Set while next/prev loads through the existing players. The slug effect must
+  // not rebuild those players for the same id.
+  let inPlaceReactionId = '';
   let addReactionLoading = false;
   let touchStartY = 0;
   let overlayRef;
@@ -38,6 +41,7 @@
   $: slug = params.slug;
   $: selectedReactionId = params.reactionId;
   $: currentReaction = reactions[currentIndex] || null;
+  $: hasNextMomentReaction = currentIndex < reactionIds.length - 1;
 
   const initialReactionSlug = get(page).params.reactionId || '';
 
@@ -99,7 +103,7 @@
   }
 
   $: overlayRef && actions.registerOverlayRef(overlayRef);
-  $: if (currentReaction?.id) {
+  $: if (currentReaction?.id && currentReaction.id !== inPlaceReactionId) {
     actions.handleSlugChange(currentReaction.id);
   }
 
@@ -107,8 +111,9 @@
     if (nextIndex < 0 || nextIndex >= reactionIds.length) return;
     if (nextIndex === currentIndex) return;
 
-    currentIndex = nextIndex;
     const nextId = reactionIds[nextIndex];
+    inPlaceReactionId = nextId;
+    currentIndex = nextIndex;
     await actions.loadReactionInPlace(nextId, {
       autoPlay: playbackSessionStarted
     });
@@ -215,21 +220,11 @@
       state={$state}
       actions={actions}
       overlayRef={overlayRef}
-      extra={{}}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
+      onNext={hasNextMomentReaction ? () => goToReactionIndex(currentIndex + 1) : null}
+      nextAriaLabel="Next reaction"
     >
-      <div class="mt-6 w-full flex justify-end">
-        <button
-          type="button"
-          class="inline-flex rounded-sm text-sm text-text-muted transition hover:text-text-primary focus-visible:outline-none focus-visible:underline disabled:opacity-50 disabled:cursor-not-allowed"
-          on:click={() => goToReactionIndex(currentIndex + 1)}
-          disabled={currentIndex >= reactionIds.length - 1}
-          aria-disabled={currentIndex >= reactionIds.length - 1}
-        >
-          Next reaction
-        </button>
-      </div>
       <div class="mt-6 w-full">
         <ReactionDetailsSection
           reactionState={$state}

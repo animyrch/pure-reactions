@@ -12,7 +12,7 @@ import {
 import { buildTwinPlayersSetupStatePatch } from '$lib/helpers/twinPlayersSetupState';
 import type { VerifyAndSyncTwinPlayersMetadataParams } from '$lib/helpers/twinPlayersMetadata';
 import type { TwinPlayersState } from '$lib/helpers/twinPlayersStateController';
-import { restoreEmbeddedPlayerContainer } from '$lib/helpers/twinPlayersTikTokOriginal';
+import { ensureEmbeddedPlayerHost, restoreEmbeddedPlayerContainer } from '$lib/helpers/twinPlayersTikTokOriginal';
 
 declare const YT: any;
 
@@ -459,6 +459,9 @@ export function createTwinPlayersOrchestrationController({
     }
 
     setSwitchingReactionInPlace(true);
+    // Claim the id before the first DOM tick. That tick flushes the moment page's
+    // slug effect, which must not start a second player setup for this reaction.
+    syncCurrentReactionDocumentId(nextReactionDocumentId, updateState);
     stopSyncScheduler();
 
     try {
@@ -555,6 +558,10 @@ export function createTwinPlayersOrchestrationController({
         expectedPlayerReadyCount,
       } = transitionPlan;
 
+      const reactionHost = document.getElementById('player-reaction');
+      const reactionHostParent = reactionHost?.parentElement ?? null;
+      const reactionHostClass = reactionHost?.className || 'absolute inset-0 h-full w-full';
+
       if (!canReuseReactionPlayer && snapshotBefore.playerReaction?.destroy) {
         snapshotBefore.playerReaction.destroy();
       }
@@ -576,6 +583,7 @@ export function createTwinPlayersOrchestrationController({
 
       if (shouldCreateReactionPlayer) {
         try {
+          ensureEmbeddedPlayerHost('player-reaction', reactionHostParent, reactionHostClass);
           nextPlayerReaction = new YT.Player('player-reaction', {
             videoId: normalizedReactionVideoId,
             playerVars: {
@@ -663,6 +671,34 @@ export function createTwinPlayersOrchestrationController({
         }
       }
 
+      if (canReuseReactionPlayer && !isSameReactionVideo && normalizedReactionVideoId) {
+        const startSeconds = Math.max(0, Number(derivedReactionData.offsetStartTime) || 0);
+        try {
+          if (!options.autoPlay && typeof nextPlayerReaction?.cueVideoById === 'function') {
+            nextPlayerReaction.cueVideoById({
+              videoId: normalizedReactionVideoId,
+              startSeconds
+            });
+            console.debug('[TwinPlayers] Cued reaction video (different reaction)', {
+              reactionVideoId: normalizedReactionVideoId,
+              startSeconds
+            });
+          } else if (typeof nextPlayerReaction?.loadVideoById === 'function') {
+            nextPlayerReaction.loadVideoById({
+              videoId: normalizedReactionVideoId,
+              startSeconds
+            });
+            console.debug('[TwinPlayers] Loaded reaction video by id', {
+              reactionVideoId: normalizedReactionVideoId,
+              startSeconds,
+              autoPlay: Boolean(options.autoPlay)
+            });
+          }
+        } catch (error) {
+          console.error('Failed to load reaction video by id', error);
+        }
+      }
+
       updateState(buildTwinPlayersInPlaceStatePatch({
         snapshotBefore,
         derived: derivedReactionData,
@@ -722,7 +758,7 @@ export function createTwinPlayersOrchestrationController({
         }
       }
 
-      if (!preserveReactionTime && canReuseReactionPlayer && typeof nextPlayerReaction?.seekTo === 'function') {
+      if (!preserveReactionTime && canReuseReactionPlayer && isSameReactionVideo && typeof nextPlayerReaction?.seekTo === 'function') {
         try {
           nextPlayerReaction.seekTo(Number(derivedReactionData.offsetStartTime) || 0, true);
         } catch {
