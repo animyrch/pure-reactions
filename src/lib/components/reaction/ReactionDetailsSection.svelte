@@ -22,13 +22,13 @@
     !isEditModeOn &&
     reactionState?.originalVideoId &&
     reactionState?.reactionVideoId;
-  $: useThreeColumnLayout = showOtherReactionsColumn && hasOtherReactions;
+  $: placeSimilarAside = showOtherReactionsColumn && hasOtherReactions;
   $: resolvedPlaylistDocument = playlistDocument ?? reactionState?.playlistDocument;
   $: resolvedPlaylistDocumentId = playlistDocumentId || reactionState?.playlistDocumentId;
 </script>
 
-<div class="grid grid-cols-1 gap-8 items-start w-full {useThreeColumnLayout ? 'lg:grid-cols-3' : ''}">
-  <div class="flex flex-col gap-6 {useThreeColumnLayout ? 'lg:col-span-2' : ''}">
+<div class="grid grid-cols-1 gap-8 items-start w-full {placeSimilarAside ? 'lg:grid-cols-[minmax(0,1fr)_22.333rem]' : ''}">
+  <div class="flex min-w-0 flex-col gap-6 {placeSimilarAside ? 'lg:col-start-1 lg:row-start-1' : ''}">
     <div data-testid="reaction-metadata">
       <CreatorDetails
         originalVideoAuthor={reactionState?.originalVideoAuthor}
@@ -74,7 +74,7 @@
   </div>
 
   {#if showOtherReactionsColumn}
-    <div class="{useThreeColumnLayout ? 'lg:col-span-1 lg:row-span-2' : ''} flex flex-col gap-6 {hasOtherReactions ? 'block' : 'hidden'}">
+    <div class="flex min-w-0 flex-col gap-6 {placeSimilarAside ? 'lg:col-start-2 lg:row-start-1 lg:row-span-2' : ''} {hasOtherReactions ? '' : 'hidden'}">
       <OtherReactions
         originalVideoId={reactionState?.originalVideoId}
         reactionVideoId={reactionState?.reactionVideoId}
@@ -86,7 +86,7 @@
   {/if}
 
   {#if includeDiscussion && !isEditModeOn}
-    <div class="{useThreeColumnLayout ? 'lg:col-span-2' : ''}">
+    <div class="min-w-0 {placeSimilarAside ? 'lg:col-start-1 lg:row-start-2' : ''}">
       <YouTubeDiscussion
         reactionVideoId={reactionState?.reactionVideoId}
         originalVideoId={reactionState?.originalVideoId}
