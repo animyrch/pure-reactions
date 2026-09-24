@@ -4,6 +4,7 @@
     import { goto } from "$app/navigation";
     import { getReactionsToOriginalVideo } from "$lib/helpers/firebase";
     import { generateOriginalVideoSlug } from "$lib/helpers/originalVideo";
+    import { UserSolid } from "flowbite-svelte-icons";
 
     export let originalVideoId;
     export let reactionVideoId;
@@ -125,25 +126,30 @@
 
 {#if otherReactions.length > 0}
     <section class="space-y-4">
-        <div
-            class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between"
-        >
-            <div class="space-y-1 sm:space-y-2">
-                <p
-                    class="text-[0.625rem] uppercase tracking-[0.3em] text-text-muted sm:text-xs"
-                >
-                    More reactions
+        <div class="flex items-center justify-between gap-3">
+            <div class="min-w-0">
+                <div class="flex items-center gap-3">
+                    <span
+                        class="inline-flex h-5 w-7 shrink-0 items-center justify-center rounded bg-[#ff2f51] text-background"
+                        aria-hidden="true"
+                    >
+                        <UserSolid class="h-4 w-4" />
+                    </span>
+                    <h2 class="truncate text-sm font-semibold leading-none text-text-primary">
+                        More reactions
+                    </h2>
+                </div>
+                <p class="mt-2 text-xs leading-tight text-text-muted">
+                    Same video. Different creators.
                 </p>
-                <h2 class="text-lg font-semibold text-text-primary sm:text-2xl">
-                    Other creators reacting to this video
-                </h2>
             </div>
             <button
-                class="inline-flex items-center gap-1.5 text-xs font-medium text-accent-primary transition hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:gap-2 sm:text-sm"
+                class="inline-flex shrink-0 items-center gap-1 self-center whitespace-nowrap text-sm font-medium text-[#02c4f9] transition hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 type="button"
+                aria-label="View all {otherReactions.length} reactions"
                 on:click={viewAllReactions}
             >
-                View all reactions
+                View all ({otherReactions.length})
                 <span aria-hidden="true">→</span>
             </button>
         </div>
