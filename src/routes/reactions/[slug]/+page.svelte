@@ -197,7 +197,7 @@
             <button
               type="button"
               on:click={handlePlayAll}
-              class="inline-flex items-center justify-center gap-3 rounded-full bg-accent-secondary px-6 py-3 text-base font-semibold text-white transition hover:bg-accent-secondary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-secondary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              class="inline-flex items-center justify-center gap-3 rounded-full bg-accent-primary px-6 py-3 text-base font-semibold text-background transition hover:bg-accent-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               aria-label={watchAllLabel}
             >
               <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
