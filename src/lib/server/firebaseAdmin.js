@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { FIREBASE_CONFIG } from '$lib/constants/firebase';
+import { pickOriginalVideoThumbnailFromReactions } from '$lib/helpers/originalVideo';
 import { env } from '$env/dynamic/private';
 
 let adminAuth = null;
@@ -341,20 +342,22 @@ export async function getReactionsByOriginalSlug(slug) {
     // Extract original video metadata from the first reaction.
     // Duration is enriched later and may be missing on the newest document.
     const firstReactionData = snapshot.docs[0]?.data() || {};
+    const reactionRecords = snapshot.docs.map((doc) => doc.data());
     let durationSeconds = null;
-    for (const doc of snapshot.docs) {
-      durationSeconds = pickOriginalVideoDurationSeconds(doc.data());
+    for (const data of reactionRecords) {
+      durationSeconds = pickOriginalVideoDurationSeconds(data);
       if (durationSeconds) break;
     }
+    const thumbnail = pickOriginalVideoThumbnailFromReactions(reactionRecords);
     const originalVideo = {
       title: firstReactionData.originalVideoTitle ?? null,
       author: firstReactionData.originalVideoAuthor ?? null,
       authorHandle: firstReactionData.originalVideoAuthorHandle ?? null,
       authorUrl: firstReactionData.originalVideoAuthorUrl ?? null,
       description: firstReactionData.originalVideoDescription ?? null,
-      thumbnailUrl: firstReactionData.originalVideoThumbnailUrl ?? null,
-      thumbnailWidth: firstReactionData.originalVideoThumbnailWidth ?? null,
-      thumbnailHeight: firstReactionData.originalVideoThumbnailHeight ?? null,
+      thumbnailUrl: thumbnail.thumbnailUrl,
+      thumbnailWidth: thumbnail.thumbnailWidth,
+      thumbnailHeight: thumbnail.thumbnailHeight,
       videoId: firstReactionData.originalVideoId ?? null,
       platform: firstReactionData.originalVideoPlatform ?? 'youtube',
       url: firstReactionData.originalVideoUrl ?? null,

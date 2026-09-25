@@ -92,6 +92,85 @@ export const buildYouTubeVideoUrl = (videoId) => {
     : undefined;
 };
 
+const firstNonEmptyString = (...values) => {
+  for (const value of values) {
+    const trimmed = trimString(value);
+    if (trimmed) return trimmed;
+  }
+  return undefined;
+};
+
+/**
+ * Thumbnail for an original-video hub.
+ * Stored `originalVideoThumbnailUrl` is often empty; enrichment keeps the
+ * image on originalYoutube/originalTikTok meta instead.
+ */
+const originalVideoThumbnailSource = (reactionData = {}) => {
+  const platform = normalizeOriginalVideoPlatform(reactionData?.originalVideoPlatform);
+  const sourceMeta =
+    platform === ORIGINAL_VIDEO_PLATFORMS.TIKTOK
+      ? reactionData?.originalTikTok?.meta || {}
+      : reactionData?.originalYoutube?.meta || {};
+
+  return { platform, sourceMeta };
+};
+
+const thumbnailDimensions = (reactionData, sourceMeta) => ({
+  thumbnailWidth: toFiniteNumber(
+    firstDefined(reactionData?.originalVideoThumbnailWidth, sourceMeta?.thumbnailWidth),
+  ) ?? null,
+  thumbnailHeight: toFiniteNumber(
+    firstDefined(reactionData?.originalVideoThumbnailHeight, sourceMeta?.thumbnailHeight),
+  ) ?? null,
+});
+
+export const pickOriginalVideoThumbnail = (reactionData = {}) => {
+  const { platform, sourceMeta } = originalVideoThumbnailSource(reactionData);
+  const storedThumbnailUrl = firstNonEmptyString(
+    reactionData?.originalVideoThumbnailUrl,
+    sourceMeta?.thumbnail,
+  );
+  const thumbnailUrl = storedThumbnailUrl
+    || (platform === ORIGINAL_VIDEO_PLATFORMS.TIKTOK
+      ? undefined
+      : buildYouTubeThumbnailUrl(reactionData?.originalVideoId));
+
+  return {
+    thumbnailUrl: thumbnailUrl ?? null,
+    ...thumbnailDimensions(reactionData, sourceMeta),
+  };
+};
+
+export const pickOriginalVideoThumbnailFromReactions = (reactions = []) => {
+  let fallback = null;
+
+  for (const reactionData of reactions) {
+    const { platform, sourceMeta } = originalVideoThumbnailSource(reactionData);
+    const storedThumbnailUrl = firstNonEmptyString(
+      reactionData?.originalVideoThumbnailUrl,
+      sourceMeta?.thumbnail,
+    );
+    if (storedThumbnailUrl) {
+      return {
+        thumbnailUrl: storedThumbnailUrl,
+        ...thumbnailDimensions(reactionData, sourceMeta),
+      };
+    }
+
+    if (!fallback && platform !== ORIGINAL_VIDEO_PLATFORMS.TIKTOK) {
+      const constructed = buildYouTubeThumbnailUrl(reactionData?.originalVideoId);
+      if (constructed) {
+        fallback = {
+          thumbnailUrl: constructed,
+          ...thumbnailDimensions(reactionData, sourceMeta),
+        };
+      }
+    }
+  }
+
+  return fallback ?? { thumbnailUrl: null, thumbnailWidth: null, thumbnailHeight: null };
+};
+
 export const buildYouTubeThumbnailUrl = (
   videoId,
   { variant = 'hqdefault', format = 'jpg' } = {},

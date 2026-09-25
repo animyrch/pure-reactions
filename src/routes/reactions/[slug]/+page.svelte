@@ -18,10 +18,10 @@
     if (!full) return 'this video';
 
     let short = full.replace(TITLE_NOISE_SUFFIX, '').trim();
-    const authorName = typeof author === 'string' ? author.trim() : '';
+    const authorName = typeof author === 'string' ? author.trim().replace(/^@/, '') : '';
     if (authorName) {
       const escaped = authorName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      short = short.replace(new RegExp(`^${escaped}\\s*[-:–—|]\\s*`, 'i'), '').trim();
+      short = short.replace(new RegExp(`^@?${escaped}\\s*[-:–—|]\\s*`, 'i'), '').trim();
     }
     short = short.replace(/^['"“”‘’]+|['"“”‘’]+$/g, '').trim();
     return short || full;
