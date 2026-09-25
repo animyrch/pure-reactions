@@ -1,6 +1,7 @@
 import { onDestroy, onMount, tick } from 'svelte';
 import { env } from '$env/dynamic/public';
 import { get } from 'svelte/store';
+import { readAdHocQueueFromUrl } from '$lib/helpers/adHocQueue';
 import {
   readAutoPlayCookie,
   readCinematicBarsCookie,
@@ -784,6 +785,12 @@ export function useTwinPlayers({
       editActionEntryPoint,
       handleSlugChange,
       loadReactionInPlace,
+      syncAdHocQueue: (queue: string[] | null, index: number) => {
+        updateState({
+          adHocQueue: queue,
+          adHocQueueIndex: index
+        });
+      },
       setPlaylistDocumentId,
       registerOverlayRef
     }
@@ -819,19 +826,7 @@ function getInitialUrlState() {
   const mobileLazySyncRaw = params.get('mobileLazySync') ?? params.get('lazySync');
   const mobileLazySync = mobileLazySyncRaw === 'true' || mobileLazySyncRaw === '1' || params.has('mobileLazySync') || params.has('lazySync');
 
-  // Parse ad-hoc queue
-  let adHocQueue: string[] | null = null;
-  const adHocQueueRaw = params.get('adHocQueue');
-  if (adHocQueueRaw) {
-    try {
-      const parsed = JSON.parse(adHocQueueRaw);
-      if (Array.isArray(parsed) && parsed.every((id: unknown) => typeof id === 'string')) {
-        adHocQueue = parsed;
-      }
-    } catch {
-      // Invalid JSON, ignore
-    }
-  }
+  const adHoc = readAdHocQueueFromUrl(url);
 
   return {
     isFullscreen: params.get('isFullscreen') === 'true',
@@ -841,7 +836,7 @@ function getInitialUrlState() {
     queueAutoPlay: queueAutoPlayRaw === 'true',
     mobileLazySync,
     syncEngine: params.get('syncEngine'),
-    adHocQueue,
-    adHocQueueIndex: adHocQueueRaw ? (params.get('adHocQueueIndex') ? Number(params.get('adHocQueueIndex')) : 0) : null
+    adHocQueue: adHoc.queue,
+    adHocQueueIndex: adHoc.queue ? adHoc.index : null
   };
 }

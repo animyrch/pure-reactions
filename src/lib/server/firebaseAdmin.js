@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { FIREBASE_CONFIG } from '$lib/constants/firebase';
+import { pickOriginalVideoThumbnailFromReactions } from '$lib/helpers/originalVideo';
 import { env } from '$env/dynamic/private';
 
 let adminAuth = null;
@@ -291,6 +292,20 @@ export async function getReactionsByCreatorServer(name) {
   }
 }
 
+function pickOriginalVideoDurationSeconds(data) {
+  const candidates = [
+    data?.originalYoutube?.meta?.durationSeconds,
+    data?.originalTikTok?.meta?.durationSeconds,
+  ];
+  for (const candidate of candidates) {
+    const numeric = Number(candidate);
+    if (Number.isFinite(numeric) && numeric > 0) {
+      return Math.round(numeric);
+    }
+  }
+  return null;
+}
+
 /**
  * Fetch all published reactions for a specific original video slug.
  * Returns an object with original video metadata (from the first matching reaction) and the reactions array.
@@ -324,22 +339,31 @@ export async function getReactionsByOriginalSlug(slug) {
       data: serializeFirestoreValue(doc.data()),
     }));
 
-    // Extract original video metadata from the first reaction
+    // Extract original video metadata from the first reaction.
+    // Duration is enriched later and may be missing on the newest document.
     const firstReactionData = snapshot.docs[0]?.data() || {};
+    const reactionRecords = snapshot.docs.map((doc) => doc.data());
+    let durationSeconds = null;
+    for (const data of reactionRecords) {
+      durationSeconds = pickOriginalVideoDurationSeconds(data);
+      if (durationSeconds) break;
+    }
+    const thumbnail = pickOriginalVideoThumbnailFromReactions(reactionRecords);
     const originalVideo = {
       title: firstReactionData.originalVideoTitle ?? null,
       author: firstReactionData.originalVideoAuthor ?? null,
       authorHandle: firstReactionData.originalVideoAuthorHandle ?? null,
       authorUrl: firstReactionData.originalVideoAuthorUrl ?? null,
       description: firstReactionData.originalVideoDescription ?? null,
-      thumbnailUrl: firstReactionData.originalVideoThumbnailUrl ?? null,
-      thumbnailWidth: firstReactionData.originalVideoThumbnailWidth ?? null,
-      thumbnailHeight: firstReactionData.originalVideoThumbnailHeight ?? null,
+      thumbnailUrl: thumbnail.thumbnailUrl,
+      thumbnailWidth: thumbnail.thumbnailWidth,
+      thumbnailHeight: thumbnail.thumbnailHeight,
       videoId: firstReactionData.originalVideoId ?? null,
       platform: firstReactionData.originalVideoPlatform ?? 'youtube',
       url: firstReactionData.originalVideoUrl ?? null,
       providerName: firstReactionData.originalVideoProviderName ?? null,
       providerUrl: firstReactionData.originalVideoProviderUrl ?? null,
+      durationSeconds,
     };
 
     return { originalVideo, reactions };

@@ -4,6 +4,7 @@
     import { goto } from "$app/navigation";
     import { getReactionsToOriginalVideo } from "$lib/helpers/firebase";
     import { generateOriginalVideoSlug } from "$lib/helpers/originalVideo";
+    import { UserSolid } from "flowbite-svelte-icons";
 
     export let originalVideoId;
     export let reactionVideoId;
@@ -12,6 +13,8 @@
     export let hasOtherReactions = false;
 
     $: hasOtherReactions = otherReactions.length > 0;
+    // The list omits the open reaction. The count includes it.
+    $: similarReactionCount = otherReactions.length + 1;
 
     let otherReactions = [];
     let itemRefs = [];
@@ -125,25 +128,30 @@
 
 {#if otherReactions.length > 0}
     <section class="space-y-4">
-        <div
-            class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between"
-        >
-            <div class="space-y-1 sm:space-y-2">
-                <p
-                    class="text-[0.625rem] uppercase tracking-[0.3em] text-text-muted sm:text-xs"
-                >
-                    More reactions
+        <div class="flex items-center justify-between gap-3">
+            <div class="min-w-0">
+                <div class="flex items-center gap-3">
+                    <span
+                        class="inline-flex h-5 w-7 shrink-0 items-center justify-center rounded bg-[#ff2f51] text-background"
+                        aria-hidden="true"
+                    >
+                        <UserSolid class="h-4 w-4" />
+                    </span>
+                    <h2 class="truncate text-sm font-semibold leading-none text-text-primary">
+                        More reactions
+                    </h2>
+                </div>
+                <p class="mt-2 text-xs leading-tight text-text-muted">
+                    Same video. Different creators.
                 </p>
-                <h2 class="text-lg font-semibold text-text-primary sm:text-2xl">
-                    Other creators reacting to this video
-                </h2>
             </div>
             <button
-                class="inline-flex items-center gap-1.5 text-xs font-medium text-accent-primary transition hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:gap-2 sm:text-sm"
+                class="inline-flex shrink-0 items-center gap-1 self-center whitespace-nowrap text-sm font-medium text-[#02c4f9] transition hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 type="button"
+                aria-label="View all {similarReactionCount} reactions"
                 on:click={viewAllReactions}
             >
-                View all reactions
+                View all ({similarReactionCount})
                 <span aria-hidden="true">→</span>
             </button>
         </div>
@@ -184,9 +192,16 @@
         }
     }
 
+    @media (min-width: 1024px) {
+        section {
+            max-width: 22.333rem;
+        }
+    }
+
     .carousel {
         display: flex;
         gap: 0.75rem;
+        min-width: 0;
         overflow-x: auto;
         padding-bottom: 0.75rem;
         scroll-snap-type: x mandatory;
@@ -196,7 +211,15 @@
 
     @media (min-width: 640px) {
         .carousel {
+            /* Homepage cards resolve to 22.333rem inside max-w-6xl:
+               (72rem − 2rem grid padding − 3rem of gaps) / 3 columns. */
+            display: grid;
             gap: 1rem;
+            grid-template-columns: repeat(auto-fill, minmax(min(100%, 22.333rem), 22.333rem));
+            justify-content: start;
+            overflow-x: visible;
+            padding-bottom: 0;
+            scroll-snap-type: none;
         }
     }
 
@@ -218,6 +241,7 @@
         scroll-snap-align: start;
         flex: 0 0 min(14rem, 82vw);
         max-width: 82vw;
+        min-width: 0;
     }
 
     @media (max-width: 639px) {
@@ -228,31 +252,10 @@
     }
 
     @media (min-width: 640px) {
-        .carousel {
-            scroll-snap-type: none;
-            overflow-x: visible;
-            padding-bottom: 0;
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
-        }
-
         .carousel-item {
             flex: initial;
-        }
-    }
-
-    @media (min-width: 1024px) {
-        .carousel {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            grid-template-columns: none;
-        }
-
-        .carousel-item {
-            flex: initial;
-            max-width: 100%;
             width: 100%;
+            max-width: 22.333rem;
         }
     }
 </style>
