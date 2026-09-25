@@ -291,6 +291,20 @@ export async function getReactionsByCreatorServer(name) {
   }
 }
 
+function pickOriginalVideoDurationSeconds(data) {
+  const candidates = [
+    data?.originalYoutube?.meta?.durationSeconds,
+    data?.originalTikTok?.meta?.durationSeconds,
+  ];
+  for (const candidate of candidates) {
+    const numeric = Number(candidate);
+    if (Number.isFinite(numeric) && numeric > 0) {
+      return Math.round(numeric);
+    }
+  }
+  return null;
+}
+
 /**
  * Fetch all published reactions for a specific original video slug.
  * Returns an object with original video metadata (from the first matching reaction) and the reactions array.
@@ -324,8 +338,14 @@ export async function getReactionsByOriginalSlug(slug) {
       data: serializeFirestoreValue(doc.data()),
     }));
 
-    // Extract original video metadata from the first reaction
+    // Extract original video metadata from the first reaction.
+    // Duration is enriched later and may be missing on the newest document.
     const firstReactionData = snapshot.docs[0]?.data() || {};
+    let durationSeconds = null;
+    for (const doc of snapshot.docs) {
+      durationSeconds = pickOriginalVideoDurationSeconds(doc.data());
+      if (durationSeconds) break;
+    }
     const originalVideo = {
       title: firstReactionData.originalVideoTitle ?? null,
       author: firstReactionData.originalVideoAuthor ?? null,
@@ -340,6 +360,7 @@ export async function getReactionsByOriginalSlug(slug) {
       url: firstReactionData.originalVideoUrl ?? null,
       providerName: firstReactionData.originalVideoProviderName ?? null,
       providerUrl: firstReactionData.originalVideoProviderUrl ?? null,
+      durationSeconds,
     };
 
     return { originalVideo, reactions };
