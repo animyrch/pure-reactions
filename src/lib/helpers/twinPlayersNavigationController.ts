@@ -1,4 +1,5 @@
 import { goto } from '$app/navigation';
+import { nextAdHocQueueIndex } from '$lib/helpers/adHocQueue';
 import { getPlaylist, getQueueBySlug, getReaction } from '$lib/helpers/firebase';
 import { writeQueueProgress } from '$lib/helpers/queueProgress';
 import {
@@ -281,7 +282,7 @@ export function createTwinPlayersNavigationController({
 
     // Handle ad-hoc queue
     if (snapshot.adHocQueue && snapshot.adHocQueue.length) {
-      const nextIndex = (Number(snapshot.adHocQueueIndex) || 0) + 1;
+      const nextIndex = nextAdHocQueueIndex(snapshot.adHocQueueIndex);
       return Boolean(getNextReactionIdInAdHocQueue(snapshot.adHocQueue, nextIndex));
     }
 
@@ -299,7 +300,7 @@ export function createTwinPlayersNavigationController({
 
     // Handle ad-hoc queue
     if (snapshot.adHocQueue && snapshot.adHocQueue.length) {
-      const nextIndex = (Number(snapshot.adHocQueueIndex) || 0) + 1;
+      const nextIndex = nextAdHocQueueIndex(snapshot.adHocQueueIndex);
       const nextReactionDocumentId = getNextReactionIdInAdHocQueue(snapshot.adHocQueue, nextIndex);
       if (!nextReactionDocumentId) {
         return { ok: false as const, reason: 'end-of-queue' as const };
@@ -347,7 +348,7 @@ export function createTwinPlayersNavigationController({
 
     // Handle ad-hoc queue
     if (snapshot.adHocQueue && snapshot.adHocQueue.length && snapshot.isQueueAutoPlay) {
-      const nextIndex = (Number(snapshot.adHocQueueIndex) || 0) + 1;
+      const nextIndex = nextAdHocQueueIndex(snapshot.adHocQueueIndex);
       const nextReactionDocumentId = getNextReactionIdInAdHocQueue(snapshot.adHocQueue, nextIndex);
       if (!nextReactionDocumentId) {
         return;

@@ -15,6 +15,7 @@
   import { onDestroy } from "svelte";
   import { showToast } from "$lib/stores/toast";
   import { TOASTS } from "$lib/constants/toasts";
+  import { adHocQueueHasNext, readAdHocQueueFromUrl } from "$lib/helpers/adHocQueue";
 
   export let data;
 
@@ -90,10 +91,28 @@
     }
   };
 
+  // The page URL is known before players finish loading. Waiting on the async
+  // queue check left the first click-to-sync dock without a Next button.
+  $: adHocFromUrl = readAdHocQueueFromUrl($page.url);
+  $: adHocQueue = adHocFromUrl.queue ?? ($state.adHocQueue?.length ? $state.adHocQueue : null);
+  $: adHocQueueIndex = adHocFromUrl.queue
+    ? adHocFromUrl.index
+    : Number($state.adHocQueueIndex) || 0;
+  $: adHocHasNext = adHocQueueHasNext(adHocQueue, adHocQueueIndex);
+  $: if (browser && adHocFromUrl.queue) {
+    const stateQueue = $state.adHocQueue;
+    const sameQueue = Array.isArray(stateQueue)
+      && stateQueue.length === adHocFromUrl.queue.length
+      && stateQueue.every((id, index) => id === adHocFromUrl.queue[index]);
+    if (!sameQueue || Number($state.adHocQueueIndex) !== adHocFromUrl.index) {
+      actions.syncAdHocQueue(adHocFromUrl.queue, adHocFromUrl.index);
+    }
+  }
+
   $: inSequenceQueue = Boolean(
-    $state.queueSlug || ($state.adHocQueue && $state.adHocQueue.length),
+    $state.queueSlug || (adHocQueue && adHocQueue.length),
   );
-  $: showQueueNext = inSequenceQueue && (queueHasNext || queueHasNextLoading);
+  $: showQueueNext = adHocHasNext || (Boolean($state.queueSlug) && (queueHasNext || queueHasNextLoading));
   $: sequenceOnNext = showQueueNext
     ? handleGoToNextInQueue
     : !inSequenceQueue && $state.hasNextIndexInPlaylist
@@ -248,7 +267,7 @@
     isPlaylist={Boolean($state.playlistDocumentId)}
     isPlaylistAutoPlay={$state.isPlaylistAutoPlay}
     onNext={sequenceOnNext}
-    nextDisabled={inSequenceQueue && queueHasNextLoading}
+    nextDisabled={Boolean($state.queueSlug) && !adHocHasNext && queueHasNextLoading}
     nextAriaLabel={sequenceNextAriaLabel}
     reactionCurrentTime={$state.reactionCurrentTime}
     reactionDuration={$state.reactionDuration}
