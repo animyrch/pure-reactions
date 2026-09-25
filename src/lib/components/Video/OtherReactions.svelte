@@ -13,6 +13,8 @@
     export let hasOtherReactions = false;
 
     $: hasOtherReactions = otherReactions.length > 0;
+    // The list omits the open reaction. The count includes it.
+    $: similarReactionCount = otherReactions.length + 1;
 
     let otherReactions = [];
     let itemRefs = [];
@@ -146,10 +148,10 @@
             <button
                 class="inline-flex shrink-0 items-center gap-1 self-center whitespace-nowrap text-sm font-medium text-[#02c4f9] transition hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 type="button"
-                aria-label="View all {otherReactions.length} reactions"
+                aria-label="View all {similarReactionCount} reactions"
                 on:click={viewAllReactions}
             >
-                View all ({otherReactions.length})
+                View all ({similarReactionCount})
                 <span aria-hidden="true">→</span>
             </button>
         </div>
