@@ -364,6 +364,74 @@ export function buildReactionSitemapEntries(reactionDocs, baseUrl) {
     .sort((a, b) => a.loc.localeCompare(b.loc));
 }
 
+function encodeProfileSegment(name) {
+  // @ is a legal path character and the profile canonical keeps it. encodeURIComponent
+  // would turn the handle prefix into %40.
+  return encodeURIComponent(name).replaceAll('%40', '@');
+}
+
+function buildProfileLoc(prefix, name, baseUrl) {
+  return new URL(`/${prefix}/${encodeProfileSegment(name)}`, baseUrl).toString();
+}
+
+function buildProfileSitemapEntry({ name, reactions, prefix, baseUrl }) {
+  const loc = buildProfileLoc(prefix, name, baseUrl);
+  const lastmod = pickLastmod(
+    reactions.flatMap(({ data }) => [
+      data?.updatedAt,
+      data?.lastEnrichedAt,
+      data?.createdAt,
+      data?.youtube?.meta?.publishedAt
+    ])
+  );
+
+  const lines = ['  <url>', `    <loc>${escapeXml(loc)}</loc>`];
+  if (lastmod) {
+    lines.push(`    <lastmod>${lastmod}</lastmod>`);
+  }
+  lines.push('  </url>');
+
+  return {
+    name,
+    loc,
+    lines: lines.join('\n')
+  };
+}
+
+function buildProfileSitemapEntries(reactionDocs, baseUrl, { field, prefix }) {
+  const grouped = new Map();
+
+  for (const doc of reactionDocs) {
+    const name = pickText(doc?.data?.[field]);
+    if (!name) continue;
+
+    const bucket = grouped.get(name);
+    if (bucket) {
+      bucket.push(doc);
+    } else {
+      grouped.set(name, [doc]);
+    }
+  }
+
+  return [...grouped.entries()]
+    .map(([name, reactions]) => buildProfileSitemapEntry({ name, reactions, prefix, baseUrl }))
+    .sort((a, b) => a.loc.localeCompare(b.loc));
+}
+
+export function buildCreatorSitemapEntries(reactionDocs, baseUrl) {
+  return buildProfileSitemapEntries(reactionDocs, baseUrl, {
+    field: 'originalVideoAuthor',
+    prefix: 'creator'
+  });
+}
+
+export function buildReactorSitemapEntries(reactionDocs, baseUrl) {
+  return buildProfileSitemapEntries(reactionDocs, baseUrl, {
+    field: 'reactionVideoAuthor',
+    prefix: 'reactor'
+  });
+}
+
 async function fetchPublishedReactions(db, collection) {
   let snapshot = await db.collection(collection).where('isPublished', '==', true).get();
 
@@ -393,7 +461,9 @@ async function generate() {
   const reactions = await fetchPublishedReactions(db, collection);
   const entries = [
     ...buildReactionSitemapEntries(reactions, baseUrl),
-    ...buildOriginalVideoSitemapEntries(reactions, baseUrl)
+    ...buildOriginalVideoSitemapEntries(reactions, baseUrl),
+    ...buildCreatorSitemapEntries(reactions, baseUrl),
+    ...buildReactorSitemapEntries(reactions, baseUrl)
   ]
     .sort((a, b) => a.loc.localeCompare(b.loc))
     .map(({ lines }) => lines);
