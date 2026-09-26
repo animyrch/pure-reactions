@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildCreatorSitemapEntries,
   buildOriginalVideoSitemapEntries,
-  buildReactionSitemapEntries
+  buildReactionSitemapEntries,
+  buildReactorSitemapEntries
 } from '../../scripts/generate-sitemap.js';
 
 function makeReaction(id, originalVideoId, originalVideoSlug, overrides = {}) {
@@ -71,5 +73,65 @@ describe('buildOriginalVideoSitemapEntries', () => {
       'https://purereactions.com/reaction/reaction-a1',
       'https://purereactions.com/reaction/reaction-b1'
     ]);
+  });
+});
+
+describe('buildCreatorSitemapEntries', () => {
+  it('emits one /creator entry per original author, keeping @ readable', () => {
+    const reactions = [
+      makeReaction('reaction-a1', 'original-a', 'alpha-video', {
+        originalVideoAuthor: '@BLACKPINK',
+        updatedAt: '2025-01-02T00:00:00.000Z'
+      }),
+      makeReaction('reaction-a2', 'original-b', 'bravo-video', {
+        originalVideoAuthor: '@BLACKPINK',
+        updatedAt: '2025-03-01T00:00:00.000Z'
+      }),
+      makeReaction('reaction-c1', 'original-c', 'charlie-video', {
+        originalVideoAuthor: 'JYP Entertainment',
+        updatedAt: '2025-02-01T00:00:00.000Z'
+      }),
+      makeReaction('reaction-d1', 'original-d', 'delta-video', {
+        originalVideoAuthor: '   '
+      })
+    ];
+
+    const entries = buildCreatorSitemapEntries(reactions, 'https://purereactions.com');
+
+    expect(entries.map((entry) => entry.name)).toEqual(['@BLACKPINK', 'JYP Entertainment']);
+    expect(entries.map((entry) => entry.loc)).toEqual([
+      'https://purereactions.com/creator/@BLACKPINK',
+      'https://purereactions.com/creator/JYP%20Entertainment'
+    ]);
+    expect(entries[0].lines).toContain('<loc>https://purereactions.com/creator/@BLACKPINK</loc>');
+    expect(entries[0].lines).toContain('<lastmod>2025-03-01T00:00:00.000Z</lastmod>');
+    expect(entries[0].lines).not.toContain('%40');
+    expect(entries[0].lines).not.toContain('video:video');
+  });
+});
+
+describe('buildReactorSitemapEntries', () => {
+  it('emits one /reactor entry per reaction author', () => {
+    const reactions = [
+      makeReaction('reaction-a1', 'original-a', 'alpha-video', {
+        reactionVideoAuthor: '@reactorone',
+        updatedAt: '2025-01-02T00:00:00.000Z'
+      }),
+      makeReaction('reaction-a2', 'original-b', 'bravo-video', {
+        reactionVideoAuthor: '@reactorone',
+        updatedAt: '2025-04-01T00:00:00.000Z'
+      }),
+      makeReaction('reaction-b1', 'original-c', 'charlie-video', {
+        reactionVideoAuthor: '@reactortwo'
+      })
+    ];
+
+    const entries = buildReactorSitemapEntries(reactions, 'https://purereactions.com');
+
+    expect(entries.map((entry) => entry.loc)).toEqual([
+      'https://purereactions.com/reactor/@reactorone',
+      'https://purereactions.com/reactor/@reactortwo'
+    ]);
+    expect(entries[0].lines).toContain('<lastmod>2025-04-01T00:00:00.000Z</lastmod>');
   });
 });
