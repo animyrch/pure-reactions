@@ -1,5 +1,6 @@
 import { error } from '@sveltejs/kit';
-import { getReactionsByOriginalSlug } from '$lib/server/firebaseAdmin';
+import { buildOtherOriginalHubs } from '$lib/helpers/originalVideo';
+import { getReactionsByCreatorServer, getReactionsByOriginalSlug } from '$lib/server/firebaseAdmin';
 
 export async function load({ params }) {
   const { slug } = params;
@@ -17,10 +18,16 @@ export async function load({ params }) {
   // Ensure the returned payload always contains a `reactions` array and
   // well-formed `originalVideo` structure so older/compiled bundles that
   // access `reactions.length` won't throw.
+  const reactions = Array.isArray(data.reactions) ? data.reactions : [];
+  const originalVideo = data.originalVideo ?? null;
+  const author = typeof originalVideo?.author === 'string' ? originalVideo.author.trim() : '';
+  const creatorReactions = author ? await getReactionsByCreatorServer(author) : [];
+
   return {
     ...data,
-    reactions: Array.isArray(data.reactions) ? data.reactions : [],
-    originalVideo: data.originalVideo ?? null,
+    reactions,
+    originalVideo,
     slug,
+    otherOriginalHubs: buildOtherOriginalHubs(creatorReactions, slug),
   };
 }

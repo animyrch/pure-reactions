@@ -9,6 +9,7 @@
   $: originalVideo = data?.originalVideo ?? {};
   $: reactions = data?.reactions ?? [];
   $: slug = data?.slug ?? '';
+  $: otherOriginalHubs = Array.isArray(data?.otherOriginalHubs) ? data.otherOriginalHubs : [];
 
   const TITLE_NOISE_SUFFIX =
     /\s*(?:\(|\[)?(?:m\/v|m-v|mv|official\s+music\s+video|official\s+lyric\s+video|official\s+video)(?:\)|\])?\s*$/i;
@@ -216,12 +217,39 @@
 
   <ReactionsList reactions={reactions} />
 
-  {#if reactions.length > 0}
-    <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-10 py-10">
-      <p class="text-sm text-text-muted leading-relaxed">
-        Looking for more reactions to {originalVideo.author || 'this video'}? Explore additional reaction collections, compare creators, and discover new perspectives on your favorite music videos.
+  {#if otherOriginalHubs.length > 0}
+    <section class="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-10" aria-labelledby="other-original-hubs-heading">
+      <h2 id="other-original-hubs-heading" class="text-lg font-semibold text-text-primary">
+        Even more reactions
+      </h2>
+      <p class="mt-1 text-sm text-text-muted">
+        Other videos by {originalVideo.author || 'this creator'} that people have reacted to.
       </p>
-    </div>
+      <ul class="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        {#each otherOriginalHubs as hub (hub.slug)}
+          <li>
+            <a href="/reactions/{hub.slug}" class="group block">
+              <div class="overflow-hidden rounded-xl bg-surface">
+                {#if hub.thumbnailUrl}
+                  <img
+                    src={hub.thumbnailUrl}
+                    alt={hub.title}
+                    class="aspect-video w-full object-cover transition duration-200 group-hover:scale-[1.02]"
+                    width={hub.thumbnailWidth || 1280}
+                    height={hub.thumbnailHeight || 720}
+                  />
+                {:else}
+                  <div class="aspect-video w-full bg-surface"></div>
+                {/if}
+              </div>
+              <p class="mt-2 line-clamp-2 text-sm font-medium text-text-primary group-hover:text-accent-primary">
+                {hub.title}
+              </p>
+            </a>
+          </li>
+        {/each}
+      </ul>
+    </section>
   {/if}
 </div>
 

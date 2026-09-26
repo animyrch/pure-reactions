@@ -171,6 +171,41 @@ export const pickOriginalVideoThumbnailFromReactions = (reactions = []) => {
   return fallback ?? { thumbnailUrl: null, thumbnailWidth: null, thumbnailHeight: null };
 };
 
+/**
+ * Other original-video hubs for the same original creator.
+ * Input is published reactions for that author, newest first.
+ * Each distinct originalVideoSlug other than the current hub becomes one card.
+ */
+export const buildOtherOriginalHubs = (reactions = [], currentSlug = '') => {
+  const groups = new Map();
+
+  for (const reaction of reactions) {
+    const data = reaction?.data && typeof reaction.data === 'object' ? reaction.data : reaction;
+    const slug = trimString(data?.originalVideoSlug);
+    if (!slug || slug === currentSlug) continue;
+
+    const bucket = groups.get(slug);
+    if (bucket) {
+      bucket.push(data);
+    } else {
+      groups.set(slug, [data]);
+    }
+  }
+
+  return [...groups.entries()].map(([slug, records]) => {
+    const titled = records.find((record) => trimString(record.originalVideoTitle));
+    const thumbnail = pickOriginalVideoThumbnailFromReactions(records);
+    return {
+      slug,
+      title: trimString(titled?.originalVideoTitle) || 'Original Video',
+      thumbnailUrl: thumbnail.thumbnailUrl,
+      thumbnailWidth: thumbnail.thumbnailWidth,
+      thumbnailHeight: thumbnail.thumbnailHeight,
+      reactionCount: records.length,
+    };
+  });
+};
+
 export const buildYouTubeThumbnailUrl = (
   videoId,
   { variant = 'hqdefault', format = 'jpg' } = {},
