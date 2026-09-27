@@ -2,16 +2,13 @@
   import { onMount } from "svelte";
 
   let sectionEl;
-  let revealed = false;
   let playing = false;
 
   onMount(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          revealed = true;
-          // Start the mock playback animation after reveal
-          setTimeout(() => { playing = true; }, 600);
+          playing = true;
           observer.disconnect();
         }
       },
@@ -27,12 +24,9 @@
   class="relative px-4 py-24 md:py-32"
   aria-label="How sync works"
 >
-  <div
-    class="mx-auto max-w-5xl"
-    class:section-revealed={revealed}
-  >
+  <div class="mx-auto max-w-5xl">
     <!-- Section header -->
-    <div class="reveal-item mb-16 text-center">
+    <div class="mb-16 text-center">
       <p class="mb-3 text-sm font-medium uppercase tracking-widest text-accent-primary">
         The core idea
       </p>
@@ -48,7 +42,7 @@
     </div>
 
     <!-- Dual-player mockup -->
-    <div class="reveal-item-delay-1 mx-auto max-w-4xl">
+    <div class="mx-auto max-w-4xl">
       <div class="overflow-hidden rounded-xl bg-surface ring-1 ring-border-subtle shadow-elevated">
         <!-- Player chrome bar -->
         <div class="flex items-center gap-2 border-b border-border-subtle px-4 py-2.5">
@@ -139,7 +133,7 @@
 
       <!-- Annotation callouts -->
       <div class="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div class="reveal-item-delay-2 flex items-start gap-3 rounded-lg bg-surface/50 p-4">
+        <div class="flex items-start gap-3 rounded-lg bg-surface/50 p-4">
           <div class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-secondary/10">
             <svg class="h-4 w-4 text-accent-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5l4.72-2.89a.75.75 0 011.28.53v7.72a.75.75 0 01-1.28.53l-4.72-2.89M4.5 8.25h10.5a1.5 1.5 0 011.5 1.5v6a1.5 1.5 0 01-1.5 1.5H4.5a1.5 1.5 0 01-1.5-1.5v-6a1.5 1.5 0 011.5-1.5z" />
@@ -151,7 +145,7 @@
           </div>
         </div>
 
-        <div class="reveal-item-delay-3 flex items-start gap-3 rounded-lg bg-surface/50 p-4">
+        <div class="flex items-start gap-3 rounded-lg bg-surface/50 p-4">
           <div class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-primary/10">
             <svg class="h-4 w-4 text-accent-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
@@ -163,7 +157,7 @@
           </div>
         </div>
 
-        <div class="reveal-item-delay-4 flex items-start gap-3 rounded-lg bg-surface/50 p-4">
+        <div class="flex items-start gap-3 rounded-lg bg-surface/50 p-4">
           <div class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-primary/10">
             <svg class="h-4 w-4 text-accent-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.986V5.653z" />
@@ -180,17 +174,6 @@
 </section>
 
 <style>
-  .section-revealed .reveal-item        { animation: reveal-up 0.7s 0.1s cubic-bezier(0.22, 1, 0.36, 1) both; }
-  .section-revealed .reveal-item-delay-1 { animation: reveal-up 0.7s 0.3s cubic-bezier(0.22, 1, 0.36, 1) both; }
-  .section-revealed .reveal-item-delay-2 { animation: reveal-up 0.6s 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
-  .section-revealed .reveal-item-delay-3 { animation: reveal-up 0.6s 0.65s cubic-bezier(0.22, 1, 0.36, 1) both; }
-  .section-revealed .reveal-item-delay-4 { animation: reveal-up 0.6s 0.8s cubic-bezier(0.22, 1, 0.36, 1) both; }
-
-  @keyframes reveal-up {
-    from { opacity: 0; transform: translateY(32px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
   .sync-progress {
     width: 0;
     transition: width 0.3s;
@@ -205,13 +188,6 @@
     to   { width: 65%; }
   }
 
-  :global(.motion-reduce) .section-revealed .reveal-item,
-  :global(.motion-reduce) .section-revealed .reveal-item-delay-1,
-  :global(.motion-reduce) .section-revealed .reveal-item-delay-2,
-  :global(.motion-reduce) .section-revealed .reveal-item-delay-3,
-  :global(.motion-reduce) .section-revealed .reveal-item-delay-4 {
-    animation: none; opacity: 1; transform: none;
-  }
   :global(.motion-reduce) .sync-progress { animation: none; width: 65%; }
   :global(.motion-reduce) .sync-progress-animate { animation: none; width: 65%; }
 </style>

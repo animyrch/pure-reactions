@@ -26,58 +26,55 @@
 		goto(`/?sortBy=${SORTINGS.NEW}`);
 	}
 
-	let reactions = (data.reactions || []).slice(0, pageSize);
-	let isLoading = false;
-	let hasLoadedInitialResults = reactions.length > 0;
-	let featuredRequest = 0;
-	let featuredKey = "";
+	// The default grid is the server payload. Following needs the signed-in
+	// user's follow list, which is only available in the browser.
+	let followingReactions = [];
+	let followingLoading = false;
+	let followingLoaded = false;
+	let followingRequest = 0;
+	let followingStarted = false;
 
-	const loadFeaturedReactions = async (requestedSort) => {
-		const requestId = ++featuredRequest;
-		if (requestedSort === SORTINGS.FOLLOWING && !$isLoggedIn) return;
+	const loadFollowingReactions = async () => {
+		const requestId = ++followingRequest;
+		if (!$isLoggedIn) return;
 
-		const serverReactions = (data.reactions || []).slice(0, pageSize);
-		if (requestedSort === SORTINGS.NEW && serverReactions.length > 0) {
-			if (requestId !== featuredRequest) return;
-			reactions = serverReactions;
-			isLoading = false;
-			hasLoadedInitialResults = true;
-			return;
-		}
-
-		if (reactions.length === 0) isLoading = true;
+		if (followingReactions.length === 0) followingLoading = true;
 		const follows = $userExtraDataStore.userExtraData?.follows;
 
 		try {
 			const reactionsResponse = await getReactionsByPage(
 				null,
 				pageSize,
-				requestedSort,
+				SORTINGS.FOLLOWING,
 				follows,
 			);
-			if (requestId !== featuredRequest) return;
-			reactions = (reactionsResponse.reactions || []).slice(0, pageSize);
+			if (requestId !== followingRequest) return;
+			followingReactions = (reactionsResponse.reactions || []).slice(0, pageSize);
 		} catch (error) {
 			console.error('Failed to load reactions for landing page:', error);
-			if (requestId !== featuredRequest) return;
+			if (requestId !== followingRequest) return;
 		} finally {
-			if (requestId === featuredRequest) {
-				isLoading = false;
-				hasLoadedInitialResults = true;
+			if (requestId === followingRequest) {
+				followingLoading = false;
+				followingLoaded = true;
 			}
 		}
 	};
 
-	// One page only. The server sends the latest reactions; the client fetches
-	// a single page when that payload is empty or the view is Following.
-	$: if (browser) {
-		const serverIds = (data.reactions || []).map((reaction) => reaction.id).join(",");
-		const nextKey = `${sortBy}|${serverIds}`;
-		if (nextKey !== featuredKey) {
-			featuredKey = nextKey;
-			loadFeaturedReactions(sortBy);
-		}
+	$: if (browser && sortBy === SORTINGS.FOLLOWING && $isLoggedIn && !followingStarted) {
+		followingStarted = true;
+		loadFollowingReactions();
 	}
+
+	$: if (sortBy !== SORTINGS.FOLLOWING) {
+		followingStarted = false;
+	}
+
+	$: reactions = sortBy === SORTINGS.FOLLOWING
+		? followingReactions
+		: (data.reactions || []).slice(0, pageSize);
+	$: isLoading = sortBy === SORTINGS.FOLLOWING && followingLoading;
+	$: hasLoadedInitialResults = sortBy === SORTINGS.FOLLOWING ? followingLoaded : true;
 
 	let creatorProofVisible = false;
 	let pillMounted = false;

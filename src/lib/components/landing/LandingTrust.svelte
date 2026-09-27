@@ -1,32 +1,10 @@
-<script>
-  import { onMount } from "svelte";
-
-  let sectionEl;
-  let revealed = false;
-
-  onMount(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          revealed = true;
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.2 }
-    );
-    if (sectionEl) observer.observe(sectionEl);
-    return () => observer.disconnect();
-  });
-</script>
-
 <section
-  bind:this={sectionEl}
   class="relative px-4 py-24 md:py-32"
   aria-label="Why it's safe and clean"
 >
-  <div class="mx-auto max-w-5xl" class:section-revealed={revealed}>
+  <div class="mx-auto max-w-5xl">
     <!-- Header -->
-    <div class="reveal-trust mb-16 text-center">
+    <div class="mb-16 text-center">
       <p class="mb-3 text-sm font-medium uppercase tracking-widest text-accent-primary">
         No copyright headaches
       </p>
@@ -42,7 +20,7 @@
     </div>
 
     <!-- Comparison cards -->
-    <div class="reveal-trust-delay-1 mx-auto grid max-w-3xl grid-cols-1 gap-6 sm:grid-cols-2">
+    <div class="mx-auto grid max-w-3xl grid-cols-1 gap-6 sm:grid-cols-2">
       <!-- Old way -->
       <div class="relative overflow-hidden rounded-xl bg-surface p-6 ring-1 ring-danger/20 md:p-8">
         <div class="mb-5 flex items-center gap-3">
@@ -128,25 +106,8 @@
     </div>
 
     <!-- Reassurance footnote -->
-    <p class="reveal-trust-delay-2 mx-auto mt-10 max-w-lg text-center text-sm text-text-muted">
+    <p class="mx-auto mt-10 max-w-lg text-center text-sm text-text-muted">
       Since each stream lives at its source, there's nothing to claim. Your content stays yours.
     </p>
   </div>
 </section>
-
-<style>
-  .section-revealed .reveal-trust         { animation: trust-up 0.7s 0.1s cubic-bezier(0.22, 1, 0.36, 1) both; }
-  .section-revealed .reveal-trust-delay-1  { animation: trust-up 0.7s 0.35s cubic-bezier(0.22, 1, 0.36, 1) both; }
-  .section-revealed .reveal-trust-delay-2  { animation: trust-up 0.6s 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
-
-  @keyframes trust-up {
-    from { opacity: 0; transform: translateY(28px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  :global(.motion-reduce) .section-revealed .reveal-trust,
-  :global(.motion-reduce) .section-revealed .reveal-trust-delay-1,
-  :global(.motion-reduce) .section-revealed .reveal-trust-delay-2 {
-    animation: none; opacity: 1; transform: none;
-  }
-</style>
