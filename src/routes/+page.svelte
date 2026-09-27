@@ -33,17 +33,18 @@
 	let featuredKey = "";
 
 	const loadFeaturedReactions = async (requestedSort) => {
+		const requestId = ++featuredRequest;
 		if (requestedSort === SORTINGS.FOLLOWING && !$isLoggedIn) return;
 
 		const serverReactions = (data.reactions || []).slice(0, pageSize);
 		if (requestedSort === SORTINGS.NEW && serverReactions.length > 0) {
+			if (requestId !== featuredRequest) return;
 			reactions = serverReactions;
 			isLoading = false;
 			hasLoadedInitialResults = true;
 			return;
 		}
 
-		const requestId = ++featuredRequest;
 		if (reactions.length === 0) isLoading = true;
 		const follows = $userExtraDataStore.userExtraData?.follows;
 
