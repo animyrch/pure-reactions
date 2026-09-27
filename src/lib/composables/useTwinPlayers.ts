@@ -406,6 +406,13 @@ export function useTwinPlayers({
       reactionCurrentTime: 0,
       reactionDuration: 0
     });
+    const players = get(state);
+    try {
+      players.playerOriginal?.setVolume?.(0);
+      players.playerReaction?.setVolume?.(0);
+    } catch {
+      // ignore
+    }
   };
 
   const verifyAndSyncMetadata = async ({
