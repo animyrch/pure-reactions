@@ -5,6 +5,12 @@ import { showToast } from '$lib/stores/toast';
 import { currentPath } from '$lib/stores/route';
 import { currentUser } from '$lib/stores/user';
 
+let logoutRedirectInProgress = false;
+
+export function setLogoutRedirectInProgress(value) {
+    logoutRedirectInProgress = value;
+}
+
 function buildVerificationRoute() {
     if (!browser) {
         return '/account/verify';
@@ -20,7 +26,7 @@ function buildVerificationRoute() {
 }
 
 export function handlePrivateRoute() {
-    if (browser) {
+    if (browser && !logoutRedirectInProgress) {
         const user = get(currentUser);
         if (user?.uid && !user?.emailVerified) {
             goToRoute(buildVerificationRoute());

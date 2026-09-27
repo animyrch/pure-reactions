@@ -5,7 +5,7 @@ import { invalidate } from '$app/navigation';
 import { checkUserSignInStatusWrapper, signOutWrapper, signInWithEmailAndPasswordWrapper } from '$lib/helpers/firebase.js';
 import { createUserWithEmailAndPasswordWrapper } from '../lib/helpers/firebase.js';
 import { showToast } from '$lib/stores/toast';
-import { goToRoute } from '$lib/helpers/routing';
+import { goToRoute, setLogoutRedirectInProgress } from '$lib/helpers/routing';
 import { TOASTS } from '$lib/constants/toasts';
 import { currentUser } from '$lib/stores/user';
 import { userExtraDataStore } from '$lib/stores/userExtraData';
@@ -57,12 +57,17 @@ export async function load({ depends }) {
             return { successful, error };
         }
         if (action === 'logout') {
-            goToRoute('/');
-            await signOutWrapper();
-            currentUser.set({});
-            await invalidate('app:auth');
-            showToast('You have been logged out successfully', TOASTS.SUCCESS, 5000);
-            return { successful: true };
+            setLogoutRedirectInProgress(true);
+            try {
+                await signOutWrapper();
+                currentUser.set({});
+                await invalidate('app:auth');
+                showToast('You have been logged out successfully', TOASTS.SUCCESS, 5000);
+                await goToRoute('/');
+                return { successful: true };
+            } finally {
+                setLogoutRedirectInProgress(false);
+            }
         }
         return { successful: false };
     };
