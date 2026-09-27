@@ -12,6 +12,7 @@
   let canSubmitSignUp = false;
   let backendMissingRequirements = [];
   let backendFallbackMessage = '';
+  let isSubmitting = false;
   const isUsingFirebaseEmulators = env.PUBLIC_FIREBASE_USE_EMULATORS === 'true';
 
   const passwordRules = [
@@ -91,37 +92,61 @@
     return null;
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
+    if (isSubmitting) {
+      return;
+    }
     resetBackendPasswordFeedback();
-    data.handleUserAction('login', {email, password})
+    isSubmitting = true;
+    let successful = false;
+    try {
+      const result = await data.handleUserAction('login', {email, password});
+      successful = Boolean(result?.successful);
+    } finally {
+      if (!successful) {
+        isSubmitting = false;
+      }
+    }
   };
 
   const handleSignUp = async () => {
+    if (isSubmitting || !canSubmitSignUp) {
+      return;
+    }
     resetBackendPasswordFeedback();
-    if (!canSubmitSignUp) {
-      return;
+    isSubmitting = true;
+    let successful = false;
+    try {
+      const result = await data.handleUserAction('signup', {email, password});
+      successful = Boolean(result?.successful);
+      if (successful || !result?.error) {
+        return;
+      }
+      const message = extractErrorMessage(result.error);
+      if (!message || !message.includes('PASSWORD_DOES_NOT_MEET_REQUIREMENTS')) {
+        return;
+      }
+      const parsedRequirements = parsePasswordRequirements(message);
+      if (parsedRequirements && parsedRequirements.length) {
+        backendMissingRequirements = parsedRequirements;
+        return;
+      }
+      backendFallbackMessage = 'Password does not meet requirements. Please review the checklist and try again.';
+      console.error('Failed to parse password requirements', {
+        message,
+        error: result.error
+      });
+    } finally {
+      if (!successful) {
+        isSubmitting = false;
+      }
     }
-    const result = await data.handleUserAction('signup', {email, password});
-    if (!result?.error) {
-      return;
-    }
-    const message = extractErrorMessage(result.error);
-    if (!message || !message.includes('PASSWORD_DOES_NOT_MEET_REQUIREMENTS')) {
-      return;
-    }
-    const parsedRequirements = parsePasswordRequirements(message);
-    if (parsedRequirements && parsedRequirements.length) {
-      backendMissingRequirements = parsedRequirements;
-      return;
-    }
-    backendFallbackMessage = 'Password does not meet requirements. Please review the checklist and try again.';
-    console.error('Failed to parse password requirements', {
-      message,
-      error: result.error
-    });
   };
 
   const toggleForm = () => {
+    if (isSubmitting) {
+      return;
+    }
     isSignUp = !isSignUp;
     resetBackendPasswordFeedback();
   };
@@ -138,31 +163,43 @@
 <div class="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
   {#if !isSignUp}
     <h2 class="text-2xl font-semibold text-center mb-4">Login</h2>
-    <form on:submit|preventDefault={handleLogin}>
+    <form on:submit|preventDefault={handleLogin} aria-busy={isSubmitting}>
       <div class="mb-4">
-        <input type="email" placeholder="Email" class="w-full p-3 border border-gray-300 rounded" bind:value={email} autocomplete="email" />
+        <input type="email" placeholder="Email" class="w-full p-3 border border-gray-300 rounded disabled:opacity-70" bind:value={email} autocomplete="email" disabled={isSubmitting} />
       </div>
       <div class="mb-4">
-        <input type="password" placeholder="Password" class="w-full p-3 border border-gray-300 rounded" bind:value={password} autocomplete="current-password" />
+        <input type="password" placeholder="Password" class="w-full p-3 border border-gray-300 rounded disabled:opacity-70" bind:value={password} autocomplete="current-password" disabled={isSubmitting} />
       </div>
-      <button type="submit" class="w-full bg-gray-900 text-white p-3 rounded">Login</button>
+      <button
+        type="submit"
+        class="inline-flex w-full items-center justify-center gap-2 bg-gray-900 text-white p-3 rounded disabled:cursor-wait disabled:opacity-80"
+        disabled={isSubmitting}
+      >
+        {#if isSubmitting}
+          <span class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden="true"></span>
+          Logging in…
+        {:else}
+          Login
+        {/if}
+      </button>
     </form>
   <p class="mt-4 text-center">Don't have an account? <button type="button" class="text-blue-500 underline-offset-2 hover:underline bg-transparent p-0 border-0" on:click={toggleForm}>Sign up</button></p>
   {/if}
 
   {#if isSignUp}
     <h2 class="text-2xl font-semibold text-center mb-4">Sign Up</h2>
-    <form on:submit|preventDefault={handleSignUp}>
+    <form on:submit|preventDefault={handleSignUp} aria-busy={isSubmitting}>
       <div class="mb-4">
-        <input type="email" placeholder="Email" class="w-full p-3 border border-gray-300 rounded" bind:value={email} autocomplete="email" />
+        <input type="email" placeholder="Email" class="w-full p-3 border border-gray-300 rounded disabled:opacity-70" bind:value={email} autocomplete="email" disabled={isSubmitting} />
       </div>
       <div class="mb-4">
         <input
           type="password"
           placeholder="Password"
-          class="w-full p-3 border border-gray-300 rounded"
+          class="w-full p-3 border border-gray-300 rounded disabled:opacity-70"
           bind:value={password}
           autocomplete="new-password"
+          disabled={isSubmitting}
           on:input={resetBackendPasswordFeedback}
         />
         <div class="mt-3">
@@ -199,10 +236,15 @@
       </div>
       <button
         type="submit"
-        class="w-full bg-pink-700 text-white p-3 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-        disabled={!canSubmitSignUp}
+        class={`inline-flex w-full items-center justify-center gap-2 bg-pink-700 text-white p-3 rounded disabled:opacity-70 ${isSubmitting ? 'disabled:cursor-wait' : 'disabled:cursor-not-allowed'}`}
+        disabled={!canSubmitSignUp || isSubmitting}
       >
-        Sign Up
+        {#if isSubmitting}
+          <span class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden="true"></span>
+          Signing up…
+        {:else}
+          Sign Up
+        {/if}
       </button>
       {#if isUsingFirebaseEmulators}
         <div class="mt-4 rounded border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900" role="note">
