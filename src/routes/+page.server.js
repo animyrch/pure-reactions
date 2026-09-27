@@ -1,6 +1,7 @@
 import { getReactionsByPageServer } from '$lib/server/firebaseAdmin';
 import { SORTINGS } from '$lib/constants/sortings';
 
+/** Home features one fixed page of the latest published reactions. */
 const PAGE_SIZE = 15;
 
 /** @type {import('./$types').PageServerLoad} */

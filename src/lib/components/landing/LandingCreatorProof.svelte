@@ -69,14 +69,25 @@
       {/if}
     </div>
 
-    <!-- Bottom CTA -->
-    <div class="reveal-proof-delay-3 mt-12 text-center">
+    <!-- Bottom CTAs -->
+    <div class="reveal-proof-delay-3 mt-12 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
       <button
-        class="inline-flex items-center gap-2 rounded-lg bg-accent-primary px-8 py-3.5 text-base font-semibold text-background shadow-elevated transition duration-subtle ease-cinematic hover:bg-primary-600 hover:shadow-overlay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98]"
+        type="button"
+        class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border-strong bg-surface/60 px-8 py-3.5 text-base font-medium text-text-primary shadow-surface backdrop-blur-sm transition duration-subtle ease-cinematic hover:bg-elevated hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:w-auto"
+        on:click={() => goToRoute("/search")}
+      >
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14z" />
+        </svg>
+        Search the catalogue
+      </button>
+      <button
+        type="button"
+        class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-accent-primary px-8 py-3.5 text-base font-semibold text-background shadow-elevated transition duration-subtle ease-cinematic hover:bg-primary-600 hover:shadow-overlay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] sm:w-auto"
         on:click={() => goToRoute("/react")}
       >
         Start creating
-        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
         </svg>
       </button>

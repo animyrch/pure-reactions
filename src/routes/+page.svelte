@@ -1,10 +1,11 @@
 <script>
+	import { browser } from "$app/environment";
 	import { getReactionsByPage } from "$lib/helpers/firebase";
 	import SEO from "$lib/components/SEO.svelte";
 	import { page } from "$app/stores";
 	import { SORTINGS } from "$lib/constants/sortings";
 	import { userExtraDataStore } from "$lib/stores/userExtraData";
-	import { onMount, onDestroy, tick } from "svelte";
+	import { onMount, onDestroy } from "svelte";
 	import { fade } from "svelte/transition";
 	import { isLoggedIn } from "$lib/stores/user";
 	import { goto } from "$app/navigation";
@@ -19,78 +20,68 @@
 	export let data;
 	const pageSize = 15;
 
-	$: if (
-		$page.url.searchParams.get("sortBy") === SORTINGS.FOLLOWING &&
-		!$isLoggedIn
-	) {
+	$: sortBy = $page.url.searchParams.get("sortBy") || SORTINGS.NEW;
+
+	$: if (sortBy === SORTINGS.FOLLOWING && !$isLoggedIn) {
 		goto(`/?sortBy=${SORTINGS.NEW}`);
 	}
 
-	let reactions = data.reactions || [];
+	let reactions = (data.reactions || []).slice(0, pageSize);
 	let isLoading = false;
 	let hasLoadedInitialResults = reactions.length > 0;
-	let lastReactionDoc = data.lastCursorMs ? new Date(data.lastCursorMs) : null;
-	let hasMoreReactions = reactions.length > 0 ? reactions.length >= pageSize : true;
-	let sentinel;
+	let featuredRequest = 0;
+	let featuredKey = "";
 
-	const ensureFillViewport = async () => {
-		await tick();
-		if (isLoading || !sentinel) return;
-		if (!hasMoreReactions) return;
-		const rect = sentinel.getBoundingClientRect();
-		if (rect.top <= window.innerHeight) {
-			loadReactions();
+	const loadFeaturedReactions = async (requestedSort) => {
+		if (requestedSort === SORTINGS.FOLLOWING && !$isLoggedIn) return;
+
+		const serverReactions = (data.reactions || []).slice(0, pageSize);
+		if (requestedSort === SORTINGS.NEW && serverReactions.length > 0) {
+			reactions = serverReactions;
+			isLoading = false;
+			hasLoadedInitialResults = true;
+			return;
 		}
-	};
 
-	const loadReactions = async () => {
-		if (isLoading) return;
-		if (!hasMoreReactions) return;
-		isLoading = true;
-		const sortBy = $page.url.searchParams.get("sortBy") || SORTINGS.NEW;
+		const requestId = ++featuredRequest;
+		if (reactions.length === 0) isLoading = true;
 		const follows = $userExtraDataStore.userExtraData?.follows;
 
 		try {
 			const reactionsResponse = await getReactionsByPage(
-				lastReactionDoc,
+				null,
 				pageSize,
-				sortBy,
+				requestedSort,
 				follows,
 			);
-			lastReactionDoc = reactionsResponse.lastVisible || null;
-			hasMoreReactions =
-				reactionsResponse.reactions?.length === pageSize &&
-				!!reactionsResponse.lastVisible;
-			reactions = [...reactions, ...(reactionsResponse.reactions || [])];
+			if (requestId !== featuredRequest) return;
+			reactions = (reactionsResponse.reactions || []).slice(0, pageSize);
 		} catch (error) {
 			console.error('Failed to load reactions for landing page:', error);
-			hasMoreReactions = false;
+			if (requestId !== featuredRequest) return;
 		} finally {
-			isLoading = false;
-			hasLoadedInitialResults = true;
-			ensureFillViewport();
+			if (requestId === featuredRequest) {
+				isLoading = false;
+				hasLoadedInitialResults = true;
+			}
 		}
 	};
+
+	// One page only. The server sends the latest reactions; the client fetches
+	// a single page when that payload is empty or the view is Following.
+	$: if (browser) {
+		const serverIds = (data.reactions || []).map((reaction) => reaction.id).join(",");
+		const nextKey = `${sortBy}|${serverIds}`;
+		if (nextKey !== featuredKey) {
+			featuredKey = nextKey;
+			loadFeaturedReactions(sortBy);
+		}
+	}
 
 	let creatorProofVisible = false;
 	let pillMounted = false;
 	let proofObserver;
 
-	let observer;
-	onMount(() => {
-		const options = {
-			root: null,
-			rootMargin: "400px 0px",
-			threshold: 0,
-		};
-		observer = new IntersectionObserver(loadMore, options);
-		if (sentinel) observer.observe(sentinel);
-		if (reactions.length === 0) {
-			loadReactions();
-		} else {
-			ensureFillViewport();
-		}
-	});
 	onMount(() => {
 		const proofSection = document.getElementById('creator-proof');
 		if (proofSection) {
@@ -107,15 +98,8 @@
 	});
 
 	onDestroy(() => {
-		if (observer) observer.disconnect();
 		if (proofObserver) proofObserver.disconnect();
 	});
-
-	function loadMore(entries, _observer) {
-		if (entries[0]?.isIntersecting) {
-			loadReactions();
-		}
-	}
 
 	const websiteJsonLd = JSON.stringify({
 		"@context": "https://schema.org",
@@ -187,7 +171,6 @@
 	<LandingWorkflow />
 	<LandingTrust />
 	<LandingCreatorProof {reactions} loading={isLoading} hasLoaded={hasLoadedInitialResults} />
-	<div class="load-more" bind:this={sentinel} aria-hidden="true"></div>
 </div>
 
 <style>
