@@ -2,8 +2,6 @@
   import { goToRoute } from "$lib/helpers/routing";
   import { onMount, onDestroy } from "svelte";
 
-  let visible = false;
-
   const creatorTypes = [
     "reaction creators",
     "commentary creators",
@@ -18,7 +16,6 @@
   let interval;
 
   onMount(() => {
-    visible = true;
     interval = setInterval(() => {
       fading = true;
       setTimeout(() => {
@@ -45,13 +42,10 @@
     />
   </div>
 
-  <div
-    class="relative z-10 mx-auto max-w-4xl"
-    class:hero-visible={visible}
-  >
+  <div class="relative z-10 mx-auto max-w-4xl">
     <!-- Eyebrow -->
     <p
-      class="hero-stagger-1 mb-6 inline-flex items-center gap-2 rounded-full bg-surface/80 px-4 py-2 text-sm font-medium text-accent-primary ring-1 ring-border-subtle backdrop-blur-sm"
+      class="mb-6 inline-flex items-center gap-2 rounded-full bg-surface/80 px-4 py-2 text-sm font-medium text-accent-primary ring-1 ring-border-subtle backdrop-blur-sm"
     >
       <span class="inline-block h-2 w-2 shrink-0 rounded-full bg-accent-primary" aria-hidden="true" />
       <span class="shrink-0">Built for</span>
@@ -64,7 +58,7 @@
 
     <!-- Headline -->
     <h1
-      class="hero-stagger-2 mb-6 text-4xl font-bold leading-[1.1] tracking-tight text-text-primary sm:text-5xl md:text-6xl lg:text-7xl"
+      class="mb-6 text-4xl font-bold leading-[1.1] tracking-tight text-text-primary sm:text-5xl md:text-6xl lg:text-7xl"
       style="font-family: var(--font-display, 'Manrope', 'Inter', sans-serif);"
     >
       Sync your transformative videos.<br class="hidden sm:block" />
@@ -73,14 +67,14 @@
 
     <!-- Subheading -->
     <p
-      class="hero-stagger-3 mx-auto mb-10 max-w-2xl text-lg leading-relaxed text-text-secondary md:text-xl"
+      class="mx-auto mb-10 max-w-2xl text-lg leading-relaxed text-text-secondary md:text-xl"
     >
       A creator tool that separates your recording from the original video—perfectly
       synchronized, copyright-safe, and ready to share.
     </p>
 
     <!-- CTA -->
-    <div class="hero-stagger-4 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+    <div class="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
       <button
         class="inline-flex items-center gap-2 rounded-lg bg-accent-primary px-8 py-3.5 text-base font-semibold text-background shadow-elevated transition duration-subtle ease-cinematic hover:bg-primary-600 hover:shadow-overlay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98]"
         on:click={() => goToRoute("/react")}
@@ -106,7 +100,7 @@
     </div>
 
     <!-- Visual hint: dual-stream preview -->
-    <div class="hero-stagger-5 mt-16 flex items-center justify-center gap-3 flex-col md:flex-row md:gap-5">
+    <div class="mt-16 flex items-center justify-center gap-3 flex-col md:flex-row md:gap-5">
       <div class="relative aspect-video w-40 overflow-hidden rounded-lg bg-surface ring-1 ring-border-subtle sm:w-52 md:w-64">
         <div class="flex h-full items-center justify-center">
           <div class="text-center">
@@ -159,17 +153,6 @@
 </section>
 
 <style>
-  .hero-visible .hero-stagger-1 { animation: hero-rise 0.7s 0.1s cubic-bezier(0.22, 1, 0.36, 1) both; }
-  .hero-visible .hero-stagger-2 { animation: hero-rise 0.7s 0.2s cubic-bezier(0.22, 1, 0.36, 1) both; }
-  .hero-visible .hero-stagger-3 { animation: hero-rise 0.7s 0.35s cubic-bezier(0.22, 1, 0.36, 1) both; }
-  .hero-visible .hero-stagger-4 { animation: hero-rise 0.7s 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
-  .hero-visible .hero-stagger-5 { animation: hero-rise 0.8s 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
-
-  @keyframes hero-rise {
-    from { opacity: 0; transform: translateY(24px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
   .hero-progress {
     animation: hero-progress-fill 3s 1.2s cubic-bezier(0.33, 1, 0.68, 1) both;
   }
@@ -188,16 +171,6 @@
     50% { transform: translateY(6px); opacity: 1; }
   }
 
-  /* Honour reduced-motion globally */
-  :global(.motion-reduce) .hero-visible .hero-stagger-1,
-  :global(.motion-reduce) .hero-visible .hero-stagger-2,
-  :global(.motion-reduce) .hero-visible .hero-stagger-3,
-  :global(.motion-reduce) .hero-visible .hero-stagger-4,
-  :global(.motion-reduce) .hero-visible .hero-stagger-5 {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
   :global(.motion-reduce) .hero-progress { animation: none; width: 60%; }
   :global(.motion-reduce) .scroll-cue { animation: none; opacity: 0.5; }
 

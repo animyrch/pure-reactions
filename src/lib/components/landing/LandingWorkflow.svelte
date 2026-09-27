@@ -1,9 +1,4 @@
 <script>
-  import { onMount } from "svelte";
-
-  let sectionEl;
-  let revealed = false;
-
   const steps = [
     {
       number: "01",
@@ -27,20 +22,6 @@
       accent: "accent-primary",
     },
   ];
-
-  onMount(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          revealed = true;
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.2 }
-    );
-    if (sectionEl) observer.observe(sectionEl);
-    return () => observer.disconnect();
-  });
 
   const howToJsonLd = JSON.stringify({
     "@context": "https://schema.org",
@@ -77,16 +58,15 @@
 </svelte:head>
 
 <section
-  bind:this={sectionEl}
   class="relative px-4 py-24 md:py-32"
   aria-label="How the workflow works"
 >
   <!-- Subtle background gradient -->
   <div class="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-surface/40 to-transparent" aria-hidden="true" />
 
-  <div class="relative mx-auto max-w-5xl" class:section-revealed={revealed}>
+  <div class="relative mx-auto max-w-5xl">
     <!-- Header -->
-    <div class="reveal-step mb-16 text-center md:mb-20">
+    <div class="mb-16 text-center md:mb-20">
       <p class="mb-3 text-sm font-medium uppercase tracking-widest text-accent-primary">
         Three steps
       </p>
@@ -102,7 +82,7 @@
     <div class="grid grid-cols-1 gap-8 md:grid-cols-3 md:gap-6">
       {#each steps as step, i}
         <div
-          class="step-card reveal-step-{i + 1} group relative flex flex-col items-center text-center"
+          class="step-card group relative flex flex-col items-center text-center"
         >
           <!-- Step number + icon -->
           <div class="relative mb-6">
@@ -148,22 +128,3 @@
     </div>
   </div>
 </section>
-
-<style>
-  .section-revealed .reveal-step   { animation: step-rise 0.7s 0.1s cubic-bezier(0.22, 1, 0.36, 1) both; }
-  .section-revealed .reveal-step-1 { animation: step-rise 0.7s 0.25s cubic-bezier(0.22, 1, 0.36, 1) both; }
-  .section-revealed .reveal-step-2 { animation: step-rise 0.7s 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
-  .section-revealed .reveal-step-3 { animation: step-rise 0.7s 0.65s cubic-bezier(0.22, 1, 0.36, 1) both; }
-
-  @keyframes step-rise {
-    from { opacity: 0; transform: translateY(28px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  :global(.motion-reduce) .section-revealed .reveal-step,
-  :global(.motion-reduce) .section-revealed .reveal-step-1,
-  :global(.motion-reduce) .section-revealed .reveal-step-2,
-  :global(.motion-reduce) .section-revealed .reveal-step-3 {
-    animation: none; opacity: 1; transform: none;
-  }
-</style>

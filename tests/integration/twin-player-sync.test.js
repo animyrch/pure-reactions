@@ -367,7 +367,7 @@ const makeInput = (overrides = {}) => ({
     ...overrides
 });
 
-const createPlaybackControllerHarness = (overrides = {}) => {
+const createPlaybackControllerHarness = (overrides = {}, hooks = {}) => {
     const ytStatesForHarness = {
         UNSTARTED: -1,
         ENDED: 0,
@@ -473,9 +473,9 @@ const createPlaybackControllerHarness = (overrides = {}) => {
         isInstanceDestroyed: () => false,
         getActiveInstanceId: () => 'test-instance',
         isSwitchingReactionInPlace: () => false,
-        getGateState: () => ({ originalVideoClicked: true, reactionVideoClicked: true }),
-        markOriginalVideoClicked: () => true,
-        markReactionVideoClicked: () => true,
+        getGateState: hooks.getGateState ?? (() => ({ originalVideoClicked: true, reactionVideoClicked: true })),
+        markOriginalVideoClicked: hooks.markOriginalVideoClicked ?? (() => true),
+        markReactionVideoClicked: hooks.markReactionVideoClicked ?? (() => true),
         getLastUserResumeAt: () => 0,
         setLastUserResumeAt: () => {},
         markPlayerReady: () => {},
@@ -529,6 +529,79 @@ describe('Playback controller overlay primary regression', () => {
                 globalThis.YT = previousYT;
             }
         }
+    });
+});
+
+describe('Click-gate volume', () => {
+    const withPlayerStates = (run) => {
+        const previousYT = globalThis.YT;
+        globalThis.YT = {
+            PlayerState: {
+                UNSTARTED: -1,
+                ENDED: 0,
+                PLAYING: 1,
+                PAUSED: 2,
+                BUFFERING: 3,
+                CUED: 5,
+            },
+        };
+        try {
+            run();
+        } finally {
+            if (typeof previousYT === 'undefined') {
+                delete globalThis.YT;
+            } else {
+                globalThis.YT = previousYT;
+            }
+        }
+    };
+
+    it('keeps both players silent until the second click, then applies the stored start volumes', () => {
+        withPlayerStates(() => {
+            const gate = { originalVideoClicked: false, reactionVideoClicked: false };
+            const { controller, snapshot, originalPlayer, reactionPlayer } = createPlaybackControllerHarness({
+                bothVideosStarted: false,
+                currentVolumeOriginalVideo: 70,
+                currentVolumeReactionVideo: 30,
+                volumeConfigs: [{ t: 0, volume: 70 }],
+                reactionVolumeConfigs: [{ t: 0, volume: 30 }],
+            }, {
+                getGateState: () => gate,
+                markOriginalVideoClicked: () => {
+                    gate.originalVideoClicked = true;
+                    return true;
+                },
+                markReactionVideoClicked: () => {
+                    gate.reactionVideoClicked = true;
+                    return true;
+                },
+            });
+
+            try {
+                controller.onPlayerReady({ target: originalPlayer });
+                controller.onPlayerReady({ target: reactionPlayer });
+
+                expect(originalPlayer.setVolume).toHaveBeenLastCalledWith(0);
+                expect(reactionPlayer.setVolume).toHaveBeenLastCalledWith(0);
+                expect(snapshot.currentVolumeOriginalVideo).toBe(70);
+                expect(snapshot.currentVolumeReactionVideo).toBe(30);
+
+                controller.onStateChangeOriginal({ data: 1, target: originalPlayer });
+
+                expect(snapshot.bothVideosStarted).toBe(false);
+                expect(originalPlayer.pauseVideo).toHaveBeenCalled();
+                expect(originalPlayer.setVolume).toHaveBeenLastCalledWith(0);
+                expect(reactionPlayer.setVolume).toHaveBeenLastCalledWith(0);
+
+                controller.onStateChangeReaction({ data: 1, target: reactionPlayer });
+
+                expect(snapshot.bothVideosStarted).toBe(true);
+                expect(originalPlayer.setVolume).toHaveBeenLastCalledWith(70);
+                expect(reactionPlayer.setVolume).toHaveBeenLastCalledWith(30);
+            } finally {
+                controller.dispose();
+            }
+        });
     });
 });
 

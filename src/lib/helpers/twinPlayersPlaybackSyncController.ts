@@ -301,12 +301,31 @@ export function createTwinPlayersPlaybackSyncController({
     }
   };
 
+  const setPlayerVolume = (player: any, volume: number) => {
+    if (typeof player?.setVolume !== 'function') {
+      return;
+    }
+    try {
+      player.setVolume(volume);
+    } catch {
+      // ignore
+    }
+  };
+
+  const releaseClickGateVolumes = () => {
+    const snapshot = getSnapshot();
+    setPlayerVolume(snapshot.playerOriginal, snapshot.currentVolumeOriginalVideo);
+    setPlayerVolume(snapshot.playerReaction, snapshot.currentVolumeReactionVideo);
+  };
+
   const setVolumeForOriginalVideo = (volume: number) => {
-    getSnapshot().playerOriginal?.setVolume?.(volume);
+    const snapshot = getSnapshot();
+    setPlayerVolume(snapshot.playerOriginal, snapshot.bothVideosStarted ? volume : 0);
   };
 
   const setVolumeForReactionVideo = (volume: number) => {
-    getSnapshot().playerReaction?.setVolume?.(volume);
+    const snapshot = getSnapshot();
+    setPlayerVolume(snapshot.playerReaction, snapshot.bothVideosStarted ? volume : 0);
   };
 
   const setPlaybackRateForOriginalVideo = (rate: number) => {
@@ -1367,9 +1386,10 @@ export function createTwinPlayersPlaybackSyncController({
         ...playerInfo
       });
       setPlaybackRateForOriginalVideo(snapshot.currentPlaybackRate);
-      if (typeof event.target.setVolume === 'function') {
-        event.target.setVolume(snapshot.currentVolumeOriginalVideo);
-      }
+      setPlayerVolume(
+        event.target,
+        snapshot.bothVideosStarted ? snapshot.currentVolumeOriginalVideo : 0
+      );
     }
     if (event?.target === snapshot.playerReaction) {
       debugClickGate('[TwinPlayers] reaction player READY', {
@@ -1378,9 +1398,10 @@ export function createTwinPlayersPlaybackSyncController({
       if (typeof event?.target?.setPlaybackRate === 'function') {
         event.target.setPlaybackRate(1);
       }
-      if (typeof event.target.setVolume === 'function') {
-        event.target.setVolume(snapshot.currentVolumeReactionVideo);
-      }
+      setPlayerVolume(
+        event.target,
+        snapshot.bothVideosStarted ? snapshot.currentVolumeReactionVideo : 0
+      );
       if (!durationProbeTimeout) {
         resetReactionDurationProbe();
         probeReactionDuration();
@@ -1401,6 +1422,7 @@ export function createTwinPlayersPlaybackSyncController({
     }
 
     updateState({ bothVideosStarted: true });
+    releaseClickGateVolumes();
     debugClickGate('[TwinPlayers] bothVideosStarted set true via startVideos gate release', {
       offsetStartTime: snapshot.offsetStartTime,
       playbackRate: snapshot.currentPlaybackRate
@@ -1621,6 +1643,7 @@ export function createTwinPlayersPlaybackSyncController({
         const gateSatisfied = gateState.originalVideoClicked && gateState.reactionVideoClicked;
 
         if (!gateSatisfied) {
+          setPlayerVolume(event?.target ?? snapshot.playerOriginal, 0);
           pausePlayerWithTrace('original', event?.target ?? snapshot.playerOriginal, 'click-gate (bothVideosStarted=false)');
           debugClickGate('[TwinPlayers] original paused for click gate', {
             gateSatisfied,
@@ -1721,6 +1744,7 @@ export function createTwinPlayersPlaybackSyncController({
       if (!snapshot.bothVideosStarted) {
         const gateSatisfied = gateState.originalVideoClicked && gateState.reactionVideoClicked;
         if (!gateSatisfied) {
+          setPlayerVolume(event?.target ?? snapshot.playerReaction, 0);
           pausePlayerWithTrace('reaction', event?.target ?? snapshot.playerReaction, 'click-gate (bothVideosStarted=false)');
           debugClickGate('[TwinPlayers] reaction paused for click gate', {
             gateSatisfied,
@@ -1761,6 +1785,7 @@ export function createTwinPlayersPlaybackSyncController({
         goToSecondsInReactionVideo(snapshot.offsetStartTime || 0, { skipOriginalSync: true });
         setPlaybackRateForOriginalVideo(snapshot.currentPlaybackRate);
         updateState({ bothVideosStarted: true });
+        releaseClickGateVolumes();
         debugClickGate('[TwinPlayers] bothVideosStarted set true via handlePlayStateChange gate release', {
           offsetStartTime: snapshot.offsetStartTime,
           playbackRate: snapshot.currentPlaybackRate
@@ -1813,6 +1838,7 @@ export function createTwinPlayersPlaybackSyncController({
       goToSecondsInReactionVideo(snapshot.offsetStartTime || 0, { skipOriginalSync: true });
       setPlaybackRateForOriginalVideo(snapshot.currentPlaybackRate);
       updateState({ bothVideosStarted: true });
+      releaseClickGateVolumes();
       debugClickGate('[TwinPlayers] bothVideosStarted set true via syncVideos gate release', {
         offsetStartTime: snapshot.offsetStartTime,
         playbackRate: snapshot.currentPlaybackRate

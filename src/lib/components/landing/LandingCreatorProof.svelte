@@ -1,39 +1,20 @@
 <script>
   import ReactionsList from "$lib/components/ReactionsList.svelte";
   import { goToRoute } from "$lib/helpers/routing";
-  import { onMount } from "svelte";
 
   export let reactions = [];
   export let loading = false;
   export let hasLoaded = false;
-
-  let sectionEl;
-  let revealed = false;
-
-  onMount(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          revealed = true;
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.1 }
-    );
-    if (sectionEl) observer.observe(sectionEl);
-    return () => observer.disconnect();
-  });
 </script>
 
 <section
   id="creator-proof"
-  bind:this={sectionEl}
   class="relative px-4 py-24 md:py-32"
   aria-label="Creator content"
 >
-  <div class="mx-auto max-w-6xl" class:section-revealed={revealed}>
+  <div class="mx-auto max-w-6xl">
     <!-- Divider line -->
-    <div class="reveal-proof mb-12 flex items-center gap-4">
+    <div class="mb-12 flex items-center gap-4">
       <div class="h-px flex-1 bg-gradient-to-r from-transparent to-border-subtle" aria-hidden="true" />
       <p class="shrink-0 text-sm font-medium uppercase tracking-widest text-accent-primary">
         Live on the platform
@@ -42,7 +23,7 @@
     </div>
 
     <!-- Section header -->
-    <div class="reveal-proof-delay-1 mb-12 text-center md:mb-16">
+    <div class="mb-12 text-center md:mb-16">
       <h2
         class="text-3xl font-bold leading-tight text-text-primary sm:text-4xl md:text-5xl"
         style="font-family: var(--font-display, 'Manrope', 'Inter', sans-serif);"
@@ -55,7 +36,7 @@
     </div>
 
     <!-- Content feed -->
-    <div class="reveal-proof-delay-2">
+    <div>
       {#if reactions.length > 0}
         <ReactionsList {reactions} />
       {:else if loading || !hasLoaded}
@@ -69,36 +50,28 @@
       {/if}
     </div>
 
-    <!-- Bottom CTA -->
-    <div class="reveal-proof-delay-3 mt-12 text-center">
+    <!-- Bottom CTAs -->
+    <div class="mt-12 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
       <button
-        class="inline-flex items-center gap-2 rounded-lg bg-accent-primary px-8 py-3.5 text-base font-semibold text-background shadow-elevated transition duration-subtle ease-cinematic hover:bg-primary-600 hover:shadow-overlay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98]"
+        type="button"
+        class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border-strong bg-surface/60 px-8 py-3.5 text-base font-medium text-text-primary shadow-surface backdrop-blur-sm transition duration-subtle ease-cinematic hover:bg-elevated hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:w-auto"
+        on:click={() => goToRoute("/search")}
+      >
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14z" />
+        </svg>
+        Search the catalogue
+      </button>
+      <button
+        type="button"
+        class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-accent-primary px-8 py-3.5 text-base font-semibold text-background shadow-elevated transition duration-subtle ease-cinematic hover:bg-primary-600 hover:shadow-overlay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] sm:w-auto"
         on:click={() => goToRoute("/react")}
       >
         Start creating
-        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
         </svg>
       </button>
     </div>
   </div>
 </section>
-
-<style>
-  .section-revealed .reveal-proof         { animation: proof-up 0.7s 0.1s cubic-bezier(0.22, 1, 0.36, 1) both; }
-  .section-revealed .reveal-proof-delay-1  { animation: proof-up 0.7s 0.3s cubic-bezier(0.22, 1, 0.36, 1) both; }
-  .section-revealed .reveal-proof-delay-2  { animation: proof-up 0.7s 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
-  .section-revealed .reveal-proof-delay-3  { animation: proof-up 0.6s 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
-
-  @keyframes proof-up {
-    from { opacity: 0; transform: translateY(28px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  :global(.motion-reduce) .section-revealed .reveal-proof,
-  :global(.motion-reduce) .section-revealed .reveal-proof-delay-1,
-  :global(.motion-reduce) .section-revealed .reveal-proof-delay-2,
-  :global(.motion-reduce) .section-revealed .reveal-proof-delay-3 {
-    animation: none; opacity: 1; transform: none;
-  }
-</style>

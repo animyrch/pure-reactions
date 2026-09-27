@@ -420,6 +420,15 @@ export function createTwinPlayersOrchestrationController({
       momentFeedLoopEnabled: getSnapshot().momentFeedLoopEnabled
     }));
 
+    // Click-gate playback is paused immediately, so keep the first click silent.
+    // Intended levels are applied when both players have been started.
+    try {
+      newPlayerOriginal?.setVolume?.(0);
+      newPlayerReaction?.setVolume?.(0);
+    } catch (error) {
+      console.error('[TwinPlayers] Failed to silence players before click gate', error);
+    }
+
     console.debug('[TwinPlayers] state reset after setUpVideos', {
       bothVideosStarted: false,
       reactionVideoId: normalizedReactionVideoId,
@@ -731,18 +740,29 @@ export function createTwinPlayersOrchestrationController({
         originalVideoId,
       );
 
+      const clickGateOpen = getSnapshot().bothVideosStarted;
+      const appliedOriginalVolume = clickGateOpen ? initialOriginalVolume : 0;
+      const appliedReactionVolume = clickGateOpen ? initialReactionVolume : 0;
       if (typeof nextPlayerOriginal?.setVolume === 'function') {
         try {
-          nextPlayerOriginal.setVolume(initialOriginalVolume);
-          console.debug('[TwinPlayers] Applied original volume after transition', { initialOriginalVolume });
+          nextPlayerOriginal.setVolume(appliedOriginalVolume);
+          console.debug('[TwinPlayers] Applied original volume after transition', {
+            initialOriginalVolume,
+            appliedOriginalVolume,
+            clickGateOpen
+          });
         } catch (error) {
           console.error('[TwinPlayers] Failed to set original volume', error);
         }
       }
       if (typeof nextPlayerReaction?.setVolume === 'function') {
         try {
-          nextPlayerReaction.setVolume(initialReactionVolume);
-          console.debug('[TwinPlayers] Applied reaction volume after transition', { initialReactionVolume });
+          nextPlayerReaction.setVolume(appliedReactionVolume);
+          console.debug('[TwinPlayers] Applied reaction volume after transition', {
+            initialReactionVolume,
+            appliedReactionVolume,
+            clickGateOpen
+          });
         } catch (error) {
           console.error('[TwinPlayers] Failed to set reaction volume', error);
         }
