@@ -79,7 +79,7 @@
   </header>
 
   <div class="mt-6 flex flex-col gap-6">
-    <div class="grid gap-4 md:grid-cols-2">
+    <div class="grid gap-4">
       <div class="flex flex-col gap-3">
         <h3 class="text-sm font-medium text-text-secondary">
           Fullscreen video

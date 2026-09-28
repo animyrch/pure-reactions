@@ -467,7 +467,7 @@
       </header>
 
       <form
-        class="mt-6 flex flex-col gap-4 md:flex-row md:items-center"
+        class="mt-6 flex flex-col gap-4"
         on:submit|preventDefault={handleReactionVideoSubmit}
       >
         <div class="flex-1">
@@ -530,7 +530,7 @@
       {/if}
 
       <div class="mt-6 flex flex-col gap-6">
-        <div class="grid gap-6 lg:grid-cols-2">
+        <div class="grid gap-6">
           <form
             class="flex flex-col gap-4"
             on:submit|preventDefault={handleOffsetStartSubmit}
@@ -628,7 +628,7 @@
         </div>
 
         <form
-          class="flex flex-col gap-4 md:flex-row md:items-center"
+          class="flex flex-col gap-4"
           on:submit|preventDefault={handleIntroBufferSubmit}
         >
           <div class="flex-1">
