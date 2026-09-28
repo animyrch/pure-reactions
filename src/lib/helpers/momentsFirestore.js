@@ -86,11 +86,16 @@ export const getMomentsByPage = async ({
 
     const snapshot = await getDocs(baseQuery);
     lastVisible = snapshot.docs[snapshot.docs.length - 1] ?? null;
-    moments = snapshot.docs.map((entry) => ({
-      id: entry.id,
-      objectID: entry.id,
-      ...entry.data()
-    }));
+    moments = snapshot.docs.map((entry) => {
+      const data = entry.data();
+      const reactionCount = Number(data.reactionCount);
+      return {
+        id: entry.id,
+        objectID: entry.id,
+        ...data,
+        reactionCount: Number.isFinite(reactionCount) ? reactionCount : 0
+      };
+    });
   } catch (error) {
     console.error('Error loading moments page:', error);
   }
@@ -181,8 +186,30 @@ export const decrementMomentReactionCount = async (momentId) =>
 export const createMomentWithSlug = async (payload) => {
   const { createMomentDocument } = await import('$lib/helpers/firebase');
   const slug = slugifyMomentTitle(payload.title) || `moment-${Date.now()}`;
-  const momentId = await createMomentDocument({ ...payload, slug });
+  const momentId = await createMomentDocument({ ...payload, slug, reactionCount: 0 });
   return { momentId, slug };
+};
+
+export const updateMomentDocument = async (momentId, fields = {}) => {
+  if (!momentId || !db) {
+    return;
+  }
+
+  const updates = {};
+  for (const [key, value] of Object.entries(fields)) {
+    if (value === undefined || key === 'reactionCount' || key === 'creatorId') {
+      continue;
+    }
+    updates[key] = value;
+  }
+  if (!Object.keys(updates).length) {
+    return;
+  }
+
+  await updateDoc(doc(createMomentsCollection(), momentId), {
+    ...updates,
+    updatedAt: serverTimestamp()
+  });
 };
 
 export const startMomentReactionDraft = async ({

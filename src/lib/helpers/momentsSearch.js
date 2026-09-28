@@ -3,6 +3,11 @@ import { getSearchProvider, normalizeQuery } from '$lib/services/search';
 import { ALGOLIA_MOMENTS_INDEX } from '$lib/constants/algolia';
 import { getMomentsByPage } from '$lib/helpers/momentsFirestore';
 import { MOMENT_SORT_OPTIONS } from '$lib/constants/moments';
+import {
+  mergeUnindexedMomentHits,
+  momentMatchesQuery,
+  shouldListMomentsFromFirestore
+} from '$lib/helpers/moments';
 
 export const hasMomentsAlgoliaIndex = () =>
   Boolean(
@@ -20,6 +25,34 @@ export const hasMomentsAlgoliaIndex = () =>
  * @param {string} params.tag
  * @param {import('firebase/firestore').DocumentSnapshot | null} params.lastFirestoreDoc
  */
+async function listMomentsFromFirestore({
+  normalizedQuery,
+  page,
+  hitsPerPage,
+  sortBy,
+  tag,
+  lastFirestoreDoc
+}) {
+  const { moments, lastVisible } = await getMomentsByPage({
+    lastDoc: lastFirestoreDoc,
+    limitBy: hitsPerPage,
+    sortBy,
+    tag
+  });
+
+  const filtered = normalizedQuery
+    ? moments.filter((moment) => momentMatchesQuery(moment, normalizedQuery))
+    : moments;
+
+  return {
+    hits: filtered,
+    nbHits: filtered.length,
+    page,
+    nbPages: filtered.length < hitsPerPage ? page + 1 : page + 2,
+    lastFirestoreDoc: lastVisible
+  };
+}
+
 export async function searchMoments({
   query = '',
   page = 0,
@@ -29,58 +62,62 @@ export async function searchMoments({
   lastFirestoreDoc = null
 }) {
   const normalizedQuery = normalizeQuery(query);
+  const hasAlgolia = hasMomentsAlgoliaIndex();
 
-  if (hasMomentsAlgoliaIndex()) {
-    const provider = getSearchProvider();
-    if (!provider?.isReady?.()) {
-      return { hits: [], nbHits: 0, page: 0, nbPages: 0, lastFirestoreDoc: null };
-    }
-
-    const result = await provider.search(normalizedQuery, {
-      index: ALGOLIA_MOMENTS_INDEX,
-      hitsPerPage,
+  if (shouldListMomentsFromFirestore({ query: normalizedQuery, tag, hasAlgolia })) {
+    return listMomentsFromFirestore({
+      normalizedQuery,
       page,
-      ...(tag ? { filters: `tags:"${tag.replace(/"/g, '')}"` } : {})
+      hitsPerPage,
+      sortBy,
+      tag,
+      lastFirestoreDoc: page === 0 ? null : lastFirestoreDoc
     });
-
-    return {
-      hits: result.hits || [],
-      nbHits: result.nbHits || 0,
-      page: result.page || 0,
-      nbPages: result.nbPages || 0,
-      lastFirestoreDoc: null
-    };
   }
 
-  const { moments, lastVisible } = await getMomentsByPage({
-    lastDoc: lastFirestoreDoc,
-    limitBy: hitsPerPage,
-    sortBy,
-    tag
+  const provider = getSearchProvider();
+  if (!provider?.isReady?.()) {
+    return listMomentsFromFirestore({
+      normalizedQuery,
+      page,
+      hitsPerPage,
+      sortBy,
+      tag,
+      lastFirestoreDoc: page === 0 ? null : lastFirestoreDoc
+    });
+  }
+
+  const result = await provider.search(normalizedQuery, {
+    index: ALGOLIA_MOMENTS_INDEX,
+    hitsPerPage,
+    page,
+    ...(tag ? { filters: `tags:"${tag.replace(/"/g, '')}"` } : {})
   });
 
-  let filtered = moments;
-  if (normalizedQuery) {
-    const needle = normalizedQuery.toLowerCase();
-    filtered = moments.filter((moment) => {
-      const haystack = [
-        moment.title,
-        moment.originalVideoTitle,
-        moment.originalVideoAuthor,
-        ...(Array.isArray(moment.tags) ? moment.tags : [])
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-      return haystack.includes(needle);
+  let hits = result.hits || [];
+  let extraCount = 0;
+  if (page === 0) {
+    const { moments } = await getMomentsByPage({
+      limitBy: hitsPerPage,
+      sortBy: MOMENT_SORT_OPTIONS.NEWEST
     });
+    const normalizedTag = tag.trim();
+    const freshMatches = moments.filter((moment) => {
+      if (normalizedTag && !(Array.isArray(moment.tags) && moment.tags.includes(normalizedTag))) {
+        return false;
+      }
+      return momentMatchesQuery(moment, normalizedQuery);
+    });
+    const merged = mergeUnindexedMomentHits(freshMatches, hits);
+    extraCount = merged.length - hits.length;
+    hits = merged;
   }
 
   return {
-    hits: filtered,
-    nbHits: filtered.length,
-    page: 0,
-    nbPages: filtered.length < hitsPerPage ? 1 : page + 2,
-    lastFirestoreDoc: lastVisible
+    hits,
+    nbHits: (result.nbHits || 0) + extraCount,
+    page: result.page || 0,
+    nbPages: Math.max(result.nbPages || 0, hits.length ? 1 : 0),
+    lastFirestoreDoc: null
   };
 }
