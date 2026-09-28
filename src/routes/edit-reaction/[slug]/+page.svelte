@@ -54,10 +54,14 @@
     }
     reactionVideoIdError = "";
     isSettingReactionVideoId = true;
+    let shouldReload = false;
     try {
       await actions.editActionEntryPoint(() =>
         actions.setReactionVideoId(trimmed),
       );
+      // The reaction player is created on load, so a new or changed ID
+      // only shows up after a full reload.
+      shouldReload = browser;
     } catch (error) {
       console.error("Failed to set reaction video ID", error);
       reactionVideoIdError =
@@ -69,7 +73,11 @@
         );
       }
     } finally {
-      isSettingReactionVideoId = false;
+      if (shouldReload) {
+        location.reload();
+      } else {
+        isSettingReactionVideoId = false;
+      }
     }
   };
 
