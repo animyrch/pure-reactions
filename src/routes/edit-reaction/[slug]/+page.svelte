@@ -8,10 +8,8 @@
   import SubtleLoader from "$lib/components/design-system/SubtleLoader.svelte";
   import CinematicButton from "$lib/components/design-system/CinematicButton.svelte";
   import HelpfulTip from "$lib/components/design-system/HelpfulTip.svelte";
-  import FullscreenChrome from "$lib/components/reaction/FullscreenChrome.svelte";
-  import ControlDock from "$lib/components/reaction/ControlDock.svelte";
   import EditorPanelsV2 from "$lib/components/reaction/EditorPanelsV2.svelte";
-  import MissingReactionPlaceholder from "$lib/components/reaction/MissingReactionPlaceholder.svelte";
+  import ReactionStage from "$lib/components/reaction/ReactionStage.svelte";
   import {
     useTwinPlayers,
     CONTROLS_FADE_CLASS,
@@ -250,7 +248,50 @@
 
       </div>
     </div>
+  {/if}
 
+  <ReactionStage
+    isFullscreen={$state.isFullscreen}
+    isControlSurfaceVisible={$state.isControlSurfaceVisible}
+    isExitButtonExpanded={$state.isExitButtonExpanded}
+    showCinematicBars={$state.showCinematicBars}
+    isReactionMissing={$state.isReactionMissing}
+    isUsersOwnVideo={$state.isUsersOwnVideo}
+    playerOriginal={$state.playerOriginal}
+    playerReaction={$state.playerReaction}
+    originalVideoPlatform={$state.originalVideoPlatform}
+    {stickyControlsClass}
+    bothVideosStarted={$state.bothVideosStarted}
+    isPlaylist={Boolean($state.playlistDocumentId)}
+    isPlaylistAutoPlay={$state.isPlaylistAutoPlay}
+    showAutoPlayButton={false}
+    reactionCurrentTime={$state.reactionCurrentTime}
+    reactionDuration={$state.reactionDuration}
+    offsetStartTime={$state.offsetStartTime}
+    reactionFinishTime={$state.reactionFinishTime}
+    fullscreenPrimaryVideo={$state.fullscreenPrimaryVideo}
+    fullscreenOverlayWidthPercent={$state.fullscreenOverlayWidthPercent}
+    fullscreenOverlayCorner={$state.fullscreenOverlayCorner}
+    fullscreenOverlayVisible={$state.fullscreenOverlayVisible}
+    missingReactionLoading={isSettingReactionVideoId}
+    missingReactionError={reactionVideoIdError}
+    bind:overlayRef
+    on:exitClick={actions.handleExitFullscreenClick}
+    on:exitEnter={actions.handleExitButtonEnter}
+    on:exitLeave={actions.handleExitButtonLeave}
+    on:pointerMove={actions.handleFullscreenPointerMove}
+    on:pointerDown={actions.handleFullscreenPointerDown}
+    on:pointerLeave={actions.scheduleHideControls}
+    on:missingReactionSubmit={handleMissingReactionSubmit}
+    on:playStateChanged={handlePlayStateChanged}
+    on:syncVideos={actions.syncVideos}
+    on:toggleAutoPlaylist={actions.toggleAutoPlaylist}
+    on:toggleCinematicBars={actions.toggleCinematicBars}
+    on:enterFullscreen={actions.openWithFullscreen}
+    on:seek={(e) => actions.seekTo(e.detail)}
+  />
+
+  {#if !$state.isFullscreen}
     <div class="mx-auto w-full px-4 sm:px-6 lg:px-10">
       <div class="mt-6 rounded-2xl bg-surface/80 p-6 shadow-elevated">
         <EditorPanelsV2
@@ -314,117 +355,6 @@
       </div>
     </div>
   {/if}
-
-  <section
-    class={`theater-wrapper ${
-      $state.isFullscreen
-        ? "fixed inset-0 z-50 m-0 h-screen w-screen overflow-hidden rounded-none bg-black px-0 py-0 text-text-primary shadow-none"
-        : "relative mx-auto my-6 w-full max-w-none rounded-2xl bg-surface/80 px-4 py-8 text-text-primary shadow-elevated backdrop-blur sm:px-6 lg:px-10 xl:rounded-3xl"
-    }`}
-  >
-    {#if $state.isFullscreen}
-      <FullscreenChrome
-        isControlSurfaceVisible={$state.isControlSurfaceVisible}
-        isExitButtonExpanded={$state.isExitButtonExpanded}
-        showCinematicBars={$state.showCinematicBars}
-        isReactionMissing={$state.isReactionMissing}
-        fullscreenPrimaryVideo={$state.fullscreenPrimaryVideo}
-        fullscreenOverlayWidthPercent={$state.fullscreenOverlayWidthPercent}
-        fullscreenOverlayCorner={$state.fullscreenOverlayCorner}
-        fullscreenOverlayVisible={$state.fullscreenOverlayVisible}
-        bind:overlayRef
-        onExitClick={actions.handleExitFullscreenClick}
-        onExitEnter={actions.handleExitButtonEnter}
-        onExitLeave={actions.handleExitButtonLeave}
-        onPointerMove={actions.handleFullscreenPointerMove}
-        onPointerDown={actions.handleFullscreenPointerDown}
-        onPointerLeave={actions.scheduleHideControls}
-      />
-    {:else}
-      <div class="grid gap-6 md:grid-cols-2 xl:gap-8">
-        <div
-          class="relative overflow-hidden rounded-xl bg-black shadow-elevated"
-        >
-          {#if $state.originalVideoPlatform === 'tiktok'}
-            <!-- TikTok: keep the same height as the 16:9 container, centre the 9:16 iframe inside -->
-            <div class="relative aspect-[16/9] sm:aspect-[3/2]">
-              <div class="absolute inset-0 flex items-center justify-center">
-                <div
-                  class="relative h-full overflow-hidden bg-black"
-                  style="aspect-ratio: 9/16;"
-                >
-                  <div
-                    id="player-original"
-                    class="h-full w-full"
-                  ></div>
-                </div>
-              </div>
-            </div>
-          {:else}
-            <div class="relative aspect-[16/9] sm:aspect-[3/2]">
-              <div
-                id="player-original"
-                class="absolute inset-0 h-full w-full"
-              ></div>
-            </div>
-          {/if}
-          {#if $state.showCinematicBars}
-            <div
-              class="pointer-events-none absolute inset-x-0 top-0 h-[12%] bg-gradient-to-b from-black via-black/80 to-transparent"
-              aria-hidden="true"
-            ></div>
-            <div
-              class="pointer-events-none absolute inset-x-0 bottom-0 h-[12%] bg-gradient-to-t from-black via-black/80 to-transparent"
-              aria-hidden="true"
-            ></div>
-          {/if}
-        </div>
-        {#if !$state.isReactionMissing}
-          <div
-            class="relative overflow-hidden rounded-xl bg-black/80 shadow-surface"
-          >
-            <div class="relative aspect-[16/9] sm:aspect-[3/2]">
-              <div
-                id="player-reaction"
-                class="absolute inset-0 h-full w-full"
-              ></div>
-            </div>
-          </div>
-        {:else}
-          <MissingReactionPlaceholder
-            loading={isSettingReactionVideoId}
-            error={reactionVideoIdError}
-            on:submit={handleMissingReactionSubmit}
-          />
-        {/if}
-      </div>
-    {/if}
-
-    {#if $state.playerOriginal && $state.playerReaction}
-      <ControlDock
-        isFullscreen={$state.isFullscreen}
-        {stickyControlsClass}
-        bothVideosStarted={$state.bothVideosStarted}
-        isPlaylist={Boolean($state.playlistDocumentId)}
-        isPlaylistAutoPlay={$state.isPlaylistAutoPlay}
-        showAutoPlayButton={false}
-        showCinematicBars={$state.showCinematicBars}
-        onPlayStateChanged={handlePlayStateChanged}
-        onSyncVideos={actions.syncVideos}
-        onToggleAutoPlaylist={actions.toggleAutoPlaylist}
-        onToggleBars={actions.toggleCinematicBars}
-        onEnterFullscreen={actions.openWithFullscreen}
-        currentTime={$state.reactionCurrentTime}
-        duration={$state.reactionDuration}
-        seekMin={$state.offsetStartTime || 0}
-        seekMax={Math.min(
-          $state.reactionFinishTime || 0,
-          $state.reactionDuration || 0,
-        )}
-        onSeek={actions.seekTo}
-      />
-    {/if}
-  </section>
 
   {#if !$state.isFullscreen}
     <div class="mx-auto w-full px-4 pb-10 sm:px-6 lg:px-10">

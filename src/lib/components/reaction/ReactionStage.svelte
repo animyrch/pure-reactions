@@ -15,6 +15,7 @@
     export let bothVideosStarted = false;
     export let isPlaylist = false;
     export let isPlaylistAutoPlay = false;
+    export let showAutoPlayButton = true;
     export let onNext = null;
     export let nextDisabled = false;
     export let nextAriaLabel = "Next reaction";
@@ -420,6 +421,7 @@
             {bothVideosStarted}
             {isPlaylist}
             {isPlaylistAutoPlay}
+            {showAutoPlayButton}
             {showCinematicBars}
             {onNext}
             {nextDisabled}
