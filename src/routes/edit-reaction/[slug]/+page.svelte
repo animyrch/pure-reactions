@@ -83,52 +83,35 @@
     await handleSetReactionVideoId(event.detail.value);
   };
 
-  const handleSetIntroBufferTime = async (value) => {
-    await actions.editActionEntryPoint(() => actions.setIntroBufferTime(value));
-  };
-
-  const handleSetOffsetStartTime = async (value) => {
-    await actions.editActionEntryPoint(() => actions.setOffsetStartTime(value));
-  };
-
-  const handleSetReactionFinishTime = async (value) => {
-    await actions.editActionEntryPoint(() =>
-      actions.setReactionFinishTime(value),
-    );
-  };
-
-  const handleSetSoundLevel = async (value) => {
-    await actions.editActionEntryPoint(() => actions.setSoundLevel(value));
-  };
-
-  const handleSetReactionMuteMode = async (value) => {
-    await actions.editActionEntryPoint(() =>
-      actions.setReactionMuteMode(value),
-    );
-  };
-
-  const handleSetFullscreenPrimaryVideo = async (value) => {
-    await actions.editActionEntryPoint(() =>
-      actions.setFullscreenPrimaryVideo(value),
-    );
-  };
-
-  const handleSetFullscreenOverlayWidthPercent = async (value) => {
-    await actions.editActionEntryPoint(() =>
-      actions.setFullscreenOverlayWidthPercent(value),
-    );
-  };
-
-  const handleSetFullscreenOverlayCorner = async (value) => {
-    await actions.editActionEntryPoint(() =>
-      actions.setFullscreenOverlayCorner(value),
-    );
-  };
-
-  let isOverlayPositionPanelOpen = false;
-
-  const handleToggleOverlayPositionPanel = () => {
-    isOverlayPositionPanelOpen = !isOverlayPositionPanelOpen;
+  const handleSaveGeneralSettings = async (patch) => {
+    await actions.editActionEntryPoint(async () => {
+      if ("offsetStartTime" in patch) {
+        await actions.setOffsetStartTime(patch.offsetStartTime);
+      }
+      if ("reactionFinishTime" in patch) {
+        await actions.setReactionFinishTime(patch.reactionFinishTime);
+      }
+      if ("introBufferTime" in patch) {
+        await actions.setIntroBufferTime(patch.introBufferTime);
+      }
+      if ("soundLevel" in patch) {
+        await actions.setSoundLevel(patch.soundLevel);
+      }
+      if ("isReactionMuteModeEnabled" in patch) {
+        await actions.setReactionMuteMode(patch.isReactionMuteModeEnabled);
+      }
+      if ("fullscreenPrimaryVideo" in patch) {
+        await actions.setFullscreenPrimaryVideo(patch.fullscreenPrimaryVideo);
+      }
+      if ("fullscreenOverlayWidthPercent" in patch) {
+        await actions.setFullscreenOverlayWidthPercent(
+          patch.fullscreenOverlayWidthPercent,
+        );
+      }
+      if ("fullscreenOverlayCorner" in patch) {
+        await actions.setFullscreenOverlayCorner(patch.fullscreenOverlayCorner);
+      }
+    });
   };
 
   const handleExitEditor = () => {
@@ -312,13 +295,13 @@
           ? "mx-auto mt-6 w-full min-w-0 px-4 sm:px-6 lg:col-span-2 lg:col-start-1 lg:row-start-1 lg:mt-0 lg:px-0"
           : "mx-auto mt-6 w-full px-4 sm:px-6 lg:px-10"}
       >
-        <div class="rounded-2xl bg-surface/80 p-4 shadow-elevated sm:p-6">
           <EditorPanelsV2
           isReactionMissing={$state.isReactionMissing}
           isEditModeOn={$state.isEditModeOn}
           isFineTuneModeOn={$state.isFineTuneModeOn}
           isPlaylist={Boolean($state.youtubePlaylistId)}
           reactionVideoId={$state.reactionVideoId}
+          reactionVideoTitle={$state.reactionVideoTitle}
           {reactionVideoIdError}
           {isSettingReactionVideoId}
           offsetStartTime={$state.offsetStartTime}
@@ -358,20 +341,9 @@
           onUpdateOverlayVisibilityConfig={actions.updateOverlayVisibilityConfig}
           onDeleteOverlayVisibilityConfig={actions.deleteOverlayVisibilityConfig}
           onSetReactionVideoId={handleSetReactionVideoId}
-          onSetOffsetStartTime={handleSetOffsetStartTime}
-          onSetIntroBufferTime={handleSetIntroBufferTime}
-          onSetReactionFinishTime={handleSetReactionFinishTime}
-          onSetSoundLevel={handleSetSoundLevel}
-          onSetReactionMuteMode={handleSetReactionMuteMode}
-          onSetFullscreenPrimaryVideo={handleSetFullscreenPrimaryVideo}
-          onSetFullscreenOverlayWidthPercent={handleSetFullscreenOverlayWidthPercent}
-          onSetFullscreenOverlayCorner={handleSetFullscreenOverlayCorner}
-          onToggleFineTuneMode={actions.toggleFineTuneMode}
-          onToggleOverlayPositionPanel={handleToggleOverlayPositionPanel}
-          {isOverlayPositionPanelOpen}
+          onSaveGeneralSettings={handleSaveGeneralSettings}
           onSeek={actions.seekTo}
         />
-        </div>
       </div>
     {/if}
   </div>
