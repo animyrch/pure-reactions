@@ -164,6 +164,8 @@
   // General settings sit beside the stage. Fine-tune keeps the timeline
   // full width under the player, where the tracks need the room.
   $: generalSettingsSplit = !$state.isFullscreen && !$state.isFineTuneModeOn;
+  // Title plus players end at the midpoint so the timeline starts in the lower half.
+  $: fineTuneHalf = !$state.isFullscreen && $state.isFineTuneModeOn;
 
   $: if (browser && !$state.isLoading) {
     reactionDial.updateContext({
@@ -199,9 +201,62 @@
 <div
   class={`website-inner-container bg-background text-text-primary ${$state.isLoading ? "hidden" : ""}`}
 >
+  {#snippet editorPanels()}
+    <EditorPanelsV2
+      isReactionMissing={$state.isReactionMissing}
+      isEditModeOn={$state.isEditModeOn}
+      isFineTuneModeOn={$state.isFineTuneModeOn}
+      isPlaylist={Boolean($state.youtubePlaylistId)}
+      reactionVideoId={$state.reactionVideoId}
+      reactionVideoTitle={$state.reactionVideoTitle}
+      {reactionVideoIdError}
+      {isSettingReactionVideoId}
+      offsetStartTime={$state.offsetStartTime}
+      introBufferTime={$state.introBufferTime}
+      reactionFinishTime={$state.reactionFinishTime}
+      soundLevel={$state.soundLevel}
+      isReactionMuteModeEnabled={$state.isReactionMuteModeEnabled}
+      playerConfigs={$state.playerConfigs}
+      volumeConfigs={$state.volumeConfigs}
+      reactionVolumeConfigs={$state.reactionVolumeConfigs}
+      stateTimeline={$state.stateTimeline}
+      volumeTimeline={$state.volumeTimeline}
+      reactionVolumeTimeline={$state.reactionVolumeTimeline}
+      playbackRateConfigs={$state.playbackRateConfigs}
+      playbackRateTimeline={$state.playbackRateTimeline}
+      overlayVisibilityTimeline={$state.overlayVisibilityTimeline}
+      reactionCurrentTime={$state.reactionCurrentTime}
+      reactionDuration={$state.reactionDuration}
+      playerEventTimeline={$state.playerEventTimeline}
+      fullscreenPrimaryVideoDefault={$state.fullscreenPrimaryVideoDefault}
+      fullscreenOverlayWidthPercent={$state.fullscreenOverlayWidthPercent}
+      fullscreenOverlayCorner={$state.fullscreenOverlayCorner}
+      originalVideoPlatform={$state.originalVideoPlatform}
+      onCreatePlayerConfig={actions.createPlayerConfig}
+      onCreateVolumeConfig={actions.createVolumeConfig}
+      onCreateReactionVolumeConfig={actions.createReactionVolumeConfig}
+      onCreatePlaybackRateConfig={actions.createPlaybackRateConfig}
+      onCreateOverlayVisibilityConfig={actions.createOverlayVisibilityConfig}
+      onUpdatePlayerConfig={actions.updatePlayerConfig}
+      onDeletePlayerConfig={actions.deletePlayerConfig}
+      onUpdateVolumeConfig={actions.updateVolumeConfig}
+      onDeleteVolumeConfig={actions.deleteVolumeConfig}
+      onUpdateReactionVolumeConfig={actions.updateReactionVolumeConfig}
+      onDeleteReactionVolumeConfig={actions.deleteReactionVolumeConfig}
+      onUpdatePlaybackRateConfig={actions.updatePlaybackRateConfig}
+      onDeletePlaybackRateConfig={actions.deletePlaybackRateConfig}
+      onUpdateOverlayVisibilityConfig={actions.updateOverlayVisibilityConfig}
+      onDeleteOverlayVisibilityConfig={actions.deleteOverlayVisibilityConfig}
+      onSetReactionVideoId={handleSetReactionVideoId}
+      onSaveGeneralSettings={handleSaveGeneralSettings}
+      onSeek={actions.seekTo}
+    />
+  {/snippet}
+
+  <div class={fineTuneHalf ? "edit-finetune-top" : ""}>
   {#if !$state.isFullscreen}
     <div
-      class="mx-auto flex w-full flex-wrap items-center justify-between gap-3 px-4 pt-6 sm:px-6 lg:px-10"
+      class="mx-auto flex w-full shrink-0 flex-wrap items-center justify-between gap-3 px-4 pt-6 sm:px-6 lg:px-10"
     >
       <h1 class="text-xl font-semibold text-text-primary">Edit Reaction</h1>
       <div class="flex items-center gap-2">
@@ -240,14 +295,19 @@
   <div
     class={generalSettingsSplit
       ? "edit-general-layout mx-auto w-full lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:px-10 lg:pt-6"
-      : ""}
+      : fineTuneHalf
+        ? "edit-finetune-stage"
+        : ""}
   >
     <div
       class={generalSettingsSplit
         ? "min-w-0 lg:col-start-2 lg:row-start-1 lg:sticky lg:top-24 lg:z-10 lg:self-start"
-        : ""}
+        : fineTuneHalf
+          ? "flex min-h-0 flex-1 flex-col"
+          : ""}
     >
       <ReactionStage
+        limitToHalfScreen={fineTuneHalf}
         isFullscreen={$state.isFullscreen}
         isControlSurfaceVisible={$state.isControlSurfaceVisible}
         isExitButtonExpanded={$state.isExitButtonExpanded}
@@ -289,64 +349,23 @@
       />
     </div>
 
-    {#if !$state.isFullscreen}
+    {#if !$state.isFullscreen && !fineTuneHalf}
       <div
         class={generalSettingsSplit
           ? "mx-auto mt-6 w-full min-w-0 px-4 sm:px-6 lg:col-start-1 lg:row-start-1 lg:mt-0 lg:px-0"
           : "mx-auto mt-6 w-full px-4 sm:px-6 lg:px-10"}
       >
-          <EditorPanelsV2
-          isReactionMissing={$state.isReactionMissing}
-          isEditModeOn={$state.isEditModeOn}
-          isFineTuneModeOn={$state.isFineTuneModeOn}
-          isPlaylist={Boolean($state.youtubePlaylistId)}
-          reactionVideoId={$state.reactionVideoId}
-          reactionVideoTitle={$state.reactionVideoTitle}
-          {reactionVideoIdError}
-          {isSettingReactionVideoId}
-          offsetStartTime={$state.offsetStartTime}
-          introBufferTime={$state.introBufferTime}
-          reactionFinishTime={$state.reactionFinishTime}
-          soundLevel={$state.soundLevel}
-          isReactionMuteModeEnabled={$state.isReactionMuteModeEnabled}
-          playerConfigs={$state.playerConfigs}
-          volumeConfigs={$state.volumeConfigs}
-          reactionVolumeConfigs={$state.reactionVolumeConfigs}
-          stateTimeline={$state.stateTimeline}
-          volumeTimeline={$state.volumeTimeline}
-          reactionVolumeTimeline={$state.reactionVolumeTimeline}
-          playbackRateConfigs={$state.playbackRateConfigs}
-          playbackRateTimeline={$state.playbackRateTimeline}
-          overlayVisibilityTimeline={$state.overlayVisibilityTimeline}
-          reactionCurrentTime={$state.reactionCurrentTime}
-          reactionDuration={$state.reactionDuration}
-          playerEventTimeline={$state.playerEventTimeline}
-          fullscreenPrimaryVideoDefault={$state.fullscreenPrimaryVideoDefault}
-          fullscreenOverlayWidthPercent={$state.fullscreenOverlayWidthPercent}
-          fullscreenOverlayCorner={$state.fullscreenOverlayCorner}
-          originalVideoPlatform={$state.originalVideoPlatform}
-          onCreatePlayerConfig={actions.createPlayerConfig}
-          onCreateVolumeConfig={actions.createVolumeConfig}
-          onCreateReactionVolumeConfig={actions.createReactionVolumeConfig}
-          onCreatePlaybackRateConfig={actions.createPlaybackRateConfig}
-          onCreateOverlayVisibilityConfig={actions.createOverlayVisibilityConfig}
-          onUpdatePlayerConfig={actions.updatePlayerConfig}
-          onDeletePlayerConfig={actions.deletePlayerConfig}
-          onUpdateVolumeConfig={actions.updateVolumeConfig}
-          onDeleteVolumeConfig={actions.deleteVolumeConfig}
-          onUpdateReactionVolumeConfig={actions.updateReactionVolumeConfig}
-          onDeleteReactionVolumeConfig={actions.deleteReactionVolumeConfig}
-          onUpdatePlaybackRateConfig={actions.updatePlaybackRateConfig}
-          onDeletePlaybackRateConfig={actions.deletePlaybackRateConfig}
-          onUpdateOverlayVisibilityConfig={actions.updateOverlayVisibilityConfig}
-          onDeleteOverlayVisibilityConfig={actions.deleteOverlayVisibilityConfig}
-          onSetReactionVideoId={handleSetReactionVideoId}
-          onSaveGeneralSettings={handleSaveGeneralSettings}
-          onSeek={actions.seekTo}
-        />
+          {@render editorPanels()}
       </div>
     {/if}
   </div>
+  </div>
+
+  {#if fineTuneHalf}
+    <div class="mx-auto mt-6 w-full px-4 sm:px-6 lg:px-10">
+      {@render editorPanels()}
+    </div>
+  {/if}
 
   {#if !$state.isFullscreen}
     <div
@@ -390,6 +409,30 @@
   .website-inner-container {
     margin: 0;
     width: 100%;
+  }
+
+  /* Content already sits below the fixed nav. This band ends at mid-screen. */
+  .edit-finetune-top {
+    display: flex;
+    flex-direction: column;
+    height: calc(50vh - 5rem);
+    height: calc(50dvh - 5rem);
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .edit-finetune-stage {
+    display: flex;
+    min-height: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+  }
+
+  @media (min-width: 640px) {
+    .edit-finetune-top {
+      height: calc(50vh - 5.5rem);
+      height: calc(50dvh - 5.5rem);
+    }
   }
 
   /* The stage's own page gutters and 80% cap are for the full-width player.
