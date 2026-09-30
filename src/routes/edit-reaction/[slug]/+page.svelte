@@ -239,12 +239,12 @@
 
   <div
     class={generalSettingsSplit
-      ? "edit-general-layout mx-auto w-full lg:grid lg:grid-cols-5 lg:items-start lg:gap-6 lg:px-10 lg:pt-6"
+      ? "edit-general-layout mx-auto w-full lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:px-10 lg:pt-6"
       : ""}
   >
     <div
       class={generalSettingsSplit
-        ? "min-w-0 lg:col-span-3 lg:col-start-3 lg:row-start-1 lg:sticky lg:top-24 lg:z-10 lg:self-start"
+        ? "min-w-0 lg:col-start-2 lg:row-start-1 lg:sticky lg:top-24 lg:z-10 lg:self-start"
         : ""}
     >
       <ReactionStage
@@ -292,7 +292,7 @@
     {#if !$state.isFullscreen}
       <div
         class={generalSettingsSplit
-          ? "mx-auto mt-6 w-full min-w-0 px-4 sm:px-6 lg:col-span-2 lg:col-start-1 lg:row-start-1 lg:mt-0 lg:px-0"
+          ? "mx-auto mt-6 w-full min-w-0 px-4 sm:px-6 lg:col-start-1 lg:row-start-1 lg:mt-0 lg:px-0"
           : "mx-auto mt-6 w-full px-4 sm:px-6 lg:px-10"}
       >
           <EditorPanelsV2
@@ -393,7 +393,7 @@
   }
 
   /* The stage's own page gutters and 80% cap are for the full-width player.
-     Inside the 3/5 column those insets would shrink it a second time. */
+     Inside the half-width column those insets would shrink it a second time. */
   @media (min-width: 1024px) {
     .edit-general-layout :global(.theater-wrapper:not(.theater-wrapper--fullscreen)) {
       width: 100%;
