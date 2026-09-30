@@ -164,7 +164,8 @@
   // General settings sit beside the stage. Fine-tune keeps the timeline
   // full width under the player, where the tracks need the room.
   $: generalSettingsSplit = !$state.isFullscreen && !$state.isFineTuneModeOn;
-  // Title plus players end at the midpoint so the timeline starts in the lower half.
+  // The player stage is half the viewport by itself. The title above it
+  // is outside that box, so on first paint the stage runs past the midpoint.
   $: fineTuneHalf = !$state.isFullscreen && $state.isFineTuneModeOn;
 
   $: if (browser && !$state.isLoading) {
@@ -411,28 +412,19 @@
     width: 100%;
   }
 
-  /* Content already sits below the fixed nav. This band ends at mid-screen. */
+  /* Title sits above this. Only the player stage is half the viewport. */
   .edit-finetune-top {
     display: flex;
     flex-direction: column;
-    height: calc(50vh - 5rem);
-    height: calc(50dvh - 5rem);
-    min-height: 0;
-    overflow: hidden;
   }
 
   .edit-finetune-stage {
     display: flex;
-    min-height: 0;
-    flex: 1 1 auto;
+    flex: 0 0 auto;
     flex-direction: column;
-  }
-
-  @media (min-width: 640px) {
-    .edit-finetune-top {
-      height: calc(50vh - 5.5rem);
-      height: calc(50dvh - 5.5rem);
-    }
+    height: 50vh;
+    height: 50dvh;
+    min-height: 0;
   }
 
   /* The stage's own page gutters and 80% cap are for the full-width player.

@@ -34,7 +34,7 @@
 
     export let alwaysShowMissingPlaceholder = false;
 
-    /** Fit the stage into a parent that is already the upper half of the screen. */
+    /** Scale the players to fill a parent that is half the viewport tall. */
     export let limitToHalfScreen = false;
 
     export let overlayRef;
@@ -467,7 +467,7 @@
         display: flex;
         flex: 1 1 auto;
         flex-direction: column;
-        height: auto;
+        height: 100%;
         min-height: 0;
         max-height: 100%;
         margin-top: 0;
