@@ -554,7 +554,7 @@
   };
 </script>
 
-<div class="flex flex-col gap-3" data-testid="editor-general-settings">
+<div class="editor-config flex flex-col gap-3" data-testid="editor-general-settings">
   {#if (isReactionMissing || isEditModeOn) && !isFineTuneModeOn}
     <section class="rounded-xl border border-border-subtle bg-surface/75 px-3 py-3">
       <div class="flex items-center gap-2">
@@ -648,7 +648,7 @@
           <h2 class="text-sm font-semibold text-text-primary">2. Timing</h2>
         </div>
 
-        <div class="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div class="timing-grid mt-2">
           <div>
             <h3 class="text-xs font-medium text-text-secondary">Reaction start time</h3>
             <div class="mt-1.5 grid grid-cols-2 gap-1.5">
@@ -740,7 +740,7 @@
           </p>
         {/if}
 
-        <div class="mt-2 grid gap-3 sm:grid-cols-[minmax(0,1fr)_16rem] sm:items-start">
+        <div class="audio-grid mt-2">
           <div>
             <div class="flex items-center justify-between gap-3">
               <label class="text-xs font-medium text-text-secondary" for="original-sound-level">
@@ -998,3 +998,27 @@
     </section>
   {/if}
 </div>
+
+<style>
+  .editor-config {
+    container-type: inline-size;
+  }
+
+  .timing-grid,
+  .audio-grid {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  /* Three timing fields only fit once the config column is wide enough to keep the inputs readable. */
+  @container (min-width: 26rem) {
+    .timing-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .audio-grid {
+      grid-template-columns: minmax(0, 1fr) 13rem;
+      align-items: start;
+    }
+  }
+</style>
