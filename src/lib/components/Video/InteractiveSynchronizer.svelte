@@ -67,18 +67,22 @@
     2: { label: "Stopped original", tone: "stop", icon: PauseSolid },
   };
 
+  // One hue per track so lanes stay distinct. Play/pause and show/hide
+  // stay in their track hue; fill strength shows the state.
   const MARKER_STYLES = {
     resume:
-      "border border-accent-primary/40 bg-accent-primary/15 text-accent-primary",
-    stop: "border border-border-strong/60 bg-background/90 text-text-primary",
+      "border border-accent-primary/55 bg-accent-primary/25 text-accent-primary",
+    stop: "border border-accent-primary/45 bg-accent-primary/10 text-accent-primary",
     speed:
-      "border border-accent-secondary/50 bg-accent-secondary/10 text-accent-secondary",
+      "border border-accent-secondary/55 bg-accent-secondary/15 text-accent-secondary",
     volume:
-      "border border-accent-primary/30 bg-accent-primary/10 text-accent-primary",
+      "border border-accent-tertiary/60 bg-accent-tertiary/15 text-accent-tertiary",
+    reactionVolume:
+      "border border-success/55 bg-success/15 text-success",
     overlayVisible:
-      "border border-accent-primary/30 bg-accent-primary/10 text-accent-primary",
+      "border border-violet-300/55 bg-violet-300/20 text-violet-300",
     overlayHidden:
-      "border border-border-strong/60 bg-background/90 text-text-muted",
+      "border border-violet-300/40 bg-violet-300/10 text-violet-200",
   };
 
   const TIMELINE_REGION_SELECTOR = '[data-timeline-region="true"]';
@@ -407,7 +411,7 @@
         id: event?.id ?? `reaction-volume-marker-${index}`,
         trackId: "reactionVolume",
         label: `Reaction volume ${displayValue}`,
-        tone: "volume",
+        tone: "reactionVolume",
         position: `${(normalized * 100).toFixed(3)}%`,
         ratio: normalized,
         timeLabel: formatTimecode(timeInReaction),
@@ -494,6 +498,8 @@
     {
       id: "originalVideo",
       label: "Original video",
+      labelClass: "text-accent-primary",
+      railClass: "bg-accent-primary/35",
       markers: playerMarkers,
       showProgress: true,
       interactive: true,
@@ -503,6 +509,8 @@
           {
             id: "speed",
             label: "Playback speed",
+            labelClass: "text-accent-secondary",
+            railClass: "bg-accent-secondary/35",
             markers: playbackRateMarkers,
             showProgress: false,
             interactive: false,
@@ -512,6 +520,8 @@
     {
       id: "volume",
       label: "Volume Original",
+      labelClass: "text-accent-tertiary",
+      railClass: "bg-accent-tertiary/40",
       markers: volumeMarkers,
       showProgress: false,
       interactive: false,
@@ -519,6 +529,8 @@
     {
       id: "reactionVolume",
       label: "Volume Reaction",
+      labelClass: "text-success",
+      railClass: "bg-success/35",
       markers: reactionVolumeMarkers,
       showProgress: false,
       interactive: false,
@@ -526,6 +538,8 @@
     {
       id: "overlayVisibility",
       label: "Overlay",
+      labelClass: "text-violet-300",
+      railClass: "bg-violet-300/35",
       markers: overlayVisibilityMarkers,
       showProgress: false,
       interactive: false,
@@ -1582,7 +1596,7 @@
       {#each visibleTracks as track (track.id)}
         <div class="flex items-center gap-3">
           <span
-            class="w-28 text-[11px] font-semibold uppercase tracking-wide text-text-muted"
+            class={`w-28 shrink-0 whitespace-nowrap text-[11px] font-semibold uppercase tracking-wide ${track.labelClass ?? "text-text-muted"}`}
             >{track.label}</span
           >
           <div
@@ -1602,7 +1616,7 @@
               ></div>
             {/if}
             <div
-              class="absolute left-0 right-0 top-1/2 z-0 h-2 -translate-y-1/2 rounded-full bg-border-subtle/40"
+              class={`absolute left-0 right-0 top-1/2 z-0 h-2 -translate-y-1/2 rounded-full ${track.railClass ?? "bg-border-subtle/40"}`}
             ></div>
 
             {#each track.markers as marker (marker.id)}
@@ -1613,7 +1627,7 @@
                 {#if marker.editable}
                   <button
                     type="button"
-                    class={`pointer-events-auto relative inline-flex items-center justify-center rounded-full transition backdrop-blur-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 hover:z-30 focus-visible:z-30 ${marker.icon ? "h-4 w-4 hover:h-8 hover:w-8 hover:z-30" : "min-w-[2.25rem] px-2 py-1 text-[10px] font-semibold leading-none"} ${MARKER_STYLES[marker.tone] ?? "bg-background/80 text-text-muted"} ${isMarkerActive(marker) ? "ring-2 ring-accent-primary/60" : ""}`}
+                    class={`pointer-events-auto relative inline-flex items-center justify-center rounded-full transition backdrop-blur-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 hover:z-30 focus-visible:z-30 ${marker.icon ? "h-4 w-4 hover:h-8 hover:w-8 hover:z-30" : "min-w-[2.25rem] px-2 py-1 text-[10px] font-semibold leading-none"} ${MARKER_STYLES[marker.tone] ?? "bg-background/80 text-text-muted"} ${isMarkerActive(marker) ? "ring-2 ring-text-primary/80" : ""}`}
                     title={`${marker.label} at ${marker.timeLabel}`}
                     aria-label={`${marker.label} at ${marker.timeLabel}`}
                     data-marker-interaction="true"

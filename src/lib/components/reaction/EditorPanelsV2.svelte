@@ -935,24 +935,18 @@
     <section
       class="rounded-3xl border border-border-subtle bg-surface/80 px-6 py-6 shadow-elevated"
     >
-      <header
-        class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
-      >
-        <div>
-          <div class="flex items-center gap-2">
-            <h2 class="text-lg font-semibold text-text-primary">
-              Fine-tune mode
-            </h2>
-          </div>
-          <p class="text-sm text-text-muted">
-            Adjust precise playback, volume, and state timelines when you need
-            full control.
-          </p>
-        </div>
+      <header class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <h2 class="text-base font-semibold text-text-primary">
+          Fine-tune mode
+        </h2>
+        <p class="text-sm text-text-muted">
+          Adjust precise playback, volume, and state timelines when you need
+          full control.
+        </p>
       </header>
 
       {#if isFineTuneModeOn}
-        <div class="mt-6 flex flex-col gap-6">
+        <div class="mt-4 flex flex-col gap-6">
           <div
             class="rounded-2xl border border-border-subtle bg-background/60 p-4 shadow-surface"
           >
