@@ -67,12 +67,12 @@
     2: { label: "Stopped original", tone: "stop", icon: PauseSolid },
   };
 
-  // One hue per track so lanes stay distinct. Play/pause and show/hide
-  // stay in their track hue; fill strength shows the state.
+  // Play and pause stay blue, show and hide stay purple. Each pair uses a
+  // different hue so the state is readable on the small marker.
   const MARKER_STYLES = {
     resume:
-      "border border-accent-primary/55 bg-accent-primary/25 text-accent-primary",
-    stop: "border border-accent-primary/45 bg-accent-primary/10 text-accent-primary",
+      "border border-cyan-300/80 bg-cyan-400/40 text-cyan-100",
+    stop: "border border-blue-400/80 bg-blue-500/45 text-blue-200",
     speed:
       "border border-accent-secondary/55 bg-accent-secondary/15 text-accent-secondary",
     volume:
@@ -80,9 +80,9 @@
     reactionVolume:
       "border border-success/55 bg-success/15 text-success",
     overlayVisible:
-      "border border-violet-300/55 bg-violet-300/20 text-violet-300",
+      "border border-fuchsia-300/80 bg-fuchsia-400/40 text-fuchsia-100",
     overlayHidden:
-      "border border-violet-300/40 bg-violet-300/10 text-violet-200",
+      "border border-violet-400/80 bg-violet-500/45 text-violet-200",
   };
 
   const TIMELINE_REGION_SELECTOR = '[data-timeline-region="true"]';
