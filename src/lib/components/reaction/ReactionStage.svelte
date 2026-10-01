@@ -15,6 +15,7 @@
     export let bothVideosStarted = false;
     export let isPlaylist = false;
     export let isPlaylistAutoPlay = false;
+    export let showAutoPlayButton = true;
     export let onNext = null;
     export let nextDisabled = false;
     export let nextAriaLabel = "Next reaction";
@@ -32,6 +33,9 @@
     export let originalVideoPlatform = 'youtube';
 
     export let alwaysShowMissingPlaceholder = false;
+
+    /** Scale the players to fill a parent that is half the viewport tall. */
+    export let limitToHalfScreen = false;
 
     export let overlayRef;
 
@@ -192,6 +196,8 @@
     $: isReactionPrimary = fullscreenPrimaryVideo === "reaction";
     $: isDesktopOverlay = isDesktop && !isMobileLandscape && !isFullscreen && bothVideosStarted;
     $: isOverlayLayout = isFullscreen || (isMobileLandscape && bothVideosStarted) || isDesktopOverlay;
+    // Phone landscape already fills the screen with its own stage rules.
+    $: halfScreen = limitToHalfScreen && !isFullscreen && !isMobileLandscape;
     $: isOriginalOverlay = isOverlayLayout && isReactionPrimary;
     $: isReactionOverlay = isOverlayLayout && !isReactionPrimary;
 
@@ -261,6 +267,8 @@
 <div
     bind:this={wrapperRef}
     class={`theater-wrapper transition-all duration-500 ${
+        halfScreen ? "theater-wrapper--half " : ""
+    }${
         isFullscreen
             ? "theater-wrapper--fullscreen fixed inset-0 z-50 m-0 h-screen w-screen overflow-hidden rounded-none bg-black px-0 py-0 text-text-primary shadow-none"
             : isDesktopOverlay
@@ -292,13 +300,18 @@
         ></div>
     {/if}
 
-    <!-- Main stage container: players always exist in DOM, layout changes via CSS -->
+    <!-- Main stage container: players always exist in DOM, layout changes via CSS.
+         `contents` keeps the default layout identical when half-screen fitting is off. -->
+    <div class={halfScreen ? "half-fit" : "contents"}>
     <div
         data-stage="container"
+        data-half-layout={halfScreen ? (isOverlayLayout ? "overlay" : "split") : undefined}
         class={isFullscreen
             ? "relative h-full w-full"
             : isMobileLandscape && bothVideosStarted
             ? "relative h-full w-full overflow-hidden"
+            : halfScreen
+            ? "relative overflow-hidden"
             : isDesktopOverlay
             ? "relative w-full aspect-video overflow-hidden"
             : "flex flex-col-reverse gap-0 md:grid md:gap-6 md:grid-cols-2 xl:gap-8"}
@@ -324,6 +337,8 @@
                     ? isOriginalOverlay
                         ? "relative w-full aspect-cinematic overflow-hidden rounded-lg bg-black/80 shadow-elevated"
                         : "h-full w-full"
+                    : halfScreen
+                    ? "half-frame"
                     : "relative w-full h-[56.25vw] md:h-auto md:aspect-[16/9]"}
             >
                 <div
@@ -376,6 +391,8 @@
                     ? isReactionOverlay
                         ? `pointer-events-auto absolute ${overlayCornerClass} z-50 transition-opacity duration-300 ease-cinematic ${effectiveOverlayClass}`
                         : "absolute inset-0"
+                    : halfScreen
+                    ? "relative min-h-0 min-w-0 overflow-hidden bg-black/80 shadow-surface"
                     : "relative overflow-hidden bg-black/80 shadow-surface w-full h-[56.25vw] mx-auto mt-0 rounded-none md:w-auto md:h-auto md:mt-0 md:mx-0 md:rounded-xl md:aspect-[16/9]"}
                 style={isReactionOverlay ? "width: var(--overlay-width);" : ""}
             >
@@ -384,6 +401,8 @@
                         ? isReactionOverlay
                             ? "relative aspect-cinematic overflow-hidden rounded-lg bg-black/80 shadow-elevated"
                             : "relative h-full w-full"
+                        : halfScreen
+                        ? "half-frame"
                         : "relative h-full w-full"}
                 >
                     <div
@@ -412,6 +431,7 @@
             <div class="hidden"></div>
         {/if}
     </div>
+    </div>
 
     {#if playerOriginal && (playerReaction || isReactionMissing)}
         <ControlDock
@@ -420,6 +440,7 @@
             {bothVideosStarted}
             {isPlaylist}
             {isPlaylistAutoPlay}
+            {showAutoPlayButton}
             {showCinematicBars}
             {onNext}
             {nextDisabled}
@@ -442,6 +463,81 @@
 </div>
 
 <style>
+    .theater-wrapper--half:not(.theater-wrapper--fullscreen) {
+        display: flex;
+        flex: 1 1 auto;
+        flex-direction: column;
+        height: 100%;
+        min-height: 0;
+        max-height: 100%;
+        margin-top: 0;
+        margin-bottom: 0;
+        overflow: hidden;
+        box-sizing: border-box;
+    }
+
+    .half-fit {
+        flex: 1 1 auto;
+        min-height: 0;
+        min-width: 0;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        container-type: size;
+    }
+
+    .theater-wrapper--half [data-half-layout="overlay"] {
+        height: min(100cqh, calc(100cqw * 9 / 16));
+        width: auto;
+        max-width: 100%;
+        aspect-ratio: 16 / 9;
+        margin-inline: auto;
+    }
+
+    .theater-wrapper--half [data-half-layout="split"] {
+        display: grid;
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+        min-width: 0;
+        align-items: center;
+        justify-items: center;
+        gap: 0.75rem;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    }
+
+    @media (min-width: 768px) {
+        .theater-wrapper--half [data-half-layout="split"] {
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            grid-template-rows: minmax(0, 1fr);
+            gap: 1.25rem;
+        }
+    }
+
+    .theater-wrapper--half [data-half-layout="split"] [data-stage="original"],
+    .theater-wrapper--half [data-half-layout="split"] [data-stage="reaction"] {
+        container-type: size;
+        width: 100%;
+        height: 100%;
+        max-width: 100%;
+        min-width: 0;
+        min-height: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .half-frame {
+        height: min(100cqh, calc(100cqw * 9 / 16));
+        width: auto;
+        max-width: 100%;
+        max-height: 100%;
+        aspect-ratio: 16 / 9;
+        position: relative;
+    }
+
     /* 
        Targeting:
        1. Standard mobile widths (max-width: 1023px)

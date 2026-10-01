@@ -8,10 +8,8 @@
   import SubtleLoader from "$lib/components/design-system/SubtleLoader.svelte";
   import CinematicButton from "$lib/components/design-system/CinematicButton.svelte";
   import HelpfulTip from "$lib/components/design-system/HelpfulTip.svelte";
-  import FullscreenChrome from "$lib/components/reaction/FullscreenChrome.svelte";
-  import ControlDock from "$lib/components/reaction/ControlDock.svelte";
   import EditorPanelsV2 from "$lib/components/reaction/EditorPanelsV2.svelte";
-  import MissingReactionPlaceholder from "$lib/components/reaction/MissingReactionPlaceholder.svelte";
+  import ReactionStage from "$lib/components/reaction/ReactionStage.svelte";
   import {
     useTwinPlayers,
     CONTROLS_FADE_CLASS,
@@ -54,10 +52,14 @@
     }
     reactionVideoIdError = "";
     isSettingReactionVideoId = true;
+    let shouldReload = false;
     try {
       await actions.editActionEntryPoint(() =>
         actions.setReactionVideoId(trimmed),
       );
+      // The reaction player is created on load, so a new or changed ID
+      // only shows up after a full reload.
+      shouldReload = browser;
     } catch (error) {
       console.error("Failed to set reaction video ID", error);
       reactionVideoIdError =
@@ -69,7 +71,11 @@
         );
       }
     } finally {
-      isSettingReactionVideoId = false;
+      if (shouldReload) {
+        location.reload();
+      } else {
+        isSettingReactionVideoId = false;
+      }
     }
   };
 
@@ -77,52 +83,35 @@
     await handleSetReactionVideoId(event.detail.value);
   };
 
-  const handleSetIntroBufferTime = async (value) => {
-    await actions.editActionEntryPoint(() => actions.setIntroBufferTime(value));
-  };
-
-  const handleSetOffsetStartTime = async (value) => {
-    await actions.editActionEntryPoint(() => actions.setOffsetStartTime(value));
-  };
-
-  const handleSetReactionFinishTime = async (value) => {
-    await actions.editActionEntryPoint(() =>
-      actions.setReactionFinishTime(value),
-    );
-  };
-
-  const handleSetSoundLevel = async (value) => {
-    await actions.editActionEntryPoint(() => actions.setSoundLevel(value));
-  };
-
-  const handleSetReactionMuteMode = async (value) => {
-    await actions.editActionEntryPoint(() =>
-      actions.setReactionMuteMode(value),
-    );
-  };
-
-  const handleSetFullscreenPrimaryVideo = async (value) => {
-    await actions.editActionEntryPoint(() =>
-      actions.setFullscreenPrimaryVideo(value),
-    );
-  };
-
-  const handleSetFullscreenOverlayWidthPercent = async (value) => {
-    await actions.editActionEntryPoint(() =>
-      actions.setFullscreenOverlayWidthPercent(value),
-    );
-  };
-
-  const handleSetFullscreenOverlayCorner = async (value) => {
-    await actions.editActionEntryPoint(() =>
-      actions.setFullscreenOverlayCorner(value),
-    );
-  };
-
-  let isOverlayPositionPanelOpen = false;
-
-  const handleToggleOverlayPositionPanel = () => {
-    isOverlayPositionPanelOpen = !isOverlayPositionPanelOpen;
+  const handleSaveGeneralSettings = async (patch) => {
+    await actions.editActionEntryPoint(async () => {
+      if ("offsetStartTime" in patch) {
+        await actions.setOffsetStartTime(patch.offsetStartTime);
+      }
+      if ("reactionFinishTime" in patch) {
+        await actions.setReactionFinishTime(patch.reactionFinishTime);
+      }
+      if ("introBufferTime" in patch) {
+        await actions.setIntroBufferTime(patch.introBufferTime);
+      }
+      if ("soundLevel" in patch) {
+        await actions.setSoundLevel(patch.soundLevel);
+      }
+      if ("isReactionMuteModeEnabled" in patch) {
+        await actions.setReactionMuteMode(patch.isReactionMuteModeEnabled);
+      }
+      if ("fullscreenPrimaryVideo" in patch) {
+        await actions.setFullscreenPrimaryVideo(patch.fullscreenPrimaryVideo);
+      }
+      if ("fullscreenOverlayWidthPercent" in patch) {
+        await actions.setFullscreenOverlayWidthPercent(
+          patch.fullscreenOverlayWidthPercent,
+        );
+      }
+      if ("fullscreenOverlayCorner" in patch) {
+        await actions.setFullscreenOverlayCorner(patch.fullscreenOverlayCorner);
+      }
+    });
   };
 
   const handleExitEditor = () => {
@@ -172,6 +161,13 @@
     actions.enterEditMode();
   }
 
+  // General settings sit beside the stage. Fine-tune keeps the timeline
+  // full width under the player, where the tracks need the room.
+  $: generalSettingsSplit = !$state.isFullscreen && !$state.isFineTuneModeOn;
+  // The player stage is half the viewport by itself. The title above it
+  // is outside that box, so on first paint the stage runs past the midpoint.
+  $: fineTuneHalf = !$state.isFullscreen && $state.isFineTuneModeOn;
+
   $: if (browser && !$state.isLoading) {
     reactionDial.updateContext({
       isUsersOwnVideo: $state.isUsersOwnVideo,
@@ -206,9 +202,62 @@
 <div
   class={`website-inner-container bg-background text-text-primary ${$state.isLoading ? "hidden" : ""}`}
 >
+  {#snippet editorPanels()}
+    <EditorPanelsV2
+      isReactionMissing={$state.isReactionMissing}
+      isEditModeOn={$state.isEditModeOn}
+      isFineTuneModeOn={$state.isFineTuneModeOn}
+      isPlaylist={Boolean($state.youtubePlaylistId)}
+      reactionVideoId={$state.reactionVideoId}
+      reactionVideoTitle={$state.reactionVideoTitle}
+      {reactionVideoIdError}
+      {isSettingReactionVideoId}
+      offsetStartTime={$state.offsetStartTime}
+      introBufferTime={$state.introBufferTime}
+      reactionFinishTime={$state.reactionFinishTime}
+      soundLevel={$state.soundLevel}
+      isReactionMuteModeEnabled={$state.isReactionMuteModeEnabled}
+      playerConfigs={$state.playerConfigs}
+      volumeConfigs={$state.volumeConfigs}
+      reactionVolumeConfigs={$state.reactionVolumeConfigs}
+      stateTimeline={$state.stateTimeline}
+      volumeTimeline={$state.volumeTimeline}
+      reactionVolumeTimeline={$state.reactionVolumeTimeline}
+      playbackRateConfigs={$state.playbackRateConfigs}
+      playbackRateTimeline={$state.playbackRateTimeline}
+      overlayVisibilityTimeline={$state.overlayVisibilityTimeline}
+      reactionCurrentTime={$state.reactionCurrentTime}
+      reactionDuration={$state.reactionDuration}
+      playerEventTimeline={$state.playerEventTimeline}
+      fullscreenPrimaryVideoDefault={$state.fullscreenPrimaryVideoDefault}
+      fullscreenOverlayWidthPercent={$state.fullscreenOverlayWidthPercent}
+      fullscreenOverlayCorner={$state.fullscreenOverlayCorner}
+      originalVideoPlatform={$state.originalVideoPlatform}
+      onCreatePlayerConfig={actions.createPlayerConfig}
+      onCreateVolumeConfig={actions.createVolumeConfig}
+      onCreateReactionVolumeConfig={actions.createReactionVolumeConfig}
+      onCreatePlaybackRateConfig={actions.createPlaybackRateConfig}
+      onCreateOverlayVisibilityConfig={actions.createOverlayVisibilityConfig}
+      onUpdatePlayerConfig={actions.updatePlayerConfig}
+      onDeletePlayerConfig={actions.deletePlayerConfig}
+      onUpdateVolumeConfig={actions.updateVolumeConfig}
+      onDeleteVolumeConfig={actions.deleteVolumeConfig}
+      onUpdateReactionVolumeConfig={actions.updateReactionVolumeConfig}
+      onDeleteReactionVolumeConfig={actions.deleteReactionVolumeConfig}
+      onUpdatePlaybackRateConfig={actions.updatePlaybackRateConfig}
+      onDeletePlaybackRateConfig={actions.deletePlaybackRateConfig}
+      onUpdateOverlayVisibilityConfig={actions.updateOverlayVisibilityConfig}
+      onDeleteOverlayVisibilityConfig={actions.deleteOverlayVisibilityConfig}
+      onSetReactionVideoId={handleSetReactionVideoId}
+      onSaveGeneralSettings={handleSaveGeneralSettings}
+      onSeek={actions.seekTo}
+    />
+  {/snippet}
+
+  <div class={fineTuneHalf ? "edit-finetune-top" : ""}>
   {#if !$state.isFullscreen}
     <div
-      class="mx-auto flex w-full flex-wrap items-center justify-between gap-3 px-4 pt-6 sm:px-6 lg:px-10"
+      class="mx-auto flex w-full shrink-0 flex-wrap items-center justify-between gap-3 px-4 pt-6 sm:px-6 lg:px-10"
     >
       <h1 class="text-xl font-semibold text-text-primary">Edit Reaction</h1>
       <div class="flex items-center gap-2">
@@ -242,184 +291,87 @@
 
       </div>
     </div>
-
-    <div class="mx-auto w-full px-4 sm:px-6 lg:px-10">
-      <div class="mt-6 rounded-2xl bg-surface/80 p-6 shadow-elevated">
-        <EditorPanelsV2
-          isReactionMissing={$state.isReactionMissing}
-          isEditModeOn={$state.isEditModeOn}
-          isFineTuneModeOn={$state.isFineTuneModeOn}
-          isPlaylist={Boolean($state.youtubePlaylistId)}
-          reactionVideoId={$state.reactionVideoId}
-          {reactionVideoIdError}
-          {isSettingReactionVideoId}
-          offsetStartTime={$state.offsetStartTime}
-          introBufferTime={$state.introBufferTime}
-          reactionFinishTime={$state.reactionFinishTime}
-          soundLevel={$state.soundLevel}
-          isReactionMuteModeEnabled={$state.isReactionMuteModeEnabled}
-          playerConfigs={$state.playerConfigs}
-          volumeConfigs={$state.volumeConfigs}
-          reactionVolumeConfigs={$state.reactionVolumeConfigs}
-          stateTimeline={$state.stateTimeline}
-          volumeTimeline={$state.volumeTimeline}
-          reactionVolumeTimeline={$state.reactionVolumeTimeline}
-          playbackRateConfigs={$state.playbackRateConfigs}
-          playbackRateTimeline={$state.playbackRateTimeline}
-          overlayVisibilityTimeline={$state.overlayVisibilityTimeline}
-          reactionCurrentTime={$state.reactionCurrentTime}
-          reactionDuration={$state.reactionDuration}
-          playerEventTimeline={$state.playerEventTimeline}
-          fullscreenPrimaryVideoDefault={$state.fullscreenPrimaryVideoDefault}
-          fullscreenOverlayWidthPercent={$state.fullscreenOverlayWidthPercent}
-          fullscreenOverlayCorner={$state.fullscreenOverlayCorner}
-          originalVideoPlatform={$state.originalVideoPlatform}
-          onCreatePlayerConfig={actions.createPlayerConfig}
-          onCreateVolumeConfig={actions.createVolumeConfig}
-          onCreateReactionVolumeConfig={actions.createReactionVolumeConfig}
-          onCreatePlaybackRateConfig={actions.createPlaybackRateConfig}
-          onCreateOverlayVisibilityConfig={actions.createOverlayVisibilityConfig}
-          onUpdatePlayerConfig={actions.updatePlayerConfig}
-          onDeletePlayerConfig={actions.deletePlayerConfig}
-          onUpdateVolumeConfig={actions.updateVolumeConfig}
-          onDeleteVolumeConfig={actions.deleteVolumeConfig}
-          onUpdateReactionVolumeConfig={actions.updateReactionVolumeConfig}
-          onDeleteReactionVolumeConfig={actions.deleteReactionVolumeConfig}
-          onUpdatePlaybackRateConfig={actions.updatePlaybackRateConfig}
-          onDeletePlaybackRateConfig={actions.deletePlaybackRateConfig}
-          onUpdateOverlayVisibilityConfig={actions.updateOverlayVisibilityConfig}
-          onDeleteOverlayVisibilityConfig={actions.deleteOverlayVisibilityConfig}
-          onSetReactionVideoId={handleSetReactionVideoId}
-          onSetOffsetStartTime={handleSetOffsetStartTime}
-          onSetIntroBufferTime={handleSetIntroBufferTime}
-          onSetReactionFinishTime={handleSetReactionFinishTime}
-          onSetSoundLevel={handleSetSoundLevel}
-          onSetReactionMuteMode={handleSetReactionMuteMode}
-          onSetFullscreenPrimaryVideo={handleSetFullscreenPrimaryVideo}
-          onSetFullscreenOverlayWidthPercent={handleSetFullscreenOverlayWidthPercent}
-          onSetFullscreenOverlayCorner={handleSetFullscreenOverlayCorner}
-          onToggleFineTuneMode={actions.toggleFineTuneMode}
-          onToggleOverlayPositionPanel={handleToggleOverlayPositionPanel}
-          {isOverlayPositionPanelOpen}
-          onSeek={actions.seekTo}
-        />
-      </div>
-    </div>
   {/if}
 
-  <section
-    class={`theater-wrapper ${
-      $state.isFullscreen
-        ? "fixed inset-0 z-50 m-0 h-screen w-screen overflow-hidden rounded-none bg-black px-0 py-0 text-text-primary shadow-none"
-        : "relative mx-auto my-6 w-full max-w-none rounded-2xl bg-surface/80 px-4 py-8 text-text-primary shadow-elevated backdrop-blur sm:px-6 lg:px-10 xl:rounded-3xl"
-    }`}
+  <div
+    class={generalSettingsSplit
+      ? "edit-general-layout mx-auto w-full lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:px-10 lg:pt-6"
+      : fineTuneHalf
+        ? "edit-finetune-stage"
+        : ""}
   >
-    {#if $state.isFullscreen}
-      <FullscreenChrome
+    <div
+      class={generalSettingsSplit
+        ? "min-w-0 lg:col-start-2 lg:row-start-1 lg:sticky lg:top-24 lg:z-10 lg:self-start"
+        : fineTuneHalf
+          ? "flex min-h-0 flex-1 flex-col"
+          : ""}
+    >
+      <ReactionStage
+        limitToHalfScreen={fineTuneHalf}
+        isFullscreen={$state.isFullscreen}
         isControlSurfaceVisible={$state.isControlSurfaceVisible}
         isExitButtonExpanded={$state.isExitButtonExpanded}
         showCinematicBars={$state.showCinematicBars}
         isReactionMissing={$state.isReactionMissing}
-        fullscreenPrimaryVideo={$state.fullscreenPrimaryVideo}
-        fullscreenOverlayWidthPercent={$state.fullscreenOverlayWidthPercent}
-        fullscreenOverlayCorner={$state.fullscreenOverlayCorner}
-        fullscreenOverlayVisible={$state.fullscreenOverlayVisible}
-        bind:overlayRef
-        onExitClick={actions.handleExitFullscreenClick}
-        onExitEnter={actions.handleExitButtonEnter}
-        onExitLeave={actions.handleExitButtonLeave}
-        onPointerMove={actions.handleFullscreenPointerMove}
-        onPointerDown={actions.handleFullscreenPointerDown}
-        onPointerLeave={actions.scheduleHideControls}
-      />
-    {:else}
-      <div class="grid gap-6 md:grid-cols-2 xl:gap-8">
-        <div
-          class="relative overflow-hidden rounded-xl bg-black shadow-elevated"
-        >
-          {#if $state.originalVideoPlatform === 'tiktok'}
-            <!-- TikTok: keep the same height as the 16:9 container, centre the 9:16 iframe inside -->
-            <div class="relative aspect-[16/9] sm:aspect-[3/2]">
-              <div class="absolute inset-0 flex items-center justify-center">
-                <div
-                  class="relative h-full overflow-hidden bg-black"
-                  style="aspect-ratio: 9/16;"
-                >
-                  <div
-                    id="player-original"
-                    class="h-full w-full"
-                  ></div>
-                </div>
-              </div>
-            </div>
-          {:else}
-            <div class="relative aspect-[16/9] sm:aspect-[3/2]">
-              <div
-                id="player-original"
-                class="absolute inset-0 h-full w-full"
-              ></div>
-            </div>
-          {/if}
-          {#if $state.showCinematicBars}
-            <div
-              class="pointer-events-none absolute inset-x-0 top-0 h-[12%] bg-gradient-to-b from-black via-black/80 to-transparent"
-              aria-hidden="true"
-            ></div>
-            <div
-              class="pointer-events-none absolute inset-x-0 bottom-0 h-[12%] bg-gradient-to-t from-black via-black/80 to-transparent"
-              aria-hidden="true"
-            ></div>
-          {/if}
-        </div>
-        {#if !$state.isReactionMissing}
-          <div
-            class="relative overflow-hidden rounded-xl bg-black/80 shadow-surface"
-          >
-            <div class="relative aspect-[16/9] sm:aspect-[3/2]">
-              <div
-                id="player-reaction"
-                class="absolute inset-0 h-full w-full"
-              ></div>
-            </div>
-          </div>
-        {:else}
-          <MissingReactionPlaceholder
-            loading={isSettingReactionVideoId}
-            error={reactionVideoIdError}
-            on:submit={handleMissingReactionSubmit}
-          />
-        {/if}
-      </div>
-    {/if}
-
-    {#if $state.playerOriginal && $state.playerReaction}
-      <ControlDock
-        isFullscreen={$state.isFullscreen}
+        isUsersOwnVideo={$state.isUsersOwnVideo}
+        playerOriginal={$state.playerOriginal}
+        playerReaction={$state.playerReaction}
+        originalVideoPlatform={$state.originalVideoPlatform}
         {stickyControlsClass}
         bothVideosStarted={$state.bothVideosStarted}
         isPlaylist={Boolean($state.playlistDocumentId)}
         isPlaylistAutoPlay={$state.isPlaylistAutoPlay}
         showAutoPlayButton={false}
-        showCinematicBars={$state.showCinematicBars}
-        onPlayStateChanged={handlePlayStateChanged}
-        onSyncVideos={actions.syncVideos}
-        onToggleAutoPlaylist={actions.toggleAutoPlaylist}
-        onToggleBars={actions.toggleCinematicBars}
-        onEnterFullscreen={actions.openWithFullscreen}
-        currentTime={$state.reactionCurrentTime}
-        duration={$state.reactionDuration}
-        seekMin={$state.offsetStartTime || 0}
-        seekMax={Math.min(
-          $state.reactionFinishTime || 0,
-          $state.reactionDuration || 0,
-        )}
-        onSeek={actions.seekTo}
+        reactionCurrentTime={$state.reactionCurrentTime}
+        reactionDuration={$state.reactionDuration}
+        offsetStartTime={$state.offsetStartTime}
+        reactionFinishTime={$state.reactionFinishTime}
+        fullscreenPrimaryVideo={$state.fullscreenPrimaryVideo}
+        fullscreenOverlayWidthPercent={$state.fullscreenOverlayWidthPercent}
+        fullscreenOverlayCorner={$state.fullscreenOverlayCorner}
+        fullscreenOverlayVisible={$state.fullscreenOverlayVisible}
+        missingReactionLoading={isSettingReactionVideoId}
+        missingReactionError={reactionVideoIdError}
+        bind:overlayRef
+        on:exitClick={actions.handleExitFullscreenClick}
+        on:exitEnter={actions.handleExitButtonEnter}
+        on:exitLeave={actions.handleExitButtonLeave}
+        on:pointerMove={actions.handleFullscreenPointerMove}
+        on:pointerDown={actions.handleFullscreenPointerDown}
+        on:pointerLeave={actions.scheduleHideControls}
+        on:missingReactionSubmit={handleMissingReactionSubmit}
+        on:playStateChanged={handlePlayStateChanged}
+        on:syncVideos={actions.syncVideos}
+        on:toggleAutoPlaylist={actions.toggleAutoPlaylist}
+        on:toggleCinematicBars={actions.toggleCinematicBars}
+        on:enterFullscreen={actions.openWithFullscreen}
+        on:seek={(e) => actions.seekTo(e.detail)}
       />
+    </div>
+
+    {#if !$state.isFullscreen && !fineTuneHalf}
+      <div
+        class={generalSettingsSplit
+          ? "mx-auto mt-6 w-full min-w-0 px-4 sm:px-6 lg:col-start-1 lg:row-start-1 lg:mt-0 lg:px-0"
+          : "mx-auto mt-6 w-full px-4 sm:px-6 lg:px-10"}
+      >
+          {@render editorPanels()}
+      </div>
     {/if}
-  </section>
+  </div>
+  </div>
+
+  {#if fineTuneHalf}
+    <div class="mx-auto mt-6 w-full px-4 sm:px-6 lg:px-10">
+      {@render editorPanels()}
+    </div>
+  {/if}
 
   {#if !$state.isFullscreen}
-    <div class="mx-auto w-full px-4 pb-10 sm:px-6 lg:px-10">
+    <div
+      class={`mx-auto w-full px-4 pb-10 sm:px-6 lg:px-10 ${generalSettingsSplit ? "lg:mt-8" : ""}`}
+    >
       <CreatorDetails
         originalVideoAuthor={$state.originalVideoAuthor}
         originalVideoAuthorUrl={$state.originalVideoAuthorUrl}
@@ -458,6 +410,39 @@
   .website-inner-container {
     margin: 0;
     width: 100%;
+  }
+
+  /* Title sits above this. Only the player stage is half the viewport. */
+  .edit-finetune-top {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .edit-finetune-stage {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    height: 50vh;
+    height: 50dvh;
+    min-height: 0;
+  }
+
+  /* The stage's own page gutters and 80% cap are for the full-width player.
+     Inside the half-width column those insets would shrink it a second time. */
+  @media (min-width: 1024px) {
+    .edit-general-layout :global(.theater-wrapper:not(.theater-wrapper--fullscreen)) {
+      width: 100%;
+      max-width: none;
+      margin: 0;
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+
+    .edit-general-layout
+      :global(.theater-wrapper:not(.theater-wrapper--fullscreen) .controls-dock) {
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
   }
 
   :global(body.reaction-fullscreen) {

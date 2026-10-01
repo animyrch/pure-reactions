@@ -49,6 +49,7 @@ import {
     getPlaylistSequenceItems,
 } from '$lib/helpers/reactionSequence';
 import { generateOriginalVideoSlug } from '$lib/helpers/originalVideo';
+import { assertMomentReady } from '$lib/helpers/moments';
 
 const createCollection = (db, params, caller) => {
     return collection(db, params);
@@ -232,19 +233,24 @@ export const createMomentDocument = async ({
     creatorDisplayName = ''
 }) => {
     try {
+        const ready = assertMomentReady({ title, originalVideoUrl, momentTimeSeconds });
+        if (!ready.ok) {
+            throw new Error(ready.error);
+        }
+
         const momentsCollection = createCollection(db, COLLECTION_MOMENTS, 'createMomentDocument');
 
         // Generate the original video slug for canonical URLs
         const originalVideoSlug = generateOriginalVideoSlug(originalVideoTitle, originalVideoAuthor);
 
         const dataToAdd = {
-            title: title?.trim?.() || 'Untitled moment',
+            title: ready.value.title,
             slug: slug?.trim?.() || '',
-            originalVideoId,
             originalVideoTitle: originalVideoTitle?.trim?.() || '',
             originalVideoPlatform: originalVideoPlatform || 'youtube',
             originalVideoSlug,
-            momentTimeSeconds: Number(momentTimeSeconds),
+            originalVideoUrl: ready.value.originalVideoUrl,
+            momentTimeSeconds: ready.value.momentTimeSeconds,
             tags: Array.isArray(tags) ? tags : [],
             reactionCount: 0,
             creatorId,
@@ -252,6 +258,10 @@ export const createMomentDocument = async ({
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp()
         };
+
+        if (typeof originalVideoId === 'string' && originalVideoId.trim()) {
+            dataToAdd.originalVideoId = originalVideoId.trim();
+        }
 
         if (typeof originalVideoAuthor === 'string' && originalVideoAuthor.trim()) {
             dataToAdd.originalVideoAuthor = originalVideoAuthor.trim();
@@ -279,9 +289,6 @@ export const createMomentDocument = async ({
         }
         if (typeof originalVideoProviderUrl === 'string' && originalVideoProviderUrl.trim()) {
             dataToAdd.originalVideoProviderUrl = originalVideoProviderUrl.trim();
-        }
-        if (typeof originalVideoUrl === 'string' && originalVideoUrl.trim()) {
-            dataToAdd.originalVideoUrl = originalVideoUrl.trim();
         }
 
         const documentRef = await addDoc(momentsCollection, dataToAdd);

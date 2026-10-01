@@ -1,9 +1,7 @@
 <script>
-  import AccessibleInput from "$lib/components/design-system/AccessibleInput.svelte";
   import CinematicButton from "$lib/components/design-system/CinematicButton.svelte";
   import HelpfulTip from "$lib/components/design-system/HelpfulTip.svelte";
-  import FullscreenLayoutPanel from "$lib/components/reaction/FullscreenLayoutPanel.svelte";
-  import OverlayPositionPanel from "$lib/components/reaction/OverlayPositionPanel.svelte";
+  import TimeStepper from "$lib/components/reaction/TimeStepper.svelte";
   import ConfigEditorV2 from "$lib/components/Video/ConfigEditorV2.svelte";
   import { showToast } from "$lib/stores/toast";
   import { TOASTS } from "$lib/constants/toasts";
@@ -11,9 +9,9 @@
   export let isReactionMissing = false;
   export let isEditModeOn = false;
   export let isFineTuneModeOn = false;
-  export let isOverlayPositionPanelOpen = false;
   export let isPlaylist = false;
   export let reactionVideoId = "";
+  export let reactionVideoTitle = "";
   export let reactionVideoIdError = "";
   export let isSettingReactionVideoId = false;
   export let offsetStartTime = 0;
@@ -55,16 +53,7 @@
   export let onDeleteOverlayVisibilityConfig = async () => {};
 
   export let onSetReactionVideoId = () => {};
-  export let onSetOffsetStartTime = () => {};
-  export let onSetIntroBufferTime = () => {};
-  export let onSetReactionFinishTime = () => {};
-  export let onSetSoundLevel = () => {};
-  export let onSetReactionMuteMode = () => {};
-  export let onSetFullscreenPrimaryVideo = () => {};
-  export let onSetFullscreenOverlayWidthPercent = () => {};
-  export let onSetFullscreenOverlayCorner = () => {};
-  export let onToggleFineTuneMode = () => {};
-  export let onToggleOverlayPositionPanel = () => {};
+  export let onSaveGeneralSettings = async () => {};
   export let onSeek = (_time) => {};
 
   $: isTikTokOriginal = originalVideoPlatform === "tiktok";
@@ -72,6 +61,40 @@
   const SOUND_LEVEL_MIN = 0;
   const SOUND_LEVEL_MAX = 200;
   const SOUND_LEVEL_STEP = 1;
+  const OVERLAY_WIDTH_MIN = 5;
+  const OVERLAY_WIDTH_MAX = 80;
+  const OVERLAY_WIDTH_STEP = 5;
+  const DEFAULT_OVERLAY_WIDTH = 35;
+
+  const OVERLAY_POSITIONS = [
+    { value: "top-left", label: "Top left", x: 3, y: 3 },
+    { value: "top-center", label: "Top center", x: 8, y: 3 },
+    { value: "top-right", label: "Top right", x: 13, y: 3 },
+    { value: "middle-left", label: "Middle left", x: 3, y: 9 },
+    { value: "middle-right", label: "Middle right", x: 13, y: 9 },
+    { value: "bottom-left", label: "Bottom left", x: 3, y: 15 },
+    { value: "bottom-center", label: "Bottom center", x: 8, y: 15 },
+    { value: "bottom-right", label: "Bottom right", x: 13, y: 15 },
+  ];
+
+  const clampOverlayWidth = (value) => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return DEFAULT_OVERLAY_WIDTH;
+    const snapped = Math.round(parsed / OVERLAY_WIDTH_STEP) * OVERLAY_WIDTH_STEP;
+    return Math.max(OVERLAY_WIDTH_MIN, Math.min(OVERLAY_WIDTH_MAX, snapped));
+  };
+
+  const formatDurationLabel = (seconds) => {
+    const total = Math.round(Number(seconds) || 0);
+    if (total <= 0) return "";
+    const hours = Math.floor(total / 3600);
+    const minutes = Math.floor((total % 3600) / 60);
+    const remainder = total % 60;
+    if (hours > 0) {
+      return `${hours}:${String(minutes).padStart(2, "0")}:${String(remainder).padStart(2, "0")}`;
+    }
+    return `${minutes}:${String(remainder).padStart(2, "0")}`;
+  };
 
   let reactionVideoIdValue = reactionVideoId ?? "";
   let offsetStartMinutesValue = "0";
@@ -80,12 +103,21 @@
   let reactionFinishSecondsValue = "0";
   let introBufferTimeValue = introBufferTime?.toString?.() ?? "";
   let soundLevelValue = Number.isFinite(soundLevel) ? soundLevel : 100;
+  let primaryDraft = fullscreenPrimaryVideoDefault || "original";
+  let cornerDraft = fullscreenOverlayCorner || "top-right";
+  let muteDraft = Boolean(isReactionMuteModeEnabled);
+  let overlayWidthValue = clampOverlayWidth(fullscreenOverlayWidthPercent);
+  let isSavingGeneral = false;
 
   let lastReactionVideoIdProp = reactionVideoId;
   let lastOffsetStartTimeProp = offsetStartTime;
   let lastIntroBufferTimeProp = introBufferTime;
   let lastReactionFinishTimeProp = reactionFinishTime;
   let lastSoundLevelProp = soundLevel;
+  let lastPrimaryProp = fullscreenPrimaryVideoDefault;
+  let lastCornerProp = fullscreenOverlayCorner;
+  let lastMuteProp = isReactionMuteModeEnabled;
+  let lastOverlayWidthProp = fullscreenOverlayWidthPercent;
 
   $: if (reactionVideoId !== lastReactionVideoIdProp) {
     lastReactionVideoIdProp = reactionVideoId;
@@ -121,29 +153,49 @@
 
   syncReactionFinishInputs(reactionFinishTime);
 
-  $: if (offsetStartTime !== lastOffsetStartTimeProp) {
+  $: if (!isSavingGeneral && offsetStartTime !== lastOffsetStartTimeProp) {
     lastOffsetStartTimeProp = offsetStartTime;
     syncOffsetStartInputs(offsetStartTime);
   }
 
-  $: if (introBufferTime !== lastIntroBufferTimeProp) {
+  $: if (!isSavingGeneral && introBufferTime !== lastIntroBufferTimeProp) {
     lastIntroBufferTimeProp = introBufferTime;
     introBufferTimeValue = introBufferTime?.toString?.() ?? "";
   }
 
-  $: if (reactionFinishTime !== lastReactionFinishTimeProp) {
+  $: if (!isSavingGeneral && reactionFinishTime !== lastReactionFinishTimeProp) {
     lastReactionFinishTimeProp = reactionFinishTime;
     syncReactionFinishInputs(reactionFinishTime);
   }
 
-  // Also sync if duration changes AND we are currently showing default (finish time is 0)
-  $: if (reactionDuration && reactionFinishTime <= 0) {
+  // A stored finish of 0 means "play until the video ends", so show the duration.
+  $: if (!isSavingGeneral && reactionDuration && reactionFinishTime <= 0) {
     syncReactionFinishInputs(reactionFinishTime);
   }
 
-  $: if (soundLevel !== lastSoundLevelProp) {
+  $: if (!isSavingGeneral && soundLevel !== lastSoundLevelProp) {
     lastSoundLevelProp = soundLevel;
     soundLevelValue = Number.isFinite(soundLevel) ? soundLevel : 100;
+  }
+
+  $: if (!isSavingGeneral && fullscreenPrimaryVideoDefault !== lastPrimaryProp) {
+    lastPrimaryProp = fullscreenPrimaryVideoDefault;
+    primaryDraft = fullscreenPrimaryVideoDefault || "original";
+  }
+
+  $: if (!isSavingGeneral && fullscreenOverlayCorner !== lastCornerProp) {
+    lastCornerProp = fullscreenOverlayCorner;
+    cornerDraft = fullscreenOverlayCorner || "top-right";
+  }
+
+  $: if (!isSavingGeneral && isReactionMuteModeEnabled !== lastMuteProp) {
+    lastMuteProp = isReactionMuteModeEnabled;
+    muteDraft = Boolean(isReactionMuteModeEnabled);
+  }
+
+  $: if (!isSavingGeneral && fullscreenOverlayWidthPercent !== lastOverlayWidthProp) {
+    lastOverlayWidthProp = fullscreenOverlayWidthPercent;
+    overlayWidthValue = clampOverlayWidth(fullscreenOverlayWidthPercent);
   }
 
   $: trimmedReactionVideoIdValue = (reactionVideoIdValue ?? "").trim();
@@ -189,43 +241,57 @@
   $: nextReactionFinishTimeSeconds = isReactionFinishTimeValid
     ? parsedReactionFinishMinutes * 60 + parsedReactionFinishSeconds
     : 0;
+  // Stored 0 displays as the video duration, so that default is not an unsaved edit.
+  $: effectiveStoredFinishSeconds =
+    Number(reactionFinishTime) > 0
+      ? Number(reactionFinishTime)
+      : Number(reactionDuration) > 0
+        ? Number(reactionDuration)
+        : 0;
   $: isReactionFinishTimeDirty =
     isReactionFinishTimeValid &&
-    Math.abs(nextReactionFinishTimeSeconds - Number(reactionFinishTime || 0)) >
+    Math.abs(nextReactionFinishTimeSeconds - effectiveStoredFinishSeconds) >
       0.0001;
 
   $: isSoundLevelDirty =
     Number.isFinite(soundLevelValue) && soundLevelValue !== soundLevel;
+  $: overlayWidthClamped = clampOverlayWidth(overlayWidthValue);
+  $: isOverlayWidthDirty =
+    overlayWidthClamped !== clampOverlayWidth(fullscreenOverlayWidthPercent);
+  $: isPrimaryDirty = primaryDraft !== (fullscreenPrimaryVideoDefault || "original");
+  $: isCornerDirty = cornerDraft !== (fullscreenOverlayCorner || "top-right");
+  $: isMuteDirty = muteDraft !== Boolean(isReactionMuteModeEnabled);
+  $: isGeneralDirty =
+    isOffsetStartDirty ||
+    isReactionFinishTimeDirty ||
+    isIntroBufferTimeDirty ||
+    isSoundLevelDirty ||
+    isOverlayWidthDirty ||
+    isPrimaryDirty ||
+    isCornerDirty ||
+    isMuteDirty;
+  $: isGeneralValid =
+    isOffsetStartValid && isReactionFinishTimeValid && isIntroBufferTimeValid;
+
+  const overlayPositionGrid = [
+    OVERLAY_POSITIONS[0],
+    OVERLAY_POSITIONS[1],
+    OVERLAY_POSITIONS[2],
+    OVERLAY_POSITIONS[3],
+    null,
+    OVERLAY_POSITIONS[4],
+    OVERLAY_POSITIONS[5],
+    OVERLAY_POSITIONS[6],
+    OVERLAY_POSITIONS[7],
+  ];
 
   const handleReactionVideoSubmit = () => {
     if (!trimmedReactionVideoIdValue) return;
     onSetReactionVideoId(trimmedReactionVideoIdValue);
   };
 
-  const handleIntroBufferSubmit = () => {
-    if (!isIntroBufferTimeValid) return;
-    onSetIntroBufferTime(parsedIntroBufferTimeValue);
-  };
-
-  const handleOffsetStartSubmit = () => {
-    if (!isOffsetStartValid) {
-      showToast("Enter a valid start time (mm:ss).", TOASTS.WARNING);
-      return;
-    }
-    onSetOffsetStartTime(nextOffsetStartTimeSeconds);
-  };
-
-  const handleReactionFinishTimeSubmit = () => {
-    if (!isReactionFinishTimeValid) {
-      showToast("Enter a valid finish time (mm:ss).", TOASTS.WARNING);
-      return;
-    }
-    onSetReactionFinishTime(nextReactionFinishTimeSeconds);
-  };
-
-  const handleSoundLevelSubmit = () => {
-    if (!Number.isFinite(soundLevelValue)) return;
-    onSetSoundLevel(soundLevelValue);
+  const clearReactionVideoInput = () => {
+    reactionVideoIdValue = "";
   };
 
   const handleRangeInput = (event) => {
@@ -233,13 +299,54 @@
     soundLevelValue = Number.isNaN(value) ? SOUND_LEVEL_MIN : value;
   };
 
-  const handleToggleFineTuneMode = () => {
-    onToggleFineTuneMode();
+  const handleOverlayWidthInput = (event) => {
+    const value = Number.parseFloat(event.currentTarget.value);
+    overlayWidthValue = Number.isNaN(value) ? DEFAULT_OVERLAY_WIDTH : value;
   };
 
-  const handleToggleReactionMuteMode = () => {
-    onSetReactionMuteMode(!isReactionMuteModeEnabled);
-  };
+  export function discardGeneralSettings() {
+    if (isSavingGeneral) return;
+    syncOffsetStartInputs(offsetStartTime);
+    syncReactionFinishInputs(reactionFinishTime);
+    introBufferTimeValue = introBufferTime?.toString?.() ?? "";
+    soundLevelValue = Number.isFinite(soundLevel) ? soundLevel : 100;
+    primaryDraft = fullscreenPrimaryVideoDefault || "original";
+    cornerDraft = fullscreenOverlayCorner || "top-right";
+    muteDraft = Boolean(isReactionMuteModeEnabled);
+    overlayWidthValue = clampOverlayWidth(fullscreenOverlayWidthPercent);
+  }
+
+  export async function saveGeneralSettings() {
+    if (!isGeneralDirty || !isGeneralValid || isSavingGeneral) return;
+    const patch = {
+      ...(isOffsetStartDirty
+        ? { offsetStartTime: nextOffsetStartTimeSeconds }
+        : {}),
+      ...(isReactionFinishTimeDirty
+        ? { reactionFinishTime: nextReactionFinishTimeSeconds }
+        : {}),
+      ...(isIntroBufferTimeDirty
+        ? { introBufferTime: parsedIntroBufferTimeValue }
+        : {}),
+      ...(isSoundLevelDirty ? { soundLevel: soundLevelValue } : {}),
+      ...(isMuteDirty ? { isReactionMuteModeEnabled: muteDraft } : {}),
+      ...(isPrimaryDirty ? { fullscreenPrimaryVideo: primaryDraft } : {}),
+      ...(isOverlayWidthDirty
+        ? { fullscreenOverlayWidthPercent: overlayWidthClamped }
+        : {}),
+      ...(isCornerDirty ? { fullscreenOverlayCorner: cornerDraft } : {}),
+    };
+    isSavingGeneral = true;
+    try {
+      await onSaveGeneralSettings(patch);
+      showToast("Settings saved.", TOASTS.SUCCESS);
+    } catch (error) {
+      console.error("Failed to save reaction settings", error);
+      showToast("Unable to save those settings. Try again.", TOASTS.WARNING);
+    } finally {
+      isSavingGeneral = false;
+    }
+  }
 
   const handleCreatePlayerConfig = async (event) => {
     const detail = event?.detail;
@@ -447,42 +554,46 @@
   };
 </script>
 
-<div class="flex flex-col gap-8">
+<div class="editor-config flex flex-col gap-3" data-testid="editor-general-settings">
   {#if (isReactionMissing || isEditModeOn) && !isFineTuneModeOn}
-    <section
-      class="rounded-3xl border border-border-subtle bg-surface/80 px-6 py-6 shadow-elevated"
-    >
-      <header
-        class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
-      >
-        <div>
-          <h2 class="text-lg font-semibold text-text-primary">
-            Reaction video source
-          </h2>
-          <p class="text-sm text-text-muted">
-            Link your YouTube reaction video so we can load it in our online
-            editor.
-          </p>
-        </div>
-      </header>
+    <section class="rounded-xl border border-border-subtle bg-surface/75 px-3 py-3">
+      <div class="flex items-center gap-2">
+        <svg class="h-4 w-4 shrink-0 text-accent-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M10 13a5 5 0 0 0 7.07 0l1.41-1.41a5 5 0 0 0-7.07-7.07L10 5" stroke-linecap="round" />
+          <path d="M14 11a5 5 0 0 0-7.07 0L5.52 12.41a5 5 0 0 0 7.07 7.07L14 19" stroke-linecap="round" />
+        </svg>
+        <h2 class="text-sm font-semibold text-text-primary">1. Reaction video source</h2>
+      </div>
+      <p class="mt-1 text-xs leading-snug text-text-muted">
+        Link your YouTube reaction video so we can load it in our editor.
+      </p>
 
-      <form
-        class="mt-6 flex flex-col gap-4 md:flex-row md:items-center"
-        on:submit|preventDefault={handleReactionVideoSubmit}
-      >
-        <div class="flex-1">
-          <AccessibleInput
-            id="reaction-video-id"
-            label="Reaction video URL or ID"
-            placeholder="https://www.youtube.com/watch?v=..."
-            bind:value={reactionVideoIdValue}
-            helperText="Paste a full YouTube URL or just the video ID."
-            error={reactionVideoIdError}
-            required
-            disabled={!isEditModeOn && !isReactionMissing}
-          />
-        </div>
-        <div class="flex-none">
+      <form class="mt-2 flex flex-col gap-1.5" on:submit|preventDefault={handleReactionVideoSubmit}>
+        <div class="flex items-center gap-2">
+          <div class="relative min-w-0 flex-1">
+            <input
+              id="reaction-video-id"
+              class="h-9 w-full rounded-lg border border-border-subtle bg-background/80 px-2.5 pr-8 text-sm text-text-primary placeholder:text-text-muted focus-visible:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:text-text-muted"
+              type="text"
+              placeholder="https://www.youtube.com/watch?v=..."
+              aria-label="Reaction video URL or ID"
+              bind:value={reactionVideoIdValue}
+              disabled={!isEditModeOn && !isReactionMissing}
+              aria-invalid={reactionVideoIdError ? "true" : undefined}
+            />
+            {#if reactionVideoIdValue}
+              <button
+                type="button"
+                class="absolute right-1.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded text-text-muted hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                aria-label="Clear video link"
+                on:click={clearReactionVideoInput}
+              >
+                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path d="M6 6l12 12M18 6 6 18" stroke-linecap="round" />
+                </svg>
+              </button>
+            {/if}
+          </div>
           <CinematicButton
             type="submit"
             size="sm"
@@ -493,205 +604,175 @@
             <span>Update video</span>
           </CinematicButton>
         </div>
+        <p class="text-[11px] text-text-muted">Paste a full YouTube URL or just the video ID.</p>
+        {#if reactionVideoIdError}
+          <p class="text-[11px] text-danger">{reactionVideoIdError}</p>
+        {/if}
       </form>
+
+      {#if currentReactionVideoId}
+        {@const loadedDuration = formatDurationLabel(reactionDuration)}
+        <div class="mt-2 flex items-center gap-2 rounded-lg border border-border-subtle bg-background/50 px-2 py-1.5">
+          <img
+            class="h-10 w-14 shrink-0 rounded object-cover"
+            src={`https://i.ytimg.com/vi/${currentReactionVideoId}/mqdefault.jpg`}
+            alt=""
+          />
+          <div class="min-w-0 flex-1">
+            <p class="truncate text-sm font-medium text-text-primary">
+              {reactionVideoTitle || "Reaction video"}
+            </p>
+            <p class="text-[11px] text-text-muted">
+              {loadedDuration ? `${loadedDuration} · ` : ""}YouTube
+            </p>
+          </div>
+          <span class="inline-flex shrink-0 items-center gap-1 text-[11px] font-medium text-success">
+            <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+              <path d="M5 12.5 9.5 17 19 7" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            Video loaded
+          </span>
+        </div>
+      {/if}
     </section>
   {/if}
 
   {#if isEditModeOn && !isFineTuneModeOn}
-    <section
-      class="rounded-3xl border border-border-subtle bg-surface/80 px-6 py-6 shadow-elevated"
-    >
-      <header
-        class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
-      >
-        <div>
-          <h2 class="text-lg font-semibold text-text-primary">
-            Playback tuning
-          </h2>
-          <p class="text-sm text-text-muted">
-            Use below configuration if the reaction video is supposed to start and finish at specific times. Especially useful in playlist reactions where the reaction to the original content is limited to a subsection of a big reaction each time.
-          </p>
+    <form class="flex flex-col gap-3" on:submit|preventDefault={saveGeneralSettings}>
+      <section class="rounded-xl border border-border-subtle bg-surface/75 px-3 py-3">
+        <div class="flex items-center gap-2">
+          <svg class="h-4 w-4 shrink-0 text-accent-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="8" />
+            <path d="M12 8v4l2.5 2" stroke-linecap="round" />
+          </svg>
+          <h2 class="text-sm font-semibold text-text-primary">2. Timing</h2>
         </div>
-      </header>
 
-      {#if isTikTokOriginal}
-        <div
-          class="mt-4 flex items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 px-4 py-3"
-          role="note"
-          aria-label="TikTok limitations"
-        >
-          <span class="mt-0.5 text-amber-400" aria-hidden="true">ⓘ</span>
-          <p class="text-sm text-amber-200">
-            <span class="font-medium">TikTok original:</span> playback speed and
-            fine-grained volume control are unavailable. Volume is limited to mute
-            or full.
-          </p>
-        </div>
-      {/if}
-
-      <div class="mt-6 flex flex-col gap-6">
-        <div class="grid gap-6 lg:grid-cols-2">
-          <form
-            class="flex flex-col gap-4"
-            on:submit|preventDefault={handleOffsetStartSubmit}
-          >
-            <div>
-              <h3 class="text-sm font-medium text-text-secondary">
-                Reaction start time
-              </h3>
-              <p class="mt-1 text-sm text-text-muted">
-                When you start playback, the reaction video will begin from this
-                timestamp.
-              </p>
-            </div>
-
-            <div class="grid gap-4 sm:grid-cols-2">
-              <AccessibleInput
+        <div class="timing-grid mt-2">
+          <div>
+            <h3 class="text-xs font-medium text-text-secondary">Reaction start time</h3>
+            <div class="mt-1.5 grid grid-cols-2 gap-1.5">
+              <TimeStepper
                 id="reaction-offset-minutes"
                 label="Minutes"
-                type="number"
-                min="0"
-                step="1"
+                min={0}
+                step={1}
                 bind:value={offsetStartMinutesValue}
-                required
               />
-              <AccessibleInput
+              <TimeStepper
                 id="reaction-offset-seconds"
                 label="Seconds"
-                type="number"
-                min="0"
-                max="59.9"
-                step="0.1"
+                min={0}
+                max={59.9}
+                step={1}
                 bind:value={offsetStartSecondsValue}
-                required
               />
             </div>
+            <p class="mt-1.5 text-[11px] leading-snug text-text-muted">
+              When you start playback, the reaction video will begin from this timestamp.
+            </p>
+          </div>
 
-            <div class="flex justify-end">
-              <CinematicButton
-                type="submit"
-                size="sm"
-                variant="secondary"
-                disabled={!isOffsetStartDirty}
-              >
-                <span>Save start time</span>
-              </CinematicButton>
-            </div>
-          </form>
-
-          <form
-            class="flex flex-col gap-4"
-            on:submit|preventDefault={handleReactionFinishTimeSubmit}
-          >
-            <div>
-              <h3 class="text-sm font-medium text-text-secondary">
-                Reaction finish time
-              </h3>
-              <p class="mt-1 text-sm text-text-muted">
-                Stop the reaction video once it reaches this timestamp.
-              </p>
-            </div>
-
-            <div class="grid gap-4 sm:grid-cols-2">
-              <AccessibleInput
+          <div>
+            <h3 class="text-xs font-medium text-text-secondary">Reaction finish time</h3>
+            <div class="mt-1.5 grid grid-cols-2 gap-1.5">
+              <TimeStepper
                 id="reaction-finish-minutes"
                 label="Minutes"
-                type="number"
-                min="0"
-                step="1"
+                min={0}
+                step={1}
                 bind:value={reactionFinishMinutesValue}
-                required
               />
-              <AccessibleInput
+              <TimeStepper
                 id="reaction-finish-seconds"
                 label="Seconds"
-                type="number"
-                min="0"
-                max="59.9"
-                step="0.1"
+                min={0}
+                max={59.9}
+                step={1}
                 bind:value={reactionFinishSecondsValue}
-                required
               />
             </div>
+            <p class="mt-1.5 text-[11px] leading-snug text-text-muted">
+              Stop the reaction video once it reaches this timestamp.
+            </p>
+          </div>
 
-            <div class="flex justify-end">
-              <CinematicButton
-                type="submit"
-                size="sm"
-                variant="secondary"
-                disabled={!isReactionFinishTimeDirty}
-              >
-                <span>Save finish time</span>
-              </CinematicButton>
+          <div>
+            <div class="flex items-center gap-1.5">
+              <h3 class="text-xs font-medium text-text-secondary">Original video lead-in</h3>
+              <HelpfulTip variant="tooltip" placement="top" label="About original video lead-in">
+                How long to play the original clip before your reaction starts. Negative values and fractions are allowed. Every cue shifts by this many seconds, which helps when the recording started out of sync.
+              </HelpfulTip>
             </div>
-          </form>
+            <div class="mt-1.5">
+              <TimeStepper
+                id="intro-buffer-time"
+                label="Seconds"
+                min={-3600}
+                max={3600}
+                step={0.1}
+                bind:value={introBufferTimeValue}
+              />
+            </div>
+            <p class="mt-1.5 text-[11px] leading-snug text-text-muted">
+              How long to play the original clip before your reaction starts.
+            </p>
+          </div>
+        </div>
+        {#if !isOffsetStartValid || !isReactionFinishTimeValid || !isIntroBufferTimeValid}
+          <p class="mt-2 text-[11px] text-danger">
+            Enter a valid time. Seconds stay under 60, and lead-in must be a number.
+          </p>
+        {/if}
+      </section>
+
+      <section class="rounded-xl border border-border-subtle bg-surface/75 px-3 py-3">
+        <div class="flex items-center gap-2">
+          <svg class="h-4 w-4 shrink-0 text-accent-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4" stroke-linecap="round" />
+          </svg>
+          <h2 class="text-sm font-semibold text-text-primary">3. Audio</h2>
         </div>
 
-        <form
-          class="flex flex-col gap-4 md:flex-row md:items-center"
-          on:submit|preventDefault={handleIntroBufferSubmit}
-        >
-          <div class="flex-1">
-            <AccessibleInput
-              id="intro-buffer-time"
-              label="Intro buffer (seconds)"
-              type="number"
-              min="0"
-              step="0.1"
-              bind:value={introBufferTimeValue}
-              helperText="How long to play the original clip before your reaction starts. Negative values and fractional values are permitted. Especially useful if your reaction recording starts out of sync compared to the time you clikced 'start reaction' on our platform. All configurations are moved by the number of seconds you specify here."
-              required
-            />
-          </div>
-          <div class="flex-none">
-            <CinematicButton
-              type="submit"
-              size="sm"
-              variant="secondary"
-              disabled={!isIntroBufferTimeDirty}
-            >
-              <span>Save intro buffer</span>
-            </CinematicButton>
-          </div>
-        </form>
-        <form
-          class="flex flex-col gap-4"
-          on:submit|preventDefault={handleSoundLevelSubmit}
-        >
-          <div class="flex w-full flex-col gap-2">
-            <div class="flex items-center justify-between">
-              <label
-                class="text-sm font-medium text-text-secondary"
-                for="original-sound-level">Original audio level</label
-              >
-              <span class="text-sm text-text-muted">{soundLevelValue}%</span>
+        {#if isTikTokOriginal}
+          <p class="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-2.5 py-1.5 text-[11px] leading-snug text-amber-200" role="note">
+            TikTok originals only support mute or full volume. Playback speed and fine-grained volume are unavailable.
+          </p>
+        {/if}
+
+        <div class="audio-grid mt-2">
+          <div>
+            <div class="flex items-center justify-between gap-3">
+              <label class="text-xs font-medium text-text-secondary" for="original-sound-level">
+                Original video audio level
+              </label>
+              <span class="text-xs tabular-nums text-text-muted">{soundLevelValue}%</span>
             </div>
             {#if isTikTokOriginal}
-              <p class="text-xs text-text-muted">
-                TikTok originals only support mute or full volume.
-              </p>
-              <div class="flex gap-3">
+              <div class="mt-2 flex gap-2" role="radiogroup" aria-label="Original video audio level">
                 <button
                   type="button"
                   role="radio"
                   aria-checked={soundLevelValue === 0}
-                  aria-label="Mute original audio"
-                  class={`flex-1 rounded-xl border px-4 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 ${soundLevelValue === 0 ? "border-accent-primary bg-accent-primary/10 text-accent-primary" : "border-border-subtle bg-surface/60 text-text-secondary hover:bg-surface"}`}
-                  on:click={() => { soundLevelValue = 0; }}
-                >Mute</button>
+                  class={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${soundLevelValue === 0 ? "border-accent-primary bg-accent-primary/10 text-accent-primary" : "border-border-subtle bg-background/50 text-text-secondary"}`}
+                  on:click={() => (soundLevelValue = 0)}
+                >
+                  Mute
+                </button>
                 <button
                   type="button"
                   role="radio"
                   aria-checked={soundLevelValue === 100}
-                  aria-label="Restore original audio to full volume"
-                  class={`flex-1 rounded-xl border px-4 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 ${soundLevelValue === 100 ? "border-accent-primary bg-accent-primary/10 text-accent-primary" : "border-border-subtle bg-surface/60 text-text-secondary hover:bg-surface"}`}
-                  on:click={() => { soundLevelValue = 100; }}
-                >Full volume</button>
+                  class={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${soundLevelValue === 100 ? "border-accent-primary bg-accent-primary/10 text-accent-primary" : "border-border-subtle bg-background/50 text-text-secondary"}`}
+                  on:click={() => (soundLevelValue = 100)}
+                >
+                  Full volume
+                </button>
               </div>
             {:else}
               <input
                 id="original-sound-level"
-                class="h-2 w-full rounded-full bg-border-subtle accent-accent-primary"
+                class="mt-3 h-2 w-full cursor-pointer accent-accent-primary"
                 type="range"
                 min={SOUND_LEVEL_MIN}
                 max={SOUND_LEVEL_MAX}
@@ -701,94 +782,171 @@
               />
             {/if}
           </div>
-          <div class="flex justify-end">
-            <CinematicButton
-              type="submit"
-              size="sm"
-              variant="secondary"
-              disabled={!isSoundLevelDirty}
-            >
-              <span>Apply sound level</span>
-            </CinematicButton>
-          </div>
-        </form>
 
-        <div
-          class="flex flex-col gap-3 rounded-2xl border border-border-subtle bg-background/60 p-4"
-        >
           <div>
-            <h3 class="text-base font-semibold text-text-primary">
-              Reaction mute mode
-            </h3>
-            <p class="text-sm text-text-muted">
+            <div class="flex items-center justify-between gap-3">
+              <h3 class="text-xs font-medium text-text-secondary">Reaction mute mode</h3>
+              <button
+                type="button"
+                class={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${muteDraft ? "border-accent-primary bg-accent-primary" : "border-border-subtle bg-background/80"}`}
+                role="switch"
+                aria-checked={muteDraft}
+                aria-label={muteDraft ? "Disable reaction mute mode" : "Enable reaction mute mode"}
+                on:click={() => (muteDraft = !muteDraft)}
+              >
+                <span
+                  class={`inline-block h-5 w-5 transform rounded-full bg-surface shadow-surface transition ${muteDraft ? "translate-x-5" : "translate-x-0.5"}`}
+                ></span>
+              </button>
+            </div>
+            <p class="mt-1.5 text-[11px] leading-snug text-text-muted">
               Mute your reaction audio whenever the original video plays.
             </p>
           </div>
-          <div class="flex items-center justify-between gap-4">
-            <span class="text-sm text-text-secondary"
-              >{isReactionMuteModeEnabled ? "Enabled" : "Disabled"}</span
-            >
-            <button
-              type="button"
-              class={`relative inline-flex h-7 w-12 items-center rounded-full border border-border-subtle transition duration-subtle ease-cinematic focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background ${isReactionMuteModeEnabled ? "bg-accent-primary/80 border-accent-primary" : "bg-surface/60 border-border-subtle"}`}
-              role="switch"
-              aria-checked={isReactionMuteModeEnabled}
-              aria-label={isReactionMuteModeEnabled
-                ? "Disable reaction mute mode"
-                : "Enable reaction mute mode"}
-              on:click={handleToggleReactionMuteMode}
-            >
-              <span
-                class={`inline-block h-6 w-6 transform rounded-full bg-surface shadow-surface transition duration-subtle ease-cinematic ${isReactionMuteModeEnabled ? "translate-x-5" : "translate-x-1"}`}
-              ></span>
-            </button>
+        </div>
+      </section>
+
+      <section class="rounded-xl border border-border-subtle bg-surface/75 px-3 py-3">
+        <div class="flex items-center gap-2">
+          <svg class="h-4 w-4 shrink-0 text-accent-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="14" rx="2" />
+            <path d="M8 21h8" stroke-linecap="round" />
+          </svg>
+          <h2 class="text-sm font-semibold text-text-primary">4. Player layout</h2>
+        </div>
+        <p class="mt-1 text-xs leading-snug text-text-muted">
+          Choose which video is the primary (main) video, and how the reaction overlay looks.
+        </p>
+
+        <div class="mt-2 grid grid-cols-2 gap-2" role="group" aria-label="Primary video">
+          <button
+            type="button"
+            class={`rounded-lg border px-2 py-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${primaryDraft === "original" ? "border-accent-primary bg-accent-primary/10 text-text-primary" : "border-border-subtle bg-background/40 text-text-muted hover:text-text-primary"}`}
+            aria-pressed={primaryDraft === "original"}
+            on:click={() => (primaryDraft = "original")}
+          >
+            <svg class="h-8 w-full" viewBox="0 0 80 36" fill="none" aria-hidden="true">
+              <rect x="1" y="1" width="78" height="34" rx="4" stroke="currentColor" stroke-width="1.5" />
+              <rect x="56" y="5" width="18" height="12" rx="2" fill="currentColor" opacity="0.85" />
+            </svg>
+            <span class="mt-1 block text-xs font-semibold">Original video (main)</span>
+            <span class="mt-0.5 block text-[11px] leading-snug text-text-muted">
+              The original video is the main video, with your reaction as an overlay.
+            </span>
+          </button>
+          <button
+            type="button"
+            class={`rounded-lg border px-2 py-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${primaryDraft === "reaction" ? "border-accent-primary bg-accent-primary/10 text-text-primary" : "border-border-subtle bg-background/40 text-text-muted hover:text-text-primary"}`}
+            aria-pressed={primaryDraft === "reaction"}
+            on:click={() => (primaryDraft = "reaction")}
+          >
+            <svg class="h-8 w-full" viewBox="0 0 80 36" fill="none" aria-hidden="true">
+              <rect x="1" y="1" width="78" height="34" rx="4" stroke="currentColor" stroke-width="1.5" />
+              <rect x="6" y="19" width="18" height="12" rx="2" fill="currentColor" opacity="0.85" />
+            </svg>
+            <span class="mt-1 block text-xs font-semibold">Reaction video (main)</span>
+            <span class="mt-0.5 block text-[11px] leading-snug text-text-muted">
+              Your reaction video is the main video, with the original video as an overlay.
+            </span>
+          </button>
+        </div>
+
+        <div class="mt-3">
+          <div class="flex items-center justify-between gap-3">
+            <label class="text-xs font-medium text-text-secondary" for="fullscreen-overlay-width">
+              Reaction overlay size
+            </label>
+            <span class="text-xs tabular-nums text-text-muted">{overlayWidthClamped}%</span>
+          </div>
+          <input
+            id="fullscreen-overlay-width"
+            class="mt-2 h-2 w-full cursor-pointer accent-accent-primary"
+            type="range"
+            min={OVERLAY_WIDTH_MIN}
+            max={OVERLAY_WIDTH_MAX}
+            step={OVERLAY_WIDTH_STEP}
+            value={overlayWidthValue}
+            on:input={handleOverlayWidthInput}
+          />
+          <p class="mt-1.5 text-[11px] leading-snug text-text-muted">
+            Choose a width from 5% to 80% of the player.
+          </p>
+        </div>
+
+        <div class="mt-3">
+          <h3 class="text-xs font-medium text-text-secondary">Reaction overlay position</h3>
+          <div class="mt-1.5 grid grid-cols-3 gap-1.5" role="group" aria-label="Reaction overlay position">
+            {#each overlayPositionGrid as position, index (position?.value ?? `empty-${index}`)}
+              {#if position}
+                <button
+                  type="button"
+                  class={`flex flex-col items-center gap-1 rounded-lg border px-1 py-1.5 text-[11px] font-medium leading-tight transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${cornerDraft === position.value ? "border-accent-primary bg-accent-primary text-background" : "border-border-subtle bg-background/40 text-text-muted hover:text-text-primary"}`}
+                  aria-pressed={cornerDraft === position.value}
+                  aria-label={`Place the overlay at the ${position.label.toLowerCase()}`}
+                  on:click={() => (cornerDraft = position.value)}
+                >
+                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <rect x="2" y="3" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.5" />
+                    <rect x={position.x} y={position.y} width="8" height="5" rx="1" fill="currentColor" />
+                  </svg>
+                  <span>{position.label}</span>
+                </button>
+              {:else}
+                <div aria-hidden="true"></div>
+              {/if}
+            {/each}
           </div>
         </div>
+      </section>
+
+      <div class="flex flex-wrap items-center justify-end gap-2">
+        <CinematicButton
+          type="button"
+          variant="secondary"
+          size="sm"
+          disabled={!isGeneralDirty || isSavingGeneral}
+          on:click={discardGeneralSettings}
+        >
+          <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M3 12a9 9 0 1 0 3-6.7" stroke-linecap="round" />
+            <path d="M3 4v5h5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          <span>Discard changes</span>
+        </CinematicButton>
+        <CinematicButton
+          type="submit"
+          variant="primary"
+          size="sm"
+          disabled={!isGeneralDirty || !isGeneralValid || isSavingGeneral}
+          loading={isSavingGeneral}
+        >
+          <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M5 4h11l3 3v13H5V4Z" />
+            <path d="M8 4v5h7V4M8 20v-6h8v6" />
+          </svg>
+          <span>Save changes</span>
+          <span slot="loading">Saving…</span>
+        </CinematicButton>
       </div>
-    </section>
-  {/if}
-
-  {#if isEditModeOn && !isFineTuneModeOn}
-    <FullscreenLayoutPanel
-      fullscreenPrimaryVideo={fullscreenPrimaryVideoDefault}
-      {fullscreenOverlayWidthPercent}
-      {fullscreenOverlayCorner}
-      {onSetFullscreenPrimaryVideo}
-      {onSetFullscreenOverlayWidthPercent}
-      onOpenOverlayPositionPanel={onToggleOverlayPositionPanel}
-    />
-  {/if}
-
-  {#if isEditModeOn && !isFineTuneModeOn && isOverlayPositionPanelOpen}
-    <OverlayPositionPanel
-      {fullscreenOverlayCorner}
-      onSetFullscreenOverlayCorner={onSetFullscreenOverlayCorner}
-      onClose={onToggleOverlayPositionPanel}
-    />
+    </form>
   {/if}
 
   {#if isEditModeOn && isFineTuneModeOn}
     <section
       class="rounded-3xl border border-border-subtle bg-surface/80 px-6 py-6 shadow-elevated"
     >
-      <header
-        class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
-      >
-        <div>
-          <div class="flex items-center gap-2">
-            <h2 class="text-lg font-semibold text-text-primary">
-              Fine-tune mode
-            </h2>
-          </div>
-          <p class="text-sm text-text-muted">
-            Adjust precise playback, volume, and state timelines when you need
-            full control.
-          </p>
-        </div>
+      <header class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <h2 class="text-base font-semibold text-text-primary">
+          Fine-tune mode
+        </h2>
+        <p class="text-sm text-text-muted">
+          Adjust precise playback, volume, and state timelines when you need
+          full control.
+        </p>
       </header>
 
       {#if isFineTuneModeOn}
-        <div class="mt-6 flex flex-col gap-6">
+        <div class="mt-4 flex flex-col gap-6">
           <div
             class="rounded-2xl border border-border-subtle bg-background/60 p-4 shadow-surface"
           >
@@ -834,3 +992,27 @@
     </section>
   {/if}
 </div>
+
+<style>
+  .editor-config {
+    container-type: inline-size;
+  }
+
+  .timing-grid,
+  .audio-grid {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  /* Three timing fields only fit once the config column is wide enough to keep the inputs readable. */
+  @container (min-width: 26rem) {
+    .timing-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .audio-grid {
+      grid-template-columns: minmax(0, 1fr) 13rem;
+      align-items: start;
+    }
+  }
+</style>

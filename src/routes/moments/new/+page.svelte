@@ -8,7 +8,8 @@
   import { handlePrivateRoute } from '$lib/helpers/routing';
   import { fetchOriginalVideoMetadata, originalVideoMetadataToFirestoreFields } from '$lib/helpers/originalVideo';
   import { parseReactionSourceInput } from '$lib/helpers/reactionSequence';
-  import { createMomentWithSlug, buildMomentPagePath } from '$lib/helpers/momentsFirestore';
+  import { createMomentWithSlug, buildMomentPagePath, updateMomentDocument } from '$lib/helpers/momentsFirestore';
+  import { assertMomentReady } from '$lib/helpers/moments';
   import { showToast } from '$lib/stores/toast';
   import { TOASTS } from '$lib/constants/toasts';
 
@@ -74,43 +75,46 @@
       return;
     }
     const source = parsed.source;
-
-    const trimmedTitle = title.trim();
-    if (!trimmedTitle) {
-      errorMessage = 'Give this moment a short, memorable title.';
-      return;
-    }
-
-    const anchorSeconds = Number(momentTimeSeconds);
-    if (!Number.isFinite(anchorSeconds) || anchorSeconds < 0) {
-      errorMessage = 'Enter the moment timing in seconds (0 or greater).';
+    const ready = assertMomentReady({
+      title,
+      originalVideoUrl: source.originalVideoUrl,
+      momentTimeSeconds
+    });
+    if (!ready.ok) {
+      errorMessage = ready.error;
       return;
     }
 
     isSubmitting = true;
     try {
-      const metadata = await fetchOriginalVideoMetadata({
-        platform: source.originalVideoPlatform,
-        videoId: source.originalVideoId,
-        videoUrl: source.originalVideoUrl
-      });
-      const firestoreFields = originalVideoMetadataToFirestoreFields(metadata);
       const tags = tagsInput
         .split(',')
         .map((tag) => tag.trim())
         .filter(Boolean);
 
       const { momentId } = await createMomentWithSlug({
-        title: trimmedTitle,
+        title: ready.value.title,
         originalVideoId: source.originalVideoId,
         originalVideoPlatform: source.originalVideoPlatform,
-        originalVideoUrl: source.originalVideoUrl,
-        momentTimeSeconds: anchorSeconds,
+        originalVideoUrl: ready.value.originalVideoUrl,
+        momentTimeSeconds: ready.value.momentTimeSeconds,
         tags,
         creatorId: user.uid,
         creatorDisplayName: user.displayName || '',
-        ...firestoreFields
+        reactionCount: 0
       });
+
+      try {
+        const metadata = await fetchOriginalVideoMetadata({
+          platform: source.originalVideoPlatform,
+          videoId: source.originalVideoId,
+          videoUrl: source.originalVideoUrl
+        });
+        const firestoreFields = originalVideoMetadataToFirestoreFields(metadata);
+        await updateMomentDocument(momentId, firestoreFields);
+      } catch (metadataError) {
+        console.warn('Moment is listed without original video details', metadataError);
+      }
 
       showToast('Moment created.', TOASTS.SUCCESS);
       await goto(buildMomentPagePath(momentId));
@@ -147,7 +151,7 @@
 
   <h1 class="mt-6 text-3xl font-semibold text-text-primary">Create a moment</h1>
   <p class="mt-2 text-base text-text-secondary">
-    A moment is a shared timestamp in original content—not a clip. Others can attach short synchronized reactions to it.
+    A moment is a shared timestamp in original content—not a clip. It is listed as soon as the original video URL, title, and time are set, with 0 reactions until someone publishes one.
   </p>
 
   <form class="mt-8 space-y-6" on:submit={handleSubmit}>

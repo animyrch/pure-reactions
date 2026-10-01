@@ -32,6 +32,7 @@
     buildYouTubeThumbnailUrl(moment.originalVideoId) ||
     '';
   $: tags = Array.isArray(moment.tags) ? moment.tags.slice(0, 3) : [];
+  $: reactionCount = Number.isFinite(Number(moment.reactionCount)) ? Number(moment.reactionCount) : 0;
 
   $: anchorTime = typeof moment.momentTimeSeconds === 'number' ? formatTime(moment.momentTimeSeconds) : '';
 </script>
@@ -70,6 +71,9 @@
         {title}
       </h2>
     </a>
+    <p class="text-sm text-text-secondary">
+      {reactionCount} {reactionCount === 1 ? 'reaction' : 'reactions'}
+    </p>
 
     {#if tags.length}
       <ul class="flex flex-wrap gap-2" aria-label="Tags">
