@@ -1,5 +1,5 @@
 <script>
-  import { createEventDispatcher, onDestroy } from "svelte";
+  import { createEventDispatcher, onDestroy, onMount } from "svelte";
   import { PlaySolid, PauseSolid, EyeSolid, EyeSlashSolid } from "flowbite-svelte-icons";
   import AdvancedVolumeControl from "./AdvancedVolumeControl.svelte";
 
@@ -156,6 +156,8 @@
   // Advanced options state
   let showAdvancedPending = false;
   let showAdvancedActive = false;
+
+  $: cueEditorOpen = pendingConfig !== null || activeMarker !== null;
 
   const PENDING_TARGET_MINUTES_INPUT_ID = "pending-target-minutes";
   const PENDING_TARGET_SECONDS_INPUT_ID = "pending-target-seconds";
@@ -1200,10 +1202,30 @@
   };
 
   const handleWindowKeydown = (event) => {
-    if (event.key === "Escape") {
+    if (event.key !== "Escape") return;
+    closeConfigPopup();
+    closeMarkerEditor();
+  };
+
+  // Marker buttons stop keydown from bubbling, so Escape is caught on the
+  // way down while a cue form is open.
+  onMount(() => {
+    const onKeydown = (event) => {
+      if (event.key !== "Escape") return;
+      if (!pendingConfig && !activeMarker) return;
       closeConfigPopup();
       closeMarkerEditor();
-    }
+    };
+    window.addEventListener("keydown", onKeydown, true);
+    return () => window.removeEventListener("keydown", onKeydown, true);
+  });
+
+  // Stop timeline shortcuts while editing, but still dismiss on Escape.
+  const handleEditorKeydown = (event) => {
+    event.stopPropagation();
+    if (event.key !== "Escape") return;
+    closeConfigPopup();
+    closeMarkerEditor();
   };
 
   const confirmConfigCreation = (rawState) => {
@@ -1525,11 +1547,33 @@
 <svelte:window on:keydown={handleWindowKeydown} />
 
 <div class="flex flex-col gap-3">
-  <div
-    class="flex items-center justify-between text-xs font-medium text-text-muted"
-  >
-    <span aria-label="Current time">{formatTimecode(safeCurrentTime)}</span>
-    <span aria-label="Total duration">{formatTimecode(safeDuration)}</span>
+  <div class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-4 gap-y-1">
+    <p class="col-start-1 row-start-1 text-sm font-semibold text-text-primary">
+      Live reaction timeline
+    </p>
+    <p class="col-start-3 row-start-1 justify-self-end text-right text-xs text-text-muted">
+      Tracks playback position in real time
+    </p>
+    <span
+      class="col-start-1 row-start-2 text-xs font-medium text-text-muted"
+      aria-label="Current time">{formatTimecode(safeCurrentTime)}</span
+    >
+    <span
+      class="col-start-3 row-start-2 justify-self-end text-xs font-medium text-text-muted"
+      aria-label="Total duration">{formatTimecode(safeDuration)}</span
+    >
+    {#if cueEditorOpen}
+      <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+      <div
+        class="col-span-3 row-start-3 min-w-0 md:col-span-1 md:col-start-2 md:row-start-1 md:row-span-2 md:w-[min(100%,28rem)] md:justify-self-center"
+        role="group"
+        aria-label="Cue editor"
+        on:click|stopPropagation
+        on:keydown={handleEditorKeydown}
+      >
+        {@render cueForm()}
+      </div>
+    {/if}
   </div>
   <div
     class="relative rounded-xl border border-border-subtle/50 bg-surface/60 px-3 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
@@ -1557,9 +1601,7 @@
       </div>
     {/if}
 
-    <!-- Replace the tracks wrapper with a relative wrapper that has room for the global indicator -->
     <div class="relative flex flex-col gap-4 pt-6">
-      <!-- Global current-time indicator (aligned to the region column: w-28 + gap-3) -->
       <div
         class="pointer-events-auto absolute left-[calc(7rem+0.75rem)] right-0 top-0 h-6 cursor-ew-resize"
         aria-label="Playhead scrubber"
@@ -1675,17 +1717,18 @@
         </div>
       {/each}
     </div>
+  </div>
 
+  {#snippet cueForm()}
     {#if pendingConfig}
       <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
       <div
-        class="pointer-events-auto absolute top-full mt-4 flex min-w-[18rem] w-max -translate-x-1/2 flex-col gap-2 rounded-lg border border-border-strong/60 bg-background/95 p-3 text-xs shadow-lg z-10"
-        style={`left: ${(pendingConfig.ratio * 100).toFixed(3)}%`}
+        class="pointer-events-auto flex w-full flex-col gap-2 rounded-lg border border-border-strong/60 bg-background/95 p-3 text-xs shadow-lg"
         role="dialog"
         aria-modal="false"
         aria-label="New playback configuration"
         on:click|stopPropagation
-        on:keydown|stopPropagation
+        on:keydown={handleEditorKeydown}
         tabindex="-1"
       >
         <div
@@ -1694,7 +1737,7 @@
           <span class="text-xs text-text-muted whitespace-nowrap"
             >Reaction at</span
           >
-          <div class="flex flex-nowrap items-end gap-3">
+          <div class="flex flex-wrap items-end gap-3">
             <div class="flex items-center gap-1">
               <label class="sr-only" for={PENDING_REACTION_MINUTES_INPUT_ID}
                 >Reaction minutes</label
@@ -1739,7 +1782,7 @@
             <span class="text-xs text-text-muted whitespace-nowrap"
               >Original video at</span
             >
-            <div class="flex flex-nowrap items-end gap-3">
+            <div class="flex flex-wrap items-end gap-3">
               <div class="flex items-center gap-1">
                 <label class="sr-only" for={PENDING_TARGET_MINUTES_INPUT_ID}
                   >Original minutes</label
@@ -1934,8 +1977,7 @@
     {#if activeMarker}
       <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
       <div
-        class="pointer-events-auto absolute top-full mt-4 flex min-w-[18rem] w-max -translate-x-1/2 flex-col gap-3 rounded-lg border border-border-strong/60 bg-background/95 p-3 text-xs shadow-lg z-10"
-        style={`left: ${(activeMarker.ratio * 100).toFixed(3)}%`}
+        class="pointer-events-auto flex w-full flex-col gap-3 rounded-lg border border-border-strong/60 bg-background/95 p-3 text-xs shadow-lg"
         role="dialog"
         aria-modal="false"
         aria-label={activeMarker.trackId === "volume" ||
@@ -1947,7 +1989,7 @@
               ? "Edit overlay cue"
             : "Edit playback cue"}
         on:click|stopPropagation
-        on:keydown|stopPropagation
+        on:keydown={handleEditorKeydown}
         tabindex="-1"
       >
         <div
@@ -1956,7 +1998,7 @@
           <span class="text-xs text-text-muted whitespace-nowrap"
             >Reaction at</span
           >
-          <div class="flex flex-nowrap items-end gap-3">
+          <div class="flex flex-wrap items-end gap-3">
             <div class="flex items-center gap-1">
               <label class="sr-only" for={ACTIVE_REACTION_MINUTES_INPUT_ID}
                 >Reaction minutes</label
@@ -2003,7 +2045,7 @@
             <span class="text-xs text-text-muted whitespace-nowrap"
               >Original video at</span
             >
-            <div class="flex flex-nowrap items-end gap-3">
+            <div class="flex flex-wrap items-end gap-3">
               <div class="flex items-center gap-1">
                 <label class="sr-only" for={ACTIVE_TARGET_MINUTES_INPUT_ID}
                   >Original minutes</label
@@ -2239,7 +2281,7 @@
         </div>
       </div>
     {/if}
-  </div>
+  {/snippet}
   {#if isZoomed}
     <div class="flex justify-end pt-1">
       <button

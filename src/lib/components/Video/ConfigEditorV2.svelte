@@ -362,14 +362,6 @@
   {/if}
 
   <div class="rounded-2xl border border-border-subtle/80 bg-surface/60 p-4">
-    <div class="mb-3 flex items-center justify-between">
-      <p class="text-sm font-semibold text-text-primary">
-        Live reaction timeline
-      </p>
-      <p class="text-xs text-text-muted">
-        Tracks playback position in real time
-      </p>
-    </div>
     <InteractiveSynchronizer
       currentTime={reactionCurrentTime}
       duration={reactionDuration}
