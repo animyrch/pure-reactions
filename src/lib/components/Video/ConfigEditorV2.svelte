@@ -304,6 +304,53 @@
 </script>
 
 <div class="flex flex-col gap-6">
+  <div class="rounded-2xl border border-border-subtle/80 bg-surface/60 p-4">
+    <InteractiveSynchronizer
+      currentTime={reactionCurrentTime}
+      duration={reactionDuration}
+      {seekMin}
+      {seekMax}
+      {playerEvents}
+      {volumeEvents}
+      {reactionVolumeEvents}
+      playbackRateEvents={playbackEvents}
+      overlayVisibilityEvents={overlayVisibilityEvents}
+      overlayPrimaryDefault={fullscreenPrimaryVideoDefault}
+      {allowPlaybackRate}
+      on:createPlayerConfig={(event) =>
+        dispatch("createPlayerConfig", event.detail)}
+      on:createVolumeConfig={(event) =>
+        dispatch("createVolumeConfig", event.detail)}
+      on:createReactionVolumeConfig={(event) =>
+        dispatch("createReactionVolumeConfig", event.detail)}
+      on:createPlaybackRateConfig={(event) =>
+        dispatch("createPlaybackRateConfig", event.detail)}
+      on:createOverlayVisibilityConfig={(event) =>
+        dispatch("createOverlayVisibilityConfig", event.detail)}
+      on:updatePlayerConfig={(event) =>
+        dispatch("updatePlayerConfig", event.detail)}
+      on:deletePlayerConfig={(event) =>
+        dispatch("deletePlayerConfig", event.detail)}
+      on:updateVolumeConfig={(event) =>
+        dispatch("updateVolumeConfig", event.detail)}
+      on:deleteVolumeConfig={(event) =>
+        dispatch("deleteVolumeConfig", event.detail)}
+      on:updateReactionVolumeConfig={(event) =>
+        dispatch("updateReactionVolumeConfig", event.detail)}
+      on:deleteReactionVolumeConfig={(event) =>
+        dispatch("deleteReactionVolumeConfig", event.detail)}
+      on:updatePlaybackRateConfig={(event) =>
+        dispatch("updatePlaybackRateConfig", event.detail)}
+      on:deletePlaybackRateConfig={(event) =>
+        dispatch("deletePlaybackRateConfig", event.detail)}
+      on:updateOverlayVisibilityConfig={(event) =>
+        dispatch("updateOverlayVisibilityConfig", event.detail)}
+      on:deleteOverlayVisibilityConfig={(event) =>
+        dispatch("deleteOverlayVisibilityConfig", event.detail)}
+      on:seek={(event) => dispatch("seek", event.detail)}
+    />
+  </div>
+
   {#if !showDebugConfigs && ignoredTimelineEntries.length}
     <button
       type="button"
@@ -360,59 +407,4 @@
         dispatch("deletePlaybackRateConfig", event.detail)}
     />
   {/if}
-
-  <div class="rounded-2xl border border-border-subtle/80 bg-surface/60 p-4">
-    <div class="mb-3 flex items-center justify-between">
-      <p class="text-sm font-semibold text-text-primary">
-        Live reaction timeline
-      </p>
-      <p class="text-xs text-text-muted">
-        Tracks playback position in real time
-      </p>
-    </div>
-    <InteractiveSynchronizer
-      currentTime={reactionCurrentTime}
-      duration={reactionDuration}
-      {seekMin}
-      {seekMax}
-      {playerEvents}
-      {volumeEvents}
-      {reactionVolumeEvents}
-      playbackRateEvents={playbackEvents}
-      overlayVisibilityEvents={overlayVisibilityEvents}
-      overlayPrimaryDefault={fullscreenPrimaryVideoDefault}
-      {allowPlaybackRate}
-      on:createPlayerConfig={(event) =>
-        dispatch("createPlayerConfig", event.detail)}
-      on:createVolumeConfig={(event) =>
-        dispatch("createVolumeConfig", event.detail)}
-      on:createReactionVolumeConfig={(event) =>
-        dispatch("createReactionVolumeConfig", event.detail)}
-      on:createPlaybackRateConfig={(event) =>
-        dispatch("createPlaybackRateConfig", event.detail)}
-      on:createOverlayVisibilityConfig={(event) =>
-        dispatch("createOverlayVisibilityConfig", event.detail)}
-      on:updatePlayerConfig={(event) =>
-        dispatch("updatePlayerConfig", event.detail)}
-      on:deletePlayerConfig={(event) =>
-        dispatch("deletePlayerConfig", event.detail)}
-      on:updateVolumeConfig={(event) =>
-        dispatch("updateVolumeConfig", event.detail)}
-      on:deleteVolumeConfig={(event) =>
-        dispatch("deleteVolumeConfig", event.detail)}
-      on:updateReactionVolumeConfig={(event) =>
-        dispatch("updateReactionVolumeConfig", event.detail)}
-      on:deleteReactionVolumeConfig={(event) =>
-        dispatch("deleteReactionVolumeConfig", event.detail)}
-      on:updatePlaybackRateConfig={(event) =>
-        dispatch("updatePlaybackRateConfig", event.detail)}
-      on:deletePlaybackRateConfig={(event) =>
-        dispatch("deletePlaybackRateConfig", event.detail)}
-      on:updateOverlayVisibilityConfig={(event) =>
-        dispatch("updateOverlayVisibilityConfig", event.detail)}
-      on:deleteOverlayVisibilityConfig={(event) =>
-        dispatch("deleteOverlayVisibilityConfig", event.detail)}
-      on:seek={(event) => dispatch("seek", event.detail)}
-    />
-  </div>
 </div>
