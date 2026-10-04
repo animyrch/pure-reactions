@@ -108,6 +108,12 @@
   let muteDraft = Boolean(isReactionMuteModeEnabled);
   let overlayWidthValue = clampOverlayWidth(fullscreenOverlayWidthPercent);
   let isSavingGeneral = false;
+  // One general-config section stays open. Source is open on first paint.
+  let openGeneralSection = "source";
+
+  const toggleGeneralSection = (id) => {
+    openGeneralSection = openGeneralSection === id ? "" : id;
+  };
 
   let lastReactionVideoIdProp = reactionVideoId;
   let lastOffsetStartTimeProp = offsetStartTime;
@@ -556,15 +562,28 @@
 
 <div class="editor-config flex flex-col gap-3" data-testid="editor-general-settings">
   {#if (isReactionMissing || isEditModeOn) && !isFineTuneModeOn}
-    <section class="rounded-xl border border-border-subtle bg-surface/75 px-3 py-3">
-      <div class="flex items-center gap-2">
-        <svg class="h-4 w-4 shrink-0 text-accent-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <path d="M10 13a5 5 0 0 0 7.07 0l1.41-1.41a5 5 0 0 0-7.07-7.07L10 5" stroke-linecap="round" />
-          <path d="M14 11a5 5 0 0 0-7.07 0L5.52 12.41a5 5 0 0 0 7.07 7.07L14 19" stroke-linecap="round" />
-        </svg>
-        <h2 class="text-sm font-semibold text-text-primary">1. Reaction video source</h2>
-      </div>
-      <p class="mt-1 text-xs leading-snug text-text-muted">
+    <section class="rounded-xl border border-border-subtle bg-surface/75">
+      <h2>
+        <button
+          type="button"
+          class="flex w-full items-center gap-2 px-3 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
+          aria-expanded={openGeneralSection === "source"}
+          aria-controls="general-section-source"
+          on:click={() => toggleGeneralSection("source")}
+        >
+          <svg class="h-4 w-4 shrink-0 text-accent-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M10 13a5 5 0 0 0 7.07 0l1.41-1.41a5 5 0 0 0-7.07-7.07L10 5" stroke-linecap="round" />
+            <path d="M14 11a5 5 0 0 0-7.07 0L5.52 12.41a5 5 0 0 0 7.07 7.07L14 19" stroke-linecap="round" />
+          </svg>
+          <span class="min-w-0 flex-1 text-sm font-semibold text-text-primary">1. Reaction video source</span>
+          <svg class={`h-4 w-4 shrink-0 text-text-muted transition-transform ${openGeneralSection === "source" ? "rotate-180" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+      </h2>
+      {#if openGeneralSection === "source"}
+      <div id="general-section-source" class="px-3 pb-3">
+      <p class="text-xs leading-snug text-text-muted">
         Link your YouTube reaction video so we can load it in our editor.
       </p>
 
@@ -634,21 +653,35 @@
           </span>
         </div>
       {/if}
+      </div>
+      {/if}
     </section>
   {/if}
 
   {#if isEditModeOn && !isFineTuneModeOn}
     <form class="flex flex-col gap-3" on:submit|preventDefault={saveGeneralSettings}>
-      <section class="rounded-xl border border-border-subtle bg-surface/75 px-3 py-3">
-        <div class="flex items-center gap-2">
-          <svg class="h-4 w-4 shrink-0 text-accent-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <circle cx="12" cy="12" r="8" />
-            <path d="M12 8v4l2.5 2" stroke-linecap="round" />
-          </svg>
-          <h2 class="text-sm font-semibold text-text-primary">2. Timing</h2>
-        </div>
-
-        <div class="timing-grid mt-2">
+      <section class="rounded-xl border border-border-subtle bg-surface/75">
+        <h2>
+          <button
+            type="button"
+            class="flex w-full items-center gap-2 px-3 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
+            aria-expanded={openGeneralSection === "timing"}
+            aria-controls="general-section-timing"
+            on:click={() => toggleGeneralSection("timing")}
+          >
+            <svg class="h-4 w-4 shrink-0 text-accent-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <circle cx="12" cy="12" r="8" />
+              <path d="M12 8v4l2.5 2" stroke-linecap="round" />
+            </svg>
+            <span class="min-w-0 flex-1 text-sm font-semibold text-text-primary">2. Timing</span>
+            <svg class={`h-4 w-4 shrink-0 text-text-muted transition-transform ${openGeneralSection === "timing" ? "rotate-180" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+        </h2>
+        {#if openGeneralSection === "timing"}
+        <div id="general-section-timing" class="px-3 pb-3">
+        <div class="timing-grid">
           <div>
             <h3 class="text-xs font-medium text-text-secondary">Reaction start time</h3>
             <div class="mt-1.5 grid grid-cols-2 gap-1.5">
@@ -724,15 +757,30 @@
             Enter a valid time. Seconds stay under 60, and lead-in must be a number.
           </p>
         {/if}
+        </div>
+        {/if}
       </section>
 
-      <section class="rounded-xl border border-border-subtle bg-surface/75 px-3 py-3">
-        <div class="flex items-center gap-2">
-          <svg class="h-4 w-4 shrink-0 text-accent-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4" stroke-linecap="round" />
-          </svg>
-          <h2 class="text-sm font-semibold text-text-primary">3. Audio</h2>
-        </div>
+      <section class="rounded-xl border border-border-subtle bg-surface/75">
+        <h2>
+          <button
+            type="button"
+            class="flex w-full items-center gap-2 px-3 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
+            aria-expanded={openGeneralSection === "audio"}
+            aria-controls="general-section-audio"
+            on:click={() => toggleGeneralSection("audio")}
+          >
+            <svg class="h-4 w-4 shrink-0 text-accent-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4" stroke-linecap="round" />
+            </svg>
+            <span class="min-w-0 flex-1 text-sm font-semibold text-text-primary">3. Audio</span>
+            <svg class={`h-4 w-4 shrink-0 text-text-muted transition-transform ${openGeneralSection === "audio" ? "rotate-180" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+        </h2>
+        {#if openGeneralSection === "audio"}
+        <div id="general-section-audio" class="px-3 pb-3">
 
         {#if isTikTokOriginal}
           <p class="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-2.5 py-1.5 text-[11px] leading-snug text-amber-200" role="note">
@@ -804,17 +852,32 @@
             </p>
           </div>
         </div>
+        </div>
+        {/if}
       </section>
 
-      <section class="rounded-xl border border-border-subtle bg-surface/75 px-3 py-3">
-        <div class="flex items-center gap-2">
-          <svg class="h-4 w-4 shrink-0 text-accent-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <rect x="3" y="4" width="18" height="14" rx="2" />
-            <path d="M8 21h8" stroke-linecap="round" />
-          </svg>
-          <h2 class="text-sm font-semibold text-text-primary">4. Player layout</h2>
-        </div>
-        <p class="mt-1 text-xs leading-snug text-text-muted">
+      <section class="rounded-xl border border-border-subtle bg-surface/75">
+        <h2>
+          <button
+            type="button"
+            class="flex w-full items-center gap-2 px-3 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
+            aria-expanded={openGeneralSection === "layout"}
+            aria-controls="general-section-layout"
+            on:click={() => toggleGeneralSection("layout")}
+          >
+            <svg class="h-4 w-4 shrink-0 text-accent-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="14" rx="2" />
+              <path d="M8 21h8" stroke-linecap="round" />
+            </svg>
+            <span class="min-w-0 flex-1 text-sm font-semibold text-text-primary">4. Player layout</span>
+            <svg class={`h-4 w-4 shrink-0 text-text-muted transition-transform ${openGeneralSection === "layout" ? "rotate-180" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+        </h2>
+        {#if openGeneralSection === "layout"}
+        <div id="general-section-layout" class="px-3 pb-3">
+        <p class="text-xs leading-snug text-text-muted">
           Choose which video is the primary (main) video, and how the reaction overlay looks.
         </p>
 
@@ -897,6 +960,8 @@
             {/each}
           </div>
         </div>
+        </div>
+        {/if}
       </section>
 
       <div class="flex flex-wrap items-center justify-end gap-2">
