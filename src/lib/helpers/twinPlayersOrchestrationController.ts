@@ -21,7 +21,8 @@ const playerOptions = {
   controls: 1,
   disablekb: 1,
   modestbranding: 1,
-  rel: 0
+  rel: 0,
+  cc_load_policy: 0
 };
 
 const originalPlayerOptions = {
