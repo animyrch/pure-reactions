@@ -24,6 +24,11 @@ const playerOptions = {
   rel: 0
 };
 
+const originalPlayerOptions = {
+  ...playerOptions,
+  controls: 0
+};
+
 const iframeOptionDefault = {
   width: '100%',
   height: '100%'
@@ -378,7 +383,7 @@ export function createTwinPlayersOrchestrationController({
         newPlayerOriginal = new YT.Player('player-original', {
           videoId: originalVideoId,
           playerVars: {
-            ...playerOptions,
+            ...originalPlayerOptions,
             start: Math.round(initialTargetTime)
           },
           ...iframeOptionDefault,
@@ -624,7 +629,7 @@ export function createTwinPlayersOrchestrationController({
             nextPlayerOriginal = new YT.Player('player-original', {
               videoId: originalVideoId,
               playerVars: {
-                ...playerOptions,
+                ...originalPlayerOptions,
                 start: Math.round(initialTargetTime)
               },
               ...iframeOptionDefault,
