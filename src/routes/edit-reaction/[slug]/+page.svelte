@@ -161,8 +161,8 @@
     actions.enterEditMode();
   }
 
-  // General settings sit beside the stage. Fine-tune keeps the timeline
-  // full width under the player, where the tracks need the room.
+  // General settings take two fifths beside the stage, which takes three.
+  // Fine-tune keeps the timeline full width under the player.
   $: generalSettingsSplit = !$state.isFullscreen && !$state.isFineTuneModeOn;
   // The player stage is half the viewport by itself. The title above it
   // is outside that box, so on first paint the stage runs past the midpoint.
@@ -295,14 +295,14 @@
 
   <div
     class={generalSettingsSplit
-      ? "edit-general-layout mx-auto w-full lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:px-10 lg:pt-6"
+      ? "edit-general-layout mx-auto w-full lg:grid lg:grid-cols-5 lg:items-start lg:gap-6 lg:px-10 lg:pt-6"
       : fineTuneHalf
         ? "edit-finetune-stage"
         : ""}
   >
     <div
       class={generalSettingsSplit
-        ? "min-w-0 lg:col-start-2 lg:row-start-1 lg:sticky lg:top-24 lg:z-10 lg:self-start"
+        ? "min-w-0 lg:col-span-3 lg:col-start-3 lg:row-start-1 lg:sticky lg:top-24 lg:z-10 lg:self-start"
         : fineTuneHalf
           ? "flex min-h-0 flex-1 flex-col"
           : ""}
@@ -353,7 +353,7 @@
     {#if !$state.isFullscreen && !fineTuneHalf}
       <div
         class={generalSettingsSplit
-          ? "mx-auto mt-6 w-full min-w-0 px-4 sm:px-6 lg:col-start-1 lg:row-start-1 lg:mt-0 lg:px-0"
+          ? "mx-auto mt-6 w-full min-w-0 px-4 sm:px-6 lg:col-span-2 lg:col-start-1 lg:row-start-1 lg:mt-0 lg:px-0"
           : "mx-auto mt-6 w-full px-4 sm:px-6 lg:px-10"}
       >
           {@render editorPanels()}
@@ -428,7 +428,7 @@
   }
 
   /* The stage's own page gutters and 80% cap are for the full-width player.
-     Inside the half-width column those insets would shrink it a second time. */
+     Inside the three-fifths column those insets would shrink it a second time. */
   @media (min-width: 1024px) {
     .edit-general-layout :global(.theater-wrapper:not(.theater-wrapper--fullscreen)) {
       width: 100%;

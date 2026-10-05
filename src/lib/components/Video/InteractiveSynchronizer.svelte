@@ -1547,25 +1547,31 @@
 <svelte:window on:keydown={handleWindowKeydown} />
 
 <div class="flex flex-col gap-3">
-  <div class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-4 gap-y-1">
-    <p class="col-start-1 row-start-1 text-sm font-semibold text-text-primary">
-      Live reaction timeline
-    </p>
-    <p class="col-start-3 row-start-1 justify-self-end text-right text-xs text-text-muted">
-      Tracks playback position in real time
-    </p>
+  <div class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1">
+    <div class="col-start-1 flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5">
+      <p class="text-sm font-semibold text-text-primary">
+        Live reaction timeline
+      </p>
+      <p class="inline-flex items-center gap-1.5 text-[11px] font-medium text-text-muted">
+        <span
+          class="relative inline-block h-1.5 w-7 shrink-0 rounded-full bg-border-subtle/70"
+          aria-hidden="true"
+        >
+          <span
+            class="absolute inset-y-0 left-1/4 w-1/2 rounded-full bg-accent-secondary/70"
+          ></span>
+        </span>
+        Drag across a track to zoom in
+      </p>
+    </div>
     <span
-      class="col-start-1 row-start-2 text-xs font-medium text-text-muted"
+      class="col-start-3 justify-self-end text-xs font-medium tabular-nums text-text-muted"
       aria-label="Current time">{formatTimecode(safeCurrentTime)}</span
-    >
-    <span
-      class="col-start-3 row-start-2 justify-self-end text-xs font-medium text-text-muted"
-      aria-label="Total duration">{formatTimecode(safeDuration)}</span
     >
     {#if cueEditorOpen}
       <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
       <div
-        class="col-span-3 row-start-3 min-w-0 md:col-span-1 md:col-start-2 md:row-start-1 md:row-span-2 md:w-[min(100%,28rem)] md:justify-self-center"
+        class="col-span-3 row-start-2 min-w-0 md:col-span-1 md:col-start-2 md:row-start-1 md:w-[min(100%,28rem)] md:justify-self-center"
         role="group"
         aria-label="Cue editor"
         on:click|stopPropagation

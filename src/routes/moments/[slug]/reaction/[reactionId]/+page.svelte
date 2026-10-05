@@ -20,6 +20,12 @@
   import { TOASTS } from '$lib/constants/toasts';
   import { page } from '$app/stores';
   import { get } from 'svelte/store';
+  import {
+    buildMomentReactionEditHref,
+    syncMomentReactionDial
+  } from '$lib/helpers/momentReactionDial';
+
+  export let data;
 
   let moment = null;
   let momentId = '';
@@ -47,8 +53,9 @@
 
   const { state, actions } = useTwinPlayers({
     data: {
-      slug: initialReactionSlug
-      // userId and displayName can be added here from your auth/user store if needed
+      slug: initialReactionSlug,
+      userId: data?.userId,
+      displayName: data?.displayName
     },
     enableAutoPlay: false,
     momentFeedLoopEnabled: true
@@ -170,6 +177,33 @@
       addReactionLoading = false;
     }
   };
+
+  $: if (browser) {
+    syncMomentReactionDial(reactionDial, {
+      isReady: !$state.isLoading && Boolean(currentReaction?.id),
+      isUsersOwnVideo: $state.isUsersOwnVideo,
+      canShowEditModeButton: $state.canShowEditModeButton,
+      canShowCloseEditModeButton: $state.canShowCloseEditModeButton,
+      isPublished: $state.isPublished,
+      isReactionMissing: $state.isReactionMissing,
+      isFullscreen: $state.isFullscreen,
+      handlers: {
+        enterEditMode: () => {
+          const href = buildMomentReactionEditHref(
+            $state.pageSlug || currentReaction?.id,
+            $state.momentId || momentId
+          );
+          if (!href) return;
+          // Hard navigate so the editor starts from a clean player state.
+          window.location.assign(href);
+        },
+        setIsPublished: actions.setIsPublished,
+        setIsUnpublished: actions.setIsUnpublished,
+        openWithFullscreen: actions.openWithFullscreen,
+        openWithHalfscreen: actions.openWithHalfscreen
+      }
+    });
+  }
 
   onDestroy(() => {
     reactionDial.reset();

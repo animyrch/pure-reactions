@@ -21,7 +21,13 @@ const playerOptions = {
   controls: 1,
   disablekb: 1,
   modestbranding: 1,
-  rel: 0
+  rel: 0,
+  cc_load_policy: 0
+};
+
+const originalPlayerOptions = {
+  ...playerOptions,
+  controls: 0
 };
 
 const iframeOptionDefault = {
@@ -378,7 +384,7 @@ export function createTwinPlayersOrchestrationController({
         newPlayerOriginal = new YT.Player('player-original', {
           videoId: originalVideoId,
           playerVars: {
-            ...playerOptions,
+            ...originalPlayerOptions,
             start: Math.round(initialTargetTime)
           },
           ...iframeOptionDefault,
@@ -624,7 +630,7 @@ export function createTwinPlayersOrchestrationController({
             nextPlayerOriginal = new YT.Player('player-original', {
               videoId: originalVideoId,
               playerVars: {
-                ...playerOptions,
+                ...originalPlayerOptions,
                 start: Math.round(initialTargetTime)
               },
               ...iframeOptionDefault,
