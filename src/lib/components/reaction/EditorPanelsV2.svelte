@@ -611,33 +611,7 @@
       </h2>
       {#if openGeneralSection === "source"}
       <div id="general-section-source" class="px-3 pb-3">
-      <div class="flex items-center justify-between gap-3">
-        <div class="flex min-w-0 items-center gap-1.5">
-          <h3 class="text-xs font-medium text-text-secondary">Remix mode</h3>
-          <HelpfulTip variant="tooltip" placement="top" label="About remix mode">
-            Remix the original video without uploading a reaction. The original stays fullscreen with no overlay. Fine-tune cues use the original video's timing, and the reaction volume and overlay tracks stay hidden.
-          </HelpfulTip>
-        </div>
-        <button
-          type="button"
-          class={`${switchTrackBase} ${remixMode ? switchTrackOn : switchTrackOff}`}
-          role="switch"
-          aria-checked={remixMode}
-          aria-label={remixMode ? "Turn off remix mode" : "Turn on remix mode"}
-          disabled={isSettingRemixMode}
-          on:click={handleRemixModeToggle}
-        >
-          <span
-            class={`${switchThumbBase} ${remixMode ? switchThumbOn : switchThumbOff}`}
-          ></span>
-        </button>
-      </div>
-      <p class="mt-1.5 text-[11px] leading-snug text-text-muted">
-        {remixMode
-          ? "The original plays on its own. Turn remix mode off to link a reaction video."
-          : "Turn this on to edit the original by itself, without a reaction video."}
-      </p>
-      <p class="mt-2 text-xs leading-snug text-text-muted">
+      <p class="text-xs leading-snug text-text-muted">
         Link your YouTube reaction video so we can load it in our editor.
       </p>
 
@@ -707,6 +681,35 @@
           </span>
         </div>
       {/if}
+
+      <div class="mt-3 border-t border-border-subtle pt-3">
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex min-w-0 items-center gap-1.5">
+            <h3 class="text-xs font-medium text-text-secondary">Remix mode</h3>
+            <HelpfulTip variant="tooltip" placement="top" label="About remix mode">
+              Remix the original video without uploading a reaction. The original stays fullscreen with no overlay. Fine-tune cues use the original video's timing, and the reaction volume and overlay tracks stay hidden.
+            </HelpfulTip>
+          </div>
+          <button
+            type="button"
+            class={`${switchTrackBase} ${remixMode ? switchTrackOn : switchTrackOff}`}
+            role="switch"
+            aria-checked={remixMode}
+            aria-label={remixMode ? "Turn off remix mode" : "Turn on remix mode"}
+            disabled={isSettingRemixMode}
+            on:click={handleRemixModeToggle}
+          >
+            <span
+              class={`${switchThumbBase} ${remixMode ? switchThumbOn : switchThumbOff}`}
+            ></span>
+          </button>
+        </div>
+        <p class="mt-1.5 text-[11px] leading-snug text-text-muted">
+          {remixMode
+            ? "The original plays on its own. Turn remix mode off to link a reaction video."
+            : "Turn this on to edit the original by itself, without a reaction video."}
+        </p>
+      </div>
       </div>
       {/if}
     </section>
