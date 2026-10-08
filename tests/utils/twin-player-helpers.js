@@ -99,7 +99,20 @@ export const installMockYouTubeApi = async (page, options = {}) => {
             }
 
             seekTo(seconds) {
-                this._currentTime = Number.isFinite(Number(seconds)) ? Number(seconds) : this._currentTime;
+                const next = Number(seconds);
+                if (!Number.isFinite(next)) return;
+                const delay = Number(window.__mockYtSeekDelayMs) || 0;
+                if (delay > 0) {
+                    const token = (this._seekToken || 0) + 1;
+                    this._seekToken = token;
+                    setTimeout(() => {
+                        if (this._destroyed || this._seekToken !== token) return;
+                        this._currentTime = next;
+                        this._lastTick = Date.now();
+                    }, delay);
+                    return;
+                }
+                this._currentTime = next;
                 this._lastTick = Date.now();
             }
 

@@ -231,6 +231,30 @@
         "fullscreenPrimaryVideo": "original",
         "youtubePlaylistId": ""
       }
+    },
+    {
+      "id": "remixFineTunePlays01",
+      "data": {
+        "isPublished": false,
+        "remixMode": true,
+        "offsetStartTime": 0,
+        "timeOffset": 0,
+        "originalVideoAuthor": "@remix-owner",
+        "originalVideoId": "origRemixFinePlays",
+        "originalVideoTitle": "Remix fine-tune two play cues",
+        "playbackTimeline": [{ "rate": 1, "t": 0 }],
+        "playlistId": "",
+        "reactionVideoAuthor": "",
+        "reactionVideoId": "",
+        "reactionVideoTitle": "",
+        "reactionVolumeTimeline": [],
+        "reactorId": "remixOwnerUid000000000001",
+        "stateTimeline": [],
+        "volumeTimeline": [],
+        "overlayVisibilityTimeline": [],
+        "fullscreenPrimaryVideo": "original",
+        "youtubePlaylistId": ""
+      }
     }
   ]
 }

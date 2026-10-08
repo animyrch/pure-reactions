@@ -15,6 +15,7 @@ const REMIX_DOCUMENT_IDS = [
   'remixFineTuneCue0001',
   'remixFineTunePause01',
   'remixFineTuneJump001',
+  'remixFineTunePlays01',
 ];
 
 function remixFirestore() {
@@ -77,7 +78,7 @@ export async function ensureRemixOwner() {
     if (id === 'remixEditor00000001') {
       patch.remixMode = false;
     }
-    if (id === 'remixFineTunePause01' || id === 'remixFineTuneJump001') {
+    if (id === 'remixFineTunePause01' || id === 'remixFineTuneJump001' || id === 'remixFineTunePlays01') {
       patch.remixMode = true;
       patch.reactionVideoId = '';
       patch.stateTimeline = [];

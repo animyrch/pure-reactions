@@ -35,6 +35,8 @@ describe('planRemixTransport', () => {
       state: 1,
       anchorTime: 10,
       targetTime: 40,
+      currentTime: 10.2,
+      previousTime: 9.6,
       lastAppliedAnchor: null,
       isUserPaused: false,
     });
@@ -48,12 +50,46 @@ describe('planRemixTransport', () => {
       state: 1,
       anchorTime: 10,
       targetTime: 40,
+      currentTime: 40.2,
+      previousTime: first.seekTo,
       lastAppliedAnchor: first.nextAppliedAnchor,
       isUserPaused: false,
     })).toEqual({
       transport: 'play',
       seekTo: null,
       nextAppliedAnchor: 10,
+    });
+  });
+
+  it('does not fire a later play cue when the clock is already past it', () => {
+    expect(planRemixTransport({
+      state: 1,
+      anchorTime: 8,
+      targetTime: 50,
+      currentTime: 25,
+      previousTime: 25,
+      lastAppliedAnchor: 1,
+      isUserPaused: false,
+    })).toEqual({
+      transport: 'play',
+      seekTo: null,
+      nextAppliedAnchor: 8,
+    });
+  });
+
+  it('jumps when playback moves across a play cue', () => {
+    expect(planRemixTransport({
+      state: 1,
+      anchorTime: 5,
+      targetTime: 40,
+      currentTime: 5.2,
+      previousTime: 4.6,
+      lastAppliedAnchor: null,
+      isUserPaused: false,
+    })).toEqual({
+      transport: 'play',
+      seekTo: 40,
+      nextAppliedAnchor: 5,
     });
   });
 

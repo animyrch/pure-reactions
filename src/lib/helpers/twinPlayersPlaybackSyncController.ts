@@ -108,6 +108,9 @@ export function createTwinPlayersPlaybackSyncController({
   let originalDurationProbeTimeout: ReturnType<typeof setTimeout> | undefined;
   let originalDurationProbeAttempts = 0;
   let remixAppliedAnchor: number | null = null;
+  let remixSampleTime: number | null = null;
+  let remixUserHold: number | null = null;
+  let remixUserHoldUntil = 0;
   let changingVolume = false;
   let changingReactionVolume = false;
   let changingSpeed = false;
@@ -800,6 +803,12 @@ export function createTwinPlayersPlaybackSyncController({
     }
     updateState({ originalCurrentTime: clamped });
     rememberRemixAnchor(clamped);
+    // Keep transport on the requested time until the player reports it.
+    // A stale getCurrentTime() would otherwise look like a later cue was
+    // newly crossed and seek the playhead back there.
+    remixSampleTime = clamped;
+    remixUserHold = clamped;
+    remixUserHoldUntil = Date.now() + 2000;
     if (!snapshot.isUserPaused) {
       pollVideoCurrentTime();
     }
@@ -811,7 +820,16 @@ export function createTwinPlayersPlaybackSyncController({
       return 'wait';
     }
 
-    const { time, duration } = readOriginalClock(player);
+    const measured = readOriginalClock(player);
+    let time = measured.time;
+    const duration = measured.duration;
+    if (remixUserHold !== null) {
+      if (Math.abs(time - remixUserHold) <= 0.6 || Date.now() > remixUserHoldUntil) {
+        remixUserHold = null;
+      } else {
+        time = remixUserHold;
+      }
+    }
     publishOriginalClock(time, duration);
 
     const playerState = getPlayerStateSafely(player);
@@ -835,6 +853,7 @@ export function createTwinPlayersPlaybackSyncController({
     }
 
     if (snapshot.isUserPaused) {
+      remixSampleTime = time;
       if (playerState === playingState || playerState === bufferingState) {
         pauseOriginalVideo();
       }
@@ -879,13 +898,18 @@ export function createTwinPlayersPlaybackSyncController({
       state: Number(config?.state),
       anchorTime: Number(config?.closestSmallerTimeCode),
       targetTime: Number(config?.time),
+      currentTime: time,
+      previousTime: remixSampleTime,
       lastAppliedAnchor: remixAppliedAnchor,
       isUserPaused: false,
     });
     remixAppliedAnchor = plan.nextAppliedAnchor;
 
-    if (plan.seekTo !== null) {
+    if (plan.seekTo !== null && remixUserHold === null) {
       goToSecondsInOriginalVideo(plan.seekTo, { force: true, allowSeekAhead: true });
+      remixSampleTime = plan.seekTo;
+    } else {
+      remixSampleTime = time;
     }
     if (plan.transport === 'pause') {
       const pausedState = typeof YT?.PlayerState?.PAUSED === 'number' ? YT.PlayerState.PAUSED : 2;
@@ -2074,6 +2098,9 @@ export function createTwinPlayersPlaybackSyncController({
         updateState({ isUserPaused: false });
       }
       remixAppliedAnchor = null;
+      remixSampleTime = null;
+      remixUserHold = null;
+      remixUserHoldUntil = 0;
       startRemixPlayback();
       return;
     }
