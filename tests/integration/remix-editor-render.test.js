@@ -24,6 +24,10 @@ describe('remix editor settings', () => {
     expect(body).toContain('Remix mode');
     expect(body).toContain('About remix mode');
     expect(body).toContain('aria-checked="true"');
+    const onSwitch = body.match(/<button[^>]*role="switch"[^>]*>[\s\S]*?<\/button>/)?.[0] ?? '';
+    expect(onSwitch).toContain('bg-accent-primary');
+    expect(onSwitch).toContain('translate-x-5');
+    expect(onSwitch).not.toContain('bg-border-strong');
     const input = body.match(/<input[^>]*aria-label="Reaction video URL or ID"[^>]*>/)?.[0] ?? '';
     expect(input).toMatch(/(?:^|\s)disabled(?:[=/\s>]|$)/);
     expect(body).not.toContain('4. Player layout');
@@ -40,6 +44,10 @@ describe('remix editor settings', () => {
     });
 
     expect(body).toContain('aria-checked="false"');
+    const offSwitch = body.match(/<button[^>]*role="switch"[^>]*>[\s\S]*?<\/button>/)?.[0] ?? '';
+    expect(offSwitch).toContain('bg-border-strong');
+    expect(offSwitch).toContain('bg-text-primary');
+    expect(offSwitch).not.toContain('bg-accent-primary');
     expect(body).toContain('4. Player layout');
     expect(body).toContain('Update video');
     const input = body.match(/<input[^>]*aria-label="Reaction video URL or ID"[^>]*>/)?.[0] ?? '';

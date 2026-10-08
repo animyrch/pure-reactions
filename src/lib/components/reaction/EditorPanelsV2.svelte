@@ -71,6 +71,17 @@
   const OVERLAY_WIDTH_STEP = 5;
   const DEFAULT_OVERLAY_WIDTH = 35;
 
+  // Off tracks use a lifted gray and a light thumb. The on state stays the accent fill with a dark thumb.
+  const switchTrackBase =
+    "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border transition duration-subtle ease-cinematic focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:brightness-100";
+  const switchTrackOff =
+    "border-text-muted/70 bg-border-strong hover:brightness-125";
+  const switchTrackOn = "border-accent-primary bg-accent-primary";
+  const switchThumbBase =
+    "pointer-events-none inline-block h-5 w-5 transform rounded-full shadow-surface transition duration-subtle ease-cinematic";
+  const switchThumbOff = "translate-x-0.5 bg-text-primary";
+  const switchThumbOn = "translate-x-5 bg-surface";
+
   const OVERLAY_POSITIONS = [
     { value: "top-left", label: "Top left", x: 3, y: 3 },
     { value: "top-center", label: "Top center", x: 8, y: 3 },
@@ -609,7 +620,7 @@
         </div>
         <button
           type="button"
-          class={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-60 ${remixMode ? "border-accent-primary bg-accent-primary" : "border-border-subtle bg-background/80"}`}
+          class={`${switchTrackBase} ${remixMode ? switchTrackOn : switchTrackOff}`}
           role="switch"
           aria-checked={remixMode}
           aria-label={remixMode ? "Turn off remix mode" : "Turn on remix mode"}
@@ -617,7 +628,7 @@
           on:click={handleRemixModeToggle}
         >
           <span
-            class={`inline-block h-5 w-5 transform rounded-full bg-surface shadow-surface transition ${remixMode ? "translate-x-5" : "translate-x-0.5"}`}
+            class={`${switchThumbBase} ${remixMode ? switchThumbOn : switchThumbOff}`}
           ></span>
         </button>
       </div>
@@ -880,14 +891,14 @@
               <h3 class="text-xs font-medium text-text-secondary">Reaction mute mode</h3>
               <button
                 type="button"
-                class={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${muteDraft ? "border-accent-primary bg-accent-primary" : "border-border-subtle bg-background/80"}`}
+                class={`${switchTrackBase} ${muteDraft ? switchTrackOn : switchTrackOff}`}
                 role="switch"
                 aria-checked={muteDraft}
                 aria-label={muteDraft ? "Disable reaction mute mode" : "Enable reaction mute mode"}
                 on:click={() => (muteDraft = !muteDraft)}
               >
                 <span
-                  class={`inline-block h-5 w-5 transform rounded-full bg-surface shadow-surface transition ${muteDraft ? "translate-x-5" : "translate-x-0.5"}`}
+                  class={`${switchThumbBase} ${muteDraft ? switchThumbOn : switchThumbOff}`}
                 ></span>
               </button>
             </div>
