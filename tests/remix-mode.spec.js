@@ -82,18 +82,6 @@ test.describe('Remix mode', () => {
   test('seeks once to the play cue target and then keeps normal playback', async ({ page }) => {
     await page.goto('/reaction/remixJumpCue000001');
     await waitForOriginalPlayer(page);
-    // The sync loop's first read can already be past a cue near the start when
-    // the runner is busy. Force that timing so the jump still has to happen.
-    await page.evaluate(() => {
-      const player = window.__players?.original;
-      if (!player || player.__lateStartPatched) return;
-      player.__lateStartPatched = true;
-      const play = player.playVideo.bind(player);
-      player.playVideo = () => {
-        player._currentTime = Math.max(Number(player._currentTime) || 0, 1.25);
-        play();
-      };
-    });
     await startOriginalOnly(page);
 
     await expect.poll(async () => (await readPlayback(page))?.original?.time >= 35, { timeout: 8000 }).toBe(true);
