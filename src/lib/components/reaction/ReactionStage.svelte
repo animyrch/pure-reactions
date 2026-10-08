@@ -8,6 +8,7 @@
     export let isExitButtonExpanded = false;
     export let showCinematicBars = false;
     export let isReactionMissing = false;
+    export let remixMode = false;
     export let isUsersOwnVideo = false;
     export let playerOriginal = null;
     export let playerReaction = null;
@@ -21,6 +22,8 @@
     export let nextAriaLabel = "Next reaction";
     export let reactionCurrentTime = 0;
     export let reactionDuration = 0;
+    export let originalCurrentTime = 0;
+    export let originalDuration = 0;
     export let offsetStartTime = 0;
     export let reactionFinishTime = 0;
     export let missingReactionLoading = false;
@@ -105,8 +108,9 @@
         : stickyControlsClass;
 
     // Overlay visibility control applies in both fullscreen and mobile landscape
+    $: displayedOverlayVisible = remixMode ? false : fullscreenOverlayVisible;
     $: effectiveOverlayClass =
-        isOverlayLayout && !fullscreenOverlayVisible
+        isOverlayLayout && !displayedOverlayVisible
             ? "opacity-0 pointer-events-none"
             : "opacity-100 pointer-events-auto";
 
@@ -193,9 +197,17 @@
             ? fullscreenOverlayCorner
             : "top-right";
     $: overlayCornerClass = overlayPositionClasses[normalizedOverlayCorner];
-    $: isReactionPrimary = fullscreenPrimaryVideo === "reaction";
-    $: isDesktopOverlay = isDesktop && !isMobileLandscape && !isFullscreen && bothVideosStarted;
-    $: isOverlayLayout = isFullscreen || (isMobileLandscape && bothVideosStarted) || isDesktopOverlay;
+    $: isReactionPrimary = !remixMode && fullscreenPrimaryVideo === "reaction";
+    $: isDesktopOverlay = remixMode || (isDesktop && !isMobileLandscape && !isFullscreen && bothVideosStarted);
+    $: isOverlayLayout = remixMode || isFullscreen || (isMobileLandscape && bothVideosStarted) || isDesktopOverlay;
+    $: dockCurrentTime = remixMode ? originalCurrentTime : reactionCurrentTime;
+    $: dockDuration = remixMode ? originalDuration : reactionDuration;
+    $: dockSeekMin = remixMode ? 0 : (offsetStartTime || 0);
+    $: dockSeekMax = remixMode
+        ? (originalDuration || 0)
+        : (reactionFinishTime > 0
+            ? Math.min(reactionFinishTime, reactionDuration || 0)
+            : reactionDuration || 0);
     // Phone landscape already fills the screen with its own stage rules.
     $: halfScreen = limitToHalfScreen && !isFullscreen && !isMobileLandscape;
     $: isOriginalOverlay = isOverlayLayout && isReactionPrimary;
@@ -421,7 +433,7 @@
                     {/if}
                 </div>
             </div>
-        {:else if isUsersOwnVideo || alwaysShowMissingPlaceholder}
+        {:else if !remixMode && (isUsersOwnVideo || alwaysShowMissingPlaceholder)}
             <MissingReactionPlaceholder
                 loading={missingReactionLoading}
                 error={missingReactionError}
@@ -451,12 +463,10 @@
             onToggleBars={handleToggleCinematicBars}
             onEnterFullscreen={handleEnterFullscreen}
             onExitClick={handleExitClick}
-            currentTime={reactionCurrentTime}
-            duration={reactionDuration}
-            seekMin={offsetStartTime || 0}
-            seekMax={reactionFinishTime > 0
-                ? Math.min(reactionFinishTime, reactionDuration || 0)
-                : reactionDuration || 0}
+            currentTime={dockCurrentTime}
+            duration={dockDuration}
+            seekMin={dockSeekMin}
+            seekMax={dockSeekMax}
             onSeek={handleSeek}
         />
     {/if}

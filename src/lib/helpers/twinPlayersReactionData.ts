@@ -172,6 +172,7 @@ export function deriveTwinPlayersReactionData({
     normalizedOriginalMetadata,
     originalVideoPlatform,
     isReactionMissing: !reactionVideoId,
+    remixMode: reactionData?.remixMode === true,
     isUsersOwnVideo: resolvedReactorId === viewerUserId,
     canShowEditModeButton: resolvedReactorId === viewerUserId,
     isReactionMuteModeEnabled: Boolean(reactionData?.muteReactionWhileOriginalPlays),

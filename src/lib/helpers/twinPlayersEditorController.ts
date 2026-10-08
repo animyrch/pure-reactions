@@ -403,6 +403,20 @@ export function createTwinPlayersEditorController({
     enforceReactionMuteMode();
   };
 
+  const setRemixMode = async (value: boolean) => {
+    const next = Boolean(value);
+    const snapshot = getSnapshot();
+    const didUpdate = await updateFirebaseDocument({ remixMode: next });
+    if (!didUpdate) {
+      throw new Error('Failed to update remix mode');
+    }
+    updateState({
+      remixMode: next,
+      fullscreenOverlayVisible: next ? false : true,
+      fullscreenPrimaryVideo: next ? 'original' : snapshot.fullscreenPrimaryVideoDefault,
+    });
+  };
+
   const setFullscreenPrimaryVideo = async (value: FullscreenPrimaryVideo) => {
     const normalized = normalizeFullscreenPrimaryVideo(value);
     await updateFirebaseDocument({ fullscreenPrimaryVideo: normalized });
@@ -970,6 +984,7 @@ export function createTwinPlayersEditorController({
     closeEditMode,
     toggleFineTuneMode,
     setReactionVideoId,
+    setRemixMode,
     setOffsetStartTime,
     setIntroBufferTime,
     setReactionFinishTime,

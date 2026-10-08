@@ -43,6 +43,7 @@
     isExitButtonExpanded={state.isExitButtonExpanded}
     showCinematicBars={state.showCinematicBars}
     isReactionMissing={state.isReactionMissing}
+    remixMode={state.remixMode}
     isUsersOwnVideo={state.isUsersOwnVideo}
     playerOriginal={state.playerOriginal}
     playerReaction={state.playerReaction}
@@ -50,6 +51,8 @@
     bothVideosStarted={state.bothVideosStarted}
     reactionCurrentTime={state.reactionCurrentTime}
     reactionDuration={state.reactionDuration}
+    originalCurrentTime={state.originalCurrentTime}
+    originalDuration={state.originalDuration}
     offsetStartTime={state.offsetStartTime}
     reactionFinishTime={state.reactionFinishTime}
     fullscreenPrimaryVideo={state.fullscreenPrimaryVideo}

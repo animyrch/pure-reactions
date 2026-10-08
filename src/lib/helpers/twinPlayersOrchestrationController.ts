@@ -189,10 +189,13 @@ export function createTwinPlayersOrchestrationController({
       resetOriginalStateTracking();
       updateState({
         isReactionMissing: true,
+        remixMode: false,
         playerOriginal: null,
         playerReaction: null,
         reactionCurrentTime: 0,
         reactionDuration: 0,
+        originalCurrentTime: 0,
+        originalDuration: 0,
         playerEventTimeline: [],
         isReactionMuteModeEnabled: false,
         isReactionAutoMuted: false,
@@ -212,12 +215,15 @@ export function createTwinPlayersOrchestrationController({
       resetOriginalStateTracking();
       updateState({
         isReactionMissing: true,
+        remixMode: false,
         reactionVideoId: reactionVideoId ?? '',
         originalVideoId: undefined,
         playerOriginal: null,
         playerReaction: null,
         reactionCurrentTime: 0,
         reactionDuration: 0,
+        originalCurrentTime: 0,
+        originalDuration: 0,
         playerEventTimeline: [],
         isReactionMuteModeEnabled: Boolean(reactionData?.muteReactionWhileOriginalPlays),
         isReactionAutoMuted: false,

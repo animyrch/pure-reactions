@@ -169,7 +169,8 @@
         }
     }
 
-    const canPublishReaction = (reaction) => Boolean(reaction?.reactionVideoId);
+    const canPublishReaction = (reaction) =>
+        Boolean(reaction?.reactionVideoId) || reaction?.remixMode === true;
 
     async function setReactionPublishState(reactionId, nextIsPublished) {
         if (publishingReactionIds.has(reactionId)) return;

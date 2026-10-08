@@ -44,6 +44,17 @@
   let isSettingReactionVideoId = false;
   let reactionVideoIdError = "";
 
+  let isSettingRemixMode = false;
+
+  const handleSetRemixMode = async (enabled) => {
+    isSettingRemixMode = true;
+    try {
+      await actions.editActionEntryPoint(() => actions.setRemixMode(enabled));
+    } finally {
+      isSettingRemixMode = false;
+    }
+  };
+
   const handleSetReactionVideoId = async (value) => {
     const trimmed = value?.trim?.() ?? "";
     if (!trimmed) {
@@ -212,6 +223,8 @@
       reactionVideoTitle={$state.reactionVideoTitle}
       {reactionVideoIdError}
       {isSettingReactionVideoId}
+      remixMode={$state.remixMode}
+      {isSettingRemixMode}
       offsetStartTime={$state.offsetStartTime}
       introBufferTime={$state.introBufferTime}
       reactionFinishTime={$state.reactionFinishTime}
@@ -228,6 +241,8 @@
       overlayVisibilityTimeline={$state.overlayVisibilityTimeline}
       reactionCurrentTime={$state.reactionCurrentTime}
       reactionDuration={$state.reactionDuration}
+      originalCurrentTime={$state.originalCurrentTime}
+      originalDuration={$state.originalDuration}
       playerEventTimeline={$state.playerEventTimeline}
       fullscreenPrimaryVideoDefault={$state.fullscreenPrimaryVideoDefault}
       fullscreenOverlayWidthPercent={$state.fullscreenOverlayWidthPercent}
@@ -249,6 +264,7 @@
       onUpdateOverlayVisibilityConfig={actions.updateOverlayVisibilityConfig}
       onDeleteOverlayVisibilityConfig={actions.deleteOverlayVisibilityConfig}
       onSetReactionVideoId={handleSetReactionVideoId}
+      onSetRemixMode={handleSetRemixMode}
       onSaveGeneralSettings={handleSaveGeneralSettings}
       onSeek={actions.seekTo}
     />
@@ -266,7 +282,9 @@
           placement="bottom"
           label="About fine-tune mode"
         >
-          Cues from your recording are already on the timeline. Click a track to add or fix pauses, volume, speed, or overlay. To zoom into a section, press and drag across any track, then release.
+          {$state.remixMode
+            ? "Remix mode times every cue to the original video. Click a track to add or fix pauses, volume, or speed. The original stays fullscreen, so there is no overlay track. To zoom into a section, press and drag across any track, then release."
+            : "Cues from your recording are already on the timeline. Click a track to add or fix pauses, volume, speed, or overlay. To zoom into a section, press and drag across any track, then release."}
         </HelpfulTip>
         <CinematicButton
           type="button"
@@ -314,6 +332,7 @@
         isExitButtonExpanded={$state.isExitButtonExpanded}
         showCinematicBars={$state.showCinematicBars}
         isReactionMissing={$state.isReactionMissing}
+        remixMode={$state.remixMode}
         isUsersOwnVideo={$state.isUsersOwnVideo}
         playerOriginal={$state.playerOriginal}
         playerReaction={$state.playerReaction}
@@ -325,6 +344,8 @@
         showAutoPlayButton={false}
         reactionCurrentTime={$state.reactionCurrentTime}
         reactionDuration={$state.reactionDuration}
+        originalCurrentTime={$state.originalCurrentTime}
+        originalDuration={$state.originalDuration}
         offsetStartTime={$state.offsetStartTime}
         reactionFinishTime={$state.reactionFinishTime}
         fullscreenPrimaryVideo={$state.fullscreenPrimaryVideo}

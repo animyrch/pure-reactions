@@ -242,7 +242,7 @@
   class="website-inner-container bg-background text-text-primary"
   aria-hidden={$state.isLoading}
 >
-  {#if $state.isReactionMissing && !$state.isUsersOwnVideo}
+  {#if $state.isReactionMissing && !$state.isUsersOwnVideo && !$state.remixMode}
     <p class="mb-4 rounded-md bg-warning/10 px-4 py-3 text-sm text-warning">
       Warning: The reaction video id is missing. This reaction page will stay
       hidden until a video id is added in the
@@ -258,6 +258,7 @@
     isExitButtonExpanded={$state.isExitButtonExpanded}
     showCinematicBars={$state.showCinematicBars}
     isReactionMissing={$state.isReactionMissing}
+    remixMode={$state.remixMode}
     isUsersOwnVideo={$state.isUsersOwnVideo}
     playerOriginal={$state.playerOriginal}
     playerReaction={$state.playerReaction}
@@ -271,6 +272,8 @@
     nextAriaLabel={sequenceNextAriaLabel}
     reactionCurrentTime={$state.reactionCurrentTime}
     reactionDuration={$state.reactionDuration}
+    originalCurrentTime={$state.originalCurrentTime}
+    originalDuration={$state.originalDuration}
     offsetStartTime={$state.offsetStartTime}
     reactionFinishTime={$state.reactionFinishTime}
     fullscreenPrimaryVideo={$state.fullscreenPrimaryVideo}

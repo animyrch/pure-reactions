@@ -14,6 +14,8 @@
   export let reactionVideoTitle = "";
   export let reactionVideoIdError = "";
   export let isSettingReactionVideoId = false;
+  export let remixMode = false;
+  export let isSettingRemixMode = false;
   export let offsetStartTime = 0;
   export let introBufferTime = 0;
   export let reactionFinishTime = 0;
@@ -30,6 +32,8 @@
   export let overlayVisibilityTimeline = [];
   export let reactionCurrentTime = 0;
   export let reactionDuration = 0;
+  export let originalCurrentTime = 0;
+  export let originalDuration = 0;
   export let playerEventTimeline = [];
   export let fullscreenPrimaryVideoDefault = "original";
   export let fullscreenOverlayWidthPercent = 35;
@@ -53,6 +57,7 @@
   export let onDeleteOverlayVisibilityConfig = async () => {};
 
   export let onSetReactionVideoId = () => {};
+  export let onSetRemixMode = async () => {};
   export let onSaveGeneralSettings = async () => {};
   export let onSeek = (_time) => {};
 
@@ -263,10 +268,12 @@
     Number.isFinite(soundLevelValue) && soundLevelValue !== soundLevel;
   $: overlayWidthClamped = clampOverlayWidth(overlayWidthValue);
   $: isOverlayWidthDirty =
+    !remixMode &&
     overlayWidthClamped !== clampOverlayWidth(fullscreenOverlayWidthPercent);
-  $: isPrimaryDirty = primaryDraft !== (fullscreenPrimaryVideoDefault || "original");
-  $: isCornerDirty = cornerDraft !== (fullscreenOverlayCorner || "top-right");
-  $: isMuteDirty = muteDraft !== Boolean(isReactionMuteModeEnabled);
+  $: isPrimaryDirty =
+    !remixMode && primaryDraft !== (fullscreenPrimaryVideoDefault || "original");
+  $: isCornerDirty = !remixMode && cornerDraft !== (fullscreenOverlayCorner || "top-right");
+  $: isMuteDirty = !remixMode && muteDraft !== Boolean(isReactionMuteModeEnabled);
   $: isGeneralDirty =
     isOffsetStartDirty ||
     isReactionFinishTimeDirty ||
@@ -292,8 +299,18 @@
   ];
 
   const handleReactionVideoSubmit = () => {
-    if (!trimmedReactionVideoIdValue) return;
+    if (remixMode || !trimmedReactionVideoIdValue) return;
     onSetReactionVideoId(trimmedReactionVideoIdValue);
+  };
+
+  const handleRemixModeToggle = async () => {
+    if (isSettingRemixMode) return;
+    try {
+      await onSetRemixMode(!remixMode);
+    } catch (error) {
+      console.error("Failed to update remix mode", error);
+      showToast("Unable to update remix mode. Try again.", TOASTS.WARNING);
+    }
   };
 
   const clearReactionVideoInput = () => {
@@ -583,7 +600,33 @@
       </h2>
       {#if openGeneralSection === "source"}
       <div id="general-section-source" class="px-3 pb-3">
-      <p class="text-xs leading-snug text-text-muted">
+      <div class="flex items-center justify-between gap-3">
+        <div class="flex min-w-0 items-center gap-1.5">
+          <h3 class="text-xs font-medium text-text-secondary">Remix mode</h3>
+          <HelpfulTip variant="tooltip" placement="top" label="About remix mode">
+            Remix the original video without uploading a reaction. The original stays fullscreen with no overlay. Fine-tune cues use the original video's timing, and the reaction volume and overlay tracks stay hidden.
+          </HelpfulTip>
+        </div>
+        <button
+          type="button"
+          class={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-60 ${remixMode ? "border-accent-primary bg-accent-primary" : "border-border-subtle bg-background/80"}`}
+          role="switch"
+          aria-checked={remixMode}
+          aria-label={remixMode ? "Turn off remix mode" : "Turn on remix mode"}
+          disabled={isSettingRemixMode}
+          on:click={handleRemixModeToggle}
+        >
+          <span
+            class={`inline-block h-5 w-5 transform rounded-full bg-surface shadow-surface transition ${remixMode ? "translate-x-5" : "translate-x-0.5"}`}
+          ></span>
+        </button>
+      </div>
+      <p class="mt-1.5 text-[11px] leading-snug text-text-muted">
+        {remixMode
+          ? "The original plays on its own. Turn remix mode off to link a reaction video."
+          : "Turn this on to edit the original by itself, without a reaction video."}
+      </p>
+      <p class="mt-2 text-xs leading-snug text-text-muted">
         Link your YouTube reaction video so we can load it in our editor.
       </p>
 
@@ -597,10 +640,10 @@
               placeholder="https://www.youtube.com/watch?v=..."
               aria-label="Reaction video URL or ID"
               bind:value={reactionVideoIdValue}
-              disabled={!isEditModeOn && !isReactionMissing}
+              disabled={remixMode || (!isEditModeOn && !isReactionMissing)}
               aria-invalid={reactionVideoIdError ? "true" : undefined}
             />
-            {#if reactionVideoIdValue}
+            {#if reactionVideoIdValue && !remixMode}
               <button
                 type="button"
                 class="absolute right-1.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded text-text-muted hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
@@ -618,7 +661,7 @@
             size="sm"
             variant="primary"
             loading={isSettingReactionVideoId}
-            disabled={!isReactionVideoIdDirty}
+            disabled={remixMode || !isReactionVideoIdDirty}
           >
             <span>Update video</span>
           </CinematicButton>
@@ -831,6 +874,7 @@
             {/if}
           </div>
 
+          {#if !remixMode}
           <div>
             <div class="flex items-center justify-between gap-3">
               <h3 class="text-xs font-medium text-text-secondary">Reaction mute mode</h3>
@@ -851,11 +895,13 @@
               Mute your reaction audio whenever the original video plays.
             </p>
           </div>
+          {/if}
         </div>
         </div>
         {/if}
       </section>
 
+      {#if !remixMode}
       <section class="rounded-xl border border-border-subtle bg-surface/75">
         <h2>
           <button
@@ -963,6 +1009,7 @@
         </div>
         {/if}
       </section>
+      {/if}
 
       <div class="flex flex-wrap items-center justify-end gap-2">
         <CinematicButton
@@ -1005,8 +1052,9 @@
           Fine-tune mode
         </h2>
         <p class="text-sm text-text-muted">
-          Adjust precise playback, volume, and state timelines when you need
-          full control.
+          {remixMode
+            ? "Cues follow the original video. The original stays fullscreen, with no reaction volume or overlay track."
+            : "Adjust precise playback, volume, and state timelines when you need full control."}
         </p>
       </header>
 
@@ -1026,14 +1074,19 @@
               {playbackRateTimeline}
               {overlayVisibilityTimeline}
               fullscreenPrimaryVideoDefault={fullscreenPrimaryVideoDefault}
-              {reactionCurrentTime}
-              {reactionDuration}
-              seekMin={offsetStartTime}
-              seekMax={reactionFinishTime > 0
-                ? reactionFinishTime
-                : Number.POSITIVE_INFINITY}
+              reactionCurrentTime={remixMode ? originalCurrentTime : reactionCurrentTime}
+              reactionDuration={remixMode ? originalDuration : reactionDuration}
+              seekMin={remixMode ? 0 : offsetStartTime}
+              seekMax={remixMode
+                ? (originalDuration > 0 ? originalDuration : Number.POSITIVE_INFINITY)
+                : (reactionFinishTime > 0
+                  ? reactionFinishTime
+                  : Number.POSITIVE_INFINITY)}
               {playerEventTimeline}
               allowPlaybackRate={!isTikTokOriginal}
+              timeAxis={remixMode ? "original" : "reaction"}
+              showReactionVolumeTrack={!remixMode}
+              showOverlayTrack={!remixMode}
               on:createPlayerConfig={handleCreatePlayerConfig}
               on:createVolumeConfig={handleCreateVolumeConfig}
               on:createReactionVolumeConfig={handleCreateReactionVolumeConfig}

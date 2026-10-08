@@ -528,6 +528,7 @@ export function useTwinPlayers({
 
   const {
     setReactionVideoId,
+    setRemixMode,
     setOffsetStartTime,
     setIntroBufferTime,
     setReactionFinishTime,
@@ -761,6 +762,7 @@ export function useTwinPlayers({
       closeEditMode,
       toggleFineTuneMode,
       setReactionVideoId,
+      setRemixMode,
       setOffsetStartTime,
       seekTo: goToSecondsInReactionVideo,
       setIntroBufferTime,
