@@ -9,6 +9,12 @@
         ExpandOutline,
         ForwardStepSolid,
     } from "flowbite-svelte-icons";
+    import SkipSecondsIcon from "$lib/components/Video/SkipSecondsIcon.svelte";
+    import {
+        COARSE_SKIP_SECONDS,
+        clampPlaybackTime,
+        playbackSkipDelta,
+    } from "$lib/helpers/playbackSkip";
 
     export let bothVideosStarted;
     export let isPlaylist;
@@ -48,6 +54,8 @@
         "inline-flex h-11 w-11 items-center justify-center rounded-full transition duration-subtle ease-cinematic focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] sm:h-12 sm:w-12";
     const iconButtonBase =
         "inline-flex h-9 w-9 items-center justify-center rounded-full text-text-primary/90 transition duration-subtle ease-cinematic hover:bg-elevated/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98]";
+    const skipButtonClass =
+        "inline-flex h-8 w-8 items-center justify-center rounded-full text-text-primary/90 transition duration-subtle ease-cinematic hover:bg-elevated/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40 sm:h-9 sm:w-9";
     const nextButtonClass =
         "inline-flex h-9 shrink-0 items-center gap-1 rounded-full bg-accent-primary/15 px-2.5 text-xs font-semibold text-accent-primary transition duration-subtle ease-cinematic hover:bg-accent-primary/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 sm:gap-1.5 sm:px-3";
 
@@ -261,6 +269,36 @@
         if (seekRaf) cancelAnimationFrame(seekRaf);
     });
 
+    function seekBy(delta) {
+        if (!bothVideosStarted) return;
+        if (!(safeSeekMax > safeSeekMin)) return;
+
+        const baseTime =
+            pendingSeekTime != null
+                ? pendingSeekTime
+                : Number.isFinite(localTime)
+                  ? localTime
+                  : Number.isFinite(currentTime)
+                    ? currentTime
+                    : safeSeekMin;
+        const nextTime = clampPlaybackTime(
+            baseTime + delta,
+            safeSeekMin,
+            safeSeekMax,
+        );
+        if (Math.abs(nextTime - baseTime) < 0.05) return;
+
+        localTime = nextTime;
+        armPendingSeek(nextTime);
+        queueSeekDispatch(nextTime);
+        revealControls();
+    }
+
+    $: canSkipBack =
+        safeSeekMax > safeSeekMin && localTime > safeSeekMin + 0.05;
+    $: canSkipForward =
+        safeSeekMax > safeSeekMin && localTime < safeSeekMax - 0.05;
+
     function togglePlayState() {
         isPlaying = !isPlaying;
         dispatch("playStateChanged", { isPlaying });
@@ -279,13 +317,16 @@
     }
 
     function handleKeydown(event) {
-        if (event.altKey || event.ctrlKey || event.metaKey) return;
+        if (event.altKey || event.ctrlKey || event.metaKey || event.isComposing) return;
+        if (event.defaultPrevented) return;
 
         const target = event.target;
         if (
             target instanceof HTMLElement &&
             (target.isContentEditable ||
-                target.closest('input, textarea, [contenteditable="true"]'))
+                target.closest(
+                    'input, textarea, select, [contenteditable="true"], [role="textbox"], [role="dialog"]',
+                ))
         ) {
             return;
         }
@@ -305,26 +346,12 @@
             return;
         }
 
-        if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
-            if (!bothVideosStarted) return;
-            if (safeSeekMax <= safeSeekMin) return;
+        const delta = playbackSkipDelta(event);
+        if (delta == null) return;
+        if (!bothVideosStarted || !(safeSeekMax > safeSeekMin)) return;
 
-            event.preventDefault();
-            const delta = event.key === "ArrowRight" ? 5 : -5;
-            const baseTime = Number.isFinite(currentTime)
-                ? currentTime
-                : localTime;
-            const nextTime = clampNumber(
-                baseTime + delta,
-                safeSeekMin,
-                safeSeekMax,
-            );
-
-            localTime = nextTime;
-            armPendingSeek(nextTime);
-            queueSeekDispatch(nextTime);
-            scheduleHide();
-        }
+        event.preventDefault();
+        seekBy(delta);
     }
 
     $: isVisible =
@@ -388,39 +415,65 @@
         </div>
     {:else}
         <div
-            class={`controls-surface flex w-full items-center justify-between gap-3 rounded-full border border-border-subtle/70 bg-surface/70 px-3 py-2 backdrop-blur-sm transition-opacity duration-subtle ease-cinematic sm:px-4 ${controlsClasses}`}
+            class={`controls-surface flex w-full flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-3xl border border-border-subtle/70 bg-surface/70 px-3 py-2 backdrop-blur-sm transition-opacity duration-subtle ease-cinematic sm:flex-nowrap sm:rounded-full sm:px-4 ${controlsClasses}`}
             role="toolbar"
             aria-label="Reaction playback controls"
             tabindex="0"
             on:mouseenter={handleControlsMouseEnter}
             on:mouseleave={handleControlsMouseLeave}
         >
-            <!-- Play/Pause -->
-            <div class="group relative shrink-0 order-2 sm:order-none">
+            <!-- Skip back, play/pause, skip forward -->
+            <div class="order-2 flex shrink-0 items-center gap-0.5 sm:order-none sm:gap-1">
                 <button
                     type="button"
-                    class={`${primaryButtonBase} ${isPlaying ? "bg-accent-primary/90 text-background" : "bg-elevated/70 text-text-primary"}`}
-                    on:click={togglePlayState}
-                    aria-label={isPlaying
-                        ? "Pause both videos"
-                        : "Resume both videos"}
-                    aria-pressed={isPlaying}
+                    class={skipButtonClass}
+                    on:click={() => seekBy(-COARSE_SKIP_SECONDS)}
+                    disabled={!canSkipBack}
+                    aria-label="Skip back 15 seconds"
+                    aria-keyshortcuts="j Shift+ArrowLeft"
+                    title="Skip back 15 seconds (J)"
                 >
-                    {#if isPlaying}
-                        <PauseSolid class="h-5 w-5" />
-                    {:else}
-                        <PlaySolid class="h-5 w-5" />
-                    {/if}
-                    <span class="sr-only"
-                        >{isPlaying ? "Pause videos" : "Resume videos"}</span
+                    <SkipSecondsIcon direction="back" seconds={COARSE_SKIP_SECONDS} />
+                </button>
+
+                <div class="group relative shrink-0">
+                    <button
+                        type="button"
+                        class={`${primaryButtonBase} ${isPlaying ? "bg-accent-primary/90 text-background" : "bg-elevated/70 text-text-primary"}`}
+                        on:click={togglePlayState}
+                        aria-label={isPlaying
+                            ? "Pause both videos"
+                            : "Resume both videos"}
+                        aria-pressed={isPlaying}
                     >
+                        {#if isPlaying}
+                            <PauseSolid class="h-5 w-5" />
+                        {:else}
+                            <PlaySolid class="h-5 w-5" />
+                        {/if}
+                        <span class="sr-only"
+                            >{isPlaying ? "Pause videos" : "Resume videos"}</span
+                        >
+                    </button>
+                </div>
+
+                <button
+                    type="button"
+                    class={skipButtonClass}
+                    on:click={() => seekBy(COARSE_SKIP_SECONDS)}
+                    disabled={!canSkipForward}
+                    aria-label="Skip forward 15 seconds"
+                    aria-keyshortcuts="l Shift+ArrowRight"
+                    title="Skip forward 15 seconds (L)"
+                >
+                    <SkipSecondsIcon direction="forward" seconds={COARSE_SKIP_SECONDS} />
                 </button>
             </div>
 
             <!-- Scrubber -->
-            <div class="scrubber-wrap flex w-full items-center gap-3 px-0 sm:flex-1 sm:px-2 order-1 sm:order-none">
+            <div class="scrubber-wrap order-1 flex w-full min-w-0 basis-full items-center gap-3 px-0 sm:order-none sm:basis-auto sm:flex-1 sm:px-2">
                 <span
-                    class="text-xs tabular-nums text-text-muted font-medium min-w-[32px] text-right hidden sm:block"
+                    class="min-w-[32px] text-right text-xs font-medium tabular-nums text-text-muted"
                     >{formatTime(displayTime)}</span
                 >
                 <input
@@ -436,7 +489,7 @@
                     aria-label="Seek reaction video"
                 />
                 <span
-                    class="text-xs tabular-nums text-text-muted font-medium min-w-[32px] hidden sm:block"
+                    class="min-w-[32px] text-xs font-medium tabular-nums text-text-muted"
                     >{formatTime(displaySeekMax)}</span
                 >
             </div>
