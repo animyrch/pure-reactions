@@ -532,6 +532,79 @@ describe('Playback controller overlay primary regression', () => {
     });
 });
 
+describe('Playback skip target', () => {
+    const withPlayerStates = (run) => {
+        const previousYT = globalThis.YT;
+        globalThis.YT = {
+            PlayerState: {
+                UNSTARTED: -1,
+                ENDED: 0,
+                PLAYING: 1,
+                PAUSED: 2,
+                BUFFERING: 3,
+                CUED: 5,
+            },
+        };
+        try {
+            run();
+        } finally {
+            if (typeof previousYT === 'undefined') {
+                delete globalThis.YT;
+            } else {
+                globalThis.YT = previousYT;
+            }
+        }
+    };
+
+    it('seeks the reaction video in normal mode and lets the original follow', () => {
+        withPlayerStates(() => {
+            const { controller, reactionPlayer, originalPlayer } = createPlaybackControllerHarness({
+                playerConfigs: {
+                    '0.0': { state: 1, time: 0 },
+                },
+                playbackRateTimeline: [{ t: 0, rate: 1 }],
+            });
+
+            try {
+                controller.seekReactionTo(40);
+
+                expect(reactionPlayer.seekTo).toHaveBeenCalledWith(40, true);
+                expect(originalPlayer.seekTo).toHaveBeenCalledWith(40, true);
+            } finally {
+                controller.dispose();
+            }
+        });
+    });
+
+    it('seeks the original video in remix mode and leaves the reaction player alone', () => {
+        withPlayerStates(() => {
+            const { controller, snapshot, reactionPlayer, originalPlayer } = createPlaybackControllerHarness({
+                remixMode: true,
+                originalCurrentTime: 10,
+                originalDuration: 240,
+            });
+
+            try {
+                controller.seekReactionTo(25);
+                expect(originalPlayer.seekTo).toHaveBeenCalledWith(25, true);
+                expect(reactionPlayer.seekTo).not.toHaveBeenCalled();
+                expect(snapshot.originalCurrentTime).toBe(25);
+
+                originalPlayer.seekTo.mockClear();
+                controller.seekReactionTo(999);
+                expect(originalPlayer.seekTo).toHaveBeenCalledWith(240, true);
+                expect(reactionPlayer.seekTo).not.toHaveBeenCalled();
+
+                originalPlayer.seekTo.mockClear();
+                controller.seekReactionTo(-8);
+                expect(originalPlayer.seekTo).toHaveBeenCalledWith(0, true);
+            } finally {
+                controller.dispose();
+            }
+        });
+    });
+});
+
 describe('Click-gate volume', () => {
     const withPlayerStates = (run) => {
         const previousYT = globalThis.YT;
