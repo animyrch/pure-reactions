@@ -109,6 +109,10 @@ export function createTwinPlayersPlaybackSyncController({
   let originalDurationProbeAttempts = 0;
   let remixAppliedAnchor: number | null = null;
   let remixSampleTime: number | null = null;
+  // Last position the viewer or a cue seek placed on purpose. Play cues behind
+  // this origin must not fire again. It stays at the playback start until then,
+  // so a late first sample can still apply a cue the playhead already passed.
+  let remixOrigin = 0;
   let remixUserHold: number | null = null;
   let remixUserHoldUntil = 0;
   let changingVolume = false;
@@ -807,6 +811,7 @@ export function createTwinPlayersPlaybackSyncController({
     // A stale getCurrentTime() would otherwise look like a later cue was
     // newly crossed and seek the playhead back there.
     remixSampleTime = clamped;
+    remixOrigin = clamped;
     remixUserHold = clamped;
     remixUserHoldUntil = Date.now() + 2000;
     if (!snapshot.isUserPaused) {
@@ -900,15 +905,20 @@ export function createTwinPlayersPlaybackSyncController({
       targetTime: Number(config?.time),
       currentTime: time,
       previousTime: remixSampleTime,
+      playbackOrigin: remixOrigin,
       lastAppliedAnchor: remixAppliedAnchor,
       isUserPaused: false,
     });
-    remixAppliedAnchor = plan.nextAppliedAnchor;
+    const seekBlocked = plan.seekTo !== null && remixUserHold !== null;
+    if (!seekBlocked) {
+      remixAppliedAnchor = plan.nextAppliedAnchor;
+    }
 
-    if (plan.seekTo !== null && remixUserHold === null) {
+    if (plan.seekTo !== null && !seekBlocked) {
       goToSecondsInOriginalVideo(plan.seekTo, { force: true, allowSeekAhead: true });
       remixSampleTime = plan.seekTo;
-    } else {
+      remixOrigin = plan.seekTo;
+    } else if (!seekBlocked) {
       remixSampleTime = time;
     }
     if (plan.transport === 'pause') {
@@ -2099,6 +2109,7 @@ export function createTwinPlayersPlaybackSyncController({
       }
       remixAppliedAnchor = null;
       remixSampleTime = null;
+      remixOrigin = readOriginalClock(getSnapshot().playerOriginal).time;
       remixUserHold = null;
       remixUserHoldUntil = 0;
       startRemixPlayback();
