@@ -937,6 +937,8 @@
         </h2>
         {#if openGeneralSection === "layout"}
         <div id="general-section-layout" class="px-3 pb-3">
+        <div class="layout-portions">
+        <div>
         <p class="text-xs leading-snug text-text-muted">
           Choose which video is the primary (main) video, and how the reaction overlay looks.
         </p>
@@ -973,8 +975,9 @@
             </span>
           </button>
         </div>
+        </div>
 
-        <div class="mt-3">
+        <div>
           <div class="flex items-center justify-between gap-3">
             <label class="text-xs font-medium text-text-secondary" for="fullscreen-overlay-width">
               Reaction overlay size
@@ -996,7 +999,7 @@
           </p>
         </div>
 
-        <div class="mt-3">
+        <div>
           <h3 class="text-xs font-medium text-text-secondary">Reaction overlay position</h3>
           <div class="mt-1.5 grid grid-cols-3 gap-1.5" role="group" aria-label="Reaction overlay position">
             {#each overlayPositionGrid as position, index (position?.value ?? `empty-${index}`)}
@@ -1019,6 +1022,7 @@
               {/if}
             {/each}
           </div>
+        </div>
         </div>
         </div>
         {/if}
@@ -1131,9 +1135,30 @@
   }
 
   .timing-grid,
-  .audio-grid {
+  .audio-grid,
+  .layout-portions {
     display: grid;
     gap: 0.75rem;
+  }
+
+  .timing-grid > *,
+  .audio-grid > *,
+  .layout-portions > * {
+    position: relative;
+    min-width: 0;
+  }
+
+  /* Stacked portions get a horizontal rule in the gap. Side-by-side portions get a vertical one. */
+  .timing-grid > * + *::before,
+  .audio-grid > * + *::before,
+  .layout-portions > * + *::before {
+    content: "";
+    position: absolute;
+    top: -0.375rem;
+    left: 0;
+    right: 0;
+    height: 1px;
+    @apply bg-border-subtle;
   }
 
   /* Three timing fields only fit once the config column is wide enough to keep the inputs readable. */
@@ -1144,7 +1169,16 @@
 
     .audio-grid {
       grid-template-columns: minmax(0, 1fr) 13rem;
-      align-items: start;
+    }
+
+    .timing-grid > * + *::before,
+    .audio-grid > * + *::before {
+      top: 0;
+      bottom: 0;
+      left: -0.375rem;
+      right: auto;
+      width: 1px;
+      height: auto;
     }
   }
 </style>
