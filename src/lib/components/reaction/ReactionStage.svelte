@@ -467,6 +467,7 @@
             duration={dockDuration}
             seekMin={dockSeekMin}
             seekMax={dockSeekMax}
+            {remixMode}
             onSeek={handleSeek}
         />
     {/if}

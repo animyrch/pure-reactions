@@ -43,6 +43,7 @@ const FIXTURES = [
   'tests/fixtures/reactions/reaction-layout.json',
   'tests/fixtures/reactions/twin-playlist-gate.json',
   'tests/fixtures/reactions/local-dev-seed.json',
+  'tests/fixtures/reactions/twin-remix-mode.json',
 ];
 
 const VERIFICATION_FIXTURES = [

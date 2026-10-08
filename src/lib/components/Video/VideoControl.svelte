@@ -29,6 +29,7 @@
     export let duration = 0;
     export let seekMin = 0;
     export let seekMax;
+    export let remixMode = false;
 
     let isPlaying = true;
     let isInteracting = false;
@@ -393,10 +394,12 @@
                 >
                     !
                 </span>
-                <span>Click each video to sync playback</span>
+                <span>{remixMode ? "Click the original video to start playback" : "Click each video to sync playback"}</span>
             </p>
             <p class="mt-1 text-xs text-text-muted sm:text-sm">
-                Once both videos are playing, shared controls will appear here. Use them instead of in-video controls.
+                {remixMode
+                    ? "Once it is playing, shared controls will appear here. Use them instead of in-video controls."
+                    : "Once both videos are playing, shared controls will appear here. Use them instead of in-video controls."}
             </p>
             {#if onNext}
                 <div class="mt-3 flex justify-end">

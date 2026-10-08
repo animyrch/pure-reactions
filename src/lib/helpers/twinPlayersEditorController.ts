@@ -406,14 +406,36 @@ export function createTwinPlayersEditorController({
   const setRemixMode = async (value: boolean) => {
     const next = Boolean(value);
     const snapshot = getSnapshot();
-    const didUpdate = await updateFirebaseDocument({ remixMode: next });
+    const patch: Record<string, unknown> = { remixMode: next };
+    if (next) {
+      patch.reactionVideoId = '';
+      patch.reactionVideoAuthor = '';
+      patch.reactionVideoTitle = '';
+    }
+    const didUpdate = await updateFirebaseDocument(patch);
     if (!didUpdate) {
       throw new Error('Failed to update remix mode');
+    }
+    if (next) {
+      try {
+        snapshot.playerReaction?.destroy?.();
+      } catch {
+        // The reaction player is leaving with the stored video.
+      }
     }
     updateState({
       remixMode: next,
       fullscreenOverlayVisible: next ? false : true,
       fullscreenPrimaryVideo: next ? 'original' : snapshot.fullscreenPrimaryVideoDefault,
+      ...(next
+        ? {
+            reactionVideoId: '',
+            reactionVideoAuthor: '',
+            reactionVideoTitle: '',
+            isReactionMissing: true,
+            playerReaction: null,
+          }
+        : {}),
     });
   };
 

@@ -23,6 +23,7 @@
   export let duration = 0;
   export let seekMin = 0;
   export let seekMax;
+  export let remixMode = false;
   export let onSeek = (_time) => {};
 </script>
 
@@ -46,6 +47,7 @@
       {duration}
       {seekMin}
       {seekMax}
+      {remixMode}
       on:playStateChanged={onPlayStateChanged}
       on:syncVideos={onSyncVideos}
       on:toggleAutoPlaylist={onToggleAutoPlaylist}
