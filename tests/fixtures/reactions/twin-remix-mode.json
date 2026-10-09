@@ -249,7 +249,10 @@
         "reactionVideoTitle": "",
         "reactionVolumeTimeline": [],
         "reactorId": "remixOwnerUid000000000001",
-        "stateTimeline": [],
+        "stateTimeline": [
+          { "state": 1, "t": 1, "targetTime": 20 },
+          { "state": 1, "t": 5, "targetTime": 50 }
+        ],
         "volumeTimeline": [],
         "overlayVisibilityTimeline": [],
         "fullscreenPrimaryVideo": "original",

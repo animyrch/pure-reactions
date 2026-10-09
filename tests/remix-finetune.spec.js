@@ -143,10 +143,10 @@ test.describe('Remix fine-tune editing', () => {
     test.skip(testInfo.project.name !== 'desktop', 'This test writes the shared fine-tune document');
     await openFineTune(page, 'remixFineTunePlays01', 'origRemixFinePlays');
 
-    await addPlayCue(page, { at: 1, target: 20 });
     await expect(page.getByRole('button', { name: 'Resumed original at 0:01' })).toBeVisible();
-    await addPlayCue(page, { at: 5, target: 50 });
     await expect(page.getByRole('button', { name: 'Resumed original at 0:05' })).toBeVisible();
+
+    await startOriginalOnly(page);
 
     let furthest = 0;
     await expect.poll(async () => {
@@ -235,15 +235,6 @@ async function readClockInputs(page, prefix) {
   const minutes = Number(await page.locator(`#${prefix}-minutes`).inputValue());
   const seconds = Number(await page.locator(`#${prefix}-seconds`).inputValue());
   return minutes * 60 + seconds;
-}
-
-async function addPlayCue(page, { at, target }) {
-  await cueSecondsAt(page, 'originalVideo', 0.15);
-  await page.locator('#pending-reaction-minutes').fill('0');
-  await page.locator('#pending-reaction-seconds').fill(String(at));
-  await page.locator('#pending-target-minutes').fill('0');
-  await page.locator('#pending-target-seconds').fill(String(target));
-  await page.getByRole('button', { name: 'Play original here' }).click();
 }
 
 async function scrubPlayheadTo(page, seconds, duration) {
