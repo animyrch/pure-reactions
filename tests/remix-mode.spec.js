@@ -123,8 +123,12 @@ test.describe('Remix mode', () => {
       return players?.original?.getDuration?.() === 400 && players?.reaction?.getDuration?.() === 90;
     }, null, { timeout: 15000 });
 
-    await expect(page.getByRole('button', { name: 'About remix mode' })).toBeVisible();
-    await expect(page.getByText('Remix the original video without uploading a reaction.')).toBeAttached();
+    const aboutRemix = page.getByRole('button', { name: 'About remix mode' });
+    await expect(aboutRemix).toBeVisible();
+    await aboutRemix.focus();
+    const remixTip = page.getByRole('tooltip');
+    await expect(remixTip).toBeVisible();
+    await expect(remixTip).toContainText('Remix the original video without uploading a reaction.');
     await expect(page.getByLabel('Reaction video URL or ID')).toBeEnabled();
     await expect(page.getByText('4. Player layout')).toBeVisible();
 
