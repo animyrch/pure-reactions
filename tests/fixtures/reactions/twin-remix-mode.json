@@ -1,0 +1,260 @@
+{
+  "version": 1,
+  "description": "Remix mode fixtures. The editor document starts with remix off so the test can toggle it. Playback documents are already in remix mode. reactorId matches the Auth emulator user created by tests/remix-mode.spec.js.",
+  "docs": [
+    {
+      "id": "remixPlaythrough0001",
+      "data": {
+        "isPublished": false,
+        "remixMode": true,
+        "offsetStartTime": 0,
+        "timeOffset": 0,
+        "originalVideoAuthor": "@remix-owner",
+        "originalVideoId": "origRemixPlay01",
+        "originalVideoTitle": "Remix playthrough original",
+        "playbackTimeline": [{ "rate": 1, "t": 0 }],
+        "playlistId": "",
+        "reactionVideoAuthor": "@remix-owner",
+        "reactionVideoId": "",
+        "reactionVideoTitle": "",
+        "reactionVolumeTimeline": [],
+        "reactorId": "remixOwnerUid000000000001",
+        "stateTimeline": [],
+        "volumeTimeline": [],
+        "overlayVisibilityTimeline": [],
+        "fullscreenPrimaryVideo": "reaction",
+        "youtubePlaylistId": ""
+      }
+    },
+    {
+      "id": "remixPauseAtCue0001",
+      "data": {
+        "isPublished": false,
+        "remixMode": true,
+        "offsetStartTime": 0,
+        "timeOffset": 0,
+        "originalVideoAuthor": "@remix-owner",
+        "originalVideoId": "origRemixPause01",
+        "originalVideoTitle": "Remix pause original",
+        "playbackTimeline": [{ "rate": 1, "t": 0 }],
+        "playlistId": "",
+        "reactionVideoAuthor": "@remix-owner",
+        "reactionVideoId": "",
+        "reactionVideoTitle": "",
+        "reactionVolumeTimeline": [],
+        "reactorId": "remixOwnerUid000000000001",
+        "stateTimeline": [
+          { "state": 2, "t": 1.2, "targetTime": 1.2 }
+        ],
+        "volumeTimeline": [],
+        "overlayVisibilityTimeline": [],
+        "fullscreenPrimaryVideo": "original",
+        "youtubePlaylistId": ""
+      }
+    },
+    {
+      "id": "remixJumpCue000001",
+      "data": {
+        "isPublished": false,
+        "remixMode": true,
+        "offsetStartTime": 0,
+        "timeOffset": 0,
+        "originalVideoAuthor": "@remix-owner",
+        "originalVideoId": "origRemixJump01",
+        "originalVideoTitle": "Remix jump original",
+        "playbackTimeline": [{ "rate": 1, "t": 0 }],
+        "playlistId": "",
+        "reactionVideoAuthor": "@remix-owner",
+        "reactionVideoId": "",
+        "reactionVideoTitle": "",
+        "reactionVolumeTimeline": [],
+        "reactorId": "remixOwnerUid000000000001",
+        "stateTimeline": [
+          { "state": 1, "t": 0.4, "targetTime": 40 }
+        ],
+        "volumeTimeline": [],
+        "overlayVisibilityTimeline": [],
+        "fullscreenPrimaryVideo": "original",
+        "youtubePlaylistId": ""
+      }
+    },
+    {
+      "id": "remixWatchReaction01",
+      "data": {
+        "isPublished": false,
+        "remixMode": true,
+        "offsetStartTime": 0,
+        "timeOffset": 0,
+        "originalVideoAuthor": "@remix-owner",
+        "originalVideoId": "origRemixWatch01",
+        "originalVideoTitle": "Remix watch original",
+        "playbackTimeline": [{ "rate": 1, "t": 0 }],
+        "playlistId": "",
+        "reactionVideoAuthor": "@remix-owner",
+        "reactionVideoId": "reactRemixWatch01",
+        "reactionVideoTitle": "Remix watch reaction",
+        "reactionVolumeTimeline": [{ "t": 0, "volume": 100 }],
+        "reactorId": "remixOwnerUid000000000001",
+        "stateTimeline": [],
+        "volumeTimeline": [{ "t": 0, "volume": 80 }],
+        "overlayVisibilityTimeline": [
+          { "t": 0, "visible": true, "primary": "reaction" }
+        ],
+        "fullscreenPrimaryVideo": "reaction",
+        "youtubePlaylistId": ""
+      }
+    },
+    {
+      "id": "remixEditor00000001",
+      "data": {
+        "isPublished": false,
+        "remixMode": false,
+        "offsetStartTime": 0,
+        "timeOffset": 0,
+        "originalVideoAuthor": "@remix-owner",
+        "originalVideoId": "origRemixEdit01",
+        "originalVideoTitle": "Remix editor original",
+        "playbackTimeline": [{ "rate": 1, "t": 0 }],
+        "playlistId": "",
+        "reactionVideoAuthor": "@remix-owner",
+        "reactionVideoId": "reactRemixEdit01",
+        "reactionVideoTitle": "Remix editor reaction",
+        "reactionVolumeTimeline": [{ "t": 5, "volume": 40 }],
+        "reactorId": "remixOwnerUid000000000001",
+        "stateTimeline": [],
+        "volumeTimeline": [{ "t": 0, "volume": 80 }],
+        "overlayVisibilityTimeline": [
+          { "t": 0, "visible": true, "primary": "reaction" }
+        ],
+        "fullscreenPrimaryVideo": "reaction",
+        "fullscreenOverlayWidthPercent": 35,
+        "fullscreenOverlayCorner": "top-right",
+        "youtubePlaylistId": ""
+      }
+    },
+    {
+      "id": "remixEditorOn000001",
+      "data": {
+        "isPublished": false,
+        "remixMode": true,
+        "offsetStartTime": 0,
+        "timeOffset": 0,
+        "originalVideoAuthor": "@remix-owner",
+        "originalVideoId": "origRemixEditOn01",
+        "originalVideoTitle": "Remix editor original already on",
+        "playbackTimeline": [{ "rate": 1, "t": 0 }],
+        "playlistId": "",
+        "reactionVideoAuthor": "@remix-owner",
+        "reactionVideoId": "reactRemixEditOn01",
+        "reactionVideoTitle": "Remix editor reaction already on",
+        "reactionVolumeTimeline": [{ "t": 5, "volume": 40 }],
+        "reactorId": "remixOwnerUid000000000001",
+        "stateTimeline": [],
+        "volumeTimeline": [{ "t": 0, "volume": 80 }],
+        "overlayVisibilityTimeline": [
+          { "t": 0, "visible": true, "primary": "reaction" }
+        ],
+        "fullscreenPrimaryVideo": "reaction",
+        "youtubePlaylistId": ""
+      }
+    },
+    {
+      "id": "remixFineTuneCue0001",
+      "data": {
+        "isPublished": false,
+        "remixMode": true,
+        "offsetStartTime": 0,
+        "timeOffset": 0,
+        "originalVideoAuthor": "@remix-owner",
+        "originalVideoId": "origRemixFineCue",
+        "originalVideoTitle": "Remix fine-tune cues",
+        "playbackTimeline": [{ "rate": 1, "t": 0 }],
+        "playlistId": "",
+        "reactionVideoAuthor": "",
+        "reactionVideoId": "",
+        "reactionVideoTitle": "",
+        "reactionVolumeTimeline": [],
+        "reactorId": "remixOwnerUid000000000001",
+        "stateTimeline": [
+          { "state": 2, "t": 200, "targetTime": 200 }
+        ],
+        "volumeTimeline": [{ "t": 100, "volume": 25 }],
+        "overlayVisibilityTimeline": [],
+        "fullscreenPrimaryVideo": "original",
+        "youtubePlaylistId": ""
+      }
+    },
+    {
+      "id": "remixFineTunePause01",
+      "data": {
+        "isPublished": false,
+        "remixMode": true,
+        "offsetStartTime": 0,
+        "timeOffset": 0,
+        "originalVideoAuthor": "@remix-owner",
+        "originalVideoId": "origRemixFinePause",
+        "originalVideoTitle": "Remix fine-tune pause edit",
+        "playbackTimeline": [{ "rate": 1, "t": 0 }],
+        "playlistId": "",
+        "reactionVideoAuthor": "",
+        "reactionVideoId": "",
+        "reactionVideoTitle": "",
+        "reactionVolumeTimeline": [],
+        "reactorId": "remixOwnerUid000000000001",
+        "stateTimeline": [],
+        "volumeTimeline": [],
+        "overlayVisibilityTimeline": [],
+        "fullscreenPrimaryVideo": "original",
+        "youtubePlaylistId": ""
+      }
+    },
+    {
+      "id": "remixFineTuneJump001",
+      "data": {
+        "isPublished": false,
+        "remixMode": true,
+        "offsetStartTime": 0,
+        "timeOffset": 0,
+        "originalVideoAuthor": "@remix-owner",
+        "originalVideoId": "origRemixFineJump",
+        "originalVideoTitle": "Remix fine-tune jump edit",
+        "playbackTimeline": [{ "rate": 1, "t": 0 }],
+        "playlistId": "",
+        "reactionVideoAuthor": "",
+        "reactionVideoId": "",
+        "reactionVideoTitle": "",
+        "reactionVolumeTimeline": [],
+        "reactorId": "remixOwnerUid000000000001",
+        "stateTimeline": [],
+        "volumeTimeline": [],
+        "overlayVisibilityTimeline": [],
+        "fullscreenPrimaryVideo": "original",
+        "youtubePlaylistId": ""
+      }
+    },
+    {
+      "id": "remixFineTunePlays01",
+      "data": {
+        "isPublished": false,
+        "remixMode": true,
+        "offsetStartTime": 0,
+        "timeOffset": 0,
+        "originalVideoAuthor": "@remix-owner",
+        "originalVideoId": "origRemixFinePlays",
+        "originalVideoTitle": "Remix fine-tune two play cues",
+        "playbackTimeline": [{ "rate": 1, "t": 0 }],
+        "playlistId": "",
+        "reactionVideoAuthor": "",
+        "reactionVideoId": "",
+        "reactionVideoTitle": "",
+        "reactionVolumeTimeline": [],
+        "reactorId": "remixOwnerUid000000000001",
+        "stateTimeline": [],
+        "volumeTimeline": [],
+        "overlayVisibilityTimeline": [],
+        "fullscreenPrimaryVideo": "original",
+        "youtubePlaylistId": ""
+      }
+    }
+  ]
+}

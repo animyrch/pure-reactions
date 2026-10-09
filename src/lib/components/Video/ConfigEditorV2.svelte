@@ -22,6 +22,9 @@
   export let seekMax = Number.POSITIVE_INFINITY;
   export let playerEventTimeline = [];
   export let allowPlaybackRate = true;
+  export let timeAxis = "reaction";
+  export let showReactionVolumeTrack = true;
+  export let showOverlayTrack = true;
 
   const YOUTUBE_STATE_LABELS = {
     "-1": "Unstarted",
@@ -317,6 +320,9 @@
       overlayVisibilityEvents={overlayVisibilityEvents}
       overlayPrimaryDefault={fullscreenPrimaryVideoDefault}
       {allowPlaybackRate}
+      {timeAxis}
+      {showReactionVolumeTrack}
+      {showOverlayTrack}
       on:createPlayerConfig={(event) =>
         dispatch("createPlayerConfig", event.detail)}
       on:createVolumeConfig={(event) =>

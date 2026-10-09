@@ -14,6 +14,9 @@
   export let seekMin = 0;
   export let seekMax = Number.POSITIVE_INFINITY;
   export let allowPlaybackRate = true;
+  export let timeAxis = "reaction";
+  export let showReactionVolumeTrack = true;
+  export let showOverlayTrack = true;
 
   const clamp01 = (value) => {
     if (!Number.isFinite(value)) return 0;
@@ -496,6 +499,10 @@
     viewportEnd = Number.isFinite(seekMax) ? seekMax : effectiveDuration;
     hasManualZoom = false;
   }
+  $: usesOriginalClock = timeAxis === "original";
+  $: cueTimeNoun = usesOriginalClock ? "Original" : "Reaction";
+  $: timelineTitle = usesOriginalClock ? "Original video timeline" : "Live reaction timeline";
+  $: timelineAriaLabel = usesOriginalClock ? "Original playback timeline" : "Reaction playback timeline";
   $: tracks = [
     {
       id: "originalVideo",
@@ -528,24 +535,32 @@
       showProgress: false,
       interactive: false,
     },
-    {
-      id: "reactionVolume",
-      label: "Volume Reaction",
-      labelClass: "text-success",
-      railClass: "bg-success/35",
-      markers: reactionVolumeMarkers,
-      showProgress: false,
-      interactive: false,
-    },
-    {
-      id: "overlayVisibility",
-      label: "Overlay",
-      labelClass: "text-violet-300",
-      railClass: "bg-violet-300/35",
-      markers: overlayVisibilityMarkers,
-      showProgress: false,
-      interactive: false,
-    },
+    ...(showReactionVolumeTrack
+      ? [
+          {
+            id: "reactionVolume",
+            label: "Volume Reaction",
+            labelClass: "text-success",
+            railClass: "bg-success/35",
+            markers: reactionVolumeMarkers,
+            showProgress: false,
+            interactive: false,
+          },
+        ]
+      : []),
+    ...(showOverlayTrack
+      ? [
+          {
+            id: "overlayVisibility",
+            label: "Overlay",
+            labelClass: "text-violet-300",
+            railClass: "bg-violet-300/35",
+            markers: overlayVisibilityMarkers,
+            showProgress: false,
+            interactive: false,
+          },
+        ]
+      : []),
   ];
   $: {
     const viewportStartBoundary = safeViewportStart - 0.0005;
@@ -728,6 +743,9 @@
 
   const computeOriginalTimeForNewEvent = (reactionTime, exclude) => {
     const previous = findPreviousPlayerEvent(reactionTime, exclude);
+    if (usesOriginalClock) {
+      return reactionTime;
+    }
     if (!previous) return 0;
     const previousTargetTime = Number.isFinite(previous.targetTime)
       ? previous.targetTime
@@ -1534,6 +1552,7 @@
   };
 
   const cleanupPlayheadListeners = () => {
+    if (typeof window === "undefined") return;
     window.removeEventListener("mousemove", updatePlayheadDrag);
     window.removeEventListener("mouseup", endPlayheadDrag);
     window.removeEventListener("touchmove", updatePlayheadDrag);
@@ -1550,7 +1569,7 @@
   <div class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1">
     <div class="col-start-1 flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5">
       <p class="text-sm font-semibold text-text-primary">
-        Live reaction timeline
+        {timelineTitle}
       </p>
       <p class="inline-flex items-center gap-1.5 text-[11px] font-medium text-text-muted">
         <span
@@ -1589,7 +1608,7 @@
     on:keydown={handleTimelineKeydown}
     role="button"
     tabindex="0"
-    aria-label="Reaction playback timeline"
+    aria-label={timelineAriaLabel}
     bind:this={timelineContainer}
   >
 
@@ -1741,12 +1760,12 @@
           class="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-3 text-left"
         >
           <span class="text-xs text-text-muted whitespace-nowrap"
-            >Reaction at</span
+            >{cueTimeNoun} at</span
           >
           <div class="flex flex-wrap items-end gap-3">
             <div class="flex items-center gap-1">
               <label class="sr-only" for={PENDING_REACTION_MINUTES_INPUT_ID}
-                >Reaction minutes</label
+                >{cueTimeNoun} minutes</label
               >
               <input
                 id={PENDING_REACTION_MINUTES_INPUT_ID}
@@ -1765,7 +1784,7 @@
             </div>
             <div class="flex items-center gap-1">
               <label class="sr-only" for={PENDING_REACTION_SECONDS_INPUT_ID}
-                >Reaction seconds</label
+                >{cueTimeNoun} seconds</label
               >
               <input
                 id={PENDING_REACTION_SECONDS_INPUT_ID}
@@ -2002,12 +2021,12 @@
           class="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-3 text-left"
         >
           <span class="text-xs text-text-muted whitespace-nowrap"
-            >Reaction at</span
+            >{cueTimeNoun} at</span
           >
           <div class="flex flex-wrap items-end gap-3">
             <div class="flex items-center gap-1">
               <label class="sr-only" for={ACTIVE_REACTION_MINUTES_INPUT_ID}
-                >Reaction minutes</label
+                >{cueTimeNoun} minutes</label
               >
               <input
                 id={ACTIVE_REACTION_MINUTES_INPUT_ID}
@@ -2027,7 +2046,7 @@
             </div>
             <div class="flex items-center gap-1">
               <label class="sr-only" for={ACTIVE_REACTION_SECONDS_INPUT_ID}
-                >Reaction seconds</label
+                >{cueTimeNoun} seconds</label
               >
               <input
                 id={ACTIVE_REACTION_SECONDS_INPUT_ID}

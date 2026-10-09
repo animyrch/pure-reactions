@@ -242,6 +242,7 @@
     isExitButtonExpanded={$state.isExitButtonExpanded}
     showCinematicBars={$state.showCinematicBars}
     isReactionMissing={$state.isReactionMissing}
+    remixMode={$state.remixMode}
     isUsersOwnVideo={isPlaylistOwner}
     playerOriginal={$state.playerOriginal}
     playerReaction={$state.playerReaction}
@@ -253,6 +254,8 @@
     nextAriaLabel="Next in playlist"
     reactionCurrentTime={$state.reactionCurrentTime}
     reactionDuration={$state.reactionDuration}
+    originalCurrentTime={$state.originalCurrentTime}
+    originalDuration={$state.originalDuration}
     offsetStartTime={$state.offsetStartTime}
     reactionFinishTime={$state.reactionFinishTime}
     fullscreenPrimaryVideo={$state.fullscreenPrimaryVideo}

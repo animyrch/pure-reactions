@@ -28,6 +28,7 @@ import {
   syncPlanTimeMsToSeconds
 } from '$lib/helpers/twinPlayersSyncPlanV2';
 import type { TwinPlayersState } from '$lib/helpers/twinPlayersStateController';
+import { planRemixTransport } from '$lib/helpers/remixPlayback';
 
 declare const YT: any;
 
@@ -104,6 +105,16 @@ export function createTwinPlayersPlaybackSyncController({
   let syncTimeout: ReturnType<typeof setTimeout> | undefined;
   let durationProbeTimeout: ReturnType<typeof setTimeout> | undefined;
   let durationProbeAttempts = 0;
+  let originalDurationProbeTimeout: ReturnType<typeof setTimeout> | undefined;
+  let originalDurationProbeAttempts = 0;
+  let remixAppliedAnchor: number | null = null;
+  let remixSampleTime: number | null = null;
+  // Last position the viewer or a cue seek placed on purpose. Play cues behind
+  // this origin must not fire again. It stays at the playback start until then,
+  // so a late first sample can still apply a cue the playhead already passed.
+  let remixOrigin = 0;
+  let remixUserHold: number | null = null;
+  let remixUserHoldUntil = 0;
   let changingVolume = false;
   let changingReactionVolume = false;
   let changingSpeed = false;
@@ -731,9 +742,227 @@ export function createTwinPlayersPlaybackSyncController({
     return engine;
   };
 
+  const readOriginalClock = (player: any) => {
+    const time = typeof player?.getCurrentTime === 'function' ? Number(player.getCurrentTime()) : Number.NaN;
+    const duration = typeof player?.getDuration === 'function' ? Number(player.getDuration()) : Number.NaN;
+    return {
+      time: Number.isFinite(time) && time >= 0 ? time : 0,
+      duration: Number.isFinite(duration) && duration > 0 ? duration : 0,
+    };
+  };
+
+  const publishOriginalClock = (time: number, duration: number) => {
+    const snapshot = getSnapshot();
+    const patch: Partial<TwinPlayersState> = {};
+    if (!Number.isFinite(snapshot.originalCurrentTime) || Math.abs(snapshot.originalCurrentTime - time) > 0.05) {
+      patch.originalCurrentTime = time;
+    }
+    if (duration > 0 && Math.abs((snapshot.originalDuration || 0) - duration) > 0.1) {
+      patch.originalDuration = duration;
+    }
+    if (Object.keys(patch).length > 0) {
+      updateState(patch);
+    }
+  };
+
+  const rememberRemixAnchor = (originalTime: number) => {
+    const snapshot = getSnapshot();
+    const source = Array.isArray(snapshot.stateTimeline) && snapshot.stateTimeline.length
+      ? snapshot.stateTimeline
+      : snapshot.playerConfigs;
+    const config = getCurrentStateFromStateConfigs(originalTime, source, snapshot.timeOffset);
+    const state = Number(config?.state);
+    if (state === 1 || state === 2) {
+      const anchor = Number(config?.closestSmallerTimeCode);
+      remixAppliedAnchor = Number.isFinite(anchor) ? anchor : null;
+      return;
+    }
+    remixAppliedAnchor = null;
+  };
+
+  const seekRemixTo = (seconds: number) => {
+    const snapshot = getSnapshot();
+    const player = snapshot.playerOriginal;
+    const measuredDuration = typeof player?.getDuration === 'function' ? Number(player.getDuration()) : Number.NaN;
+    const duration = Number.isFinite(measuredDuration) && measuredDuration > 0
+      ? measuredDuration
+      : Number(snapshot.originalDuration);
+    const cap = Number.isFinite(duration) && duration > 0 ? duration : Number.POSITIVE_INFINITY;
+    const clamped = cap === Number.POSITIVE_INFINITY
+      ? Math.max(Number(seconds) || 0, 0)
+      : Math.min(Math.max(Number(seconds) || 0, 0), cap);
+
+    if (!snapshot.bothVideosStarted) {
+      updateState({
+        bothVideosStarted: true,
+        fullscreenOverlayVisible: false,
+        fullscreenPrimaryVideo: 'original',
+      });
+      releaseClickGateVolumes();
+      markOriginalVideoClicked();
+    }
+
+    if (player && typeof player.seekTo === 'function') {
+      player.seekTo(clamped, true);
+    }
+    updateState({ originalCurrentTime: clamped });
+    rememberRemixAnchor(clamped);
+    // Keep transport on the requested time until the player reports it.
+    // A stale getCurrentTime() would otherwise look like a later cue was
+    // newly crossed and seek the playhead back there.
+    remixSampleTime = clamped;
+    remixOrigin = clamped;
+    remixUserHold = clamped;
+    remixUserHoldUntil = Date.now() + 2000;
+    if (!snapshot.isUserPaused) {
+      pollVideoCurrentTime();
+    }
+  };
+
+  const applyRemixTransport = (snapshot: TwinPlayersState) => {
+    const player = snapshot.playerOriginal;
+    if (!player) {
+      return 'wait';
+    }
+
+    const measured = readOriginalClock(player);
+    let time = measured.time;
+    const duration = measured.duration;
+    if (remixUserHold !== null) {
+      if (Math.abs(time - remixUserHold) <= 0.6 || Date.now() > remixUserHoldUntil) {
+        remixUserHold = null;
+      } else {
+        time = remixUserHold;
+      }
+    }
+    publishOriginalClock(time, duration);
+
+    const playerState = getPlayerStateSafely(player);
+    const endedState = typeof YT?.PlayerState?.ENDED === 'number' ? YT.PlayerState.ENDED : 0;
+    if (playerState === endedState) {
+      return 'ended';
+    }
+
+    if (snapshot.fullscreenOverlayVisible || snapshot.fullscreenPrimaryVideo !== 'original') {
+      updateState({
+        fullscreenOverlayVisible: false,
+        fullscreenPrimaryVideo: 'original',
+      });
+    }
+
+    const reactionState = getPlayerStateSafely(snapshot.playerReaction);
+    const playingState = typeof YT?.PlayerState?.PLAYING === 'number' ? YT.PlayerState.PLAYING : 1;
+    const bufferingState = typeof YT?.PlayerState?.BUFFERING === 'number' ? YT.PlayerState.BUFFERING : 3;
+    if (reactionState === playingState || reactionState === bufferingState) {
+      pauseReactionVideo();
+    }
+
+    if (snapshot.isUserPaused) {
+      remixSampleTime = time;
+      if (playerState === playingState || playerState === bufferingState) {
+        pauseOriginalVideo();
+      }
+      return 'paused';
+    }
+
+    const stateSource = Array.isArray(snapshot.stateTimeline) && snapshot.stateTimeline.length
+      ? snapshot.stateTimeline
+      : snapshot.playerConfigs;
+    const volumeSource = Array.isArray(snapshot.volumeTimeline) && snapshot.volumeTimeline.length
+      ? snapshot.volumeTimeline
+      : snapshot.volumeConfigs;
+    const rateSource = Array.isArray(snapshot.playbackRateTimeline) && snapshot.playbackRateTimeline.length
+      ? snapshot.playbackRateTimeline
+      : snapshot.playbackRateConfigs;
+    const config = getCurrentStateFromStateConfigs(time, stateSource, snapshot.timeOffset);
+    const volume = getCurrentVolumeFromVolumeConfigs(time, volumeSource, snapshot.globalGain, snapshot.timeOffset);
+    const rate = getCurrentPlaybackRateFromConfigs(time, rateSource, snapshot.timeOffset);
+    const resolvedVolume = snapshot.originalVideoPlatform === 'tiktok'
+      ? (volume >= 100 ? 100 : 0)
+      : volume;
+
+    if (!changingVolume && Math.abs(snapshot.currentVolumeOriginalVideo - resolvedVolume) > 0.5) {
+      changingVolume = true;
+      setVolumeForOriginalVideo(resolvedVolume);
+      updateState({ currentVolumeOriginalVideo: resolvedVolume });
+      changingVolume = false;
+    }
+
+    if (
+      snapshot.originalVideoPlatform !== 'tiktok'
+      && !changingSpeed
+      && Math.abs(snapshot.currentPlaybackRate - rate) > 0.001
+    ) {
+      changingSpeed = true;
+      setPlaybackRateForOriginalVideo(rate);
+      updateState({ currentPlaybackRate: rate });
+      changingSpeed = false;
+    }
+
+    const plan = planRemixTransport({
+      state: Number(config?.state),
+      anchorTime: Number(config?.closestSmallerTimeCode),
+      targetTime: Number(config?.time),
+      currentTime: time,
+      previousTime: remixSampleTime,
+      playbackOrigin: remixOrigin,
+      lastAppliedAnchor: remixAppliedAnchor,
+      isUserPaused: false,
+    });
+    const seekBlocked = plan.seekTo !== null && remixUserHold !== null;
+    if (!seekBlocked) {
+      remixAppliedAnchor = plan.nextAppliedAnchor;
+    }
+
+    if (plan.seekTo !== null && !seekBlocked) {
+      goToSecondsInOriginalVideo(plan.seekTo, { force: true, allowSeekAhead: true });
+      remixSampleTime = plan.seekTo;
+      remixOrigin = plan.seekTo;
+    } else if (!seekBlocked) {
+      remixSampleTime = time;
+    }
+    if (plan.transport === 'pause') {
+      const pausedState = typeof YT?.PlayerState?.PAUSED === 'number' ? YT.PlayerState.PAUSED : 2;
+      if (playerState !== pausedState) {
+        pauseOriginalVideo();
+      }
+    } else if (plan.transport === 'play') {
+      if (playerState !== playingState && playerState !== bufferingState) {
+        startOriginalVideo();
+      }
+    }
+    return 'running';
+  };
+
+  const startRemixPlayback = () => {
+    const snapshot = getSnapshot();
+    if (!snapshot.playerOriginal) {
+      return;
+    }
+    updateState({
+      bothVideosStarted: true,
+      fullscreenOverlayVisible: false,
+      fullscreenPrimaryVideo: 'original',
+    });
+    releaseClickGateVolumes();
+    const reactionState = getPlayerStateSafely(snapshot.playerReaction);
+    const playingState = typeof YT?.PlayerState?.PLAYING === 'number' ? YT.PlayerState.PLAYING : 1;
+    const bufferingState = typeof YT?.PlayerState?.BUFFERING === 'number' ? YT.PlayerState.BUFFERING : 3;
+    if (reactionState === playingState || reactionState === bufferingState) {
+      pauseReactionVideo();
+    }
+    startOriginalVideo();
+    pollVideoCurrentTime();
+  };
+
   const goToSecondsInReactionVideo = (seconds: number, options?: { skipOriginalSync?: boolean }) => {
     const normalized = Number(seconds);
     if (!Number.isFinite(normalized)) {
+      return;
+    }
+
+    if (getSnapshot().remixMode) {
+      seekRemixTo(normalized);
       return;
     }
 
@@ -946,6 +1175,15 @@ export function createTwinPlayersPlaybackSyncController({
       const snapshot = getSnapshot();
       if (isSwitchingReactionInPlace()) {
         scheduleNextSync(250, runSyncCycle);
+        return;
+      }
+
+      if (snapshot.remixMode) {
+        const status = applyRemixTransport(snapshot);
+        if (status === 'ended') {
+          return;
+        }
+        scheduleNextSync(status === 'running' ? 200 : 500, runSyncCycle);
         return;
       }
 
@@ -1309,10 +1547,31 @@ export function createTwinPlayersPlaybackSyncController({
     runSyncCycle();
   };
 
+  const resetOriginalDurationProbe = () => {
+    clearTimeout(originalDurationProbeTimeout);
+    originalDurationProbeTimeout = undefined;
+    originalDurationProbeAttempts = 0;
+  };
+
+  const probeOriginalDuration = () => {
+    originalDurationProbeAttempts += 1;
+    const player = getSnapshot().playerOriginal;
+    const measuredDuration = typeof player?.getDuration === 'function' ? Number(player.getDuration()) : Number.NaN;
+    if (Number.isFinite(measuredDuration) && measuredDuration > 0) {
+      updateState({ originalDuration: measuredDuration });
+      resetOriginalDurationProbe();
+      return;
+    }
+    if (originalDurationProbeAttempts < 10) {
+      originalDurationProbeTimeout = setTimeout(probeOriginalDuration, 400);
+    }
+  };
+
   const resetReactionDurationProbe = () => {
     clearTimeout(durationProbeTimeout);
     durationProbeTimeout = undefined;
     durationProbeAttempts = 0;
+    resetOriginalDurationProbe();
   };
 
   const probeReactionDuration = () => {
@@ -1385,6 +1644,8 @@ export function createTwinPlayersPlaybackSyncController({
       debugClickGate('[TwinPlayers] original player READY', {
         ...playerInfo
       });
+      resetOriginalDurationProbe();
+      probeOriginalDuration();
       setPlaybackRateForOriginalVideo(snapshot.currentPlaybackRate);
       setPlayerVolume(
         event.target,
@@ -1414,6 +1675,10 @@ export function createTwinPlayersPlaybackSyncController({
   const startVideos = () => {
     const snapshot = getSnapshot();
     debugClickGate('[TwinPlayers] startVideos invoked', { reactionVideoId: snapshot.reactionVideoId }, true);
+    if (snapshot.remixMode) {
+      startRemixPlayback();
+      return;
+    }
     if (!snapshot.playerReaction) {
       debugClickGate('[TwinPlayers] startVideos aborted (missing reaction player)', {
         reactionVideoId: snapshot.reactionVideoId
@@ -1640,7 +1905,9 @@ export function createTwinPlayersPlaybackSyncController({
       }, true);
 
       if (!snapshot.bothVideosStarted) {
-        const gateSatisfied = gateState.originalVideoClicked && gateState.reactionVideoClicked;
+        const gateSatisfied = snapshot.remixMode
+          ? gateState.originalVideoClicked
+          : gateState.originalVideoClicked && gateState.reactionVideoClicked;
 
         if (!gateSatisfied) {
           setPlayerVolume(event?.target ?? snapshot.playerOriginal, 0);
@@ -1769,6 +2036,18 @@ export function createTwinPlayersPlaybackSyncController({
 
   const handlePlayStateChange = (isPlaying: boolean) => {
     debugClickGate('[TwinPlayers] handlePlayStateChange called', { isPlaying }, true);
+    if (getSnapshot().remixMode) {
+      if (isPlaying) {
+        if (getSnapshot().isUserPaused) {
+          updateState({ isUserPaused: false });
+        }
+        startRemixPlayback();
+        return;
+      }
+      updateState({ isUserPaused: true });
+      pauseOriginalVideo();
+      return;
+    }
     if (isPlaying) {
       const wasUserPaused = getSnapshot().isUserPaused;
       if (wasUserPaused) {
@@ -1824,6 +2103,18 @@ export function createTwinPlayersPlaybackSyncController({
 
   const syncVideos = () => {
     debugClickGate('[TwinPlayers] syncVideos called', {}, true);
+    if (getSnapshot().remixMode) {
+      if (getSnapshot().isUserPaused) {
+        updateState({ isUserPaused: false });
+      }
+      remixAppliedAnchor = null;
+      remixSampleTime = null;
+      remixOrigin = readOriginalClock(getSnapshot().playerOriginal).time;
+      remixUserHold = null;
+      remixUserHoldUntil = 0;
+      startRemixPlayback();
+      return;
+    }
     if (getSnapshot().isUserPaused) {
       updateState({ isUserPaused: false });
     }

@@ -1,5 +1,6 @@
 <script>
-  import { createEventDispatcher, onMount } from 'svelte';
+  import { createEventDispatcher, onMount, tick } from 'svelte';
+  import { placeTooltip } from '$lib/helpers/tooltipPlacement.js';
 
   export let title = 'Tip';
   export let variant = 'callout';
@@ -20,6 +21,12 @@
   let dismissed = false;
   let collapsed = false;
   let ready = !storageKey;
+  let triggerEl;
+  let tipEl;
+  let tooltipOpen = false;
+  let tooltipPlaced = false;
+  let tooltipTop = 0;
+  let tooltipLeft = 0;
 
   $: tipId = id ?? generatedId;
   $: titleId = `${tipId}-title`;
@@ -73,6 +80,66 @@
     dispatch('expand');
   };
 
+  const portalToBody = (node) => {
+    document.body.appendChild(node);
+
+    return {
+      destroy() {
+        node.remove();
+      },
+    };
+  };
+
+  const positionTooltip = () => {
+    if (!triggerEl || !tipEl || typeof window === 'undefined') {
+      return;
+    }
+
+    const tipRect = tipEl.getBoundingClientRect();
+    if (tipRect.width === 0 || tipRect.height === 0) {
+      return;
+    }
+
+    const placed = placeTooltip({
+      trigger: triggerEl.getBoundingClientRect(),
+      tip: tipRect,
+      placement,
+      viewport: { width: window.innerWidth, height: window.innerHeight },
+    });
+    tooltipTop = placed.top;
+    tooltipLeft = placed.left;
+    tooltipPlaced = true;
+    // The node lives on document.body, so write the box directly after measuring.
+    tipEl.style.top = `${placed.top}px`;
+    tipEl.style.left = `${placed.left}px`;
+    tipEl.style.visibility = 'visible';
+  };
+
+  const showTooltip = async () => {
+    tooltipOpen = true;
+    tooltipPlaced = false;
+    await tick();
+    if (!tooltipOpen) {
+      return;
+    }
+    positionTooltip();
+  };
+
+  const hideTooltip = (force = false) => {
+    if (!force && triggerEl && document.activeElement === triggerEl) {
+      return;
+    }
+
+    tooltipOpen = false;
+    tooltipPlaced = false;
+  };
+
+  const handleWindowKeydown = (event) => {
+    if (event.key === 'Escape' && tooltipOpen) {
+      hideTooltip(true);
+    }
+  };
+
   onMount(() => {
     const stored = readStored();
     if (collapsible) {
@@ -81,36 +148,59 @@
       dismissed = stored;
     }
     ready = true;
+
+    if (!isTooltip) {
+      return;
+    }
+
+    const reposition = () => {
+      if (tooltipOpen) {
+        positionTooltip();
+      }
+    };
+
+    window.addEventListener('resize', reposition);
+    window.addEventListener('scroll', reposition, true);
+
+    return () => {
+      window.removeEventListener('resize', reposition);
+      window.removeEventListener('scroll', reposition, true);
+    };
   });
-
-  const placementClasses = {
-    top: 'bottom-full right-0 mb-2',
-    bottom: 'top-full right-0 mt-2',
-    left: 'right-full top-1/2 mr-2 -translate-y-1/2',
-    right: 'left-full top-1/2 ml-2 -translate-y-1/2',
-  };
-
-  $: tooltipPosition = placementClasses[placement] ?? placementClasses.top;
 </script>
+
+<svelte:window on:keydown={handleWindowKeydown} />
 
 {#if isTooltip}
   <span class="relative inline-flex">
     <button
       type="button"
-      class="peer inline-flex h-4 w-4 items-center justify-center rounded-full border border-border-subtle text-[0.65rem] leading-none text-text-muted transition duration-subtle ease-cinematic hover:border-border-strong hover:text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      bind:this={triggerEl}
+      class="inline-flex h-4 w-4 items-center justify-center rounded-full border border-border-subtle text-[0.65rem] leading-none text-text-muted transition duration-subtle ease-cinematic hover:border-border-strong hover:text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       aria-label={label}
-      aria-describedby={tipId}
+      aria-describedby={tooltipOpen ? tipId : undefined}
+      on:mouseenter={showTooltip}
+      on:mouseleave={() => hideTooltip(false)}
+      on:focus={showTooltip}
+      on:blur={() => hideTooltip(true)}
     >
       ?
     </button>
+  </span>
+  {#if tooltipOpen}
     <span
       id={tipId}
+      use:portalToBody
+      bind:this={tipEl}
       role="tooltip"
-      class="pointer-events-none absolute z-10 hidden w-52 rounded-md border border-border-subtle bg-elevated px-sm py-xs text-xs text-text-primary shadow-md peer-hover:block peer-focus-visible:block {tooltipPosition}"
+      class="pointer-events-none fixed z-[110] w-[min(16rem,calc(100vw-1rem))] whitespace-normal break-words rounded-md border border-border-subtle bg-elevated px-sm py-xs text-xs text-text-primary shadow-md"
+      style:top="{tooltipTop}px"
+      style:left="{tooltipLeft}px"
+      style:visibility={tooltipPlaced ? 'visible' : 'hidden'}
     >
       <slot />
     </span>
-  </span>
+  {/if}
 {:else if showCollapsed}
   <button
     type="button"

@@ -10,6 +10,7 @@ import {
 export type TwinPlayersState = {
   isLoading: boolean;
   isReactionMissing: boolean;
+  remixMode: boolean;
   isEditModeOn: boolean;
   isFineTuneModeOn: boolean;
   canShowEditModeButton: boolean;
@@ -64,6 +65,8 @@ export type TwinPlayersState = {
   fullscreenOverlayVisible: boolean;
   reactionCurrentTime: number;
   reactionDuration: number;
+  originalCurrentTime: number;
+  originalDuration: number;
   offsetStartTime: number;
   reactionFinishTime: number;
   timeOffset: number;
@@ -90,6 +93,7 @@ export type TwinPlayersState = {
 type TwinPlayersContentState = Pick<
   TwinPlayersState,
   | 'isReactionMissing'
+  | 'remixMode'
   | 'isUsersOwnVideo'
   | 'isPublished'
   | 'reactionVideoId'
@@ -156,6 +160,8 @@ type TwinPlayersPlaybackState = Pick<
   | 'currentVolumeReactionVideo'
   | 'reactionCurrentTime'
   | 'reactionDuration'
+  | 'originalCurrentTime'
+  | 'originalDuration'
   | 'offsetStartTime'
   | 'reactionFinishTime'
   | 'timeOffset'
@@ -198,6 +204,7 @@ type CreateTwinPlayersStateControllerOptions = {
 
 const contentKeys = [
   'isReactionMissing',
+  'remixMode',
   'isUsersOwnVideo',
   'isPublished',
   'reactionVideoId',
@@ -262,6 +269,8 @@ const playbackKeys = [
   'currentVolumeReactionVideo',
   'reactionCurrentTime',
   'reactionDuration',
+  'originalCurrentTime',
+  'originalDuration',
   'offsetStartTime',
   'reactionFinishTime',
   'timeOffset',
@@ -338,6 +347,7 @@ export function createTwinPlayersStateController({
 }: CreateTwinPlayersStateControllerOptions) {
   const contentState = writable<TwinPlayersContentState>({
     isReactionMissing: false,
+    remixMode: false,
     isUsersOwnVideo: false,
     isPublished: false,
     reactionVideoId: '',
@@ -402,6 +412,8 @@ export function createTwinPlayersStateController({
     currentVolumeReactionVideo: 100,
     reactionCurrentTime: 0,
     reactionDuration: 0,
+    originalCurrentTime: 0,
+    originalDuration: 0,
     offsetStartTime: 0,
     reactionFinishTime: 100000,
     timeOffset: 0,

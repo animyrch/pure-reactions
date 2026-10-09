@@ -54,7 +54,8 @@ export function deriveTwinPlayersReactionData({
   viewerDisplayName,
   reactionFinishTimeFallback = 0
 }: DeriveTwinPlayersReactionDataParams) {
-  const reactionVideoId = reactionData?.reactionVideoId ?? '';
+  const remixMode = reactionData?.remixMode === true;
+  const reactionVideoId = remixMode ? '' : (reactionData?.reactionVideoId ?? '');
   const originalVideoId = reactionData?.originalVideoId;
   const youtubePlaylistId = reactionData?.youtubePlaylistId;
 
@@ -172,6 +173,7 @@ export function deriveTwinPlayersReactionData({
     normalizedOriginalMetadata,
     originalVideoPlatform,
     isReactionMissing: !reactionVideoId,
+    remixMode,
     isUsersOwnVideo: resolvedReactorId === viewerUserId,
     canShowEditModeButton: resolvedReactorId === viewerUserId,
     isReactionMuteModeEnabled: Boolean(reactionData?.muteReactionWhileOriginalPlays),

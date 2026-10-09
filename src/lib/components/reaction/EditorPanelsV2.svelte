@@ -14,6 +14,8 @@
   export let reactionVideoTitle = "";
   export let reactionVideoIdError = "";
   export let isSettingReactionVideoId = false;
+  export let remixMode = false;
+  export let isSettingRemixMode = false;
   export let offsetStartTime = 0;
   export let introBufferTime = 0;
   export let reactionFinishTime = 0;
@@ -30,6 +32,8 @@
   export let overlayVisibilityTimeline = [];
   export let reactionCurrentTime = 0;
   export let reactionDuration = 0;
+  export let originalCurrentTime = 0;
+  export let originalDuration = 0;
   export let playerEventTimeline = [];
   export let fullscreenPrimaryVideoDefault = "original";
   export let fullscreenOverlayWidthPercent = 35;
@@ -53,6 +57,7 @@
   export let onDeleteOverlayVisibilityConfig = async () => {};
 
   export let onSetReactionVideoId = () => {};
+  export let onSetRemixMode = async () => {};
   export let onSaveGeneralSettings = async () => {};
   export let onSeek = (_time) => {};
 
@@ -65,6 +70,17 @@
   const OVERLAY_WIDTH_MAX = 80;
   const OVERLAY_WIDTH_STEP = 5;
   const DEFAULT_OVERLAY_WIDTH = 35;
+
+  // Off tracks use a lifted gray and a light thumb. The on state stays the accent fill with a dark thumb.
+  const switchTrackBase =
+    "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border transition duration-subtle ease-cinematic focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:brightness-100";
+  const switchTrackOff =
+    "border-text-muted/70 bg-border-strong hover:brightness-125";
+  const switchTrackOn = "border-accent-primary bg-accent-primary";
+  const switchThumbBase =
+    "pointer-events-none inline-block h-5 w-5 transform rounded-full shadow-surface transition duration-subtle ease-cinematic";
+  const switchThumbOff = "translate-x-0.5 bg-text-primary";
+  const switchThumbOn = "translate-x-5 bg-surface";
 
   const OVERLAY_POSITIONS = [
     { value: "top-left", label: "Top left", x: 3, y: 3 },
@@ -263,10 +279,12 @@
     Number.isFinite(soundLevelValue) && soundLevelValue !== soundLevel;
   $: overlayWidthClamped = clampOverlayWidth(overlayWidthValue);
   $: isOverlayWidthDirty =
+    !remixMode &&
     overlayWidthClamped !== clampOverlayWidth(fullscreenOverlayWidthPercent);
-  $: isPrimaryDirty = primaryDraft !== (fullscreenPrimaryVideoDefault || "original");
-  $: isCornerDirty = cornerDraft !== (fullscreenOverlayCorner || "top-right");
-  $: isMuteDirty = muteDraft !== Boolean(isReactionMuteModeEnabled);
+  $: isPrimaryDirty =
+    !remixMode && primaryDraft !== (fullscreenPrimaryVideoDefault || "original");
+  $: isCornerDirty = !remixMode && cornerDraft !== (fullscreenOverlayCorner || "top-right");
+  $: isMuteDirty = !remixMode && muteDraft !== Boolean(isReactionMuteModeEnabled);
   $: isGeneralDirty =
     isOffsetStartDirty ||
     isReactionFinishTimeDirty ||
@@ -292,8 +310,18 @@
   ];
 
   const handleReactionVideoSubmit = () => {
-    if (!trimmedReactionVideoIdValue) return;
+    if (remixMode || !trimmedReactionVideoIdValue) return;
     onSetReactionVideoId(trimmedReactionVideoIdValue);
+  };
+
+  const handleRemixModeToggle = async () => {
+    if (isSettingRemixMode) return;
+    try {
+      await onSetRemixMode(!remixMode);
+    } catch (error) {
+      console.error("Failed to update remix mode", error);
+      showToast("Unable to update remix mode. Try again.", TOASTS.WARNING);
+    }
   };
 
   const clearReactionVideoInput = () => {
@@ -597,10 +625,10 @@
               placeholder="https://www.youtube.com/watch?v=..."
               aria-label="Reaction video URL or ID"
               bind:value={reactionVideoIdValue}
-              disabled={!isEditModeOn && !isReactionMissing}
+              disabled={remixMode || (!isEditModeOn && !isReactionMissing)}
               aria-invalid={reactionVideoIdError ? "true" : undefined}
             />
-            {#if reactionVideoIdValue}
+            {#if reactionVideoIdValue && !remixMode}
               <button
                 type="button"
                 class="absolute right-1.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded text-text-muted hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
@@ -618,7 +646,7 @@
             size="sm"
             variant="primary"
             loading={isSettingReactionVideoId}
-            disabled={!isReactionVideoIdDirty}
+            disabled={remixMode || !isReactionVideoIdDirty}
           >
             <span>Update video</span>
           </CinematicButton>
@@ -653,6 +681,35 @@
           </span>
         </div>
       {/if}
+
+      <div class="mt-3 border-t border-border-subtle pt-3">
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex min-w-0 items-center gap-1.5">
+            <h3 class="text-xs font-medium text-text-secondary">Remix mode</h3>
+            <HelpfulTip variant="tooltip" placement="top" label="About remix mode">
+              Remix the original video without uploading a reaction. The original stays fullscreen with no overlay. Fine-tune cues use the original video's timing, and the reaction volume and overlay tracks stay hidden.
+            </HelpfulTip>
+          </div>
+          <button
+            type="button"
+            class={`${switchTrackBase} ${remixMode ? switchTrackOn : switchTrackOff}`}
+            role="switch"
+            aria-checked={remixMode}
+            aria-label={remixMode ? "Turn off remix mode" : "Turn on remix mode"}
+            disabled={isSettingRemixMode}
+            on:click={handleRemixModeToggle}
+          >
+            <span
+              class={`${switchThumbBase} ${remixMode ? switchThumbOn : switchThumbOff}`}
+            ></span>
+          </button>
+        </div>
+        <p class="mt-1.5 text-[11px] leading-snug text-text-muted">
+          {remixMode
+            ? "The original plays on its own. Turn remix mode off to link a reaction video."
+            : "Turn this on to edit the original by itself, without a reaction video."}
+        </p>
+      </div>
       </div>
       {/if}
     </section>
@@ -831,19 +888,20 @@
             {/if}
           </div>
 
+          {#if !remixMode}
           <div>
             <div class="flex items-center justify-between gap-3">
               <h3 class="text-xs font-medium text-text-secondary">Reaction mute mode</h3>
               <button
                 type="button"
-                class={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${muteDraft ? "border-accent-primary bg-accent-primary" : "border-border-subtle bg-background/80"}`}
+                class={`${switchTrackBase} ${muteDraft ? switchTrackOn : switchTrackOff}`}
                 role="switch"
                 aria-checked={muteDraft}
                 aria-label={muteDraft ? "Disable reaction mute mode" : "Enable reaction mute mode"}
                 on:click={() => (muteDraft = !muteDraft)}
               >
                 <span
-                  class={`inline-block h-5 w-5 transform rounded-full bg-surface shadow-surface transition ${muteDraft ? "translate-x-5" : "translate-x-0.5"}`}
+                  class={`${switchThumbBase} ${muteDraft ? switchThumbOn : switchThumbOff}`}
                 ></span>
               </button>
             </div>
@@ -851,11 +909,13 @@
               Mute your reaction audio whenever the original video plays.
             </p>
           </div>
+          {/if}
         </div>
         </div>
         {/if}
       </section>
 
+      {#if !remixMode}
       <section class="rounded-xl border border-border-subtle bg-surface/75">
         <h2>
           <button
@@ -877,6 +937,8 @@
         </h2>
         {#if openGeneralSection === "layout"}
         <div id="general-section-layout" class="px-3 pb-3">
+        <div class="layout-portions">
+        <div>
         <p class="text-xs leading-snug text-text-muted">
           Choose which video is the primary (main) video, and how the reaction overlay looks.
         </p>
@@ -913,8 +975,9 @@
             </span>
           </button>
         </div>
+        </div>
 
-        <div class="mt-3">
+        <div>
           <div class="flex items-center justify-between gap-3">
             <label class="text-xs font-medium text-text-secondary" for="fullscreen-overlay-width">
               Reaction overlay size
@@ -936,7 +999,7 @@
           </p>
         </div>
 
-        <div class="mt-3">
+        <div>
           <h3 class="text-xs font-medium text-text-secondary">Reaction overlay position</h3>
           <div class="mt-1.5 grid grid-cols-3 gap-1.5" role="group" aria-label="Reaction overlay position">
             {#each overlayPositionGrid as position, index (position?.value ?? `empty-${index}`)}
@@ -961,8 +1024,10 @@
           </div>
         </div>
         </div>
+        </div>
         {/if}
       </section>
+      {/if}
 
       <div class="flex flex-wrap items-center justify-end gap-2">
         <CinematicButton
@@ -1005,8 +1070,9 @@
           Fine-tune mode
         </h2>
         <p class="text-sm text-text-muted">
-          Adjust precise playback, volume, and state timelines when you need
-          full control.
+          {remixMode
+            ? "Cues follow the original video. The original stays fullscreen, with no reaction volume or overlay track."
+            : "Adjust precise playback, volume, and state timelines when you need full control."}
         </p>
       </header>
 
@@ -1026,14 +1092,19 @@
               {playbackRateTimeline}
               {overlayVisibilityTimeline}
               fullscreenPrimaryVideoDefault={fullscreenPrimaryVideoDefault}
-              {reactionCurrentTime}
-              {reactionDuration}
-              seekMin={offsetStartTime}
-              seekMax={reactionFinishTime > 0
-                ? reactionFinishTime
-                : Number.POSITIVE_INFINITY}
+              reactionCurrentTime={remixMode ? originalCurrentTime : reactionCurrentTime}
+              reactionDuration={remixMode ? originalDuration : reactionDuration}
+              seekMin={remixMode ? 0 : offsetStartTime}
+              seekMax={remixMode
+                ? (originalDuration > 0 ? originalDuration : Number.POSITIVE_INFINITY)
+                : (reactionFinishTime > 0
+                  ? reactionFinishTime
+                  : Number.POSITIVE_INFINITY)}
               {playerEventTimeline}
               allowPlaybackRate={!isTikTokOriginal}
+              timeAxis={remixMode ? "original" : "reaction"}
+              showReactionVolumeTrack={!remixMode}
+              showOverlayTrack={!remixMode}
               on:createPlayerConfig={handleCreatePlayerConfig}
               on:createVolumeConfig={handleCreateVolumeConfig}
               on:createReactionVolumeConfig={handleCreateReactionVolumeConfig}
@@ -1064,9 +1135,30 @@
   }
 
   .timing-grid,
-  .audio-grid {
+  .audio-grid,
+  .layout-portions {
     display: grid;
     gap: 0.75rem;
+  }
+
+  .timing-grid > *,
+  .audio-grid > *,
+  .layout-portions > * {
+    position: relative;
+    min-width: 0;
+  }
+
+  /* Stacked portions get a horizontal rule in the gap. Side-by-side portions get a vertical one. */
+  .timing-grid > * + *::before,
+  .audio-grid > * + *::before,
+  .layout-portions > * + *::before {
+    content: "";
+    position: absolute;
+    top: -0.375rem;
+    left: 0;
+    right: 0;
+    height: 1px;
+    @apply bg-border-subtle;
   }
 
   /* Three timing fields only fit once the config column is wide enough to keep the inputs readable. */
@@ -1077,7 +1169,16 @@
 
     .audio-grid {
       grid-template-columns: minmax(0, 1fr) 13rem;
-      align-items: start;
+    }
+
+    .timing-grid > * + *::before,
+    .audio-grid > * + *::before {
+      top: 0;
+      bottom: 0;
+      left: -0.375rem;
+      right: auto;
+      width: 1px;
+      height: auto;
     }
   }
 </style>

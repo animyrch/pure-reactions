@@ -15,8 +15,10 @@ export const YT_PLAYER_STATE = {
  * The mock simulates player lifecycle, click-to-start, and state transitions.
  * @param {import('@playwright/test').Page} page
  */
-export const installMockYouTubeApi = async (page) => {
-    await page.addInitScript(() => {
+export const installMockYouTubeApi = async (page, options = {}) => {
+    await page.addInitScript(({ durations, autoAdvance }) => {
+        window.__mockYtDurationByVideoId = durations || {};
+        window.__mockYtAutoAdvance = Boolean(autoAdvance);
         const ensureIframeInContainer = (containerOrId, prefix) => {
             let container = containerOrId;
             if (typeof containerOrId === 'string') {
@@ -69,6 +71,14 @@ export const installMockYouTubeApi = async (page) => {
                 });
             }
 
+            _tick() {
+                if (!window.__mockYtAutoAdvance || this._destroyed || this._state !== 1) return;
+                const now = Date.now();
+                const delta = Math.max(0, (now - (this._lastTick || now)) / 1000) * (this._playbackRate || 1);
+                this._lastTick = now;
+                this._currentTime += delta;
+            }
+
             _emitState(state) {
                 if (this._destroyed) return;
                 this._state = state;
@@ -84,15 +94,34 @@ export const installMockYouTubeApi = async (page) => {
             }
 
             getDuration() {
-                return 300;
+                const mapped = window.__mockYtDurationByVideoId?.[this._options.videoId];
+                return Number.isFinite(mapped) ? mapped : 300;
             }
 
             seekTo(seconds) {
-                this._currentTime = Number.isFinite(Number(seconds)) ? Number(seconds) : this._currentTime;
+                const next = Number(seconds);
+                if (!Number.isFinite(next)) return;
+                const delay = Number(window.__mockYtSeekDelayMs) || 0;
+                if (delay > 0) {
+                    const token = (this._seekToken || 0) + 1;
+                    this._seekToken = token;
+                    setTimeout(() => {
+                        if (this._destroyed || this._seekToken !== token) return;
+                        this._currentTime = next;
+                        this._lastTick = Date.now();
+                    }, delay);
+                    return;
+                }
+                this._currentTime = next;
+                this._lastTick = Date.now();
             }
 
             playVideo() {
+                this._lastTick = Date.now();
                 this._emitState(1);
+                if (window.__mockYtAutoAdvance && !this._timer) {
+                    this._timer = setInterval(() => this._tick(), 50);
+                }
             }
 
             pauseVideo() {
@@ -142,6 +171,10 @@ export const installMockYouTubeApi = async (page) => {
 
             destroy() {
                 this._destroyed = true;
+                if (this._timer) {
+                    clearInterval(this._timer);
+                    this._timer = undefined;
+                }
                 if (this._iframe) {
                     this._iframe.removeEventListener('click', this._onIframeClick);
                     this._iframe.remove();
@@ -160,6 +193,9 @@ export const installMockYouTubeApi = async (page) => {
                 CUED: 5,
             },
         };
+    }, {
+        durations: options.durations || {},
+        autoAdvance: Boolean(options.autoAdvance),
     });
 };
 
