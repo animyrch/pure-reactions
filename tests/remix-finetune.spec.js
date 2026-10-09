@@ -184,7 +184,58 @@ test.describe('Remix fine-tune editing', () => {
     await expect(page.getByRole('button', { name: 'Resumed original at 0:01' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Resumed original at 0:05' })).toBeVisible();
   });
+
+  test('skip to cannot be earlier than original at in the cue form', async ({ page }) => {
+    await openFineTune(page, 'remixFineTuneCue0001', 'origRemixFineCue');
+
+    await cueSecondsAt(page, 'originalVideo', 0.25);
+    await page.locator('#pending-reaction-minutes').fill('0');
+    await page.locator('#pending-reaction-seconds').fill('30');
+    await page.locator('#pending-target-minutes').fill('0');
+    await page.locator('#pending-target-seconds').fill('5');
+    await expect.poll(() => readClockInputs(page, 'pending-target')).toBe(30);
+    await page.locator('#pending-target-seconds').fill('5');
+    await expect.poll(() => readClockInputs(page, 'pending-target')).toBe(30);
+
+    await page.locator('#pending-target-minutes').fill('1');
+    await page.locator('#pending-target-seconds').fill('0');
+    await expect.poll(() => readClockInputs(page, 'pending-target')).toBe(60);
+
+    await page.locator('#pending-reaction-seconds').fill('0');
+    await page.locator('#pending-reaction-minutes').fill('2');
+    await expect.poll(() => readClockInputs(page, 'pending-reaction')).toBe(120);
+    await expect.poll(() => readClockInputs(page, 'pending-target')).toBe(120);
+
+    await page.locator('#pending-reaction-seconds').fill('20');
+    await expect.poll(() => readClockInputs(page, 'pending-reaction')).toBe(140);
+    await expect.poll(() => readClockInputs(page, 'pending-target')).toBe(140);
+
+    await page.getByRole('button', { name: 'Cancel' }).click();
+
+    await page.getByRole('button', { name: 'Stopped original at 3:20' }).click();
+    const editor = page.getByRole('dialog', { name: 'Edit playback cue' });
+    await expect(editor).toBeVisible();
+    await page.locator('#active-target-seconds').fill('0');
+    await expect.poll(() => readClockInputs(page, 'active-target')).toBe(200);
+
+    await page.locator('#active-target-minutes').fill('3');
+    await page.locator('#active-target-seconds').fill('40');
+    await expect.poll(() => readClockInputs(page, 'active-target')).toBe(220);
+
+    await page.locator('#active-reaction-seconds').fill('50');
+    await expect.poll(() => readClockInputs(page, 'active-reaction')).toBe(230);
+    await expect.poll(() => readClockInputs(page, 'active-target')).toBe(230);
+
+    await page.getByRole('button', { name: 'Close' }).click();
+    await expect(page.getByRole('button', { name: 'Stopped original at 3:20' })).toBeVisible();
+  });
 });
+
+async function readClockInputs(page, prefix) {
+  const minutes = Number(await page.locator(`#${prefix}-minutes`).inputValue());
+  const seconds = Number(await page.locator(`#${prefix}-seconds`).inputValue());
+  return minutes * 60 + seconds;
+}
 
 async function addPlayCue(page, { at, target }) {
   await cueSecondsAt(page, 'originalVideo', 0.15);

@@ -2,6 +2,7 @@
   import { createEventDispatcher, onDestroy, onMount } from "svelte";
   import { PlaySolid, PauseSolid, EyeSolid, EyeSlashSolid } from "flowbite-svelte-icons";
   import AdvancedVolumeControl from "./AdvancedVolumeControl.svelte";
+  import { floorSkipToOriginalAt } from "$lib/helpers/remixCueForm";
   import {
     buildRemixDisabledSections,
     canPlaceRemixCue,
@@ -216,6 +217,49 @@
       return fallback;
     }
     return minutesValue * 60 + secondsValue;
+  };
+
+  // Setting the state back to the value already shown does not redraw a
+  // focused number input, so write the corrected clock into the fields too.
+  const writeClockInputs = (minutesId, secondsId, formatted) => {
+    if (typeof document === "undefined") return;
+    const minutesInput = document.getElementById(minutesId);
+    const secondsInput = document.getElementById(secondsId);
+    if (minutesInput instanceof HTMLInputElement) {
+      minutesInput.value = formatted.minutes;
+    }
+    if (secondsInput instanceof HTMLInputElement) {
+      secondsInput.value = formatted.seconds;
+    }
+  };
+
+  const commitSkipFloor = (which, cueAt, skipTo) => {
+    if (!usesOriginalClock) return skipTo;
+    const applies =
+      which === "pending"
+        ? pendingConfig?.trackId === "originalVideo"
+        : activeMarker?.trackId === "player";
+    if (!applies) return skipTo;
+    const floored = floorSkipToOriginalAt(cueAt, skipTo);
+    if (!(floored > skipTo + 0.0005)) return skipTo;
+    const formatted = formatSecondsForInput(floored);
+    const minutesId =
+      which === "pending"
+        ? PENDING_TARGET_MINUTES_INPUT_ID
+        : ACTIVE_TARGET_MINUTES_INPUT_ID;
+    const secondsId =
+      which === "pending"
+        ? PENDING_TARGET_SECONDS_INPUT_ID
+        : ACTIVE_TARGET_SECONDS_INPUT_ID;
+    if (which === "pending") {
+      pendingTargetMinutesInput = formatted.minutes;
+      pendingTargetSecondsInput = formatted.seconds;
+    } else {
+      activeTargetMinutesInput = formatted.minutes;
+      activeTargetSecondsInput = formatted.seconds;
+    }
+    writeClockInputs(minutesId, secondsId, formatted);
+    return floored;
   };
 
   $: safeDuration = Number.isFinite(duration) && duration > 0 ? duration : 0;
@@ -743,6 +787,30 @@
       };
     }
   }
+  // Skip to stays at Original at or later while a cue is entered or edited.
+  $: if (usesOriginalClock && pendingConfig?.trackId === "originalVideo") {
+    const floored = commitSkipFloor(
+      "pending",
+      pendingReactionSeconds,
+      pendingTargetSeconds,
+    );
+    if (floored > pendingTargetSeconds + 0.0005) {
+      pendingTargetSeconds = floored;
+    }
+  }
+  $: if (usesOriginalClock && activeMarker?.trackId === "player") {
+    const floored = commitSkipFloor(
+      "active",
+      activeReactionSeconds,
+      activeTargetSeconds,
+    );
+    if (floored > activeTargetSeconds + 0.0005) {
+      activeTargetSeconds = floored;
+      if (Math.abs((activeMarker.targetTime ?? 0) - floored) > 0.0005) {
+        activeMarker = { ...activeMarker, targetTime: floored };
+      }
+    }
+  }
   $: if (pendingConfig) {
     const nextRatio =
       viewportSpan > 0
@@ -1106,6 +1174,11 @@
       pendingTargetSecondsInput,
       pendingTargetSeconds,
     );
+    pendingTargetSeconds = commitSkipFloor(
+      "pending",
+      pendingReactionSeconds,
+      pendingTargetSeconds,
+    );
     if (pendingConfig) {
       const nextRatio =
         viewportSpan > 0
@@ -1146,6 +1219,11 @@
       activeTargetSeconds,
     );
     enforceActiveTargetLock();
+    activeTargetSeconds = commitSkipFloor(
+      "active",
+      activeReactionSeconds,
+      activeTargetSeconds,
+    );
     if (activeMarker) {
       const nextRatio =
         viewportSpan > 0
@@ -1363,9 +1441,12 @@
     const timeInReaction = Number.isFinite(pendingReactionSeconds)
       ? pendingReactionSeconds
       : pendingConfig.reactionTime;
-    const targetTime = Number.isFinite(pendingTargetSeconds)
+    const requestedTarget = Number.isFinite(pendingTargetSeconds)
       ? pendingTargetSeconds
       : pendingConfig.targetTime;
+    const targetTime = usesOriginalClock
+      ? floorSkipToOriginalAt(timeInReaction, requestedTarget)
+      : requestedTarget;
     const state = Number.isFinite(rawState) ? Number(rawState) : 2;
     dispatch("createPlayerConfig", {
       timeInReaction,
@@ -1577,10 +1658,14 @@
 
   const confirmMarkerUpdate = (state) => {
     if (!activeMarker || formTimeBlocked) return;
+    const timeInReaction = activeMarker.timeInReaction;
+    const targetTime = usesOriginalClock
+      ? floorSkipToOriginalAt(timeInReaction, activeTargetSeconds)
+      : activeTargetSeconds;
     dispatch("updatePlayerConfig", {
       state,
-      timeInReaction: activeMarker.timeInReaction,
-      targetTime: activeTargetSeconds,
+      timeInReaction,
+      targetTime,
       previousTimeInReaction: activeMarker.initialTimeInReaction,
     });
     closeMarkerEditor();
