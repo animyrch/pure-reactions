@@ -193,20 +193,27 @@ test.describe('Remix fine-tune editing', () => {
     await page.locator('#pending-reaction-seconds').fill('30');
     await page.locator('#pending-target-minutes').fill('0');
     await page.locator('#pending-target-seconds').fill('5');
-    await expect.poll(() => readClockInputs(page, 'pending-target')).toBe(30);
-    await page.locator('#pending-target-seconds').fill('5');
+    await expect.poll(() => readClockInputs(page, 'pending-target')).toBe(5);
+    await page.locator('#pending-target-minutes').focus();
+    await expect.poll(() => readClockInputs(page, 'pending-target')).toBe(5);
+    await page.locator('#pending-target-minutes').blur();
     await expect.poll(() => readClockInputs(page, 'pending-target')).toBe(30);
 
     await page.locator('#pending-target-minutes').fill('1');
     await page.locator('#pending-target-seconds').fill('0');
+    await page.locator('#pending-target-seconds').blur();
     await expect.poll(() => readClockInputs(page, 'pending-target')).toBe(60);
 
     await page.locator('#pending-reaction-seconds').fill('0');
     await page.locator('#pending-reaction-minutes').fill('2');
     await expect.poll(() => readClockInputs(page, 'pending-reaction')).toBe(120);
+    await expect.poll(() => readClockInputs(page, 'pending-target')).toBe(60);
+    await page.locator('#pending-reaction-minutes').blur();
     await expect.poll(() => readClockInputs(page, 'pending-target')).toBe(120);
 
     await page.locator('#pending-reaction-seconds').fill('20');
+    await expect.poll(() => readClockInputs(page, 'pending-target')).toBe(120);
+    await page.locator('#pending-reaction-seconds').blur();
     await expect.poll(() => readClockInputs(page, 'pending-reaction')).toBe(140);
     await expect.poll(() => readClockInputs(page, 'pending-target')).toBe(140);
 
@@ -216,14 +223,19 @@ test.describe('Remix fine-tune editing', () => {
     const editor = page.getByRole('dialog', { name: 'Edit playback cue' });
     await expect(editor).toBeVisible();
     await page.locator('#active-target-seconds').fill('0');
+    await expect.poll(() => readClockInputs(page, 'active-target')).toBe(180);
+    await page.locator('#active-target-seconds').blur();
     await expect.poll(() => readClockInputs(page, 'active-target')).toBe(200);
 
     await page.locator('#active-target-minutes').fill('3');
     await page.locator('#active-target-seconds').fill('40');
+    await page.locator('#active-target-seconds').blur();
     await expect.poll(() => readClockInputs(page, 'active-target')).toBe(220);
 
     await page.locator('#active-reaction-seconds').fill('50');
     await expect.poll(() => readClockInputs(page, 'active-reaction')).toBe(230);
+    await expect.poll(() => readClockInputs(page, 'active-target')).toBe(220);
+    await page.locator('#active-reaction-seconds').blur();
     await expect.poll(() => readClockInputs(page, 'active-target')).toBe(230);
 
     await page.getByRole('button', { name: 'Close' }).click();

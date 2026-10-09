@@ -262,6 +262,61 @@
     return floored;
   };
 
+  const applySkipFloor = (which) => {
+    if (which === "pending") {
+      pendingTargetSeconds = commitSkipFloor(
+        "pending",
+        pendingReactionSeconds,
+        pendingTargetSeconds,
+      );
+      return;
+    }
+    activeTargetSeconds = commitSkipFloor(
+      "active",
+      activeReactionSeconds,
+      activeTargetSeconds,
+    );
+    if (
+      activeMarker?.trackId === "player" &&
+      Math.abs((activeMarker.targetTime ?? 0) - activeTargetSeconds) > 0.0005
+    ) {
+      activeMarker = { ...activeMarker, targetTime: activeTargetSeconds };
+    }
+  };
+
+  const blurKeepsSameClock = (event, pairs) => {
+    const currentId = event?.currentTarget?.id;
+    const nextId = event?.relatedTarget?.id;
+    if (!currentId || !nextId) return false;
+    return pairs.some((pair) => pair.includes(currentId) && pair.includes(nextId));
+  };
+
+  const handlePendingCueBlur = (event) => {
+    if (
+      blurKeepsSameClock(event, [
+        [PENDING_REACTION_MINUTES_INPUT_ID, PENDING_REACTION_SECONDS_INPUT_ID],
+        [PENDING_TARGET_MINUTES_INPUT_ID, PENDING_TARGET_SECONDS_INPUT_ID],
+      ])
+    ) {
+      return;
+    }
+    refreshPendingDerivedValues();
+    applySkipFloor("pending");
+  };
+
+  const handleActiveCueBlur = (event) => {
+    if (
+      blurKeepsSameClock(event, [
+        [ACTIVE_REACTION_MINUTES_INPUT_ID, ACTIVE_REACTION_SECONDS_INPUT_ID],
+        [ACTIVE_TARGET_MINUTES_INPUT_ID, ACTIVE_TARGET_SECONDS_INPUT_ID],
+      ])
+    ) {
+      return;
+    }
+    refreshActiveDerivedValues();
+    applySkipFloor("active");
+  };
+
   $: safeDuration = Number.isFinite(duration) && duration > 0 ? duration : 0;
   $: safeCurrentTime =
     Number.isFinite(currentTime) && currentTime > 0 ? currentTime : 0;
@@ -787,30 +842,6 @@
       };
     }
   }
-  // Skip to stays at Original at or later while a cue is entered or edited.
-  $: if (usesOriginalClock && pendingConfig?.trackId === "originalVideo") {
-    const floored = commitSkipFloor(
-      "pending",
-      pendingReactionSeconds,
-      pendingTargetSeconds,
-    );
-    if (floored > pendingTargetSeconds + 0.0005) {
-      pendingTargetSeconds = floored;
-    }
-  }
-  $: if (usesOriginalClock && activeMarker?.trackId === "player") {
-    const floored = commitSkipFloor(
-      "active",
-      activeReactionSeconds,
-      activeTargetSeconds,
-    );
-    if (floored > activeTargetSeconds + 0.0005) {
-      activeTargetSeconds = floored;
-      if (Math.abs((activeMarker.targetTime ?? 0) - floored) > 0.0005) {
-        activeMarker = { ...activeMarker, targetTime: floored };
-      }
-    }
-  }
   $: if (pendingConfig) {
     const nextRatio =
       viewportSpan > 0
@@ -1174,11 +1205,6 @@
       pendingTargetSecondsInput,
       pendingTargetSeconds,
     );
-    pendingTargetSeconds = commitSkipFloor(
-      "pending",
-      pendingReactionSeconds,
-      pendingTargetSeconds,
-    );
     if (pendingConfig) {
       const nextRatio =
         viewportSpan > 0
@@ -1219,11 +1245,6 @@
       activeTargetSeconds,
     );
     enforceActiveTargetLock();
-    activeTargetSeconds = commitSkipFloor(
-      "active",
-      activeReactionSeconds,
-      activeTargetSeconds,
-    );
     if (activeMarker) {
       const nextRatio =
         viewportSpan > 0
@@ -2002,6 +2023,7 @@
                   pendingReactionMinutesInput = event.currentTarget.value;
                   refreshPendingDerivedValues();
                 }}
+                on:blur={handlePendingCueBlur}
               />
               <span class="text-xs text-text-muted">min</span>
             </div>
@@ -2022,6 +2044,7 @@
                   pendingReactionSecondsInput = event.currentTarget.value;
                   refreshPendingDerivedValues();
                 }}
+                on:blur={handlePendingCueBlur}
               />
               <span class="text-xs text-text-muted">sec</span>
             </div>
@@ -2047,6 +2070,7 @@
                     pendingTargetMinutesInput = event.currentTarget.value;
                     refreshPendingDerivedValues();
                   }}
+                  on:blur={handlePendingCueBlur}
                 />
                 <span class="text-xs text-text-muted">min</span>
               </div>
@@ -2067,6 +2091,7 @@
                     pendingTargetSecondsInput = event.currentTarget.value;
                     refreshPendingDerivedValues();
                   }}
+                  on:blur={handlePendingCueBlur}
                 />
                 <span class="text-xs text-text-muted">sec</span>
               </div>
@@ -2274,6 +2299,7 @@
                   activeMarkerIsDirty = true;
                   refreshActiveDerivedValues();
                 }}
+                on:blur={handleActiveCueBlur}
               />
               <span class="text-xs text-text-muted">min</span>
             </div>
@@ -2295,6 +2321,7 @@
                   activeMarkerIsDirty = true;
                   refreshActiveDerivedValues();
                 }}
+                on:blur={handleActiveCueBlur}
               />
               <span class="text-xs text-text-muted">sec</span>
             </div>
@@ -2323,6 +2350,7 @@
                     activeMarkerIsDirty = true;
                     refreshActiveDerivedValues();
                   }}
+                  on:blur={handleActiveCueBlur}
                 />
                 <span class="text-xs text-text-muted">min</span>
               </div>
@@ -2346,6 +2374,7 @@
                     activeMarkerIsDirty = true;
                     refreshActiveDerivedValues();
                   }}
+                  on:blur={handleActiveCueBlur}
                 />
                 <span class="text-xs text-text-muted">sec</span>
               </div>
