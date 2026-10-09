@@ -501,6 +501,7 @@
   }
   $: usesOriginalClock = timeAxis === "original";
   $: cueTimeNoun = usesOriginalClock ? "Original" : "Reaction";
+  $: targetTimeLabel = usesOriginalClock ? "Skip to" : "Original video at";
   $: timelineTitle = usesOriginalClock ? "Original video timeline" : "Live reaction timeline";
   $: timelineAriaLabel = usesOriginalClock ? "Original playback timeline" : "Reaction playback timeline";
   $: tracks = [
@@ -1805,7 +1806,7 @@
           </div>
           {#if pendingConfig.trackId === "originalVideo"}
             <span class="text-xs text-text-muted whitespace-nowrap"
-              >Original video at</span
+              >{targetTimeLabel}</span
             >
             <div class="flex flex-wrap items-end gap-3">
               <div class="flex items-center gap-1">
@@ -2068,7 +2069,7 @@
           </div>
           {#if activeMarker.trackId === "player"}
             <span class="text-xs text-text-muted whitespace-nowrap"
-              >Original video at</span
+              >{targetTimeLabel}</span
             >
             <div class="flex flex-wrap items-end gap-3">
               <div class="flex items-center gap-1">
