@@ -2,6 +2,13 @@
   import { createEventDispatcher, onDestroy, onMount } from "svelte";
   import { PlaySolid, PauseSolid, EyeSolid, EyeSlashSolid } from "flowbite-svelte-icons";
   import AdvancedVolumeControl from "./AdvancedVolumeControl.svelte";
+  import {
+    buildRemixDisabledSections,
+    canPlaceRemixCue,
+    mergeRemixDisabledSections,
+    remixDisabledLabelAt,
+    remixDisabledSectionLabel,
+  } from "$lib/helpers/remixDisabledSections";
 
   export let currentTime = 0;
   export let duration = 0;
@@ -90,6 +97,12 @@
 
   const TIMELINE_REGION_SELECTOR = '[data-timeline-region="true"]';
   const MARKER_INTERACTION_SELECTOR = '[data-marker-interaction="true"]';
+  const DISABLED_SECTION_FILL = [
+    "background-color: rgba(8, 10, 14, 0.78)",
+    "background-image: repeating-linear-gradient(-45deg, rgba(246, 182, 91, 0) 0px, rgba(246, 182, 91, 0) 7px, rgba(246, 182, 91, 0.92) 7px, rgba(246, 182, 91, 0.92) 9px)",
+    "box-shadow: inset 0 0 0 2px rgba(246, 182, 91, 0.95)",
+  ].join("; ");
+  const COMMIT_DISABLED_CLASS = "disabled:cursor-not-allowed disabled:opacity-40";
 
   const MIN_ZOOM_RATIO = 0.01;
   const MIN_ZOOM_SPAN_SECONDS = 0.5;
@@ -117,6 +130,7 @@
   let hoverViewportRatio = null;
   let hoverTimeLabel = null;
   let hoverIndicatorLeftPx = null;
+  let hoverInDisabledSection = false;
   let viewportInitialized = false;
   let viewportStart = 0;
   let viewportEnd = 0;
@@ -504,6 +518,86 @@
   $: targetTimeLabel = usesOriginalClock ? "Skip to" : "Original video at";
   $: timelineTitle = usesOriginalClock ? "Original video timeline" : "Live reaction timeline";
   $: timelineAriaLabel = usesOriginalClock ? "Original playback timeline" : "Reaction playback timeline";
+  $: editingPlayerCue =
+    usesOriginalClock && activeMarker?.trackId === "player" ? activeMarker : null;
+  $: remixDisplayCues = usesOriginalClock
+    ? playerMarkers.map((marker) => {
+        const editingThisCue =
+          editingPlayerCue &&
+          Math.abs(marker.timeInReaction - editingPlayerCue.initialTimeInReaction) <
+            0.001;
+        if (!editingThisCue) {
+          return {
+            time: marker.timeInReaction,
+            state: Number(marker.state),
+            targetTime: marker.targetTime,
+          };
+        }
+        return {
+          time: activeReactionSeconds,
+          state: Number(editingPlayerCue.state),
+          targetTime: activeTargetSeconds,
+        };
+      })
+    : [];
+  $: remixPlacementCues = usesOriginalClock
+    ? playerMarkers
+        .filter((marker) => {
+          if (!editingPlayerCue) return true;
+          return (
+            Math.abs(marker.timeInReaction - editingPlayerCue.initialTimeInReaction) >=
+            0.001
+          );
+        })
+        .map((marker) => ({
+          time: marker.timeInReaction,
+          state: Number(marker.state),
+          targetTime: marker.targetTime,
+        }))
+    : [];
+  $: remixDisabledSections = buildRemixDisabledSections(
+    remixDisplayCues,
+    effectiveDuration,
+  );
+  $: remixPlacementSections = buildRemixDisabledSections(
+    remixPlacementCues,
+    effectiveDuration,
+  );
+  $: disabledViewportSpans = mergeRemixDisabledSections(remixDisabledSections)
+    .map((section) => {
+      const clippedStart = Math.max(section.start, safeViewportStart);
+      const clippedEnd = Math.min(section.end, safeViewportEnd);
+      if (!(viewportSpan > 0) || clippedEnd - clippedStart <= 0.001) return null;
+      const leftRatio = clamp01((clippedStart - safeViewportStart) / viewportSpan);
+      const widthRatio =
+        clamp01((clippedEnd - safeViewportStart) / viewportSpan) - leftRatio;
+      if (widthRatio <= 0.0005) return null;
+      return {
+        key: `${section.start.toFixed(3)}-${section.end.toFixed(3)}-${section.reasons.join("+")}`,
+        reason: section.reasons.length === 1 ? section.reasons[0] : "mixed",
+        startLabel: section.start.toFixed(3),
+        endLabel: section.end.toFixed(3),
+        left: `${(leftRatio * 100).toFixed(3)}%`,
+        width: `${(widthRatio * 100).toFixed(3)}%`,
+        start: section.start,
+        end: section.end,
+        label: remixDisabledSectionLabel(section.reasons),
+        showLabel: widthRatio >= 0.14,
+      };
+    })
+    .filter(Boolean);
+  $: formCueTime = pendingConfig
+    ? pendingReactionSeconds
+    : activeMarker
+      ? activeReactionSeconds
+      : null;
+  $: formTimeBlocked =
+    formCueTime !== null &&
+    !canPlaceRemixCue(
+      formCueTime,
+      remixPlacementSections,
+      pendingConfig || !activeMarker ? null : activeMarker.initialTimeInReaction,
+    );
   $: tracks = [
     {
       id: "originalVideo",
@@ -822,6 +916,7 @@
       hoverViewportRatio = null;
       hoverTimeLabel = null;
       hoverIndicatorLeftPx = null;
+      hoverInDisabledSection = false;
       return;
     }
     const regionRect = timelineRegion.getBoundingClientRect();
@@ -830,10 +925,18 @@
       hoverViewportRatio = null;
       hoverTimeLabel = null;
       hoverIndicatorLeftPx = null;
+      hoverInDisabledSection = false;
       return;
     }
     hoverViewportRatio = coordinates.viewportRatio;
-    hoverTimeLabel = formatTimecode(coordinates.absoluteTime);
+    const disabledLabel = remixDisabledLabelAt(
+      coordinates.absoluteTime,
+      remixDisabledSections,
+    );
+    hoverInDisabledSection = disabledLabel !== null;
+    hoverTimeLabel = disabledLabel
+      ? `${formatTimecode(coordinates.absoluteTime)} · ${disabledLabel}`
+      : formatTimecode(coordinates.absoluteTime);
     const containerRect = timelineContainer?.getBoundingClientRect?.();
     if (containerRect && containerRect.width > 0) {
       const rawLeft = coordinates.clientX - containerRect.left;
@@ -850,6 +953,7 @@
     hoverViewportRatio = null;
     hoverTimeLabel = null;
     hoverIndicatorLeftPx = null;
+    hoverInDisabledSection = false;
   };
 
   const cleanupZoomListeners = () => {
@@ -1128,6 +1232,10 @@
     );
     if (!coordinates) return;
     const reactionTime = coordinates.absoluteTime;
+    if (remixDisabledLabelAt(reactionTime, remixDisabledSections)) {
+      closeConfigPopup();
+      return;
+    }
     const targetTime = computeOriginalTimeForNewEvent(reactionTime);
     hoverViewportRatio = coordinates.viewportRatio;
     hoverTimeLabel = formatTimecode(reactionTime);
@@ -1202,6 +1310,9 @@
     closeMarkerEditor();
     const ratio = displayProgress;
     const reactionTime = safeViewportStart + ratio * viewportSpan;
+    if (remixDisabledLabelAt(reactionTime, remixDisabledSections)) {
+      return;
+    }
     const targetTime = computeOriginalTimeForNewEvent(reactionTime);
     pendingConfig = {
       ratio,
@@ -1248,7 +1359,7 @@
   };
 
   const confirmConfigCreation = (rawState) => {
-    if (!pendingConfig) return;
+    if (!pendingConfig || formTimeBlocked) return;
     const timeInReaction = Number.isFinite(pendingReactionSeconds)
       ? pendingReactionSeconds
       : pendingConfig.reactionTime;
@@ -1265,7 +1376,7 @@
   };
 
   const confirmVolumeCreation = () => {
-    if (!pendingConfig) return;
+    if (!pendingConfig || formTimeBlocked) return;
     const volume = Math.round(
       Math.min(Math.max(Number.parseFloat(pendingVolumeInput), 0), 100),
     );
@@ -1277,7 +1388,7 @@
   };
 
   const confirmReactionVolumeCreation = () => {
-    if (!pendingConfig) return;
+    if (!pendingConfig || formTimeBlocked) return;
     const volume = Math.round(
       Math.min(Math.max(Number.parseFloat(pendingVolumeInput), 0), 100),
     );
@@ -1289,7 +1400,7 @@
   };
 
   const confirmPlaybackRateCreation = () => {
-    if (!pendingConfig) return;
+    if (!pendingConfig || formTimeBlocked) return;
     const rateCandidate = Number.parseFloat(pendingPlaybackRateInput);
     const rate =
       Number.isFinite(rateCandidate) && rateCandidate > 0 ? rateCandidate : 1;
@@ -1301,7 +1412,7 @@
   };
 
   const confirmOverlayVisibilityCreation = () => {
-    if (!pendingConfig) return;
+    if (!pendingConfig || formTimeBlocked) return;
     dispatch("createOverlayVisibilityConfig", {
       timeInReaction: pendingConfig.reactionTime,
       visible: pendingOverlayVisibleInput,
@@ -1383,7 +1494,7 @@
   };
 
   const confirmVolumeUpdate = () => {
-    if (!activeMarker) return;
+    if (!activeMarker || formTimeBlocked) return;
     const volume = Math.round(
       Math.min(Math.max(Number.parseFloat(activeVolumeInput), 0), 100),
     );
@@ -1396,7 +1507,7 @@
   };
 
   const confirmReactionVolumeUpdate = () => {
-    if (!activeMarker) return;
+    if (!activeMarker || formTimeBlocked) return;
     const volume = Math.round(
       Math.min(Math.max(Number.parseFloat(activeVolumeInput), 0), 100),
     );
@@ -1409,7 +1520,7 @@
   };
 
   const confirmPlaybackRateUpdate = () => {
-    if (!activeMarker) return;
+    if (!activeMarker || formTimeBlocked) return;
     const rateCandidate = Number.parseFloat(activePlaybackRateInput);
     const rate =
       Number.isFinite(rateCandidate) && rateCandidate > 0 ? rateCandidate : 1;
@@ -1422,7 +1533,7 @@
   };
 
   const confirmOverlayVisibilityUpdate = () => {
-    if (!activeMarker) return;
+    if (!activeMarker || formTimeBlocked) return;
     dispatch("updateOverlayVisibilityConfig", {
       timeInReaction: activeMarker.timeInReaction,
       visible: activeOverlayVisibleInput,
@@ -1465,7 +1576,7 @@
   };
 
   const confirmMarkerUpdate = (state) => {
-    if (!activeMarker) return;
+    if (!activeMarker || formTimeBlocked) return;
     dispatch("updatePlayerConfig", {
       state,
       timeInReaction: activeMarker.timeInReaction,
@@ -1498,6 +1609,7 @@
     const timeInReaction = Number.isFinite(config.reactionTime)
       ? config.reactionTime
       : config.timeInReaction;
+    if (remixDisabledLabelAt(timeInReaction, remixDisabledSections)) return;
 
     if (currentTrack === "volume") {
       // Mirror to reactionVolume
@@ -1602,7 +1714,7 @@
     {/if}
   </div>
   <div
-    class="relative rounded-xl border border-border-subtle/50 bg-surface/60 px-3 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+    class={`relative rounded-xl border border-border-subtle/50 bg-surface/60 px-3 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 ${hoverInDisabledSection ? "cursor-not-allowed" : ""}`}
     on:mousemove={updateHover}
     on:mouseleave={clearHover}
     on:click={handleTimelineClick}
@@ -1689,7 +1801,7 @@
 
             {#each track.markers as marker (marker.id)}
               <div
-                class="pointer-events-none absolute top-1/2 -translate-y-1/2 -translate-x-1/2"
+                class="pointer-events-none absolute top-1/2 z-30 -translate-y-1/2 -translate-x-1/2"
                 style={`left: ${toViewportPosition(marker.timeInReaction)}`}
               >
                 {#if marker.editable}
@@ -1742,6 +1854,31 @@
           </div>
         </div>
       {/each}
+      {#if disabledViewportSpans.length}
+        <div
+          class="pointer-events-none absolute bottom-0 left-[calc(7rem+0.75rem)] right-0 top-6 z-[1]"
+          aria-hidden="true"
+        >
+          {#each disabledViewportSpans as span (span.key)}
+            <div
+              class="absolute inset-y-0 overflow-hidden"
+              style={`left: ${span.left}; width: ${span.width}; ${DISABLED_SECTION_FILL}`}
+              data-disabled-section={span.reason}
+              data-disabled-start={span.startLabel}
+              data-disabled-end={span.endLabel}
+              data-disabled-label={span.label}
+            >
+              {#if span.showLabel}
+                <span
+                  class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-background/90 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-warning"
+                >
+                  {span.label}
+                </span>
+              {/if}
+            </div>
+          {/each}
+        </div>
+      {/if}
     </div>
   </div>
 
@@ -1851,18 +1988,25 @@
             </div>
           {/if}
         </div>
+        {#if formTimeBlocked}
+          <p class="text-[11px] font-semibold text-warning" role="status">
+            This part of the remix is unavailable. Cues cannot be added here.
+          </p>
+        {/if}
         {#if pendingConfig.trackId === "originalVideo"}
           <div class="flex flex-wrap gap-2">
             <button
               type="button"
-              class="flex-1 rounded-md border border-border-strong/70 bg-surface/90 px-2 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+              class={`flex-1 rounded-md border border-border-strong/70 bg-surface/90 px-2 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 ${COMMIT_DISABLED_CLASS}`}
+              disabled={formTimeBlocked}
               on:click|stopPropagation={() => confirmConfigCreation(1)}
             >
               Play original here
             </button>
             <button
               type="button"
-              class="flex-1 rounded-md border border-border-strong/70 bg-surface/90 px-2 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+              class={`flex-1 rounded-md border border-border-strong/70 bg-surface/90 px-2 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 ${COMMIT_DISABLED_CLASS}`}
+              disabled={formTimeBlocked}
               on:click|stopPropagation={() => confirmConfigCreation(2)}
             >
               Pause original here
@@ -1890,7 +2034,8 @@
               </select>
               <button
                 type="button"
-                class="rounded-md border border-border-strong/70 bg-surface/90 px-3 py-1 font-semibold text-text-primary transition hover:border-accent-secondary/60 hover:text-accent-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                class={`rounded-md border border-border-strong/70 bg-surface/90 px-3 py-1 font-semibold text-text-primary transition hover:border-accent-secondary/60 hover:text-accent-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 ${COMMIT_DISABLED_CLASS}`}
+                disabled={formTimeBlocked}
                 on:click|stopPropagation={confirmPlaybackRateCreation}
               >
                 Set speed
@@ -1923,7 +2068,8 @@
               <span class="self-center text-xs text-text-muted">%</span>
               <button
                 type="button"
-                class="rounded-md border border-border-strong/70 bg-surface/90 px-3 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                class={`rounded-md border border-border-strong/70 bg-surface/90 px-3 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 ${COMMIT_DISABLED_CLASS}`}
+                disabled={formTimeBlocked}
                 on:click|stopPropagation={() =>
                   pendingConfig?.trackId === "reactionVolume"
                     ? confirmReactionVolumeCreation()
@@ -1978,7 +2124,8 @@
               </div>
               <button
                 type="button"
-                class="rounded-md border border-border-strong/70 bg-surface/90 px-3 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                class={`rounded-md border border-border-strong/70 bg-surface/90 px-3 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 ${COMMIT_DISABLED_CLASS}`}
+                disabled={formTimeBlocked}
                 on:click|stopPropagation={confirmOverlayVisibilityCreation}
               >
                 Set overlay cue
@@ -2120,20 +2267,27 @@
             </div>
           {/if}
         </div>
+        {#if formTimeBlocked}
+          <p class="text-[11px] font-semibold text-warning" role="status">
+            This part of the remix is unavailable. Cues cannot be added here.
+          </p>
+        {/if}
         {#if activeMarker.trackId === "player"}
           <div class="flex flex-wrap gap-2">
             <button
               type="button"
-              class={`flex-1 rounded-md border bg-surface/90 px-2 py-1 font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 hover:border-accent-primary/50 hover:text-accent-primary ${activeMarker.state === 1 ? "border-accent-primary/60 text-accent-primary" : "border-border-strong/70 text-text-primary"}`}
+              class={`flex-1 rounded-md border bg-surface/90 px-2 py-1 font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 hover:border-accent-primary/50 hover:text-accent-primary ${COMMIT_DISABLED_CLASS} ${activeMarker.state === 1 ? "border-accent-primary/60 text-accent-primary" : "border-border-strong/70 text-text-primary"}`}
               aria-pressed={activeMarker.state === 1}
+              disabled={formTimeBlocked}
               on:click|stopPropagation={() => confirmMarkerUpdate(1)}
             >
               Play original here
             </button>
             <button
               type="button"
-              class={`flex-1 rounded-md border bg-surface/90 px-2 py-1 font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 hover:border-accent-primary/50 hover:text-accent-primary ${activeMarker.state === 2 ? "border-accent-primary/60 text-accent-primary" : "border-border-strong/70 text-text-primary"}`}
+              class={`flex-1 rounded-md border bg-surface/90 px-2 py-1 font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 hover:border-accent-primary/50 hover:text-accent-primary ${COMMIT_DISABLED_CLASS} ${activeMarker.state === 2 ? "border-accent-primary/60 text-accent-primary" : "border-border-strong/70 text-text-primary"}`}
               aria-pressed={activeMarker.state === 2}
+              disabled={formTimeBlocked}
               on:click|stopPropagation={() => confirmMarkerUpdate(2)}
             >
               Pause original here
@@ -2164,7 +2318,8 @@
               </select>
               <button
                 type="button"
-                class="rounded-md border border-border-strong/70 bg-surface/90 px-3 py-1 font-semibold text-text-primary transition hover:border-accent-secondary/60 hover:text-accent-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                class={`rounded-md border border-border-strong/70 bg-surface/90 px-3 py-1 font-semibold text-text-primary transition hover:border-accent-secondary/60 hover:text-accent-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 ${COMMIT_DISABLED_CLASS}`}
+                disabled={formTimeBlocked}
                 on:click|stopPropagation={confirmPlaybackRateUpdate}
               >
                 Set speed
@@ -2200,7 +2355,8 @@
               <span class="self-center text-xs text-text-muted">%</span>
               <button
                 type="button"
-                class="rounded-md border border-border-strong/70 bg-surface/90 px-3 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                class={`rounded-md border border-border-strong/70 bg-surface/90 px-3 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 ${COMMIT_DISABLED_CLASS}`}
+                disabled={formTimeBlocked}
                 on:click|stopPropagation={() =>
                   activeMarker?.trackId === "reactionVolume"
                     ? confirmReactionVolumeUpdate()
@@ -2260,7 +2416,8 @@
               </div>
               <button
                 type="button"
-                class="rounded-md border border-border-strong/70 bg-surface/90 px-3 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                class={`rounded-md border border-border-strong/70 bg-surface/90 px-3 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 ${COMMIT_DISABLED_CLASS}`}
+                disabled={formTimeBlocked}
                 on:click|stopPropagation={confirmOverlayVisibilityUpdate}
               >
                 Set overlay cue
@@ -2323,6 +2480,15 @@
     Timeline position {formatTimecode(safeCurrentTime)} of {formatTimecode(
       safeDuration,
     )}.
+    {#if disabledViewportSpans.length}
+      Unavailable remix sections:
+      {#each disabledViewportSpans as span, index}
+        {span.label} from {formatTimecode(span.start)} to {formatTimecode(span.end)}{index <
+        disabledViewportSpans.length - 1
+          ? "; "
+          : "."}
+      {/each}
+    {/if}
     {#if playerMarkers.length}
       Original video: {#each playerMarkers as marker, index}{marker.label} at {marker.timeLabel}{index <
         playerMarkers.length - 1
