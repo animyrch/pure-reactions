@@ -58,7 +58,7 @@
   const handleSetRemixMode = async (enabled) => {
     isSettingRemixMode = true;
     try {
-      await actions.editActionEntryPoint(() => actions.setRemixMode(enabled));
+      await actions.setRemixMode(enabled);
     } finally {
       isSettingRemixMode = false;
     }
@@ -74,9 +74,7 @@
     isSettingReactionVideoId = true;
     let shouldReload = false;
     try {
-      await actions.editActionEntryPoint(() =>
-        actions.setReactionVideoId(trimmed),
-      );
+      await actions.setReactionVideoId(trimmed);
       // The reaction player is created on load, so a new or changed ID
       // only shows up after a full reload.
       shouldReload = browser;
@@ -104,37 +102,35 @@
   };
 
   const handleSaveGeneralSettings = async (patch) => {
-    await actions.editActionEntryPoint(async () => {
-      if ("offsetStartTime" in patch) {
-        await actions.setOffsetStartTime(patch.offsetStartTime);
-      }
-      if ("reactionFinishTime" in patch) {
-        await actions.setReactionFinishTime(patch.reactionFinishTime);
-      }
-      if ("customReactionTitle" in patch) {
-        await actions.setCustomReactionTitle(patch.customReactionTitle);
-      }
-      if ("introBufferTime" in patch) {
-        await actions.setIntroBufferTime(patch.introBufferTime);
-      }
-      if ("soundLevel" in patch) {
-        await actions.setSoundLevel(patch.soundLevel);
-      }
-      if ("isReactionMuteModeEnabled" in patch) {
-        await actions.setReactionMuteMode(patch.isReactionMuteModeEnabled);
-      }
-      if ("fullscreenPrimaryVideo" in patch) {
-        await actions.setFullscreenPrimaryVideo(patch.fullscreenPrimaryVideo);
-      }
-      if ("fullscreenOverlayWidthPercent" in patch) {
-        await actions.setFullscreenOverlayWidthPercent(
-          patch.fullscreenOverlayWidthPercent,
-        );
-      }
-      if ("fullscreenOverlayCorner" in patch) {
-        await actions.setFullscreenOverlayCorner(patch.fullscreenOverlayCorner);
-      }
-    });
+    if ("offsetStartTime" in patch) {
+      await actions.setOffsetStartTime(patch.offsetStartTime);
+    }
+    if ("reactionFinishTime" in patch) {
+      await actions.setReactionFinishTime(patch.reactionFinishTime);
+    }
+    if ("customReactionTitle" in patch) {
+      await actions.setCustomReactionTitle(patch.customReactionTitle);
+    }
+    if ("introBufferTime" in patch) {
+      await actions.setIntroBufferTime(patch.introBufferTime);
+    }
+    if ("soundLevel" in patch) {
+      await actions.setSoundLevel(patch.soundLevel);
+    }
+    if ("isReactionMuteModeEnabled" in patch) {
+      await actions.setReactionMuteMode(patch.isReactionMuteModeEnabled);
+    }
+    if ("fullscreenPrimaryVideo" in patch) {
+      await actions.setFullscreenPrimaryVideo(patch.fullscreenPrimaryVideo);
+    }
+    if ("fullscreenOverlayWidthPercent" in patch) {
+      await actions.setFullscreenOverlayWidthPercent(
+        patch.fullscreenOverlayWidthPercent,
+      );
+    }
+    if ("fullscreenOverlayCorner" in patch) {
+      await actions.setFullscreenOverlayCorner(patch.fullscreenOverlayCorner);
+    }
   };
 
   const handleExitEditor = () => {

@@ -14,11 +14,16 @@
   import { showToast } from "$lib/stores/toast";
   import { TOASTS } from "$lib/constants/toasts";
   import { getPlaylist } from "$lib/helpers/firebase";
+  import { reactionPageTitle } from "$lib/helpers/reactionListItem";
 
   export let data;
 
   $: playlist = data?.playlist;
-  $: seoTitle = playlist?.title || playlist?.firstReactionVideoTitle || "Playlist";
+  $: seoTitle = playlist?.title || reactionPageTitle({
+    customReactionTitle: playlist?.firstCustomReactionTitle,
+    reactionVideoTitle: playlist?.firstReactionVideoTitle,
+    fallback: "Playlist",
+  });
   $: seoDescription = playlist?.description || playlist?.firstReactionDescription || "Watch this playlist on Pure Reactions.";
   $: seoImage =
     playlist?.thumbnailUrl ||

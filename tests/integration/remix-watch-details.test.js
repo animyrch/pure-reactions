@@ -38,6 +38,19 @@ describe('remix watch details', () => {
     expect(body).toContain('data-details-layout="both"');
   });
 
+  it('uses a filled-in custom title as the reaction heading', () => {
+    const { body } = render(CreatorDetails, {
+      props: {
+        ...details,
+        remixMode: false,
+        customReactionTitle: 'Custom watch title',
+      },
+    });
+
+    expect(body).toContain('Custom watch title');
+    expect(body).not.toContain('Remix watch reaction');
+  });
+
   it('does not render a reaction player when remix mode is on', () => {
     const { body } = render(ReactionStage, {
       props: {

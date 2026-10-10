@@ -16,7 +16,7 @@ The main collection for reaction videos.
 |-------|------|----------|-------------|
 | `reactionVideoId` | string | Yes | YouTube video ID of the reaction |
 | `reactionVideoTitle` | string | Yes | Title of the reaction video, copied from YouTube |
-| `customReactionTitle` | string | No | Optional card title. Empty or missing keeps `reactionVideoTitle` on thumbnails. YouTube sync does not write this field |
+| `customReactionTitle` | string | No | Optional title for cards, the reaction page heading, and the SEO title (`<title>`, Open Graph, Twitter). Empty or missing keeps `reactionVideoTitle`. YouTube sync does not write this field |
 | `reactionVideoAuthor` | string | No | YouTube channel handle for the reaction video (e.g., `@channel`) |
 | `originalVideoId` | string | Yes | Platform-native ID of the original content (YouTube ID or TikTok video ID) |
 | `originalVideoTitle` | string | Yes | Title of the original video |
@@ -510,7 +510,7 @@ const docRef = await addDoc(collection(db, 'reactions'), {
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.12 | 2026-10-10 | Reactions index retrieves `remixMode` so remix cards can use the teal REMIX badge. Remixes stay on `/reaction/{reactionId}` |
-| 1.11 | 2026-10-10 | Added optional `customReactionTitle` on reactions. Thumbnails use it only when filled in. The YouTube `reactionVideoTitle` is unchanged. The reactions index retrieves and searches the custom title |
+| 1.11 | 2026-10-10 | Added optional `customReactionTitle` on reactions. Cards, the reaction page heading, and the SEO title use it only when filled in. The YouTube `reactionVideoTitle` is unchanged. The reactions index retrieves and searches the custom title |
 | 1.10 | 2026-09-23 | Reactions index now retrieves `isMomentReaction` and `momentId` so published moment reactions can be badged and linked to `/moments/{momentId}/reaction/{reactionId}` |
 | 1.9 | 2026-06-10 | Added `originalVideoSlug` field to `reactions` and `moments` collections for SEO-friendly canonical URLs (format: `{title-slugified}-{author-slugified}`) |
 | 1.8 | 2026-05-22 | Added `moments` collection, moment reaction fields on `reactions`, discovery routes (`/moments`), and Algolia moments index env `PUBLIC_ALGOLIA_MOMENTS_INDEX` |

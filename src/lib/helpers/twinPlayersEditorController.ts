@@ -1018,11 +1018,6 @@ export function createTwinPlayersEditorController({
     updateState({ isFineTuneModeOn: !getSnapshot().isFineTuneModeOn });
   };
 
-  const editActionEntryPoint = async (callback: () => Promise<void>) => {
-    await callback();
-    await setIsUnpublished();
-  };
-
   return {
     enterEditMode,
     closeEditMode,
@@ -1055,6 +1050,5 @@ export function createTwinPlayersEditorController({
     deleteOverlayVisibilityConfig,
     setIsPublished,
     setIsUnpublished,
-    editActionEntryPoint,
   };
 }

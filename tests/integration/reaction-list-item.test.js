@@ -3,6 +3,7 @@ import {
     buildReactionCardHref,
     isMomentReactionData,
     isRemixReactionData,
+    reactionPageTitle,
     reactionThumbnailSourceTitle,
     resolveReactionListItemType
 } from '../../src/lib/helpers/reactionListItem.js';
@@ -16,6 +17,23 @@ describe('reaction thumbnail title', () => {
         expect(reactionThumbnailSourceTitle({
             reactionVideoTitle: undefined
         })).toBeUndefined();
+    });
+
+    it('uses a filled-in custom title for the page and SEO title', () => {
+        expect(reactionPageTitle({
+            customReactionTitle: 'Card title',
+            reactionVideoTitle: 'YouTube title',
+            originalVideoTitle: 'Original title'
+        })).toBe('Card title');
+        expect(reactionPageTitle({
+            customReactionTitle: '  ',
+            reactionVideoTitle: 'YouTube title',
+            originalVideoTitle: 'Original title'
+        })).toBe('YouTube title');
+        expect(reactionPageTitle({
+            reactionVideoTitle: '',
+            originalVideoTitle: 'Original title'
+        })).toBe('Original title');
     });
 
     it('uses a filled-in custom title on the card', () => {

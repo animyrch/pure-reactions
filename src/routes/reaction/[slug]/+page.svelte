@@ -141,9 +141,7 @@
     reactionVideoIdError = "";
     isSettingReactionVideoId = true;
     try {
-      await actions.editActionEntryPoint(() =>
-        actions.setReactionVideoId(trimmed),
-      );
+      await actions.setReactionVideoId(trimmed);
       await actions.loadReactionInPlace($state.pageSlug, {
         autoPlay: false,
       });

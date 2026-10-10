@@ -557,7 +557,6 @@ export function useTwinPlayers({
     setIsUnpublished,
     enterEditMode,
     closeEditMode,
-    editActionEntryPoint,
   } = createTwinPlayersEditorController({
     getSnapshot: () => get(state),
     updateState,
@@ -793,7 +792,6 @@ export function useTwinPlayers({
       setIsUnpublished,
       openWithFullscreen,
       openWithHalfscreen,
-      editActionEntryPoint,
       handleSlugChange,
       loadReactionInPlace,
       syncAdHocQueue: (queue: string[] | null, index: number) => {
