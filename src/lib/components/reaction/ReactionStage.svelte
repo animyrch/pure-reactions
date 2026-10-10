@@ -395,8 +395,8 @@
             {/if}
         </div>
 
-        <!-- Reaction video player container -->
-        {#if !isReactionMissing}
+        <!-- Reaction video player container. A remix never has one. -->
+        {#if !remixMode && !isReactionMissing}
             <div
                 data-stage="reaction"
                 data-stage-role={isOverlayLayout

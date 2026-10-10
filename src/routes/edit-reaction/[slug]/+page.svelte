@@ -422,6 +422,7 @@
         isUsersOwnVideo={$state.isUsersOwnVideo}
         reactorId={$state.reactorId}
         reactorDisplayName={$state.reactorDisplayName}
+        remixMode={$state.remixMode}
       />
 
       {#if $state.originalVideoId && $state.playlistDocumentId}

@@ -86,14 +86,19 @@ export async function fetchYouTubeComments(videoId) {
  * @param {string} [opts.reactionVideoId]
  * @param {string} [opts.originalVideoId]
  * @param {string} [opts.originalVideoPlatform] - 'youtube' | 'tiktok' | etc.
+ * @param {boolean} [opts.remixMode] - remixes have no reaction video
  * @returns {{ sections: Array<{ videoId: string, sourceType: 'reaction' | 'original', sourceLabel: string }> }}
  */
 export function resolveDiscussionSections({
   reactionVideoId,
   originalVideoId,
   originalVideoPlatform = 'youtube',
+  remixMode = false,
 } = {}) {
   const sections = [];
+  if (remixMode) {
+    reactionVideoId = '';
+  }
 
   const isOriginalYouTube =
     originalVideoId &&

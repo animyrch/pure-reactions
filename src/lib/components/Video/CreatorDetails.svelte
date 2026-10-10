@@ -19,6 +19,7 @@
     export let originalVideoUrl = '';
     export let originalVideoDescription;
     export let reactionVideoDescription;
+    export let remixMode = false;
 
     const createAvatarPlaceholder = (_name) => '/by-icon.svg';
 
@@ -43,16 +44,32 @@
     $: showReactionDescriptionToggle =
         typeof reactionVideoDescription === 'string' && reactionVideoDescription.trim().length > 200;
 
-    $: showOriginalActions = Boolean(originalVideoId);
-    $: showReactionActions = Boolean(reactionVideoId) || Boolean(canUseActions);
+    $: showRemixViewerActions = remixMode && canUseActions;
+    $: showOriginalActions = Boolean(originalVideoId) || showRemixViewerActions;
+    $: showReactionActions = !remixMode && (Boolean(reactionVideoId) || Boolean(canUseActions));
 </script>
 
-<section class="details-grid" aria-label="Creator details">
+<section
+    class="details-grid"
+    class:original-only={remixMode}
+    aria-label="Creator details"
+    data-details-layout={remixMode ? 'original' : 'both'}
+>
     <article class="column original" aria-labelledby="original-heading">
         {#if showOriginalActions}
             <div class="header-actions">
                 {#if originalVideoId}
                     <RateVideo videoId={originalVideoId} platform={originalVideoPlatform} originalVideoUrl={originalVideoUrl} />
+                {/if}
+                {#if showRemixViewerActions}
+                    <BookmarkManagement slug={pageSlug} />
+                    {#if reactionVideoAuthor}
+                        <FollowManagement
+                            reactionCreator={reactionVideoAuthor}
+                            {reactorId}
+                            follows={viewerData?.follows}
+                        />
+                    {/if}
                 {/if}
             </div>
         {/if}
@@ -128,6 +145,7 @@
         {/if}
     </article>
 
+    {#if !remixMode}
     <article class="column reaction" aria-labelledby="reaction-heading">
         {#if showReactionActions}
             <div class="header-actions">
@@ -217,6 +235,7 @@
             </div>
         {/if}
     </article>
+    {/if}
 </section>
 
 <style>
@@ -391,6 +410,10 @@
             grid-template-rows: auto auto auto auto;
             column-gap: 1.75rem;
             row-gap: 1.25rem;
+        }
+
+        .details-grid.original-only {
+            grid-template-columns: minmax(0, 1fr);
         }
 
         .column {

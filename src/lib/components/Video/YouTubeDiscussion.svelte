@@ -8,9 +8,10 @@
   export let originalVideoId = undefined;
   /** @type {string} 'youtube' | 'tiktok' | etc. */
   export let originalVideoPlatform = 'youtube';
+  export let remixMode = false;
 
   $: resolved = resolveDiscussionSections({
-    reactionVideoId,
+    reactionVideoId: remixMode ? '' : reactionVideoId,
     originalVideoId,
     originalVideoPlatform,
   });
