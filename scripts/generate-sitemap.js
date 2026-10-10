@@ -152,7 +152,7 @@ function buildReactionSitemapEntry({ docId, data, baseUrl }) {
   const reactionVideoId = pickReactionVideoId(data);
   const playerLoc = buildYoutubePlayerUrl(reactionVideoId);
 
-  const title = pickText(data.title, data.reactionVideoTitle, data.youtube?.meta?.title, slug);
+  const title = pickText(data.customReactionTitle, data.title, data.reactionVideoTitle, data.youtube?.meta?.title, slug);
   const description = pickText(
     data.description,
     data.youtube?.meta?.description,

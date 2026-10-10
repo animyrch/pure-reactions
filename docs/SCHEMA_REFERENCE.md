@@ -16,7 +16,7 @@ The main collection for reaction videos.
 |-------|------|----------|-------------|
 | `reactionVideoId` | string | Yes | YouTube video ID of the reaction |
 | `reactionVideoTitle` | string | Yes | Title of the reaction video, copied from YouTube |
-| `customReactionTitle` | string | No | Optional card title. Empty or missing keeps `reactionVideoTitle` on thumbnails. YouTube sync does not write this field |
+| `customReactionTitle` | string | No | Optional title for cards, the reaction page heading, and the SEO title (`<title>`, Open Graph, Twitter). Empty or missing keeps `reactionVideoTitle`. YouTube sync does not write this field |
 | `reactionVideoAuthor` | string | No | YouTube channel handle for the reaction video (e.g., `@channel`) |
 | `originalVideoId` | string | Yes | Platform-native ID of the original content (YouTube ID or TikTok video ID) |
 | `originalVideoTitle` | string | Yes | Title of the original video |
@@ -54,6 +54,8 @@ The main collection for reaction videos.
 | `tags` | array[string] | No | Categorization tags |
 | `description` | string | No | Description or notes |
 | `duration` | number | No | Video duration in seconds |
+| `reactionWatchDurationSeconds` | number/null | No | This reaction video's watch window in seconds, after start and finish. Written when the reaction is published or edited, and when media duration arrives. Playlist totals add these windows. `null` means the reaction duration is not known yet |
+| `watchDurationSeconds` | number/null | No | Watch time shown on the card, in whole seconds. A normal reaction, moment, or queue item stores its reaction window. A remix stores the original time that is actually played. A playlist card stores the playlist total. `null` means it is not known yet |
 | `thumbnailUrl` | string | No | Custom thumbnail URL (if not using YouTube default) |
 
 #### Enriched Metadata Fields
@@ -174,6 +176,7 @@ User-created playlists of reactions.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `reactionBinomeIds` | array[string] | Yes | Array of reaction document IDs in playlist |
+| `watchDurationSeconds` | number/null | No | Sum of each member's reaction watch window, rounded per member. Written when membership changes or a member's start, finish, or duration changes. `null` until every filled slot has a known reaction duration |
 | `originalVideoIds` | array[string] | Yes | Legacy aligned array of original video IDs. New playlist docs keep it in sync with `sequenceItems` for backward compatibility. |
 | `sequenceItems` | array[object] | No | Canonical ordered snapshot for playlist playback/recording. Preserves duplicates and mixed YouTube/TikTok sources. |
 | `sequenceItems[].id` | string | No | Deterministic local item identifier for rendering and ordering |
@@ -274,6 +277,7 @@ Minimal, cost-optimized search index for reactions.
 | `isMomentReaction` | boolean | No | Yes | True when the published reaction is a moment reaction, so search cards can use moment theming instead of a normal reaction card |
 | `momentId` | string | No | Yes | Parent moment document ID. Search and home cards link moment reactions to `/moments/{momentId}/reaction/{reactionId}` |
 | `remixMode` | boolean | No | Yes | True when the published reaction is a remix. Search and home cards badge it and keep the link on `/reaction/{reactionId}` |
+| `watchDurationSeconds` | number | No | Yes | Stored card watch time in whole seconds. Home and search read this instead of recomputing timelines. Omitted until it is known |
 | `reactionVideoAuthor` | string | Yes | Yes | Reactor's YouTube channel handle (tertiary search field) |
 | `tags` | array[string] | Yes | Yes | Categorization tags (filterable) |
 | `slug` | string | No | Yes | URL-friendly identifier |
@@ -307,13 +311,15 @@ To minimize cost and payload size:
 - `thumbnailUrl` - Derivable from video IDs
 - `state` - Recording session data, temporary
 - `reactorId` / `reactorDisplayName` - Privacy, not needed for search
-- `duration` - Derivable from YouTube API
+- `duration` - Raw media duration. The stored card value `watchDurationSeconds` is retrieved instead, because start, finish, remix skips, and playlist totals are not derivable from the search payload
 
 `playlistId` is intentionally retained even though it is not searchable because shared card components use it to route playlist-backed reactions into the playlist playback experience.
 
 `isMomentReaction` and `momentId` are retained for the same reason. Published moment reactions stay in the reactions index, and shared cards use these fields to badge them as moments and open `/moments/{momentId}/reaction/{reactionId}` instead of `/reaction/{reactionId}`.
 
 `remixMode` is retained so shared cards can badge a remix and outline it in teal. A remix still opens `/reaction/{reactionId}`. Moment and playlist identity stay ahead of remix when those fields are also set. Existing hits stay ordinary reactions until the next reactions reindex.
+
+`watchDurationSeconds` is the thumbnail watch time already calculated on the reaction. Search does not receive timelines or start/finish configs. Existing hits omit the badge until the next reactions reindex after the stored field is written.
 
 #### Indexing Rules
 
@@ -509,8 +515,9 @@ const docRef = await addDoc(collection(db, 'reactions'), {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.13 | 2026-10-10 | Reactions store `watchDurationSeconds` for thumbnail badges. Playlist docs store the summed reaction-window total. The reactions index retrieves `watchDurationSeconds` |
 | 1.12 | 2026-10-10 | Reactions index retrieves `remixMode` so remix cards can use the teal REMIX badge. Remixes stay on `/reaction/{reactionId}` |
-| 1.11 | 2026-10-10 | Added optional `customReactionTitle` on reactions. Thumbnails use it only when filled in. The YouTube `reactionVideoTitle` is unchanged. The reactions index retrieves and searches the custom title |
+| 1.11 | 2026-10-10 | Added optional `customReactionTitle` on reactions. Cards, the reaction page heading, and the SEO title use it only when filled in. The YouTube `reactionVideoTitle` is unchanged. The reactions index retrieves and searches the custom title |
 | 1.10 | 2026-09-23 | Reactions index now retrieves `isMomentReaction` and `momentId` so published moment reactions can be badged and linked to `/moments/{momentId}/reaction/{reactionId}` |
 | 1.9 | 2026-06-10 | Added `originalVideoSlug` field to `reactions` and `moments` collections for SEO-friendly canonical URLs (format: `{title-slugified}-{author-slugified}`) |
 | 1.8 | 2026-05-22 | Added `moments` collection, moment reaction fields on `reactions`, discovery routes (`/moments`), and Algolia moments index env `PUBLIC_ALGOLIA_MOMENTS_INDEX` |

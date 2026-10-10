@@ -9,6 +9,17 @@ export const reactionThumbnailSourceTitle = ({
     reactionVideoTitle
 } = {}) => trimmedString(customReactionTitle) || reactionVideoTitle;
 
+/** Page heading and SEO title. A filled-in custom title wins over the YouTube title. */
+export const reactionPageTitle = ({
+    customReactionTitle,
+    reactionVideoTitle,
+    originalVideoTitle,
+    fallback = 'Reaction'
+} = {}) =>
+    reactionThumbnailSourceTitle({ customReactionTitle, reactionVideoTitle })
+        || originalVideoTitle
+        || fallback;
+
 export const momentIdFromReactionData = (data) => trimmedString(data?.momentId);
 
 /**

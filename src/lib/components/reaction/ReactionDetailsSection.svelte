@@ -42,6 +42,7 @@
         originalVideoPlatform={reactionState?.originalVideoPlatform}
         reactionVideoAuthor={reactionState?.reactionVideoAuthor}
         reactionVideoTitle={reactionState?.reactionVideoTitle}
+        customReactionTitle={reactionState?.customReactionTitle}
         reactionVideoId={reactionState?.reactionVideoId}
         reactionVideoDescription={reactionState?.reactionVideoDescription}
         pageSlug={reactionState?.pageSlug}

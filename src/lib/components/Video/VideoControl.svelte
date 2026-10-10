@@ -1,5 +1,8 @@
 <script>
-    import { createEventDispatcher, onDestroy } from "svelte";
+    import { createEventDispatcher, onDestroy, onMount } from "svelte";
+    import { get } from "svelte/store";
+    import { showToast, toasts } from "$lib/stores/toast";
+    import { TOASTS } from "$lib/constants/toasts";
     import {
         PauseSolid,
         PlaySolid,
@@ -52,6 +55,26 @@
     let queuedSeekTime = null;
 
     const dispatch = createEventDispatcher();
+
+    // Phones and tablets held upright. Matches the rest of the player's coarse-pointer checks.
+    const MOBILE_PORTRAIT_QUERY =
+        "(hover: none) and (pointer: coarse) and (orientation: portrait)";
+    const MOBILE_PORTRAIT_FULLSCREEN_MESSAGE =
+        "Turn your device to horizontal mode";
+
+    let isMobilePortrait = false;
+    let portraitMediaQuery;
+
+    function syncMobilePortrait() {
+        isMobilePortrait = Boolean(portraitMediaQuery?.matches);
+    }
+
+    function blocksFullscreenInPortrait() {
+        if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+            return false;
+        }
+        return window.matchMedia(MOBILE_PORTRAIT_QUERY).matches;
+    }
 
     const primaryButtonBase =
         "inline-flex h-11 w-11 items-center justify-center rounded-full transition duration-subtle ease-cinematic focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] sm:h-12 sm:w-12";
@@ -266,10 +289,17 @@
         return `${m}:${s.toString().padStart(2, "0")}`;
     }
 
+    onMount(() => {
+        portraitMediaQuery = window.matchMedia(MOBILE_PORTRAIT_QUERY);
+        syncMobilePortrait();
+        portraitMediaQuery.addEventListener("change", syncMobilePortrait);
+    });
+
     onDestroy(() => {
         clearHideTimeout();
         clearPendingSeek();
         if (seekRaf) cancelAnimationFrame(seekRaf);
+        portraitMediaQuery?.removeEventListener("change", syncMobilePortrait);
     });
 
     function seekBy(delta) {
@@ -316,6 +346,19 @@
         dispatch("toggleBars");
     }
     function enterFullscreen() {
+        if (blocksFullscreenInPortrait()) {
+            const alreadyShowing = get(toasts).some(
+                (toast) => toast.message === MOBILE_PORTRAIT_FULLSCREEN_MESSAGE,
+            );
+            if (!alreadyShowing) {
+                showToast(
+                    MOBILE_PORTRAIT_FULLSCREEN_MESSAGE,
+                    TOASTS.WARNING,
+                    4000,
+                );
+            }
+            return;
+        }
         dispatch("enterFullscreen");
     }
 
@@ -556,9 +599,16 @@
                     <div class="group relative">
                         <button
                             type="button"
-                            class={iconButtonBase}
+                            class={`${iconButtonBase} fullscreen-enter`}
                             on:click={enterFullscreen}
+                            aria-disabled={isMobilePortrait}
                             aria-label="Enter fullscreen view"
+                            title={isMobilePortrait
+                                ? MOBILE_PORTRAIT_FULLSCREEN_MESSAGE
+                                : "Enter fullscreen"}
+                            data-fullscreen-portrait-blocked={isMobilePortrait
+                                ? "true"
+                                : "false"}
                         >
                             <ExpandOutline class="h-4 w-4" />
                             <span class="sr-only">Enter fullscreen</span>
@@ -673,5 +723,18 @@
     .scrubber-range:hover::-webkit-slider-thumb,
     .scrubber-range:hover::-moz-range-thumb {
         transform: scale(1.06);
+    }
+
+    @media (hover: none) and (pointer: coarse) and (orientation: portrait) {
+        .fullscreen-enter {
+            cursor: not-allowed;
+            opacity: 0.4;
+        }
+
+        .fullscreen-enter:hover,
+        .fullscreen-enter:active {
+            background: transparent;
+            transform: none;
+        }
     }
 </style>

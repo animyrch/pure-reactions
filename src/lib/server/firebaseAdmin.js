@@ -2,6 +2,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { FIREBASE_CONFIG } from '$lib/constants/firebase';
 import { pickOriginalVideoThumbnailFromReactions } from '$lib/helpers/originalVideo';
+import { hasStoredWatchDuration } from '$lib/helpers/watchDuration';
+import {
+  createAdminWatchDurationIo,
+  ensureReactionWatchDurationAdmin,
+} from '$lib/server/watchDurationAdmin';
 import { env } from '$env/dynamic/private';
 
 let adminAuth = null;
@@ -140,6 +145,7 @@ export async function getReactionBySlug(slug) {
       id: docSnap.id,
       reactionVideoId: data.reactionVideoId ?? null,
       reactionVideoTitle: data.reactionVideoTitle ?? null,
+      customReactionTitle: data.customReactionTitle ?? null,
       reactionVideoAuthor: data.reactionVideoAuthor ?? null,
       originalVideoTitle: data.originalVideoTitle ?? null,
       originalVideoDescription: data.originalVideoDescription ?? null,
@@ -210,15 +216,25 @@ export async function getReactionsByPageServer(cursor, limitBy, _sort) {
     }
 
     const snapshot = await q.get();
+    const watchDurationIo = createAdminWatchDurationIo(adminDb);
+    const reactions = [];
 
-    const reactions = snapshot.docs.map((doc) => {
-      const raw = doc.data();
-      return {
+    for (const doc of snapshot.docs) {
+      const peeked = watchDurationIo.peekReaction(doc.id);
+      let raw = peeked?.data || doc.data();
+      if (!hasStoredWatchDuration(raw)) {
+        try {
+          raw = await ensureReactionWatchDurationAdmin(adminDb, doc.id, raw, watchDurationIo);
+        } catch (error) {
+          console.error('Failed to store watch duration for home reaction', doc.id, error);
+        }
+      }
+      reactions.push({
         id: doc.id,
         data: serializeFirestoreValue(raw),
         type: 'reaction',
-      };
-    });
+      });
+    }
 
     const lastDoc = snapshot.docs[snapshot.docs.length - 1];
     const lastCursorMs = lastDoc?.data()?.createdAt?.toMillis?.() ?? null;
@@ -404,6 +420,7 @@ export async function getPlaylistBySlug(slug) {
       ? (data.reactionBinomeIds[0] ?? null)
       : null;
     let firstReactionVideoTitle = null;
+    let firstCustomReactionTitle = null;
     let firstReactionDescription = null;
     let firstReactionThumbnailUrl = null;
     let firstReactionVideoId = null;
@@ -412,6 +429,7 @@ export async function getPlaylistBySlug(slug) {
       if (reactionSnap.exists) {
         const rd = reactionSnap.data();
         firstReactionVideoTitle = rd.reactionVideoTitle ?? null;
+        firstCustomReactionTitle = rd.customReactionTitle ?? null;
         firstReactionDescription = rd.description ?? null;
         firstReactionThumbnailUrl = rd.thumbnailUrl ?? null;
         firstReactionVideoId = rd.reactionVideoId ?? null;
@@ -425,6 +443,7 @@ export async function getPlaylistBySlug(slug) {
       thumbnailUrl: firstItemThumbnail,
       firstOriginalVideoId,
       firstReactionVideoTitle,
+      firstCustomReactionTitle,
       firstReactionDescription,
       firstReactionThumbnailUrl,
       firstReactionVideoId,

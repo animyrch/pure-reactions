@@ -124,7 +124,6 @@
                 reactionVideoId: videoId,
                 reactionVideoAuthor: details.videoAuthor || "",
                 reactionVideoTitle: details.videoTitle || "",
-                isPublished: false, // Reset published state maybe? Or keep as is. usually editing resets it.
             };
 
             const updateResults = await Promise.all(

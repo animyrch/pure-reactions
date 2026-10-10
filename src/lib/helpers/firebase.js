@@ -50,6 +50,12 @@ import {
 } from '$lib/helpers/reactionSequence';
 import { generateOriginalVideoSlug } from '$lib/helpers/originalVideo';
 import { assertMomentReady } from '$lib/helpers/moments';
+import { affectsWatchDuration } from '$lib/helpers/watchDuration';
+import {
+    syncPlaylistWatchDuration,
+    syncReactionWatchDuration,
+    watchDurationPatchChanged,
+} from '$lib/helpers/watchDurationSync';
 
 const createCollection = (db, params, caller) => {
     return collection(db, params);
@@ -86,6 +92,65 @@ const shouldEvaluateMomentReactionCountSync = (dataToUpdate) => {
     }
 
     return ['isPublished', 'isMomentReaction', 'momentId'].some((field) => hasOwnField(dataToUpdate, field));
+};
+
+const createClientWatchDurationIo = () => {
+    const reactionCache = new Map();
+    const playlistCache = new Map();
+    const reactionsCollection = () =>
+        createCollection(db, COLLECTION_REACTION_BINOMES, 'watchDuration');
+    const playlistsCollection = () =>
+        createCollection(db, COLLECTION_PLAYLISTS, 'watchDuration');
+
+    return {
+        async getReaction(id) {
+            if (reactionCache.has(id)) return reactionCache.get(id);
+            const snap = await getDoc(doc(reactionsCollection(), id));
+            const value = snap.exists() ? { id, data: snap.data() } : null;
+            reactionCache.set(id, value);
+            return value;
+        },
+
+        async getReactions(ids) {
+            const missing = ids.filter((id) => id && !reactionCache.has(id));
+            for (let index = 0; index < missing.length; index += 10) {
+                const batchIds = missing.slice(index, index + 10);
+                if (!batchIds.length) continue;
+                const snap = await getDocs(
+                    query(reactionsCollection(), where('__name__', 'in', batchIds))
+                );
+                const found = new Set();
+                snap.docs.forEach((docSnap) => {
+                    found.add(docSnap.id);
+                    reactionCache.set(docSnap.id, { id: docSnap.id, data: docSnap.data() });
+                });
+                batchIds.forEach((id) => {
+                    if (!found.has(id)) reactionCache.set(id, null);
+                });
+            }
+            return ids.map((id) => reactionCache.get(id)).filter(Boolean);
+        },
+
+        async updateReaction(id, patch, current) {
+            if (!watchDurationPatchChanged(current, patch)) return;
+            await updateDoc(doc(reactionsCollection(), id), patch);
+            reactionCache.set(id, { id, data: { ...(current || {}), ...patch } });
+        },
+
+        async getPlaylist(id) {
+            if (playlistCache.has(id)) return playlistCache.get(id);
+            const snap = await getDoc(doc(playlistsCollection(), id));
+            const value = snap.exists() ? { id, data: snap.data() } : null;
+            playlistCache.set(id, value);
+            return value;
+        },
+
+        async updatePlaylist(id, patch, current) {
+            if (!watchDurationPatchChanged(current, patch)) return;
+            await updateDoc(doc(playlistsCollection(), id), patch);
+            playlistCache.set(id, { id, data: { ...(current || {}), ...patch } });
+        },
+    };
 };
 
 export const requestReactionEnrichment = async (reactionId, { force = false } = {}) => {
@@ -638,6 +703,13 @@ export const addToPlaylistDocument = async ({
             sequenceItem: nextSequenceItem,
         });
         await setDoc(playlistDocumentRef, updatedPlaylist, { merge: false });
+        try {
+            await syncPlaylistWatchDuration(playlistDocumentId, createClientWatchDurationIo());
+        } catch (error) {
+            console.error('Failed to store playlist watch duration:', error, {
+                playlistDocumentId
+            });
+        }
     } catch (error) {
         console.error('Error updating document: ', error);
     }
@@ -654,9 +726,10 @@ export const updateFirebaseDocument = async (dataToUpdate, documentId) => {
 
         const documentRef = doc(reactionsCollection, targetDocumentId);
         const shouldSyncMomentReactionCount = shouldEvaluateMomentReactionCountSync(dataToUpdate);
+        const shouldSyncDuration = affectsWatchDuration(dataToUpdate);
         let previousData = null;
 
-        if (shouldSyncMomentReactionCount) {
+        if (shouldSyncMomentReactionCount || shouldSyncDuration) {
             try {
                 const previousSnapshot = await getDoc(documentRef);
                 if (previousSnapshot.exists()) {
@@ -717,6 +790,23 @@ export const updateFirebaseDocument = async (dataToUpdate, documentId) => {
 
         if (shouldRequestReactionEnrichment(dataToUpdate)) {
             await requestReactionEnrichment(targetDocumentId);
+        }
+
+        if (shouldSyncDuration) {
+            try {
+                const previousPlaylistId = hasOwnField(dataToUpdate, 'playlistId')
+                    ? previousData?.playlistId
+                    : '';
+                await syncReactionWatchDuration({
+                    reactionId: targetDocumentId,
+                    previousPlaylistId,
+                    io: createClientWatchDurationIo(),
+                });
+            } catch (error) {
+                console.error('Failed to store watch duration after reaction update:', error, {
+                    targetDocumentId
+                });
+            }
         }
         return true;
     } catch (error) {

@@ -706,7 +706,7 @@
           class="mt-1.5 h-9 w-full rounded-lg border border-border-subtle bg-background/80 px-2.5 text-sm text-text-primary placeholder:text-text-muted focus-visible:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:text-text-muted"
           type="text"
           maxlength="200"
-          placeholder="Optional title for reaction cards"
+          placeholder="Optional title for this reaction"
           aria-label="Reaction title"
           bind:value={customReactionTitleValue}
           disabled={!isEditModeOn}
@@ -718,7 +718,7 @@
           }}
         />
         <p class="mt-1.5 text-[11px] leading-snug text-text-muted">
-          Shown on reaction cards when filled in. Leave blank to keep the YouTube title.
+          Shown on reaction cards, the page heading, and the page title when filled in. Leave blank to keep the YouTube title.
         </p>
       </div>
 
