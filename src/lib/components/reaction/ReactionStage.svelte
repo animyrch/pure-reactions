@@ -289,7 +289,7 @@
         isFullscreen
             ? "theater-wrapper--fullscreen fixed inset-0 z-50 m-0 h-screen w-screen overflow-hidden rounded-none bg-black px-0 py-0 text-text-primary shadow-none"
             : isDesktopOverlay
-            ? "relative w-full max-w-[80%] bg-black text-text-primary shadow-none md:shadow-elevated md:mx-auto md:mt-6 md:mb-0 md:rounded-2xl md:bg-surface/80 md:px-4 md:pt-4 md:pb-3 md:backdrop-blur sm:px-6 lg:px-10 xl:rounded-3xl"
+            ? "relative w-full max-w-none bg-black text-text-primary shadow-none md:mx-auto md:mt-6 md:mb-0 md:max-w-[80%] md:rounded-2xl md:bg-surface/80 md:px-4 md:pt-4 md:pb-3 md:shadow-elevated md:backdrop-blur sm:px-6 lg:px-10 xl:rounded-3xl"
             : "relative w-full max-w-none bg-black text-text-primary shadow-none md:shadow-elevated md:mx-auto md:mt-6 md:mb-0 md:rounded-2xl md:bg-surface/80 md:px-4 md:pt-4 md:pb-3 md:backdrop-blur sm:px-6 lg:px-10 xl:rounded-3xl"
     }`}
     style={`--control-dock-space: calc(80px + env(safe-area-inset-bottom)); --overlay-width: ${normalizedOverlayWidth}%;`}
@@ -569,6 +569,9 @@
             position: fixed;
             inset: 0;
             z-index: 50;
+            width: 100%;
+            max-width: none;
+            height: 100%;
             margin: 0;
             padding: 0;
             overflow: hidden;
@@ -581,6 +584,10 @@
             inset: 0;
             z-index: 50;
             display: block; /* Changing from flex to block to allow absolute positioning of children */
+            width: 100%;
+            height: 100%;
+            max-width: none;
+            aspect-ratio: auto;
             padding: 0;
             background: black;
         }

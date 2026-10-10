@@ -8,7 +8,7 @@
     let isReactionMissing = false;
     let playerOriginal = {}; // Just needs to be truthy to show controls
     let playerReaction = {}; // Just needs to be truthy to show controls
-    let bothVideosStarted = true;
+    $: bothVideosStarted = $page.url.searchParams.get("started") !== "0";
     let reactionCurrentTime = 30;
     let reactionDuration = 100;
 
