@@ -38,19 +38,25 @@ export const resolveReactionListItemType = (reaction) => {
 };
 
 /**
- * Frame around the watched video.
+ * Accent hue for the playback control dock.
  * Moment and playlist routes keep their own color. On `/reaction`, a moment
  * reaction stays a moment, a playlist query stays a playlist, a remix stays
  * a remix, and a saved queue playthrough marks a plain reaction as a queue.
- * Ad-hoc queues do not. Remix playback draws the color on the original video,
- * because that is the only video on screen.
- * Colors match the thumbnail card borders in ReactionThumbnail.svelte.
+ * Ad-hoc queues do not. A standalone reaction has no accent.
+ * Hues match the thumbnail card borders in ReactionThumbnail.svelte.
+ * The dock draws a 1px border from `playbackDockBorderColor`.
  */
 export const PLAYBACK_FRAME_COLORS = {
     queue: 'rgba(99, 102, 241, 0.95)',
     playlist: 'rgba(244, 114, 182, 0.95)',
     moment: 'rgba(251, 191, 36, 0.95)',
     remix: 'rgba(45, 212, 191, 0.95)'
+};
+
+/** Same hue as the playback accent, at a lower opacity for a 1px dock border. */
+export const playbackDockBorderColor = (color) => {
+    if (typeof color !== 'string' || !color) return '';
+    return color.replace(/[\d.]+\)$/, '0.45)');
 };
 
 export const resolvePlaybackFrameKind = ({

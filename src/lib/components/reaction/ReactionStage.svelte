@@ -1,7 +1,7 @@
 <script>
     import ControlDock from "$lib/components/reaction/ControlDock.svelte";
     import MissingReactionPlaceholder from "$lib/components/reaction/MissingReactionPlaceholder.svelte";
-    import { PLAYBACK_FRAME_COLORS } from "$lib/helpers/reactionListItem";
+    import { PLAYBACK_FRAME_COLORS, playbackDockBorderColor } from "$lib/helpers/reactionListItem";
     import { createEventDispatcher, onMount, onDestroy } from "svelte";
 
     export let isFullscreen = false;
@@ -202,9 +202,7 @@
             : "top-right";
     $: overlayCornerClass = overlayPositionClasses[normalizedOverlayCorner];
     $: isReactionPrimary = !remixMode && fullscreenPrimaryVideo === "reaction";
-    $: reactionFrameColor = PLAYBACK_FRAME_COLORS[itemType] || "";
-    // Remix hides the reaction video, so the type color has to sit on the original.
-    $: showTypeFrameOnOriginal = remixMode && Boolean(reactionFrameColor);
+    $: dockBorderColor = playbackDockBorderColor(PLAYBACK_FRAME_COLORS[itemType] || "");
     $: isDesktopOverlay = remixMode || (isDesktop && !isMobileLandscape && !isFullscreen && bothVideosStarted);
     $: isOverlayLayout = remixMode || isFullscreen || (isMobileLandscape && bothVideosStarted) || isDesktopOverlay;
     $: dockCurrentTime = remixMode ? originalCurrentTime : reactionCurrentTime;
@@ -352,7 +350,6 @@
         >
             <div
                 data-stage="original-frame"
-                data-item-type={showTypeFrameOnOriginal ? itemType : undefined}
                 class={isOverlayLayout
                     ? isOriginalOverlay
                         ? "relative w-full aspect-cinematic overflow-hidden rounded-lg bg-black/80 shadow-elevated"
@@ -385,14 +382,6 @@
                         ></div>
                     {/if}
                 </div>
-                {#if showTypeFrameOnOriginal}
-                    <div
-                        class="reaction-type-frame"
-                        style={`--reaction-frame-color: ${reactionFrameColor}`}
-                        data-reaction-type-frame
-                        aria-hidden="true"
-                    ></div>
-                {/if}
             </div>
             {#if showCinematicBars}
                 <div
@@ -426,7 +415,6 @@
             >
                 <div
                     data-stage="reaction-frame"
-                    data-item-type={itemType}
                     class={isOverlayLayout
                         ? isReactionOverlay
                             ? "relative aspect-cinematic overflow-hidden rounded-lg bg-black/80 shadow-elevated"
@@ -439,14 +427,6 @@
                         id="player-reaction"
                         class="absolute inset-0 h-full w-full"
                     ></div>
-                    {#if reactionFrameColor && !showTypeFrameOnOriginal}
-                        <div
-                            class="reaction-type-frame"
-                            style={`--reaction-frame-color: ${reactionFrameColor}`}
-                            data-reaction-type-frame
-                            aria-hidden="true"
-                        ></div>
-                    {/if}
                     {#if showCinematicBars}
                         <div
                             class="pointer-events-none absolute inset-x-0 top-0 h-[12%] bg-gradient-to-b from-black via-black/80 to-transparent"
@@ -494,6 +474,7 @@
             seekMin={dockSeekMin}
             seekMax={dockSeekMax}
             {remixMode}
+            {dockBorderColor}
             onSeek={handleSeek}
         />
     {/if}
@@ -573,16 +554,6 @@
         max-height: 100%;
         aspect-ratio: 16 / 9;
         position: relative;
-    }
-
-    /* Sits above the YouTube iframe so the type color stays visible. */
-    .reaction-type-frame {
-        pointer-events: none;
-        position: absolute;
-        inset: 0;
-        z-index: 30;
-        border-radius: inherit;
-        box-shadow: inset 0 0 0 4px var(--reaction-frame-color);
     }
 
     /* 
