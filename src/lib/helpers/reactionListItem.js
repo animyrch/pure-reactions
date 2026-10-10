@@ -18,6 +18,9 @@ export const momentIdFromReactionData = (data) => trimmedString(data?.momentId);
 export const isMomentReactionData = (data) =>
     data?.isMomentReaction === true && momentIdFromReactionData(data).length > 0;
 
+/** A remix plays the original only. The flag is stored on the reaction document. */
+export const isRemixReactionData = (data) => data?.remixMode === true;
+
 export const resolveReactionListItemType = (reaction) => {
     if (reaction?.type === 'queue') {
         return 'queue';
@@ -28,20 +31,26 @@ export const resolveReactionListItemType = (reaction) => {
     if (trimmedString(reaction?.data?.playlistId)) {
         return 'playlist';
     }
+    if (isRemixReactionData(reaction?.data)) {
+        return 'remix';
+    }
     return reaction?.type || 'reaction';
 };
 
 /**
- * Frame around the reaction video on a watching page.
+ * Frame around the watched video.
  * Moment and playlist routes keep their own color. On `/reaction`, a moment
- * reaction stays a moment, a playlist query stays a playlist, and a saved
- * queue playthrough marks a plain reaction as a queue. Ad-hoc queues do not.
+ * reaction stays a moment, a playlist query stays a playlist, a remix stays
+ * a remix, and a saved queue playthrough marks a plain reaction as a queue.
+ * Ad-hoc queues do not. Remix playback draws the color on the original video,
+ * because that is the only video on screen.
  * Colors match the thumbnail card borders in ReactionThumbnail.svelte.
  */
 export const PLAYBACK_FRAME_COLORS = {
     queue: 'rgba(99, 102, 241, 0.95)',
     playlist: 'rgba(244, 114, 182, 0.95)',
-    moment: 'rgba(251, 191, 36, 0.95)'
+    moment: 'rgba(251, 191, 36, 0.95)',
+    remix: 'rgba(45, 212, 191, 0.95)'
 };
 
 export const resolvePlaybackFrameKind = ({
@@ -49,12 +58,14 @@ export const resolvePlaybackFrameKind = ({
     queueSlug = '',
     playlistId = '',
     isMomentReaction = false,
-    momentId = ''
+    momentId = '',
+    remixMode = false
 } = {}) => {
     if (routeKind === 'moment') return 'moment';
     if (routeKind === 'playlist') return 'playlist';
     if (isMomentReactionData({ isMomentReaction, momentId })) return 'moment';
     if (trimmedString(playlistId)) return 'playlist';
+    if (remixMode === true) return 'remix';
     if (trimmedString(queueSlug)) return 'queue';
     return 'reaction';
 };

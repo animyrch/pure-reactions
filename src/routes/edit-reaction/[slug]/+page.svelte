@@ -27,6 +27,7 @@
     playlistId: $state.playlistDocumentId,
     isMomentReaction: $state.isMomentReaction,
     momentId: $state.momentId,
+    remixMode: $state.remixMode,
   });
 
   let overlayRef;

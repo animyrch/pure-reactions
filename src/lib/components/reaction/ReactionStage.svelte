@@ -41,7 +41,7 @@
     /** Scale the players to fill a parent that is half the viewport tall. */
     export let limitToHalfScreen = false;
 
-    /** Thumbnail type for this watch context: reaction, moment, playlist, or queue. */
+    /** Thumbnail type for this watch context: reaction, moment, playlist, queue, or remix. */
     export let itemType = "reaction";
 
     export let overlayRef;
@@ -203,6 +203,8 @@
     $: overlayCornerClass = overlayPositionClasses[normalizedOverlayCorner];
     $: isReactionPrimary = !remixMode && fullscreenPrimaryVideo === "reaction";
     $: reactionFrameColor = PLAYBACK_FRAME_COLORS[itemType] || "";
+    // Remix hides the reaction video, so the type color has to sit on the original.
+    $: showTypeFrameOnOriginal = remixMode && Boolean(reactionFrameColor);
     $: isDesktopOverlay = remixMode || (isDesktop && !isMobileLandscape && !isFullscreen && bothVideosStarted);
     $: isOverlayLayout = remixMode || isFullscreen || (isMobileLandscape && bothVideosStarted) || isDesktopOverlay;
     $: dockCurrentTime = remixMode ? originalCurrentTime : reactionCurrentTime;
@@ -350,10 +352,11 @@
         >
             <div
                 data-stage="original-frame"
+                data-item-type={showTypeFrameOnOriginal ? itemType : undefined}
                 class={isOverlayLayout
                     ? isOriginalOverlay
                         ? "relative w-full aspect-cinematic overflow-hidden rounded-lg bg-black/80 shadow-elevated"
-                        : "h-full w-full"
+                        : "relative h-full w-full"
                     : halfScreen
                     ? "half-frame"
                     : "relative w-full h-[56.25vw] md:h-auto md:aspect-[16/9]"}
@@ -382,6 +385,14 @@
                         ></div>
                     {/if}
                 </div>
+                {#if showTypeFrameOnOriginal}
+                    <div
+                        class="reaction-type-frame"
+                        style={`--reaction-frame-color: ${reactionFrameColor}`}
+                        data-reaction-type-frame
+                        aria-hidden="true"
+                    ></div>
+                {/if}
             </div>
             {#if showCinematicBars}
                 <div
@@ -428,7 +439,7 @@
                         id="player-reaction"
                         class="absolute inset-0 h-full w-full"
                     ></div>
-                    {#if reactionFrameColor}
+                    {#if reactionFrameColor && !showTypeFrameOnOriginal}
                         <div
                             class="reaction-type-frame"
                             style={`--reaction-frame-color: ${reactionFrameColor}`}

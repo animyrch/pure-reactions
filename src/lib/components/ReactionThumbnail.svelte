@@ -24,6 +24,7 @@
     $: isQueue = itemType === "queue";
     $: isPlaylist = itemType === "playlist";
     $: isMoment = itemType === "moment";
+    $: isRemix = itemType === "remix";
 
     $: reactionRedirectionPath = buildReactionCardHref({
         itemType,
@@ -43,11 +44,13 @@
         : sourceTitle || originalVideoTitle || "Untitled Reaction";
     $: thumbnailAlt = isMoment
         ? `Moment reaction: ${sourceTitle || originalVideoTitle || "Moment"}`
-        : sourceTitle
-          ? `Reaction: ${sourceTitle}`
-          : originalVideoTitle
-            ? `Original: ${originalVideoTitle}`
-            : "Reaction thumbnail";
+        : isRemix
+          ? `Remix: ${sourceTitle || originalVideoTitle || "Remix"}`
+          : sourceTitle
+            ? `Reaction: ${sourceTitle}`
+            : originalVideoTitle
+              ? `Original: ${originalVideoTitle}`
+              : "Reaction thumbnail";
 
     $: linkLabel = isQueue
         ? `Open queue: ${queueTitle}`
@@ -55,11 +58,13 @@
           ? `Open playlist: ${sourceTitle || "Playlist"}`
           : isMoment
             ? `Open moment reaction: ${sourceTitle || originalVideoTitle || "Moment"}`
-            : sourceTitle
-              ? `Open reaction: ${sourceTitle}`
-              : originalVideoTitle
-                ? `Open reaction: ${originalVideoTitle}`
-                : undefined;
+            : isRemix
+              ? `Open remix: ${sourceTitle || originalVideoTitle || "Remix"}`
+              : sourceTitle
+                ? `Open reaction: ${sourceTitle}`
+                : originalVideoTitle
+                  ? `Open reaction: ${originalVideoTitle}`
+                  : undefined;
 
     const thumbnailVariants = [
         { key: "mqdefault", width: 320 },
@@ -117,6 +122,7 @@
     class:is-queue={isQueue}
     class:is-playlist={isPlaylist}
     class:is-moment={isMoment}
+    class:is-remix={isRemix}
     data-item-type={itemType}
 >
     {#if linkless}
@@ -183,6 +189,26 @@
                             <path d="M18.5 15.5l.5 1.4 1.5.5-1.5.5-.5 1.6-.5-1.6-1.5-.5 1.5-.5.5-1.4z" />
                         </svg>
                         <span>MOMENT</span>
+                    </div>
+                {:else if isRemix}
+                    <div class="remix-badge">
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            aria-hidden="true"
+                        >
+                            <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                            <polyline points="2 12 12 17 22 12" />
+                            <polyline points="2 17 12 22 22 17" />
+                        </svg>
+                        <span>REMIX</span>
                     </div>
                 {/if}
                 {#if isQueue}
@@ -312,6 +338,26 @@
                             <path d="M18.5 15.5l.5 1.4 1.5.5-1.5.5-.5 1.6-.5-1.6-1.5-.5 1.5-.5.5-1.4z" />
                         </svg>
                         <span>MOMENT</span>
+                    </div>
+                {:else if isRemix}
+                    <div class="remix-badge">
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            aria-hidden="true"
+                        >
+                            <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                            <polyline points="2 12 12 17 22 12" />
+                            <polyline points="2 17 12 22 22 17" />
+                        </svg>
+                        <span>REMIX</span>
                     </div>
                 {/if}
                 {#if isQueue}
@@ -516,6 +562,38 @@
         border-radius: 999px;
     }
     .moment-badge svg {
+        width: 14px;
+        height: 14px;
+    }
+    .thumbnail-card.is-remix {
+        border: 2px solid rgba(45, 212, 191, 0.38);
+        background: linear-gradient(
+            135deg,
+            rgba(45, 212, 191, 0.07),
+            rgba(13, 148, 136, 0.06)
+        );
+    }
+    .thumbnail-card.is-remix:hover {
+        border-color: rgba(45, 212, 191, 0.62);
+        box-shadow: 0 8px 32px rgba(13, 148, 136, 0.18);
+    }
+    .remix-badge {
+        position: absolute;
+        top: 0.5rem;
+        left: 0.5rem;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.375rem 0.625rem;
+        background: rgba(13, 148, 136, 0.95);
+        color: white;
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        border-radius: 999px;
+    }
+    .remix-badge svg {
         width: 14px;
         height: 14px;
     }

@@ -43,6 +43,31 @@ describe('playback frame kind', () => {
         expect(resolvePlaybackFrameKind({ queueSlug: ' evening-set ' })).toBe('queue');
     });
 
+    it('colors a remix on the canonical reaction url', () => {
+        expect(resolvePlaybackFrameKind({ remixMode: true })).toBe('remix');
+        expect(PLAYBACK_FRAME_COLORS.remix).toBe('rgba(45, 212, 191, 0.95)');
+    });
+
+    it('keeps remix ahead of a saved queue and behind moment and playlist context', () => {
+        expect(resolvePlaybackFrameKind({
+            remixMode: true,
+            queueSlug: 'evening-set'
+        })).toBe('remix');
+        expect(resolvePlaybackFrameKind({
+            remixMode: true,
+            playlistId: 'playlist-9'
+        })).toBe('playlist');
+        expect(resolvePlaybackFrameKind({
+            remixMode: true,
+            isMomentReaction: true,
+            momentId: 'moment-1'
+        })).toBe('moment');
+        expect(resolvePlaybackFrameKind({
+            routeKind: 'playlist',
+            remixMode: true
+        })).toBe('playlist');
+    });
+
     it('does not treat an ad-hoc queue as a saved queue', () => {
         expect(resolvePlaybackFrameKind({ queueSlug: '   ' })).toBe('reaction');
     });
