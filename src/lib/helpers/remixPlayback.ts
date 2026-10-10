@@ -16,15 +16,31 @@ type PlanRemixTransportParams = {
   previousTime?: number | null;
   playbackOrigin?: number | null;
   lastAppliedAnchor: number | null;
+  appliedAnchors?: number[] | null;
   isUserPaused: boolean;
+};
+
+const anchorWasApplied = (
+  anchor: number,
+  lastAppliedAnchor: number | null,
+  appliedAnchors?: number[] | null
+) => {
+  if (lastAppliedAnchor !== null && Math.abs(lastAppliedAnchor - anchor) <= 0.001) {
+    return true;
+  }
+  if (!Array.isArray(appliedAnchors)) {
+    return false;
+  }
+  return appliedAnchors.some((entry) => Number.isFinite(entry) && Math.abs(entry - anchor) <= 0.001);
 };
 
 // Remix playback uses the original video as the clock. A play cue jumps once
 // when the playhead is past that cue and the cue is still ahead of the last
-// intentional position (play start, or the last seek). A later cue that an
-// earlier jump or scrub already landed beyond must not fire. Integrating the
-// target every tick would run away, because seeking the original also moves
-// the clock.
+// intentional position (play start, or the last seek). A cue that already
+// jumped stays applied even if that jump lands before it and the clock
+// reaches it again. A later cue that an earlier jump or scrub already landed
+// beyond must not fire. Integrating the target every tick would run away,
+// because seeking the original also moves the clock.
 export function planRemixTransport({
   state,
   anchorTime,
@@ -33,6 +49,7 @@ export function planRemixTransport({
   previousTime,
   playbackOrigin,
   lastAppliedAnchor,
+  appliedAnchors,
   isUserPaused,
 }: PlanRemixTransportParams): RemixTransportPlan {
   if (isUserPaused) {
@@ -60,8 +77,7 @@ export function planRemixTransport({
     const origin = Number.isFinite(playbackOrigin)
       ? Number(playbackOrigin)
       : (previous ?? 0);
-    const alreadyApplied =
-      lastAppliedAnchor !== null && Math.abs(lastAppliedAnchor - anchor) <= 0.001;
+    const alreadyApplied = anchorWasApplied(anchor, lastAppliedAnchor, appliedAnchors);
     const reached = now !== null && now + 0.05 >= anchor;
     // Cues behind the last seek or scrub were skipped on purpose.
     const stillAheadOfPlacement = anchor + 0.001 >= origin;

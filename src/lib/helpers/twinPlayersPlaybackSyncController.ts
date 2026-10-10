@@ -108,6 +108,10 @@ export function createTwinPlayersPlaybackSyncController({
   let originalDurationProbeTimeout: ReturnType<typeof setTimeout> | undefined;
   let originalDurationProbeAttempts = 0;
   let remixAppliedAnchor: number | null = null;
+  // Play cues that already jumped. A jump can land in an earlier cue's region
+  // and replace remixAppliedAnchor; this list still blocks that same cue when
+  // the clock reaches it again. Cleared for cues ahead of a viewer scrub.
+  let remixConsumedAnchors: number[] = [];
   let remixSampleTime: number | null = null;
   // Last position the viewer or a cue seek placed on purpose. Play cues behind
   // this origin must not fire again. It stays at the playback start until then,
@@ -765,6 +769,24 @@ export function createTwinPlayersPlaybackSyncController({
     }
   };
 
+  const rememberConsumedAnchor = (anchor: number) => {
+    if (!Number.isFinite(anchor)) {
+      return;
+    }
+    if (remixConsumedAnchors.some((entry) => Math.abs(entry - anchor) <= 0.001)) {
+      return;
+    }
+    remixConsumedAnchors.push(anchor);
+  };
+
+  const forgetConsumedAnchorsAfter = (time: number) => {
+    if (!Number.isFinite(time)) {
+      remixConsumedAnchors = [];
+      return;
+    }
+    remixConsumedAnchors = remixConsumedAnchors.filter((entry) => entry <= time + 0.001);
+  };
+
   const rememberRemixAnchor = (originalTime: number) => {
     const snapshot = getSnapshot();
     const source = Array.isArray(snapshot.stateTimeline) && snapshot.stateTimeline.length
@@ -806,6 +828,7 @@ export function createTwinPlayersPlaybackSyncController({
       player.seekTo(clamped, true);
     }
     updateState({ originalCurrentTime: clamped });
+    forgetConsumedAnchorsAfter(clamped);
     rememberRemixAnchor(clamped);
     // Keep transport on the requested time until the player reports it.
     // A stale getCurrentTime() would otherwise look like a later cue was
@@ -899,14 +922,16 @@ export function createTwinPlayersPlaybackSyncController({
       changingSpeed = false;
     }
 
+    const anchorTime = Number(config?.closestSmallerTimeCode);
     const plan = planRemixTransport({
       state: Number(config?.state),
-      anchorTime: Number(config?.closestSmallerTimeCode),
+      anchorTime,
       targetTime: Number(config?.time),
       currentTime: time,
       previousTime: remixSampleTime,
       playbackOrigin: remixOrigin,
       lastAppliedAnchor: remixAppliedAnchor,
+      appliedAnchors: remixConsumedAnchors,
       isUserPaused: false,
     });
     const seekBlocked = plan.seekTo !== null && remixUserHold !== null;
@@ -915,6 +940,7 @@ export function createTwinPlayersPlaybackSyncController({
     }
 
     if (plan.seekTo !== null && !seekBlocked) {
+      rememberConsumedAnchor(anchorTime);
       goToSecondsInOriginalVideo(plan.seekTo, { force: true, allowSeekAhead: true });
       remixSampleTime = plan.seekTo;
       remixOrigin = plan.seekTo;
@@ -2107,9 +2133,11 @@ export function createTwinPlayersPlaybackSyncController({
       if (getSnapshot().isUserPaused) {
         updateState({ isUserPaused: false });
       }
+      const resumeAt = readOriginalClock(getSnapshot().playerOriginal).time;
+      forgetConsumedAnchorsAfter(resumeAt);
       remixAppliedAnchor = null;
       remixSampleTime = null;
-      remixOrigin = readOriginalClock(getSnapshot().playerOriginal).time;
+      remixOrigin = resumeAt;
       remixUserHold = null;
       remixUserHoldUntil = 0;
       startRemixPlayback();

@@ -174,6 +174,7 @@ test.describe('Remix mode', () => {
     expect(originalCue).toBeGreaterThan(150);
     expect(originalCue).toBeLessThan(250);
     await expect(page.getByRole('dialog', { name: 'New playback configuration' })).toContainText('Original at');
+    await expect(page.getByRole('dialog', { name: 'New playback configuration' })).toContainText('Skip to');
   });
 
   test('uses the original clock when remix mode is already on', async ({ page }, testInfo) => {

@@ -78,10 +78,20 @@ export async function ensureRemixOwner() {
     if (id === 'remixEditor00000001') {
       patch.remixMode = false;
     }
-    if (id === 'remixFineTunePause01' || id === 'remixFineTuneJump001' || id === 'remixFineTunePlays01') {
+    if (id === 'remixFineTunePause01' || id === 'remixFineTuneJump001') {
       patch.remixMode = true;
       patch.reactionVideoId = '';
       patch.stateTimeline = [];
+    }
+    // The later cue sits inside the first skip. The editor refuses a new cue
+    // there, so this document keeps the saved pair the playback test needs.
+    if (id === 'remixFineTunePlays01') {
+      patch.remixMode = true;
+      patch.reactionVideoId = '';
+      patch.stateTimeline = [
+        { t: 1, state: 1, targetTime: 20 },
+        { t: 5, state: 1, targetTime: 50 },
+      ];
     }
     return db.collection(collection).doc(id).update(patch);
   }));

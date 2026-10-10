@@ -101,5 +101,103 @@ describe('remix fine-tune timeline', () => {
     expect(body).toContain('data-track-id="reactionVolume"');
     expect(body).toContain('data-track-id="overlayVisibility"');
     expect(body).toContain('at 0:12');
+    expect(body).not.toContain('data-disabled-section');
+  });
+
+  it('disables the skipped span and the tail after a pause on the original clock', () => {
+    const { body } = render(InteractiveSynchronizer, {
+      props: {
+        timeAxis: 'original',
+        showReactionVolumeTrack: false,
+        showOverlayTrack: false,
+        currentTime: 5,
+        duration: 120,
+        seekMin: 0,
+        seekMax: 120,
+        playerEvents: [
+          { timeInReaction: 20, state: 1, targetTime: 50 },
+          { timeInReaction: 80, state: 2, targetTime: 80 },
+        ],
+        volumeEvents: [{ timeInReaction: 10, volume: 40 }],
+      },
+    });
+
+    const sections = [
+      ...body.matchAll(
+        /data-disabled-section="(skip|pause|mixed)" data-disabled-start="([^"]+)" data-disabled-end="([^"]+)"/g,
+      ),
+    ];
+    expect(sections.map((match) => match.slice(1))).toEqual([
+      ['skip', '20.000', '50.000'],
+      ['pause', '80.000', '120.000'],
+    ]);
+    expect(body).toContain('left: 16.667%');
+    expect(body).toContain('width: 25.000%');
+    expect(body).toContain('left: 66.667%');
+    expect(body).toContain('width: 33.333%');
+    expect(body).toContain('Skipped');
+    expect(body).toContain('Remix ended');
+    expect(body).toContain('data-track-id="volume"');
+    expect(body).toContain('data-track-id="speed"');
+  });
+
+  it('moves the disabled span when the play cue target changes and clears it when the cue is removed', () => {
+    const adjusted = render(InteractiveSynchronizer, {
+      props: {
+        timeAxis: 'original',
+        showReactionVolumeTrack: false,
+        showOverlayTrack: false,
+        allowPlaybackRate: false,
+        currentTime: 0,
+        duration: 120,
+        seekMin: 0,
+        seekMax: 120,
+        playerEvents: [{ timeInReaction: 20, state: 1, targetTime: 70 }],
+      },
+    }).body;
+    expect(adjusted).toContain('data-disabled-start="20.000"');
+    expect(adjusted).toContain('data-disabled-end="70.000"');
+    expect(adjusted).toContain('width: 41.667%');
+
+    const cleared = render(InteractiveSynchronizer, {
+      props: {
+        timeAxis: 'original',
+        showReactionVolumeTrack: false,
+        showOverlayTrack: false,
+        allowPlaybackRate: false,
+        currentTime: 0,
+        duration: 120,
+        seekMin: 0,
+        seekMax: 120,
+        playerEvents: [],
+      },
+    }).body;
+    expect(cleared).not.toContain('data-disabled-section');
+  });
+
+  it('clips a disabled span to the zoomed timeline', () => {
+    const { body } = render(InteractiveSynchronizer, {
+      props: {
+        timeAxis: 'original',
+        showReactionVolumeTrack: false,
+        showOverlayTrack: false,
+        allowPlaybackRate: false,
+        currentTime: 40,
+        duration: 120,
+        seekMin: 30,
+        seekMax: 90,
+        playerEvents: [
+          { timeInReaction: 20, state: 1, targetTime: 50 },
+          { timeInReaction: 80, state: 2, targetTime: 80 },
+        ],
+      },
+    });
+
+    expect(body).toContain('data-disabled-start="20.000"');
+    expect(body).toContain('data-disabled-end="50.000"');
+    expect(body).toContain('left: 0.000%');
+    expect(body).toContain('width: 33.333%');
+    expect(body).toContain('left: 83.333%');
+    expect(body).toContain('width: 16.667%');
   });
 });
