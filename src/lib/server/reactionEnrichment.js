@@ -1,6 +1,8 @@
 import { normalizeOriginalVideoPlatform } from '$lib/helpers/platform';
 import { originalVideoMetadataToFirestoreFields } from '$lib/helpers/originalVideo';
+import { hasStoredWatchDuration } from '$lib/helpers/watchDuration';
 import { fetchTikTokOriginalVideoMetadata } from '$lib/server/originalVideoMetadata';
+import { persistReactionWatchDurationAdmin } from '$lib/server/watchDurationAdmin';
 
 const ENRICHMENT_TTL_MS = 1000 * 60 * 60 * 24 * 7;
 const YOUTUBE_API_URL = 'https://www.googleapis.com/youtube/v3/videos';
@@ -142,6 +144,19 @@ function compactMeta(meta) {
   return cleaned;
 }
 
+async function storeWatchDuration(adminDb, collectionName, reactionId) {
+  try {
+    await persistReactionWatchDurationAdmin(adminDb, reactionId, {
+      reactionCollection: collectionName,
+    });
+  } catch (error) {
+    console.error('Failed to store watch duration after enrichment', {
+      reactionId,
+      error,
+    });
+  }
+}
+
 function buildMetaFromResponse(response, youtubeId) {
   const snippet = response?.snippet || {};
   const contentDetails = response?.contentDetails || {};
@@ -189,6 +204,9 @@ export async function enrichReactionDocument({ adminDb, adminFieldValue, collect
           isStale(data?.originalTikTok?.lastEnrichedAt));
 
   if (!reactionNeedsUpdate && !originalNeedsUpdate) {
+    if (!hasStoredWatchDuration(data)) {
+      await storeWatchDuration(adminDb, collectionName, reactionId);
+    }
     return { found: true, updated: false, reason: 'meta-fresh' };
   }
 
@@ -247,6 +265,7 @@ export async function enrichReactionDocument({ adminDb, adminFieldValue, collect
   }
 
   await docRef.set(updates, { merge: true });
+  await storeWatchDuration(adminDb, collectionName, reactionId);
 
   return {
     found: true,

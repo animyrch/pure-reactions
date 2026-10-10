@@ -4,6 +4,7 @@
         momentIdFromReactionData,
         resolveReactionListItemType
     } from '$lib/helpers/reactionListItem';
+    import { displayedWatchDurationSeconds } from '$lib/helpers/watchDuration';
 
     export let reaction;
 
@@ -20,6 +21,7 @@
     const originalVideoTitle = reaction?.data?.originalVideoTitle;
     const queueTitle = reaction?.data?.title;
     const queueSlug = reaction?.data?.slug;
+    $: watchDurationSeconds = displayedWatchDurationSeconds(reaction);
 </script>
 
 <div>
@@ -37,6 +39,7 @@
         {itemType}
         queueTitle={queueTitle}
         queueSlug={queueSlug}
+        {watchDurationSeconds}
         interactive
     />
 </div>

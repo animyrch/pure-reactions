@@ -3,6 +3,7 @@
     import VideoAuthor from "$lib/components/VideoAuthor.svelte";
     import ThumbnailContext from "$lib/components/Video/ThumbnailContext.svelte";
     import { buildReactionCardHref, reactionThumbnailSourceTitle } from "$lib/helpers/reactionListItem";
+    import { formatWatchDuration } from "$lib/helpers/watchDuration";
 
     export let reactionPageId;
     export let reactionVideoId;
@@ -17,6 +18,7 @@
     export let itemType = "reaction";
     export let queueTitle = "";
     export let queueSlug = "";
+    export let watchDurationSeconds = null;
     export let interactive = false;
     export let linkless = false;
     export let showContextMenu = true;
@@ -51,6 +53,8 @@
             : originalVideoTitle
               ? `Original: ${originalVideoTitle}`
               : "Reaction thumbnail";
+
+    $: watchDurationLabel = formatWatchDuration(watchDurationSeconds);
 
     $: linkLabel = isQueue
         ? `Open queue: ${queueTitle}`
@@ -115,6 +119,14 @@
         }
     });
 </script>
+
+{#snippet watchDurationBadge()}
+    {#if watchDurationLabel}
+        <span class="watch-duration" data-watch-duration={watchDurationLabel}>
+            {watchDurationLabel}
+        </span>
+    {/if}
+{/snippet}
 
 <div
     class="thumbnail-card group rounded-2xl border border-border-strong/30 bg-surface/50 text-text-primary shadow-surface transition-all duration-300 hover:border-border-strong hover:shadow-elevated"
@@ -268,6 +280,7 @@
                         </picture>
                     {/if}
                 {/if}
+                {@render watchDurationBadge()}
             </div>
         </div>
     {:else}
@@ -417,6 +430,7 @@
                         </picture>
                     {/if}
                 {/if}
+                {@render watchDurationBadge()}
             </div>
         </a>
     {/if}
@@ -600,6 +614,21 @@
     .queue-badge svg {
         width: 14px;
         height: 14px;
+    }
+    .watch-duration {
+        position: absolute;
+        right: 8px;
+        bottom: 8px;
+        z-index: 11;
+        padding: 2px 5px;
+        border-radius: 4px;
+        background: rgba(0, 0, 0, 0.8);
+        color: #fff;
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 1.2;
+        font-variant-numeric: tabular-nums;
+        pointer-events: none;
     }
     .thumbnail-wrapper {
         position: relative;
