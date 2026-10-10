@@ -4,12 +4,14 @@
     import FollowManagement from '$lib/components/FollowManagement.svelte';
     import RateVideo from '$lib/components/Video/RateVideo.svelte';
     import { linkifyText } from '$lib/helpers/system';
+    import { reactionThumbnailSourceTitle } from '$lib/helpers/reactionListItem';
 
     export let originalVideoTitle;
     export let originalVideoAuthor;
     export let originalVideoAuthorUrl;
     export let originalVideoPlatform = 'youtube';
     export let reactionVideoTitle;
+    export let customReactionTitle = '';
     export let reactionVideoAuthor;
     export let reactorId;
     export let pageSlug;
@@ -35,6 +37,10 @@
         let viewerData;
         $: viewerData = $userExtraDataStore?.userExtraData;
     $: canUseActions = Boolean(viewerData) && !isUsersOwnVideo;
+    $: displayReactionTitle = reactionThumbnailSourceTitle({
+        customReactionTitle,
+        reactionVideoTitle
+    });
 
     let isOriginalDescriptionExpanded = false;
     let isReactionDescriptionExpanded = false;
@@ -167,8 +173,8 @@
 
         <header class="column-header">
             <h2 id="reaction-heading" class="video-heading">
-                {#if reactionVideoTitle}
-                    {reactionVideoTitle}
+                {#if displayReactionTitle}
+                    {displayReactionTitle}
                 {:else}
                     Reaction video
                 {/if}

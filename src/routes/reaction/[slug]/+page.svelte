@@ -16,12 +16,16 @@
   import { showToast } from "$lib/stores/toast";
   import { TOASTS } from "$lib/constants/toasts";
   import { adHocQueueHasNext, readAdHocQueueFromUrl } from "$lib/helpers/adHocQueue";
-  import { resolvePlaybackFrameKind } from "$lib/helpers/reactionListItem";
+  import { reactionPageTitle, resolvePlaybackFrameKind } from "$lib/helpers/reactionListItem";
 
   export let data;
 
   $: reaction = data?.reaction;
-  $: seoTitle = reaction?.reactionVideoTitle || reaction?.originalVideoTitle || "Reaction";
+  $: seoTitle = reactionPageTitle({
+    customReactionTitle: reaction?.customReactionTitle,
+    reactionVideoTitle: reaction?.reactionVideoTitle,
+    originalVideoTitle: reaction?.originalVideoTitle,
+  });
   $: seoDescription = reaction
     ? [
         reaction.reactionVideoTitle && reaction.originalVideoTitle

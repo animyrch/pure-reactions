@@ -417,6 +417,7 @@
         originalVideoPlatform={$state.originalVideoPlatform}
         reactionVideoAuthor={$state.reactionVideoAuthor}
         reactionVideoTitle={$state.reactionVideoTitle}
+        customReactionTitle={$state.customReactionTitle}
         reactionVideoId={$state.reactionVideoId}
         pageSlug={$state.pageSlug}
         isUsersOwnVideo={$state.isUsersOwnVideo}

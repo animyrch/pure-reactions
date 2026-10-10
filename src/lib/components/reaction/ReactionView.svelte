@@ -1,5 +1,6 @@
 <script>
   import SEO from '$lib/components/SEO.svelte';
+  import { reactionPageTitle } from '$lib/helpers/reactionListItem';
   import SubtleLoader from '$lib/components/design-system/SubtleLoader.svelte';
   import ReactionStage from '$lib/components/reaction/ReactionStage.svelte';
   export let reaction;
@@ -22,7 +23,11 @@
 </script>
 
 <SEO
-  title={reaction?.reactionVideoTitle || reaction?.originalVideoTitle || 'Reaction'}
+  title={reactionPageTitle({
+    customReactionTitle: reaction?.customReactionTitle,
+    reactionVideoTitle: reaction?.reactionVideoTitle,
+    originalVideoTitle: reaction?.originalVideoTitle
+  })}
   description={reaction?.description || reaction?.originalVideoDescription || 'Watch this reaction on Pure Reactions.'}
   type="video.other"
   image={reaction?.thumbnailUrl}

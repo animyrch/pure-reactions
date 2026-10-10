@@ -140,6 +140,7 @@ export async function getReactionBySlug(slug) {
       id: docSnap.id,
       reactionVideoId: data.reactionVideoId ?? null,
       reactionVideoTitle: data.reactionVideoTitle ?? null,
+      customReactionTitle: data.customReactionTitle ?? null,
       reactionVideoAuthor: data.reactionVideoAuthor ?? null,
       originalVideoTitle: data.originalVideoTitle ?? null,
       originalVideoDescription: data.originalVideoDescription ?? null,
@@ -404,6 +405,7 @@ export async function getPlaylistBySlug(slug) {
       ? (data.reactionBinomeIds[0] ?? null)
       : null;
     let firstReactionVideoTitle = null;
+    let firstCustomReactionTitle = null;
     let firstReactionDescription = null;
     let firstReactionThumbnailUrl = null;
     let firstReactionVideoId = null;
@@ -412,6 +414,7 @@ export async function getPlaylistBySlug(slug) {
       if (reactionSnap.exists) {
         const rd = reactionSnap.data();
         firstReactionVideoTitle = rd.reactionVideoTitle ?? null;
+        firstCustomReactionTitle = rd.customReactionTitle ?? null;
         firstReactionDescription = rd.description ?? null;
         firstReactionThumbnailUrl = rd.thumbnailUrl ?? null;
         firstReactionVideoId = rd.reactionVideoId ?? null;
@@ -425,6 +428,7 @@ export async function getPlaylistBySlug(slug) {
       thumbnailUrl: firstItemThumbnail,
       firstOriginalVideoId,
       firstReactionVideoTitle,
+      firstCustomReactionTitle,
       firstReactionDescription,
       firstReactionThumbnailUrl,
       firstReactionVideoId,
