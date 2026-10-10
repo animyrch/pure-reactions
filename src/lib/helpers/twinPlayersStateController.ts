@@ -21,6 +21,7 @@ export type TwinPlayersState = {
   reactionVideoAuthor?: string;
   reactorDisplayName?: string;
   reactionVideoTitle?: string;
+  customReactionTitle: string;
   reactionVideoDescription?: string;
   originalVideoAuthor?: string;
   originalVideoAuthorUrl?: string;
@@ -100,6 +101,7 @@ type TwinPlayersContentState = Pick<
   | 'reactionVideoAuthor'
   | 'reactorDisplayName'
   | 'reactionVideoTitle'
+  | 'customReactionTitle'
   | 'reactionVideoDescription'
   | 'originalVideoAuthor'
   | 'originalVideoAuthorUrl'
@@ -211,6 +213,7 @@ const contentKeys = [
   'reactionVideoAuthor',
   'reactorDisplayName',
   'reactionVideoTitle',
+  'customReactionTitle',
   'reactionVideoDescription',
   'originalVideoAuthor',
   'originalVideoAuthorUrl',
@@ -357,6 +360,7 @@ export function createTwinPlayersStateController({
     reactionVideoAuthor: undefined,
     reactorDisplayName: undefined,
     reactionVideoTitle: undefined,
+    customReactionTitle: '',
     reactionVideoDescription: undefined,
     originalVideoDescription: undefined,
     originalVideoId: undefined,

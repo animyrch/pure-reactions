@@ -7,6 +7,7 @@
     import { getReactionsByIds, getPlaylist, getQueueBySlug, updateQueueDocument } from '$lib/helpers/firebase';
     import { handlePrivateRoute } from '$lib/helpers/routing';
     import { readQueueProgress } from '$lib/helpers/queueProgress';
+    import { reactionThumbnailSourceTitle } from '$lib/helpers/reactionListItem';
 
     export let data;
 
@@ -371,7 +372,7 @@
                                         class="queue-item"
                                         href={buildQueueWatchUrl(entry.reactionId, entry.index, { autoplay: true, fullscreen: false })}
                                         aria-current={entry.reactionId === currentSetReactionId ? 'true' : undefined}
-                                        aria-label={`Watch ${entry.reaction?.data?.reactionVideoTitle || entry.reaction?.data?.originalVideoTitle || 'reaction'} (item ${entry.index + 1} of ${queueEntries.length})`}
+                                        aria-label={`Watch ${reactionThumbnailSourceTitle({ customReactionTitle: entry.reaction?.data?.customReactionTitle, reactionVideoTitle: entry.reaction?.data?.reactionVideoTitle }) || entry.reaction?.data?.originalVideoTitle || 'reaction'} (item ${entry.index + 1} of ${queueEntries.length})`}
                                     >
                                         <QueueBinomeCard
                                             linkless

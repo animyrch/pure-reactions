@@ -14,6 +14,7 @@
     const reactionVideoId = reaction?.data?.reactionVideoId;
     const originalVideoId = reaction?.data?.originalVideoId;
     const reactionVideoTitle = reaction?.data?.reactionVideoTitle;
+    const customReactionTitle = reaction?.data?.customReactionTitle;
     const reactionVideoAuthor = reaction?.data?.reactionVideoAuthor;
     const reactorDisplayName = reaction?.data?.reactorDisplayName;
     const originalVideoTitle = reaction?.data?.originalVideoTitle;
@@ -27,6 +28,7 @@
         {reactionVideoId}
         {originalVideoId}
         {reactionVideoTitle}
+        {customReactionTitle}
         {originalVideoTitle}
         {reactionVideoAuthor}
         {reactorDisplayName}

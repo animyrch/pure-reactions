@@ -13,6 +13,7 @@
   export let onNext = null;
   export let nextDisabled = false;
   export let nextAriaLabel = "Next reaction";
+  export let itemType = "reaction";
 
   // ReactionStage forwards { isPlaying }. handlePlayStateChange only pauses when that flag is false.
   const handlePlayStateChanged = (event) => {
@@ -75,6 +76,7 @@
     onTouchStart={onTouchStart}
     onTouchEnd={onTouchEnd}
     {onNext}
+    {itemType}
     {nextDisabled}
     {nextAriaLabel}
   />

@@ -1,4 +1,5 @@
 <script>
+    import { page } from "$app/stores";
     import ReactionStage from "$lib/components/reaction/ReactionStage.svelte";
 
     // Mock props
@@ -10,6 +11,9 @@
     let bothVideosStarted = true;
     let reactionCurrentTime = 30;
     let reactionDuration = 100;
+
+    $: itemType = $page.url.searchParams.get("itemType") || "reaction";
+    $: remixMode = $page.url.searchParams.get("remix") === "1";
 </script>
 
 <div class="test-container" style="background: #333; min-height: 100vh;">
@@ -30,12 +34,14 @@
         <ReactionStage
             bind:isFullscreen
             bind:isControlSurfaceVisible
-            {isReactionMissing}
+            isReactionMissing={remixMode || isReactionMissing}
+            {remixMode}
             {playerOriginal}
             {playerReaction}
             {bothVideosStarted}
             {reactionCurrentTime}
             {reactionDuration}
+            {itemType}
             alwaysShowMissingPlaceholder={true}
         />
     </div>

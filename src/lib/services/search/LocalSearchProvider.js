@@ -8,7 +8,7 @@ import { SearchProvider } from './SearchProvider.js';
  * Algolia credentials are absent (local / contributor mode).
  *
  * Records in the corpus must include an `objectID` field plus any
- * searchable reaction fields (reactionVideoTitle, originalVideoTitle, etc.).
+ * searchable reaction fields (customReactionTitle, reactionVideoTitle, originalVideoTitle, etc.).
  */
 export class LocalSearchProvider extends SearchProvider {
 	/**
@@ -101,6 +101,7 @@ export class LocalSearchProvider extends SearchProvider {
 	 */
 	_matches(record, query) {
 		const fields = [
+			record.customReactionTitle,
 			record.reactionVideoTitle,
 			record.originalVideoTitle,
 			record.reactionVideoAuthor,

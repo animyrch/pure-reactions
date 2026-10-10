@@ -12,6 +12,7 @@
   export let isPlaylist = false;
   export let reactionVideoId = "";
   export let reactionVideoTitle = "";
+  export let customReactionTitle = "";
   export let reactionVideoIdError = "";
   export let isSettingReactionVideoId = false;
   export let remixMode = false;
@@ -113,6 +114,7 @@
   };
 
   let reactionVideoIdValue = reactionVideoId ?? "";
+  let customReactionTitleValue = customReactionTitle ?? "";
   let offsetStartMinutesValue = "0";
   let offsetStartSecondsValue = "0";
   let reactionFinishMinutesValue = "0";
@@ -132,6 +134,7 @@
   };
 
   let lastReactionVideoIdProp = reactionVideoId;
+  let lastCustomReactionTitleProp = customReactionTitle;
   let lastOffsetStartTimeProp = offsetStartTime;
   let lastIntroBufferTimeProp = introBufferTime;
   let lastReactionFinishTimeProp = reactionFinishTime;
@@ -144,6 +147,11 @@
   $: if (reactionVideoId !== lastReactionVideoIdProp) {
     lastReactionVideoIdProp = reactionVideoId;
     reactionVideoIdValue = reactionVideoId ?? "";
+  }
+
+  $: if (!isSavingGeneral && customReactionTitle !== lastCustomReactionTitleProp) {
+    lastCustomReactionTitleProp = customReactionTitle;
+    customReactionTitleValue = customReactionTitle ?? "";
   }
 
   const syncOffsetStartInputs = (value) => {
@@ -275,6 +283,10 @@
     Math.abs(nextReactionFinishTimeSeconds - effectiveStoredFinishSeconds) >
       0.0001;
 
+  $: trimmedCustomReactionTitle = (customReactionTitleValue ?? "").trim();
+  $: storedCustomReactionTitle = (customReactionTitle ?? "").trim();
+  $: isCustomReactionTitleDirty =
+    trimmedCustomReactionTitle !== storedCustomReactionTitle;
   $: isSoundLevelDirty =
     Number.isFinite(soundLevelValue) && soundLevelValue !== soundLevel;
   $: overlayWidthClamped = clampOverlayWidth(overlayWidthValue);
@@ -286,6 +298,7 @@
   $: isCornerDirty = !remixMode && cornerDraft !== (fullscreenOverlayCorner || "top-right");
   $: isMuteDirty = !remixMode && muteDraft !== Boolean(isReactionMuteModeEnabled);
   $: isGeneralDirty =
+    isCustomReactionTitleDirty ||
     isOffsetStartDirty ||
     isReactionFinishTimeDirty ||
     isIntroBufferTimeDirty ||
@@ -340,6 +353,7 @@
 
   export function discardGeneralSettings() {
     if (isSavingGeneral) return;
+    customReactionTitleValue = customReactionTitle ?? "";
     syncOffsetStartInputs(offsetStartTime);
     syncReactionFinishInputs(reactionFinishTime);
     introBufferTimeValue = introBufferTime?.toString?.() ?? "";
@@ -353,6 +367,9 @@
   export async function saveGeneralSettings() {
     if (!isGeneralDirty || !isGeneralValid || isSavingGeneral) return;
     const patch = {
+      ...(isCustomReactionTitleDirty
+        ? { customReactionTitle: trimmedCustomReactionTitle }
+        : {}),
       ...(isOffsetStartDirty
         ? { offsetStartTime: nextOffsetStartTimeSeconds }
         : {}),
@@ -681,6 +698,29 @@
           </span>
         </div>
       {/if}
+
+      <div class="mt-3 border-t border-border-subtle pt-3">
+        <label for="custom-reaction-title" class="text-xs font-medium text-text-secondary">Reaction title</label>
+        <input
+          id="custom-reaction-title"
+          class="mt-1.5 h-9 w-full rounded-lg border border-border-subtle bg-background/80 px-2.5 text-sm text-text-primary placeholder:text-text-muted focus-visible:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:text-text-muted"
+          type="text"
+          maxlength="200"
+          placeholder="Optional title for reaction cards"
+          aria-label="Reaction title"
+          bind:value={customReactionTitleValue}
+          disabled={!isEditModeOn}
+          on:keydown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              saveGeneralSettings();
+            }
+          }}
+        />
+        <p class="mt-1.5 text-[11px] leading-snug text-text-muted">
+          Shown on reaction cards when filled in. Leave blank to keep the YouTube title.
+        </p>
+      </div>
 
       <div class="mt-3 border-t border-border-subtle pt-3">
         <div class="flex items-center justify-between gap-3">

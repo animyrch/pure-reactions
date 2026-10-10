@@ -122,6 +122,11 @@ export function deriveTwinPlayersReactionData({
   const resolvedReactorDisplayName =
     rawReactorDisplayName || (reactionData?.reactorId === viewerUserId ? normalizedViewerDisplayName : '');
 
+  const customReactionTitle =
+    typeof reactionData?.customReactionTitle === 'string'
+      ? reactionData.customReactionTitle.trim()
+      : '';
+
   const reactionVideoDescription =
     (typeof reactionData?.reactionVideoDescription === 'string'
       ? reactionData.reactionVideoDescription.trim()
@@ -169,6 +174,7 @@ export function deriveTwinPlayersReactionData({
     currentPlaybackRate,
     resolvedReactorId,
     resolvedReactorDisplayName: resolvedReactorDisplayName || undefined,
+    customReactionTitle,
     reactionVideoDescription,
     normalizedOriginalMetadata,
     originalVideoPlatform,

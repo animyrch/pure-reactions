@@ -136,6 +136,7 @@ export function buildTwinPlayersInPlaceStatePatch({
     reactionVideoAuthor,
     reactorDisplayName: derived.resolvedReactorDisplayName,
     reactionVideoTitle,
+    customReactionTitle: derived.customReactionTitle,
     youtubePlaylistId: derived.youtubePlaylistId,
     offsetStartTime: derived.offsetStartTime,
     reactionFinishTime: derived.reactionFinishTime,

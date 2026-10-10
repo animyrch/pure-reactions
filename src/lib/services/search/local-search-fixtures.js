@@ -9,6 +9,7 @@
  * Keep this list in sync with tests/fixtures/reactions/local-dev-seed.json.
  * `local-moment-reaction-001` is an extra stand-in so local search can show a
  * published moment reaction card without Algolia. It is not in that seed.
+ * `local-remix-reaction-001` is the same kind of stand-in for a remix card.
  */
 
 /** @type {Array<Object>} */
@@ -44,6 +45,24 @@ export const LOCAL_SEARCH_FIXTURES = [
 		isPublished: true,
 		createdAt: 1735768800000,
 		updatedAt: 1735768800000,
+	},
+	{
+		objectID: 'local-remix-reaction-001',
+		reactionVideoId: '',
+		originalVideoId: 'qg6b4b0FAB4',
+		reactionVideoTitle: '',
+		customReactionTitle: 'Remix of Sample Original Video B',
+		originalVideoTitle: 'Sample Original Video B — Play Trigger Demo',
+		reactionVideoAuthor: '',
+		originalVideoAuthor: '@testCreatorB',
+		reactorDisplayName: 'Remix Reactor',
+		playlistId: '',
+		isMomentReaction: false,
+		momentId: '',
+		remixMode: true,
+		isPublished: true,
+		createdAt: 1735780000000,
+		updatedAt: 1735780000000,
 	},
 	{
 		objectID: 'local-sample-002',

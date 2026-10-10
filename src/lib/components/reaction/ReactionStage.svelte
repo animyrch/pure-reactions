@@ -1,6 +1,7 @@
 <script>
     import ControlDock from "$lib/components/reaction/ControlDock.svelte";
     import MissingReactionPlaceholder from "$lib/components/reaction/MissingReactionPlaceholder.svelte";
+    import { PLAYBACK_FRAME_COLORS, playbackDockBorderColor } from "$lib/helpers/reactionListItem";
     import { createEventDispatcher, onMount, onDestroy } from "svelte";
 
     export let isFullscreen = false;
@@ -39,6 +40,9 @@
 
     /** Scale the players to fill a parent that is half the viewport tall. */
     export let limitToHalfScreen = false;
+
+    /** Thumbnail type for this watch context: reaction, moment, playlist, queue, or remix. */
+    export let itemType = "reaction";
 
     export let overlayRef;
 
@@ -198,6 +202,7 @@
             : "top-right";
     $: overlayCornerClass = overlayPositionClasses[normalizedOverlayCorner];
     $: isReactionPrimary = !remixMode && fullscreenPrimaryVideo === "reaction";
+    $: dockBorderColor = playbackDockBorderColor(PLAYBACK_FRAME_COLORS[itemType] || "");
     $: isDesktopOverlay = remixMode || (isDesktop && !isMobileLandscape && !isFullscreen && bothVideosStarted);
     $: isOverlayLayout = remixMode || isFullscreen || (isMobileLandscape && bothVideosStarted) || isDesktopOverlay;
     $: dockCurrentTime = remixMode ? originalCurrentTime : reactionCurrentTime;
@@ -348,7 +353,7 @@
                 class={isOverlayLayout
                     ? isOriginalOverlay
                         ? "relative w-full aspect-cinematic overflow-hidden rounded-lg bg-black/80 shadow-elevated"
-                        : "h-full w-full"
+                        : "relative h-full w-full"
                     : halfScreen
                     ? "half-frame"
                     : "relative w-full h-[56.25vw] md:h-auto md:aspect-[16/9]"}
@@ -390,8 +395,8 @@
             {/if}
         </div>
 
-        <!-- Reaction video player container -->
-        {#if !isReactionMissing}
+        <!-- Reaction video player container. A remix never has one. -->
+        {#if !remixMode && !isReactionMissing}
             <div
                 data-stage="reaction"
                 data-stage-role={isOverlayLayout
@@ -409,6 +414,7 @@
                 style={isReactionOverlay ? "width: var(--overlay-width);" : ""}
             >
                 <div
+                    data-stage="reaction-frame"
                     class={isOverlayLayout
                         ? isReactionOverlay
                             ? "relative aspect-cinematic overflow-hidden rounded-lg bg-black/80 shadow-elevated"
@@ -468,6 +474,7 @@
             seekMin={dockSeekMin}
             seekMax={dockSeekMax}
             {remixMode}
+            {dockBorderColor}
             onSeek={handleSeek}
         />
     {/if}

@@ -52,6 +52,8 @@ describe('remix editor settings', () => {
     expect(body).toContain('4. Player layout');
     expect(body).toContain('Update video');
     expect(body.indexOf('Reaction video URL or ID')).toBeLessThan(body.indexOf('Remix mode'));
+    expect(body).toContain('aria-label="Reaction title"');
+    expect(body).toContain('Leave blank to keep the YouTube title.');
     const input = body.match(/<input[^>]*aria-label="Reaction video URL or ID"[^>]*>/)?.[0] ?? '';
     expect(input).not.toMatch(/(?:^|\s)disabled(?:[=/\s>]|$)/);
   });

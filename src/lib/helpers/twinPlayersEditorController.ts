@@ -21,6 +21,7 @@ import {
 import type { TwinPlayersState } from '$lib/helpers/twinPlayersStateController';
 import { downloadBasicVideoDetails, parseYouTubeUrl } from '$lib/helpers/youtube';
 import { validateMomentReaction } from '$lib/helpers/momentReactionValidation';
+import { canPublishReactionMedia } from '$lib/helpers/reactionPublish';
 import { showToast } from '$lib/stores/toast';
 import { TOASTS } from '$lib/constants/toasts';
 
@@ -388,6 +389,15 @@ export function createTwinPlayersEditorController({
 
     await updateFirebaseDocument({ reactionFinishTime: finalValue });
     updateState({ reactionFinishTime: finalValue });
+  };
+
+  const setCustomReactionTitle = async (value: string) => {
+    const next = typeof value === 'string' ? value.trim() : '';
+    const didUpdate = await updateFirebaseDocument({ customReactionTitle: next });
+    if (!didUpdate) {
+      throw new Error('Failed to update reaction title');
+    }
+    updateState({ customReactionTitle: next });
   };
 
   const setSoundLevel = async (value: number) => {
@@ -917,6 +927,18 @@ export function createTwinPlayersEditorController({
   const setIsPublished = async () => {
     const snapshot = getSnapshot();
 
+    if (
+      !canPublishReactionMedia({
+        remixMode: snapshot.remixMode,
+        isReactionMissing: snapshot.isReactionMissing
+      })
+    ) {
+      if (typeof window !== 'undefined') {
+        showToast("Can't publish: missing reaction video", TOASTS.WARNING);
+      }
+      return;
+    }
+
     if (snapshot.isMomentReaction) {
       const momentTime = Number(snapshot.momentOriginalTimeSeconds);
       const validation = validateMomentReaction({
@@ -1010,6 +1032,7 @@ export function createTwinPlayersEditorController({
     setOffsetStartTime,
     setIntroBufferTime,
     setReactionFinishTime,
+    setCustomReactionTitle,
     setSoundLevel,
     setReactionMuteMode,
     setFullscreenPrimaryVideo,

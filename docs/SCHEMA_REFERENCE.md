@@ -15,7 +15,8 @@ The main collection for reaction videos.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `reactionVideoId` | string | Yes | YouTube video ID of the reaction |
-| `reactionVideoTitle` | string | Yes | Title of the reaction video |
+| `reactionVideoTitle` | string | Yes | Title of the reaction video, copied from YouTube |
+| `customReactionTitle` | string | No | Optional card title. Empty or missing keeps `reactionVideoTitle` on thumbnails. YouTube sync does not write this field |
 | `reactionVideoAuthor` | string | No | YouTube channel handle for the reaction video (e.g., `@channel`) |
 | `originalVideoId` | string | Yes | Platform-native ID of the original content (YouTube ID or TikTok video ID) |
 | `originalVideoTitle` | string | Yes | Title of the original video |
@@ -265,12 +266,14 @@ Minimal, cost-optimized search index for reactions.
 |-------|------|------------|-------------|-------------|
 | `objectID` | string | No | Yes | Firestore document ID |
 | `reactionVideoId` | string | No | Yes | YouTube video ID (reaction) |
+| `customReactionTitle` | string | Yes | Yes | Optional card title. Search cards use it when it is filled in |
 | `reactionVideoTitle` | string | Yes | Yes | Title of reaction video (primary search field) |
 | `originalVideoId` | string | No | Yes | YouTube video ID (original) |
 | `originalVideoTitle` | string | Yes | Yes | Title of original video (secondary search field) |
 | `playlistId` | string | No | Yes | Playlist document ID when the reaction belongs to a playlist, used to preserve playlist navigation semantics in search results |
 | `isMomentReaction` | boolean | No | Yes | True when the published reaction is a moment reaction, so search cards can use moment theming instead of a normal reaction card |
 | `momentId` | string | No | Yes | Parent moment document ID. Search and home cards link moment reactions to `/moments/{momentId}/reaction/{reactionId}` |
+| `remixMode` | boolean | No | Yes | True when the published reaction is a remix. Search and home cards badge it and keep the link on `/reaction/{reactionId}` |
 | `reactionVideoAuthor` | string | Yes | Yes | Reactor's YouTube channel handle (tertiary search field) |
 | `tags` | array[string] | Yes | Yes | Categorization tags (filterable) |
 | `slug` | string | No | Yes | URL-friendly identifier |
@@ -279,10 +282,11 @@ Minimal, cost-optimized search index for reactions.
 
 #### Searchable Attributes (in priority order)
 
-1. `reactionVideoTitle` (highest priority)
-2. `originalVideoTitle`
-3. `reactionVideoAuthor`
-4. `tags`
+1. `customReactionTitle` (highest priority)
+2. `reactionVideoTitle`
+3. `originalVideoTitle`
+4. `reactionVideoAuthor`
+5. `tags`
 
 #### Attributes for Faceting
 
@@ -308,6 +312,8 @@ To minimize cost and payload size:
 `playlistId` is intentionally retained even though it is not searchable because shared card components use it to route playlist-backed reactions into the playlist playback experience.
 
 `isMomentReaction` and `momentId` are retained for the same reason. Published moment reactions stay in the reactions index, and shared cards use these fields to badge them as moments and open `/moments/{momentId}/reaction/{reactionId}` instead of `/reaction/{reactionId}`.
+
+`remixMode` is retained so shared cards can badge a remix and outline it in teal. A remix still opens `/reaction/{reactionId}`. Moment and playlist identity stay ahead of remix when those fields are also set. Existing hits stay ordinary reactions until the next reactions reindex.
 
 #### Indexing Rules
 
@@ -503,6 +509,8 @@ const docRef = await addDoc(collection(db, 'reactions'), {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.12 | 2026-10-10 | Reactions index retrieves `remixMode` so remix cards can use the teal REMIX badge. Remixes stay on `/reaction/{reactionId}` |
+| 1.11 | 2026-10-10 | Added optional `customReactionTitle` on reactions. Thumbnails use it only when filled in. The YouTube `reactionVideoTitle` is unchanged. The reactions index retrieves and searches the custom title |
 | 1.10 | 2026-09-23 | Reactions index now retrieves `isMomentReaction` and `momentId` so published moment reactions can be badged and linked to `/moments/{momentId}/reaction/{reactionId}` |
 | 1.9 | 2026-06-10 | Added `originalVideoSlug` field to `reactions` and `moments` collections for SEO-friendly canonical URLs (format: `{title-slugified}-{author-slugified}`) |
 | 1.8 | 2026-05-22 | Added `moments` collection, moment reaction fields on `reactions`, discovery routes (`/moments`), and Algolia moments index env `PUBLIC_ALGOLIA_MOMENTS_INDEX` |

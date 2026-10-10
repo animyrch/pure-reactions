@@ -20,6 +20,7 @@
         FilePenOutline,
     } from "flowbite-svelte-icons";
     import SubtleLoader from "$lib/components/design-system/SubtleLoader.svelte";
+    import { canPublishReactionMedia } from "$lib/helpers/reactionPublish";
 
     let isLoading = true;
     let playlistId = "";
@@ -170,7 +171,10 @@
     }
 
     const canPublishReaction = (reaction) =>
-        Boolean(reaction?.reactionVideoId) || reaction?.remixMode === true;
+        canPublishReactionMedia({
+            remixMode: reaction?.remixMode,
+            reactionVideoId: reaction?.reactionVideoId,
+        });
 
     async function setReactionPublishState(reactionId, nextIsPublished) {
         if (publishingReactionIds.has(reactionId)) return;
@@ -453,14 +457,14 @@
                                         {/if}
                                     </td>
                                     <td class="px-6 py-4">
-                                        {#if reaction.reactionVideoId}
+                                        {#if canPublishReaction(reaction)}
                                             <div
                                                 class="flex items-center gap-1.5 text-emerald-400"
                                             >
                                                 <CheckCircleSolid
                                                     class="h-4 w-4"
                                                 />
-                                                <span>Ready</span>
+                                                <span>{reaction.remixMode ? "Remix" : "Ready"}</span>
                                             </div>
                                         {:else}
                                             <div
@@ -509,7 +513,7 @@
                                                             reaction.id,
                                                             true,
                                                         )}
-                                                    disabled={!reaction.reactionVideoId}
+                                                    disabled={!canPublishReaction(reaction)}
                                                     class="rounded-lg bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-500/20 disabled:opacity-50 disabled:hover:bg-emerald-500/10"
                                                 >
                                                     Publish

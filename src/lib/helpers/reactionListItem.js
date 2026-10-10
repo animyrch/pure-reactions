@@ -1,5 +1,14 @@
 const trimmedString = (value) => (typeof value === 'string' ? value.trim() : '');
 
+/**
+ * Card title source. A filled-in custom title wins. An empty custom title
+ * leaves the YouTube reaction title untouched, including when it is missing.
+ */
+export const reactionThumbnailSourceTitle = ({
+    customReactionTitle,
+    reactionVideoTitle
+} = {}) => trimmedString(customReactionTitle) || reactionVideoTitle;
+
 export const momentIdFromReactionData = (data) => trimmedString(data?.momentId);
 
 /**
@@ -8,6 +17,9 @@ export const momentIdFromReactionData = (data) => trimmedString(data?.momentId);
  */
 export const isMomentReactionData = (data) =>
     data?.isMomentReaction === true && momentIdFromReactionData(data).length > 0;
+
+/** A remix plays the original only. The flag is stored on the reaction document. */
+export const isRemixReactionData = (data) => data?.remixMode === true;
 
 export const resolveReactionListItemType = (reaction) => {
     if (reaction?.type === 'queue') {
@@ -19,7 +31,49 @@ export const resolveReactionListItemType = (reaction) => {
     if (trimmedString(reaction?.data?.playlistId)) {
         return 'playlist';
     }
+    if (isRemixReactionData(reaction?.data)) {
+        return 'remix';
+    }
     return reaction?.type || 'reaction';
+};
+
+/**
+ * Accent hue for the playback control dock.
+ * Moment and playlist routes keep their own color. On `/reaction`, a moment
+ * reaction stays a moment, a playlist query stays a playlist, a remix stays
+ * a remix, and a saved queue playthrough marks a plain reaction as a queue.
+ * Ad-hoc queues do not. A standalone reaction has no accent.
+ * Hues match the thumbnail card borders in ReactionThumbnail.svelte.
+ * The dock draws a 1px border from `playbackDockBorderColor`.
+ */
+export const PLAYBACK_FRAME_COLORS = {
+    queue: 'rgba(99, 102, 241, 0.95)',
+    playlist: 'rgba(244, 114, 182, 0.95)',
+    moment: 'rgba(251, 191, 36, 0.95)',
+    remix: 'rgba(45, 212, 191, 0.95)'
+};
+
+/** Same hue as the playback accent, at a lower opacity for a 1px dock border. */
+export const playbackDockBorderColor = (color) => {
+    if (typeof color !== 'string' || !color) return '';
+    return color.replace(/[\d.]+\)$/, '0.45)');
+};
+
+export const resolvePlaybackFrameKind = ({
+    routeKind = 'reaction',
+    queueSlug = '',
+    playlistId = '',
+    isMomentReaction = false,
+    momentId = '',
+    remixMode = false
+} = {}) => {
+    if (routeKind === 'moment') return 'moment';
+    if (routeKind === 'playlist') return 'playlist';
+    if (isMomentReactionData({ isMomentReaction, momentId })) return 'moment';
+    if (trimmedString(playlistId)) return 'playlist';
+    if (remixMode === true) return 'remix';
+    if (trimmedString(queueSlug)) return 'queue';
+    return 'reaction';
 };
 
 export const buildReactionCardHref = ({

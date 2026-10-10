@@ -16,6 +16,7 @@ export function syncMomentReactionDial(reactionDial, {
   canShowCloseEditModeButton = false,
   isPublished = false,
   isReactionMissing = false,
+  remixMode = false,
   isFullscreen = false,
   handlers = {}
 } = {}) {
@@ -27,6 +28,7 @@ export function syncMomentReactionDial(reactionDial, {
     canShowCloseEditModeButton,
     isPublished,
     isReactionMissing,
+    remixMode,
     isFullscreen,
     canShowEditPlaylistButton: false,
     handlers: {

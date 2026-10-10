@@ -16,6 +16,7 @@
   import { showToast } from "$lib/stores/toast";
   import { TOASTS } from "$lib/constants/toasts";
   import { adHocQueueHasNext, readAdHocQueueFromUrl } from "$lib/helpers/adHocQueue";
+  import { resolvePlaybackFrameKind } from "$lib/helpers/reactionListItem";
 
   export let data;
 
@@ -113,6 +114,13 @@
     $state.queueSlug || (adHocQueue && adHocQueue.length),
   );
   $: showQueueNext = adHocHasNext || (Boolean($state.queueSlug) && (queueHasNext || queueHasNextLoading));
+  $: playbackFrameKind = resolvePlaybackFrameKind({
+    queueSlug: $state.queueSlug,
+    playlistId: $state.playlistDocumentId,
+    isMomentReaction: $state.isMomentReaction,
+    momentId: $state.momentId,
+    remixMode: $state.remixMode,
+  });
   $: sequenceOnNext = showQueueNext
     ? handleGoToNextInQueue
     : !inSequenceQueue && $state.hasNextIndexInPlaylist
@@ -181,6 +189,7 @@
       canShowCloseEditModeButton: $state.canShowCloseEditModeButton,
       isPublished: $state.isPublished,
       isReactionMissing: $state.isReactionMissing,
+      remixMode: $state.remixMode,
       isFullscreen: $state.isFullscreen,
       canShowEditPlaylistButton:
         Boolean($state.playlistDocumentId) && isCurrentReactionCreator,
@@ -267,6 +276,7 @@
     bothVideosStarted={$state.bothVideosStarted}
     isPlaylist={Boolean($state.playlistDocumentId)}
     isPlaylistAutoPlay={$state.isPlaylistAutoPlay}
+    itemType={playbackFrameKind}
     onNext={sequenceOnNext}
     nextDisabled={Boolean($state.queueSlug) && !adHocHasNext && queueHasNextLoading}
     nextAriaLabel={sequenceNextAriaLabel}

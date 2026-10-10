@@ -17,9 +17,11 @@
 
   let hasOtherReactions = false;
 
+  $: isRemix = reactionState?.remixMode === true;
   $: showOtherReactionsColumn =
     includeOtherReactions &&
     !isEditModeOn &&
+    !isRemix &&
     reactionState?.originalVideoId &&
     reactionState?.reactionVideoId;
   $: placeSimilarAside = showOtherReactionsColumn && hasOtherReactions;
@@ -46,6 +48,7 @@
         isUsersOwnVideo={reactionState?.isUsersOwnVideo}
         reactorId={reactionState?.reactorId}
         reactorDisplayName={reactionState?.reactorDisplayName}
+        remixMode={isRemix}
       />
       <div class="mt-3 sm:mt-4">
         <AttributionBlock
@@ -88,9 +91,10 @@
   {#if includeDiscussion && !isEditModeOn}
     <div class="min-w-0 {placeSimilarAside ? 'lg:col-start-1 lg:row-start-2' : ''}">
       <YouTubeDiscussion
-        reactionVideoId={reactionState?.reactionVideoId}
+        reactionVideoId={isRemix ? '' : reactionState?.reactionVideoId}
         originalVideoId={reactionState?.originalVideoId}
         originalVideoPlatform={reactionState?.originalVideoPlatform}
+        remixMode={isRemix}
       />
     </div>
   {/if}

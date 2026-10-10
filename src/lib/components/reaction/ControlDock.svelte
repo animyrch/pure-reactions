@@ -24,6 +24,7 @@
   export let seekMin = 0;
   export let seekMax;
   export let remixMode = false;
+  export let dockBorderColor = "";
   export let onSeek = (_time) => {};
 </script>
 
@@ -48,6 +49,7 @@
       {seekMin}
       {seekMax}
       {remixMode}
+      {dockBorderColor}
       on:playStateChanged={onPlayStateChanged}
       on:syncVideos={onSyncVideos}
       on:toggleAutoPlaylist={onToggleAutoPlaylist}

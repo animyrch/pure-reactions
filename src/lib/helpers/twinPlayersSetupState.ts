@@ -6,6 +6,7 @@ type BuildTwinPlayersSetupStatePatchParams = {
   derived: TwinPlayersDerivedReactionData;
   reactionVideoAuthor?: string;
   reactionVideoTitle?: string;
+  customReactionTitle?: string;
   reactionVideoDescription?: string;
   nextPlayerOriginal: any;
   nextPlayerReaction: any;
@@ -43,6 +44,7 @@ export function buildTwinPlayersSetupStatePatch({
     reactionVideoAuthor,
     reactorDisplayName: derived.resolvedReactorDisplayName,
     reactionVideoTitle,
+    customReactionTitle: derived.customReactionTitle,
     reactionVideoDescription,
     originalVideoAuthor: derived.normalizedOriginalMetadata.author,
     originalVideoAuthorUrl: derived.normalizedOriginalMetadata.authorUrl,

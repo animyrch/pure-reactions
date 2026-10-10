@@ -47,6 +47,18 @@ describe('resolveDiscussionSections', () => {
     expect(sections[0].videoId).toBe('abc123');
   });
 
+  it('returns only the original section for a remix, even with a stored reaction video id', () => {
+    const { sections } = resolveDiscussionSections({
+      reactionVideoId: 'reactRemixWatch01',
+      originalVideoId: 'origRemixWatch01',
+      originalVideoPlatform: 'youtube',
+      remixMode: true,
+    });
+    expect(sections).toHaveLength(1);
+    expect(sections[0].sourceType).toBe('original');
+    expect(sections[0].videoId).toBe('origRemixWatch01');
+  });
+
   it('returns only original section when reaction video ID is missing', () => {
     const { sections } = resolveDiscussionSections({
       reactionVideoId: '',

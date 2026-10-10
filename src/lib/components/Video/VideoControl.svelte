@@ -30,6 +30,8 @@
     export let seekMin = 0;
     export let seekMax;
     export let remixMode = false;
+    /** 1px type accent for queue, playlist, moment, and remix playback. */
+    export let dockBorderColor = "";
 
     let isPlaying = true;
     let isInteracting = false;
@@ -363,6 +365,7 @@
         isDragging ||
         isHoveringControls;
     $: controlsClasses = `${isVisible ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`;
+    $: dockAccentStyle = dockBorderColor ? `border-color: ${dockBorderColor}` : undefined;
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
@@ -382,8 +385,10 @@
     {#if !bothVideosStarted}
         <div
             class="click-gate-prompt w-full max-w-xl rounded-2xl border border-border-subtle/80 bg-elevated/95 px-5 py-3.5 text-center shadow-surface backdrop-blur-sm sm:px-8 sm:py-4"
+            style={dockAccentStyle}
             role="status"
             data-testid="click-gate-prompt"
+            data-dock-type-accent={dockBorderColor || undefined}
         >
             <p
                 class="flex items-center justify-center gap-2.5 text-sm font-semibold text-text-primary sm:text-base"
@@ -419,8 +424,10 @@
     {:else}
         <div
             class={`controls-surface flex w-full flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-3xl border border-border-subtle/70 bg-surface/70 px-3 py-2 backdrop-blur-sm transition-opacity duration-subtle ease-cinematic sm:flex-nowrap sm:rounded-full sm:px-4 ${controlsClasses}`}
+            style={dockAccentStyle}
             role="toolbar"
             aria-label="Reaction playback controls"
+            data-dock-type-accent={dockBorderColor || undefined}
             tabindex="0"
             on:mouseenter={handleControlsMouseEnter}
             on:mouseleave={handleControlsMouseLeave}

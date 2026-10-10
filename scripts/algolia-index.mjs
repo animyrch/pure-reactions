@@ -138,12 +138,14 @@ function reactionToAlgoliaRecord(docId, data) {
     objectID: docId,
     // Essential metadata
     reactionVideoId: data.reactionVideoId || '',
+    customReactionTitle: data.customReactionTitle || '',
     reactionVideoTitle: data.reactionVideoTitle || '',
     originalVideoId: data.originalVideoId || '',
     originalVideoTitle: data.originalVideoTitle || '',
     playlistId: data.playlistId || '',
     isMomentReaction: data.isMomentReaction === true,
     momentId: typeof data.momentId === 'string' ? data.momentId.trim() : '',
+    remixMode: data.remixMode === true,
     
     // Reactor/channel information
     reactionVideoAuthor: data.reactionVideoAuthor || '',
@@ -272,6 +274,7 @@ async function indexReactions() {
   await algoliaIndex.setSettings({
     // Searchable attributes in order of importance
     searchableAttributes: [
+      'customReactionTitle',
       'reactionVideoTitle',
       'originalVideoTitle',
       'reactionVideoAuthor',
@@ -280,12 +283,14 @@ async function indexReactions() {
     // Attributes to retrieve in search results
     attributesToRetrieve: [
       'reactionVideoId',
+      'customReactionTitle',
       'reactionVideoTitle',
       'originalVideoId',
       'originalVideoTitle',
       'playlistId',
       'isMomentReaction',
       'momentId',
+      'remixMode',
       'reactionVideoAuthor',
       'tags',
       'slug',
@@ -307,6 +312,7 @@ async function indexReactions() {
     minWordSizefor2Typos: 8,
     // Highlighting
     attributesToHighlight: [
+      'customReactionTitle',
       'reactionVideoTitle',
       'originalVideoTitle',
       'reactionVideoAuthor'

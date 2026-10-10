@@ -45,6 +45,9 @@ test.describe('Remix mode', () => {
 
     await expect(page.getByText(/reaction video id is missing/i)).toHaveCount(0);
     await expect(page.locator('[data-stage="reaction"]')).toHaveCount(0);
+    await expect(page.locator('[data-details-layout="original"]')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Reaction video' })).toHaveCount(0);
+    await expect(page.locator('[data-testid="youtube-discussion-reaction"]')).toHaveCount(0);
     await expect(page.locator('[data-stage-role="overlay"]')).toHaveCount(0);
     await expect(page.locator('[data-stage="original"]')).toHaveAttribute('data-stage-role', 'primary');
     await expect(page.locator('[data-fullscreen-primary="original"]')).toBeVisible();
@@ -101,6 +104,10 @@ test.describe('Remix mode', () => {
     await expect(page.locator('[data-fullscreen-primary="original"]')).toBeVisible();
     await expect(page.getByTestId('click-gate-prompt')).toContainText('Click the original video to start playback');
     await expect(page.locator('[data-stage="reaction"]')).toHaveCount(0);
+    await expect(page.locator('[data-details-layout="original"]')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Remix watch reaction' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Reaction video' })).toHaveCount(0);
+    await expect(page.locator('[data-testid="youtube-discussion-reaction"]')).toHaveCount(0);
 
     await startOriginalOnly(page);
 

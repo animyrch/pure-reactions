@@ -162,6 +162,7 @@
       canShowCloseEditModeButton: false,
       isPublished: $state.isPublished,
       isReactionMissing: $state.isReactionMissing,
+      remixMode: $state.remixMode,
       isFullscreen: $state.isFullscreen,
       canShowEditPlaylistButton: Boolean(
         playlistSlug && isCurrentReactionCreator,
@@ -250,6 +251,7 @@
     bothVideosStarted={$state.bothVideosStarted}
     isPlaylist={true}
     isPlaylistAutoPlay={$state.isPlaylistAutoPlay}
+    itemType="playlist"
     onNext={$state.hasNextIndexInPlaylist ? actions.loadNextReactionInPlaylist : null}
     nextAriaLabel="Next in playlist"
     reactionCurrentTime={$state.reactionCurrentTime}

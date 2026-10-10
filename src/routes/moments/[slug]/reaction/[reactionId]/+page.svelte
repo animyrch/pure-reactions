@@ -186,6 +186,7 @@
       canShowCloseEditModeButton: $state.canShowCloseEditModeButton,
       isPublished: $state.isPublished,
       isReactionMissing: $state.isReactionMissing,
+      remixMode: $state.remixMode,
       isFullscreen: $state.isFullscreen,
       handlers: {
         enterEditMode: () => {
@@ -258,6 +259,7 @@
       onTouchEnd={handleTouchEnd}
       onNext={hasNextMomentReaction ? () => goToReactionIndex(currentIndex + 1) : null}
       nextAriaLabel="Next reaction"
+      itemType="moment"
     >
       <div class="mt-6 w-full">
         <ReactionDetailsSection

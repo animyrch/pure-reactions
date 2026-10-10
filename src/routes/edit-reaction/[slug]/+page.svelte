@@ -17,9 +17,18 @@
   import { reactionDial } from "$lib/stores/reactionDial";
   import { showToast } from "$lib/stores/toast";
   import { TOASTS } from "$lib/constants/toasts";
+  import { resolvePlaybackFrameKind } from "$lib/helpers/reactionListItem";
 
   export let data;
   const { state, actions } = useTwinPlayers({ data, enableAutoPlay: false });
+
+  $: playbackFrameKind = resolvePlaybackFrameKind({
+    queueSlug: $state.queueSlug,
+    playlistId: $state.playlistDocumentId,
+    isMomentReaction: $state.isMomentReaction,
+    momentId: $state.momentId,
+    remixMode: $state.remixMode,
+  });
 
   let overlayRef;
 
@@ -101,6 +110,9 @@
       }
       if ("reactionFinishTime" in patch) {
         await actions.setReactionFinishTime(patch.reactionFinishTime);
+      }
+      if ("customReactionTitle" in patch) {
+        await actions.setCustomReactionTitle(patch.customReactionTitle);
       }
       if ("introBufferTime" in patch) {
         await actions.setIntroBufferTime(patch.introBufferTime);
@@ -186,6 +198,7 @@
       canShowCloseEditModeButton: $state.isUsersOwnVideo && $state.isEditModeOn,
       isPublished: $state.isPublished,
       isReactionMissing: $state.isReactionMissing,
+      remixMode: $state.remixMode,
       isFullscreen: $state.isFullscreen,
       canShowEditPlaylistButton: false,
       handlers: {
@@ -221,6 +234,7 @@
       isPlaylist={Boolean($state.youtubePlaylistId)}
       reactionVideoId={$state.reactionVideoId}
       reactionVideoTitle={$state.reactionVideoTitle}
+      customReactionTitle={$state.customReactionTitle}
       {reactionVideoIdError}
       {isSettingReactionVideoId}
       remixMode={$state.remixMode}
@@ -341,6 +355,7 @@
         bothVideosStarted={$state.bothVideosStarted}
         isPlaylist={Boolean($state.playlistDocumentId)}
         isPlaylistAutoPlay={$state.isPlaylistAutoPlay}
+        itemType={playbackFrameKind}
         showAutoPlayButton={false}
         reactionCurrentTime={$state.reactionCurrentTime}
         reactionDuration={$state.reactionDuration}
@@ -407,6 +422,7 @@
         isUsersOwnVideo={$state.isUsersOwnVideo}
         reactorId={$state.reactorId}
         reactorDisplayName={$state.reactorDisplayName}
+        remixMode={$state.remixMode}
       />
 
       {#if $state.originalVideoId && $state.playlistDocumentId}

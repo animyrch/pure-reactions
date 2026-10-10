@@ -21,6 +21,7 @@
   import { showToast } from "$lib/stores/toast";
   import { TOASTS } from "$lib/constants/toasts";
   import { reactionDial } from "$lib/stores/reactionDial";
+  import { canPublishReactionMedia } from "$lib/helpers/reactionPublish";
 
   let isOpen = false;
   let isVisible = true;
@@ -159,6 +160,7 @@
       canShowCloseEditModeButton,
       isPublished,
       isReactionMissing,
+      remixMode,
       canShowEditPlaylistButton,
       handlers,
     } = state;
@@ -186,7 +188,7 @@
     if (
       isUsersOwnVideo &&
       !isPublished &&
-      !isReactionMissing &&
+      canPublishReactionMedia({ isReactionMissing, remixMode }) &&
       handlers.setIsPublished
     ) {
       itemList.push({
