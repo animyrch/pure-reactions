@@ -1,4 +1,5 @@
 <script>
+    import { page } from "$app/stores";
     import ReactionStage from "$lib/components/reaction/ReactionStage.svelte";
 
     // Mock props
@@ -10,6 +11,8 @@
     let bothVideosStarted = true;
     let reactionCurrentTime = 30;
     let reactionDuration = 100;
+
+    $: itemType = $page.url.searchParams.get("itemType") || "reaction";
 </script>
 
 <div class="test-container" style="background: #333; min-height: 100vh;">
@@ -36,6 +39,7 @@
             {bothVideosStarted}
             {reactionCurrentTime}
             {reactionDuration}
+            {itemType}
             alwaysShowMissingPlaceholder={true}
         />
     </div>

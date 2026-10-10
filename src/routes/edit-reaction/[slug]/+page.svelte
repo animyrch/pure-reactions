@@ -17,9 +17,17 @@
   import { reactionDial } from "$lib/stores/reactionDial";
   import { showToast } from "$lib/stores/toast";
   import { TOASTS } from "$lib/constants/toasts";
+  import { resolvePlaybackFrameKind } from "$lib/helpers/reactionListItem";
 
   export let data;
   const { state, actions } = useTwinPlayers({ data, enableAutoPlay: false });
+
+  $: playbackFrameKind = resolvePlaybackFrameKind({
+    queueSlug: $state.queueSlug,
+    playlistId: $state.playlistDocumentId,
+    isMomentReaction: $state.isMomentReaction,
+    momentId: $state.momentId,
+  });
 
   let overlayRef;
 
@@ -346,6 +354,7 @@
         bothVideosStarted={$state.bothVideosStarted}
         isPlaylist={Boolean($state.playlistDocumentId)}
         isPlaylistAutoPlay={$state.isPlaylistAutoPlay}
+        itemType={playbackFrameKind}
         showAutoPlayButton={false}
         reactionCurrentTime={$state.reactionCurrentTime}
         reactionDuration={$state.reactionDuration}

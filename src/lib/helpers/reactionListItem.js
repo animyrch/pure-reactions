@@ -31,6 +31,34 @@ export const resolveReactionListItemType = (reaction) => {
     return reaction?.type || 'reaction';
 };
 
+/**
+ * Frame around the reaction video on a watching page.
+ * Moment and playlist routes keep their own color. On `/reaction`, a moment
+ * reaction stays a moment, a playlist query stays a playlist, and a saved
+ * queue playthrough marks a plain reaction as a queue. Ad-hoc queues do not.
+ * Colors match the thumbnail card borders in ReactionThumbnail.svelte.
+ */
+export const PLAYBACK_FRAME_COLORS = {
+    queue: 'rgba(99, 102, 241, 0.95)',
+    playlist: 'rgba(244, 114, 182, 0.95)',
+    moment: 'rgba(251, 191, 36, 0.95)'
+};
+
+export const resolvePlaybackFrameKind = ({
+    routeKind = 'reaction',
+    queueSlug = '',
+    playlistId = '',
+    isMomentReaction = false,
+    momentId = ''
+} = {}) => {
+    if (routeKind === 'moment') return 'moment';
+    if (routeKind === 'playlist') return 'playlist';
+    if (isMomentReactionData({ isMomentReaction, momentId })) return 'moment';
+    if (trimmedString(playlistId)) return 'playlist';
+    if (trimmedString(queueSlug)) return 'queue';
+    return 'reaction';
+};
+
 export const buildReactionCardHref = ({
     itemType = 'reaction',
     reactionPageId = '',

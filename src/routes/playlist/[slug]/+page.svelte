@@ -251,6 +251,7 @@
     bothVideosStarted={$state.bothVideosStarted}
     isPlaylist={true}
     isPlaylistAutoPlay={$state.isPlaylistAutoPlay}
+    itemType="playlist"
     onNext={$state.hasNextIndexInPlaylist ? actions.loadNextReactionInPlaylist : null}
     nextAriaLabel="Next in playlist"
     reactionCurrentTime={$state.reactionCurrentTime}
