@@ -2,8 +2,28 @@ import { describe, expect, it } from 'vitest';
 import {
     buildReactionCardHref,
     isMomentReactionData,
+    reactionThumbnailSourceTitle,
     resolveReactionListItemType
 } from '../../src/lib/helpers/reactionListItem.js';
+
+describe('reaction thumbnail title', () => {
+    it('keeps the YouTube title when the custom title is empty', () => {
+        expect(reactionThumbnailSourceTitle({
+            customReactionTitle: '   ',
+            reactionVideoTitle: 'YouTube title'
+        })).toBe('YouTube title');
+        expect(reactionThumbnailSourceTitle({
+            reactionVideoTitle: undefined
+        })).toBeUndefined();
+    });
+
+    it('uses a filled-in custom title on the card', () => {
+        expect(reactionThumbnailSourceTitle({
+            customReactionTitle: '  Card title  ',
+            reactionVideoTitle: 'YouTube title'
+        })).toBe('Card title');
+    });
+});
 
 describe('reaction list item presentation', () => {
     it('keeps a published reaction on the reaction page', () => {

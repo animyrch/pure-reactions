@@ -15,6 +15,7 @@
     $: reactionVideoId = reactionData?.reactionVideoId;
     $: originalVideoId = reactionData?.originalVideoId;
     $: reactionVideoTitle = reactionData?.reactionVideoTitle;
+    $: customReactionTitle = reactionData?.customReactionTitle;
     $: originalVideoTitle = reactionData?.originalVideoTitle;
     $: reactionVideoAuthor = reactionData?.reactionVideoAuthor;
     $: reactorDisplayName = reactionData?.reactorDisplayName;
@@ -39,6 +40,7 @@
             {reactionVideoId}
             {originalVideoId}
             {reactionVideoTitle}
+            {customReactionTitle}
             {originalVideoTitle}
             {reactionVideoAuthor}
             {reactorDisplayName}

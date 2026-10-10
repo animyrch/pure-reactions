@@ -1,5 +1,14 @@
 const trimmedString = (value) => (typeof value === 'string' ? value.trim() : '');
 
+/**
+ * Card title source. A filled-in custom title wins. An empty custom title
+ * leaves the YouTube reaction title untouched, including when it is missing.
+ */
+export const reactionThumbnailSourceTitle = ({
+    customReactionTitle,
+    reactionVideoTitle
+} = {}) => trimmedString(customReactionTitle) || reactionVideoTitle;
+
 export const momentIdFromReactionData = (data) => trimmedString(data?.momentId);
 
 /**

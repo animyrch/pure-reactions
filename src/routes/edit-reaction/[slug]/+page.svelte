@@ -102,6 +102,9 @@
       if ("reactionFinishTime" in patch) {
         await actions.setReactionFinishTime(patch.reactionFinishTime);
       }
+      if ("customReactionTitle" in patch) {
+        await actions.setCustomReactionTitle(patch.customReactionTitle);
+      }
       if ("introBufferTime" in patch) {
         await actions.setIntroBufferTime(patch.introBufferTime);
       }
@@ -221,6 +224,7 @@
       isPlaylist={Boolean($state.youtubePlaylistId)}
       reactionVideoId={$state.reactionVideoId}
       reactionVideoTitle={$state.reactionVideoTitle}
+      customReactionTitle={$state.customReactionTitle}
       {reactionVideoIdError}
       {isSettingReactionVideoId}
       remixMode={$state.remixMode}

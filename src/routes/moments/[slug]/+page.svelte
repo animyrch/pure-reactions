@@ -15,6 +15,7 @@
     getPublishedMomentReactions,
     startMomentReactionDraft
   } from '$lib/helpers/momentsFirestore';
+  import { reactionThumbnailSourceTitle } from '$lib/helpers/reactionListItem';
   import { showToast } from '$lib/stores/toast';
   import { TOASTS } from '$lib/constants/toasts';
 
@@ -218,7 +219,7 @@
               <a
                 class="queue-item moment-queue-item"
                 href={buildMomentReactionPath(slug, reaction.id)}
-                aria-label={`Watch ${reaction?.data?.reactionVideoTitle || reaction?.data?.originalVideoTitle || 'reaction'} (item ${index + 1} of ${reactions.length})`}
+                aria-label={`Watch ${reactionThumbnailSourceTitle({ customReactionTitle: reaction?.data?.customReactionTitle, reactionVideoTitle: reaction?.data?.reactionVideoTitle }) || reaction?.data?.originalVideoTitle || 'reaction'} (item ${index + 1} of ${reactions.length})`}
               >
                 <QueueBinomeCard
                   linkless

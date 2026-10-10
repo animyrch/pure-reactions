@@ -202,7 +202,8 @@ export function createTwinPlayersOrchestrationController({
         fullscreenPrimaryVideo: DEFAULT_FULLSCREEN_PRIMARY_VIDEO,
         fullscreenPrimaryVideoDefault: DEFAULT_FULLSCREEN_PRIMARY_VIDEO,
         fullscreenOverlayWidthPercent: DEFAULT_FULLSCREEN_OVERLAY_WIDTH_PERCENT,
-        fullscreenOverlayCorner: DEFAULT_FULLSCREEN_OVERLAY_CORNER
+        fullscreenOverlayCorner: DEFAULT_FULLSCREEN_OVERLAY_CORNER,
+        customReactionTitle: ''
       });
       return;
     }
@@ -230,7 +231,10 @@ export function createTwinPlayersOrchestrationController({
         fullscreenPrimaryVideo: DEFAULT_FULLSCREEN_PRIMARY_VIDEO,
         fullscreenPrimaryVideoDefault: DEFAULT_FULLSCREEN_PRIMARY_VIDEO,
         fullscreenOverlayWidthPercent: DEFAULT_FULLSCREEN_OVERLAY_WIDTH_PERCENT,
-        fullscreenOverlayCorner: DEFAULT_FULLSCREEN_OVERLAY_CORNER
+        fullscreenOverlayCorner: DEFAULT_FULLSCREEN_OVERLAY_CORNER,
+        customReactionTitle: typeof reactionData?.customReactionTitle === 'string'
+          ? reactionData.customReactionTitle.trim()
+          : ''
       });
       return;
     }
@@ -329,6 +333,7 @@ export function createTwinPlayersOrchestrationController({
       reactionVideoAuthor: reactionData?.reactionVideoAuthor,
       reactorDisplayName: resolvedReactorDisplayName,
       reactionVideoTitle: reactionData?.reactionVideoTitle,
+      customReactionTitle: derivedReactionData.customReactionTitle,
       reactionVideoDescription,
       originalVideoAuthor: normalizedOriginalMetadata.author,
       originalVideoAuthorUrl: normalizedOriginalMetadata.authorUrl,

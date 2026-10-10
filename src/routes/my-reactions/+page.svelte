@@ -45,6 +45,7 @@
 						reactionVideoId: playlist.firstReactionBinomeData.reactionVideoId,
 						originalVideoId: playlist.firstReactionBinomeData.originalVideoId,
 						reactionVideoTitle: playlist.firstReactionBinomeData.reactionVideoTitle,
+						customReactionTitle: playlist.firstReactionBinomeData.customReactionTitle,
 						reactionVideoAuthor: playlist.firstReactionBinomeData.reactionVideoAuthor,
 						originalVideoTitle: playlist.firstReactionBinomeData.originalVideoTitle,
 					}

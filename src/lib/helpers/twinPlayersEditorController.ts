@@ -390,6 +390,15 @@ export function createTwinPlayersEditorController({
     updateState({ reactionFinishTime: finalValue });
   };
 
+  const setCustomReactionTitle = async (value: string) => {
+    const next = typeof value === 'string' ? value.trim() : '';
+    const didUpdate = await updateFirebaseDocument({ customReactionTitle: next });
+    if (!didUpdate) {
+      throw new Error('Failed to update reaction title');
+    }
+    updateState({ customReactionTitle: next });
+  };
+
   const setSoundLevel = async (value: number) => {
     const gain = Number(value) / 100;
     await updateFirebaseDocument({ globalGain: Number.isNaN(gain) ? 1.0 : gain });
@@ -1010,6 +1019,7 @@ export function createTwinPlayersEditorController({
     setOffsetStartTime,
     setIntroBufferTime,
     setReactionFinishTime,
+    setCustomReactionTitle,
     setSoundLevel,
     setReactionMuteMode,
     setFullscreenPrimaryVideo,

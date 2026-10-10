@@ -2,12 +2,13 @@
     import { onMount } from "svelte";
     import VideoAuthor from "$lib/components/VideoAuthor.svelte";
     import ThumbnailContext from "$lib/components/Video/ThumbnailContext.svelte";
-    import { buildReactionCardHref } from "$lib/helpers/reactionListItem";
+    import { buildReactionCardHref, reactionThumbnailSourceTitle } from "$lib/helpers/reactionListItem";
 
     export let reactionPageId;
     export let reactionVideoId;
     export let originalVideoId;
     export let reactionVideoTitle;
+    export let customReactionTitle = "";
     export let originalVideoTitle;
     export let reactionVideoAuthor;
     export let reactorDisplayName;
@@ -33,13 +34,17 @@
         queueSlug,
     });
 
+    $: sourceTitle = reactionThumbnailSourceTitle({
+        customReactionTitle,
+        reactionVideoTitle,
+    });
     $: displayTitle = isQueue
         ? queueTitle
-        : reactionVideoTitle || originalVideoTitle || "Untitled Reaction";
+        : sourceTitle || originalVideoTitle || "Untitled Reaction";
     $: thumbnailAlt = isMoment
-        ? `Moment reaction: ${reactionVideoTitle || originalVideoTitle || "Moment"}`
-        : reactionVideoTitle
-          ? `Reaction: ${reactionVideoTitle}`
+        ? `Moment reaction: ${sourceTitle || originalVideoTitle || "Moment"}`
+        : sourceTitle
+          ? `Reaction: ${sourceTitle}`
           : originalVideoTitle
             ? `Original: ${originalVideoTitle}`
             : "Reaction thumbnail";
@@ -47,11 +52,11 @@
     $: linkLabel = isQueue
         ? `Open queue: ${queueTitle}`
         : isPlaylist
-          ? `Open playlist: ${reactionVideoTitle || "Playlist"}`
+          ? `Open playlist: ${sourceTitle || "Playlist"}`
           : isMoment
-            ? `Open moment reaction: ${reactionVideoTitle || originalVideoTitle || "Moment"}`
-            : reactionVideoTitle
-              ? `Open reaction: ${reactionVideoTitle}`
+            ? `Open moment reaction: ${sourceTitle || originalVideoTitle || "Moment"}`
+            : sourceTitle
+              ? `Open reaction: ${sourceTitle}`
               : originalVideoTitle
                 ? `Open reaction: ${originalVideoTitle}`
                 : undefined;
