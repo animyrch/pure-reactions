@@ -181,6 +181,7 @@
       canShowCloseEditModeButton: $state.canShowCloseEditModeButton,
       isPublished: $state.isPublished,
       isReactionMissing: $state.isReactionMissing,
+      remixMode: $state.remixMode,
       isFullscreen: $state.isFullscreen,
       canShowEditPlaylistButton:
         Boolean($state.playlistDocumentId) && isCurrentReactionCreator,

@@ -186,6 +186,7 @@
       canShowCloseEditModeButton: $state.canShowCloseEditModeButton,
       isPublished: $state.isPublished,
       isReactionMissing: $state.isReactionMissing,
+      remixMode: $state.remixMode,
       isFullscreen: $state.isFullscreen,
       handlers: {
         enterEditMode: () => {

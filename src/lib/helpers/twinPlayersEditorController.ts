@@ -21,6 +21,7 @@ import {
 import type { TwinPlayersState } from '$lib/helpers/twinPlayersStateController';
 import { downloadBasicVideoDetails, parseYouTubeUrl } from '$lib/helpers/youtube';
 import { validateMomentReaction } from '$lib/helpers/momentReactionValidation';
+import { canPublishReactionMedia } from '$lib/helpers/reactionPublish';
 import { showToast } from '$lib/stores/toast';
 import { TOASTS } from '$lib/constants/toasts';
 
@@ -925,6 +926,18 @@ export function createTwinPlayersEditorController({
 
   const setIsPublished = async () => {
     const snapshot = getSnapshot();
+
+    if (
+      !canPublishReactionMedia({
+        remixMode: snapshot.remixMode,
+        isReactionMissing: snapshot.isReactionMissing
+      })
+    ) {
+      if (typeof window !== 'undefined') {
+        showToast("Can't publish: missing reaction video", TOASTS.WARNING);
+      }
+      return;
+    }
 
     if (snapshot.isMomentReaction) {
       const momentTime = Number(snapshot.momentOriginalTimeSeconds);

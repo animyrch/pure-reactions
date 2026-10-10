@@ -189,6 +189,7 @@
       canShowCloseEditModeButton: $state.isUsersOwnVideo && $state.isEditModeOn,
       isPublished: $state.isPublished,
       isReactionMissing: $state.isReactionMissing,
+      remixMode: $state.remixMode,
       isFullscreen: $state.isFullscreen,
       canShowEditPlaylistButton: false,
       handlers: {
