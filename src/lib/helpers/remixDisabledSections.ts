@@ -1,7 +1,8 @@
 // Remix fine-tune only. A pause cue finishes the remix, so the timeline after
 // it is closed. A play cue skips, so the open span between its time and its
-// target is closed. The cue that creates a span stays on the boundary and can
-// still be edited.
+// target is closed. Reaction start time skips everything before that time on
+// the original clock. The cue that creates a span stays on the boundary and
+// can still be edited. The start time itself stays available.
 
 const EDGE_EPSILON_SECONDS = 0.001;
 const MIN_SKIP_SPAN_SECONDS = 0.05;
@@ -44,6 +45,7 @@ const containsTime = (section: RemixDisabledSection, time: number) => {
 export function buildRemixDisabledSections(
   cues: RemixDisabledCue[],
   duration: number,
+  offsetStartTime = 0,
 ): RemixDisabledSection[] {
   const timelineEnd = finite(duration);
   if (timelineEnd === null || timelineEnd <= 0 || !Array.isArray(cues)) {
@@ -51,6 +53,14 @@ export function buildRemixDisabledSections(
   }
 
   const sections: RemixDisabledSection[] = [];
+  const playbackStart = finite(offsetStartTime);
+  if (playbackStart !== null) {
+    const boundedStart = Math.min(Math.max(playbackStart, 0), timelineEnd);
+    if (boundedStart > MIN_SKIP_SPAN_SECONDS) {
+      sections.push({ start: 0, end: boundedStart, reason: "skip" });
+    }
+  }
+
   for (const cue of cues) {
     const time = finite(cue?.time);
     const state = finite(cue?.state);

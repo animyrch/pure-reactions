@@ -25,6 +25,7 @@
   export let timeAxis = "reaction";
   export let showReactionVolumeTrack = true;
   export let showOverlayTrack = true;
+  export let offsetStartTime = 0;
 
   const YOUTUBE_STATE_LABELS = {
     "-1": "Unstarted",
@@ -323,6 +324,7 @@
       {timeAxis}
       {showReactionVolumeTrack}
       {showOverlayTrack}
+      {offsetStartTime}
       on:createPlayerConfig={(event) =>
         dispatch("createPlayerConfig", event.detail)}
       on:createVolumeConfig={(event) =>

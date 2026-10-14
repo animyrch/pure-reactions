@@ -25,6 +25,7 @@
   export let timeAxis = "reaction";
   export let showReactionVolumeTrack = true;
   export let showOverlayTrack = true;
+  export let offsetStartTime = 0;
 
   const clamp01 = (value) => {
     if (!Number.isFinite(value)) return 0;
@@ -654,13 +655,16 @@
           targetTime: marker.targetTime,
         }))
     : [];
+  $: remixClockStart = usesOriginalClock ? offsetStartTime : 0;
   $: remixDisabledSections = buildRemixDisabledSections(
     remixDisplayCues,
     effectiveDuration,
+    remixClockStart,
   );
   $: remixPlacementSections = buildRemixDisabledSections(
     remixPlacementCues,
     effectiveDuration,
+    remixClockStart,
   );
   $: disabledViewportSpans = mergeRemixDisabledSections(remixDisabledSections)
     .map((section) => {

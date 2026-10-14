@@ -1145,6 +1145,7 @@
               {playerEventTimeline}
               allowPlaybackRate={!isTikTokOriginal}
               timeAxis={remixMode ? "original" : "reaction"}
+              offsetStartTime={remixMode ? offsetStartTime : 0}
               showReactionVolumeTrack={!remixMode}
               showOverlayTrack={!remixMode}
               on:createPlayerConfig={handleCreatePlayerConfig}
