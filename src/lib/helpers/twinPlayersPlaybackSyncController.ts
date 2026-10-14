@@ -28,7 +28,7 @@ import {
   syncPlanTimeMsToSeconds
 } from '$lib/helpers/twinPlayersSyncPlanV2';
 import type { TwinPlayersState } from '$lib/helpers/twinPlayersStateController';
-import { planRemixTransport } from '$lib/helpers/remixPlayback';
+import { planRemixTransport, remixPlaybackStartSeconds } from '$lib/helpers/remixPlayback';
 
 declare const YT: any;
 
@@ -968,6 +968,11 @@ export function createTwinPlayersPlaybackSyncController({
     return 'running';
   };
 
+  const beginRemixAtConfiguredStart = () => {
+    const snapshot = getSnapshot();
+    seekRemixTo(remixPlaybackStartSeconds(snapshot.offsetStartTime));
+  };
+
   const startRemixPlayback = () => {
     const snapshot = getSnapshot();
     if (!snapshot.playerOriginal) {
@@ -1742,6 +1747,7 @@ export function createTwinPlayersPlaybackSyncController({
     const snapshot = getSnapshot();
     debugClickGate('[TwinPlayers] startVideos invoked', { reactionVideoId: snapshot.reactionVideoId }, true);
     if (snapshot.remixMode) {
+      beginRemixAtConfiguredStart();
       startRemixPlayback();
       return;
     }
@@ -2104,8 +2110,13 @@ export function createTwinPlayersPlaybackSyncController({
     debugClickGate('[TwinPlayers] handlePlayStateChange called', { isPlaying }, true);
     if (getSnapshot().remixMode) {
       if (isPlaying) {
-        if (getSnapshot().isUserPaused) {
+        const snapshot = getSnapshot();
+        const starting = !snapshot.bothVideosStarted;
+        if (snapshot.isUserPaused) {
           updateState({ isUserPaused: false });
+        }
+        if (starting) {
+          beginRemixAtConfiguredStart();
         }
         startRemixPlayback();
         return;
@@ -2170,16 +2181,22 @@ export function createTwinPlayersPlaybackSyncController({
   const syncVideos = () => {
     debugClickGate('[TwinPlayers] syncVideos called', {}, true);
     if (getSnapshot().remixMode) {
-      if (getSnapshot().isUserPaused) {
+      const snapshot = getSnapshot();
+      const starting = !snapshot.bothVideosStarted;
+      if (snapshot.isUserPaused) {
         updateState({ isUserPaused: false });
       }
-      const resumeAt = readOriginalClock(getSnapshot().playerOriginal).time;
-      forgetConsumedAnchorsAfter(resumeAt);
-      remixAppliedAnchor = null;
-      remixSampleTime = null;
-      remixOrigin = resumeAt;
-      remixUserHold = null;
-      remixUserHoldUntil = 0;
+      if (starting) {
+        beginRemixAtConfiguredStart();
+      } else {
+        const resumeAt = readOriginalClock(getSnapshot().playerOriginal).time;
+        forgetConsumedAnchorsAfter(resumeAt);
+        remixAppliedAnchor = null;
+        remixSampleTime = null;
+        remixOrigin = resumeAt;
+        remixUserHold = null;
+        remixUserHoldUntil = 0;
+      }
       startRemixPlayback();
       return;
     }

@@ -322,6 +322,10 @@ export function createTwinPlayersEditorController({
     await updateFirebaseDocument({ offsetStartTime: rounded });
     updateState({ offsetStartTime: rounded, reactionCurrentTime: rounded });
 
+    if (snapshot.remixMode && snapshot.bothVideosStarted) {
+      seekReactionTo(rounded);
+    }
+
     const oldKey = roundReactionTime(oldStart).toFixed(3);
     const newKey = roundReactionTime(rounded).toFixed(3);
     const startMovedForward = rounded > oldStart;

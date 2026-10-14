@@ -779,6 +779,84 @@ describe('Remix playlist autoplay', () => {
     });
 });
 
+describe('Remix reaction start', () => {
+    const withPlayerStates = (run) => {
+        const previousYT = globalThis.YT;
+        globalThis.YT = {
+            PlayerState: {
+                UNSTARTED: -1,
+                ENDED: 0,
+                PLAYING: 1,
+                PAUSED: 2,
+                BUFFERING: 3,
+                CUED: 5,
+            },
+        };
+        try {
+            run();
+        } finally {
+            if (typeof previousYT === 'undefined') {
+                delete globalThis.YT;
+            } else {
+                globalThis.YT = previousYT;
+            }
+        }
+    };
+
+    it('seeks the original to the reaction start when playback begins', () => {
+        withPlayerStates(() => {
+            const { controller, snapshot, originalPlayer, reactionPlayer } = createPlaybackControllerHarness({
+                remixMode: true,
+                bothVideosStarted: false,
+                isUserPaused: false,
+                offsetStartTime: 90,
+                originalCurrentTime: 0,
+                originalDuration: 240,
+                fullscreenPrimaryVideo: 'original',
+                fullscreenOverlayVisible: false,
+                stateTimeline: [{ t: 0, state: 1, targetTime: 0 }],
+            });
+
+            try {
+                controller.onStateChangeOriginal({ data: 1, target: originalPlayer });
+
+                expect(snapshot.bothVideosStarted).toBe(true);
+                expect(originalPlayer.seekTo).toHaveBeenCalledWith(90, true);
+                expect(originalPlayer.playVideo).toHaveBeenCalled();
+                expect(reactionPlayer.seekTo).not.toHaveBeenCalled();
+                expect(originalPlayer.seekTo).not.toHaveBeenCalledWith(0, true);
+            } finally {
+                controller.dispose();
+            }
+        });
+    });
+
+    it('does not jump back to the reaction start when playback resumes', () => {
+        withPlayerStates(() => {
+            const { controller, originalPlayer } = createPlaybackControllerHarness({
+                remixMode: true,
+                bothVideosStarted: true,
+                isUserPaused: true,
+                offsetStartTime: 90,
+                originalCurrentTime: 110,
+                originalDuration: 240,
+                originalPlayerState: 2,
+                fullscreenPrimaryVideo: 'original',
+                fullscreenOverlayVisible: false,
+            });
+
+            try {
+                controller.handlePlayStateChange(true);
+
+                expect(originalPlayer.seekTo).not.toHaveBeenCalled();
+                expect(originalPlayer.playVideo).toHaveBeenCalled();
+            } finally {
+                controller.dispose();
+            }
+        });
+    });
+});
+
 describe('Click-gate volume', () => {
     const withPlayerStates = (run) => {
         const previousYT = globalThis.YT;
