@@ -465,7 +465,7 @@ const createPlaybackControllerHarness = (overrides = {}, hooks = {}) => {
     const controller = createTwinPlayersPlaybackSyncController({
         getSnapshot: () => snapshot,
         updateState,
-        getProgressionHooks: () => null,
+        getProgressionHooks: hooks.getProgressionHooks ?? (() => null),
         getPlayerDebugInfo: () => ({}),
         debugClickGate: () => {},
         lazySyncRequested: false,
@@ -598,6 +598,180 @@ describe('Playback skip target', () => {
                 originalPlayer.seekTo.mockClear();
                 controller.seekReactionTo(-8);
                 expect(originalPlayer.seekTo).toHaveBeenCalledWith(0, true);
+            } finally {
+                controller.dispose();
+            }
+        });
+    });
+});
+
+describe('Remix playlist autoplay', () => {
+    const withPlayerStates = (run) => {
+        const previousYT = globalThis.YT;
+        globalThis.YT = {
+            PlayerState: {
+                UNSTARTED: -1,
+                ENDED: 0,
+                PLAYING: 1,
+                PAUSED: 2,
+                BUFFERING: 3,
+                CUED: 5,
+            },
+        };
+        try {
+            run();
+        } finally {
+            if (typeof previousYT === 'undefined') {
+                delete globalThis.YT;
+            } else {
+                globalThis.YT = previousYT;
+            }
+        }
+    };
+
+    const playingRemix = (overrides, hooks) => createPlaybackControllerHarness({
+        remixMode: true,
+        isUserPaused: false,
+        bothVideosStarted: true,
+        fullscreenPrimaryVideo: 'original',
+        fullscreenOverlayVisible: false,
+        originalCurrentTime: 10,
+        originalDuration: 240,
+        originalPlayerState: 1,
+        pageSlug: 'remix-a',
+        stateTimeline: [
+            { t: 0, state: 1, targetTime: 0 },
+            { t: 30, state: 2, targetTime: 30 },
+        ],
+        ...overrides,
+    }, hooks);
+
+    it('advances the playlist when a remix pause cue finishes the item', () => {
+        withPlayerStates(() => {
+            const loadNextReactionInPlaylist = vi.fn();
+            const { controller, originalPlayer } = playingRemix({
+                isPlaylistAutoPlay: true,
+                hasNextIndexInPlaylist: true,
+            }, {
+                getProgressionHooks: () => ({
+                    loadNextReactionInPlaylist,
+                    loadNextReactionInQueue: vi.fn(),
+                }),
+            });
+
+            try {
+                controller.pollVideoCurrentTime();
+                expect(loadNextReactionInPlaylist).not.toHaveBeenCalled();
+
+                originalPlayer.currentTime = 30.2;
+                controller.pollVideoCurrentTime();
+
+                expect(loadNextReactionInPlaylist).toHaveBeenCalledTimes(1);
+                expect(originalPlayer.pauseVideo).toHaveBeenCalled();
+
+                controller.pollVideoCurrentTime();
+                expect(loadNextReactionInPlaylist).toHaveBeenCalledTimes(1);
+            } finally {
+                controller.dispose();
+            }
+        });
+    });
+
+    it('advances the playlist when the original video ends', () => {
+        withPlayerStates(() => {
+            const loadNextReactionInPlaylist = vi.fn();
+            const { controller, originalPlayer } = playingRemix({
+                isPlaylistAutoPlay: true,
+                hasNextIndexInPlaylist: true,
+                stateTimeline: [{ t: 0, state: 1, targetTime: 0 }],
+            }, {
+                getProgressionHooks: () => ({
+                    loadNextReactionInPlaylist,
+                    loadNextReactionInQueue: vi.fn(),
+                }),
+            });
+
+            try {
+                controller.pollVideoCurrentTime();
+                originalPlayer.currentTime = 240;
+                originalPlayer.state = 0;
+                controller.pollVideoCurrentTime();
+                expect(loadNextReactionInPlaylist).toHaveBeenCalledTimes(1);
+            } finally {
+                controller.dispose();
+            }
+        });
+    });
+
+    it('stays on the item when playlist autoplay is off', () => {
+        withPlayerStates(() => {
+            const loadNextReactionInPlaylist = vi.fn();
+            const { controller, originalPlayer } = playingRemix({
+                isPlaylistAutoPlay: false,
+                hasNextIndexInPlaylist: true,
+            }, {
+                getProgressionHooks: () => ({
+                    loadNextReactionInPlaylist,
+                    loadNextReactionInQueue: vi.fn(),
+                }),
+            });
+
+            try {
+                controller.pollVideoCurrentTime();
+                originalPlayer.currentTime = 30.2;
+                controller.pollVideoCurrentTime();
+                expect(loadNextReactionInPlaylist).not.toHaveBeenCalled();
+                expect(originalPlayer.pauseVideo).toHaveBeenCalled();
+            } finally {
+                controller.dispose();
+            }
+        });
+    });
+
+    it('does not treat a manual pause as the end of the remix', () => {
+        withPlayerStates(() => {
+            const loadNextReactionInPlaylist = vi.fn();
+            const { controller, snapshot, originalPlayer } = playingRemix({
+                isPlaylistAutoPlay: true,
+                hasNextIndexInPlaylist: true,
+            }, {
+                getProgressionHooks: () => ({
+                    loadNextReactionInPlaylist,
+                    loadNextReactionInQueue: vi.fn(),
+                }),
+            });
+
+            try {
+                controller.pollVideoCurrentTime();
+                snapshot.isUserPaused = true;
+                originalPlayer.currentTime = 30.2;
+                controller.pollVideoCurrentTime();
+                expect(loadNextReactionInPlaylist).not.toHaveBeenCalled();
+            } finally {
+                controller.dispose();
+            }
+        });
+    });
+
+    it('advances a queue when the remix ends', () => {
+        withPlayerStates(() => {
+            const loadNextReactionInQueue = vi.fn();
+            const { controller, originalPlayer } = playingRemix({
+                isPlaylistAutoPlay: false,
+                hasNextIndexInPlaylist: false,
+                isQueueAutoPlay: true,
+            }, {
+                getProgressionHooks: () => ({
+                    loadNextReactionInPlaylist: vi.fn(),
+                    loadNextReactionInQueue,
+                }),
+            });
+
+            try {
+                controller.pollVideoCurrentTime();
+                originalPlayer.currentTime = 30.2;
+                controller.pollVideoCurrentTime();
+                expect(loadNextReactionInQueue).toHaveBeenCalledTimes(1);
             } finally {
                 controller.dispose();
             }
