@@ -22,6 +22,7 @@ import type { TwinPlayersState } from '$lib/helpers/twinPlayersStateController';
 import { downloadBasicVideoDetails, parseYouTubeUrl } from '$lib/helpers/youtube';
 import { validateMomentReaction } from '$lib/helpers/momentReactionValidation';
 import { canPublishReactionMedia } from '$lib/helpers/reactionPublish';
+import { nextPlayTargetAfterStartMove } from '$lib/helpers/remixCueForm';
 import { showToast } from '$lib/stores/toast';
 import { TOASTS } from '$lib/constants/toasts';
 
@@ -321,20 +322,41 @@ export function createTwinPlayersEditorController({
     await updateFirebaseDocument({ offsetStartTime: rounded });
     updateState({ offsetStartTime: rounded, reactionCurrentTime: rounded });
 
-    if (rounded <= oldStart) {
-      return;
-    }
-
     const oldKey = roundReactionTime(oldStart).toFixed(3);
     const newKey = roundReactionTime(rounded).toFixed(3);
+    const startMovedForward = rounded > oldStart;
 
     const playerMap = timelineArrayToMap(snapshot.stateTimeline);
-    if (playerMap.has(oldKey) && !playerMap.has(newKey)) {
+    let playerTimelineChanged = false;
+    if (startMovedForward && playerMap.has(oldKey) && !playerMap.has(newKey)) {
       const entry = playerMap.get(oldKey)!;
       entry.t = rounded;
       playerMap.set(newKey, entry);
       playerMap.delete(oldKey);
+      playerTimelineChanged = true;
+    }
+
+    const startCue = playerMap.get(newKey);
+    if (startCue && snapshot.remixMode && Number(startCue.state) === 1) {
+      const flooredTarget = roundTargetTime(nextPlayTargetAfterStartMove({
+        remixMode: true,
+        state: Number(startCue.state),
+        cueTime: rounded,
+        targetTime: Number(startCue.targetTime ?? 0),
+      }));
+      if (Math.abs(flooredTarget - Number(startCue.targetTime ?? 0)) > 0.001) {
+        startCue.t = rounded;
+        startCue.targetTime = flooredTarget;
+        playerTimelineChanged = true;
+      }
+    }
+
+    if (playerTimelineChanged) {
       await persistPlayerTimelineMap(playerMap, rounded);
+    }
+
+    if (!startMovedForward) {
+      return;
     }
 
     const volumeMap = volumeTimelineArrayToMap(snapshot.volumeTimeline);
@@ -474,7 +496,12 @@ export function createTwinPlayersEditorController({
     const sanitizedState = Number.isFinite(rawState) ? rawState : 2;
 
     const roundedReactionTime = roundReactionTime(sanitizedReactionTime);
-    const roundedTargetTime = roundTargetTime(sanitizedTargetTime);
+    const roundedTargetTime = roundTargetTime(nextPlayTargetAfterStartMove({
+      remixMode: snapshot.remixMode,
+      state: sanitizedState,
+      cueTime: roundedReactionTime,
+      targetTime: roundTargetTime(sanitizedTargetTime),
+    }));
     const timelineMap = timelineArrayToMap(Array.isArray(snapshot.stateTimeline) ? snapshot.stateTimeline : []);
 
     timelineMap.set(roundedReactionTime.toFixed(3), {
@@ -616,7 +643,12 @@ export function createTwinPlayersEditorController({
       typeof targetTime === 'number' && Number.isFinite(targetTime)
         ? Math.max(0, targetTime)
         : Number(currentEntry?.targetTime ?? 0);
-    const roundedTargetTime = roundTargetTime(resolvedTarget);
+    const roundedTargetTime = roundTargetTime(nextPlayTargetAfterStartMove({
+      remixMode: snapshot.remixMode,
+      state: resolvedState,
+      cueTime: roundedReactionTime,
+      targetTime: roundTargetTime(resolvedTarget),
+    }));
 
     if (nextKey !== previousKey) {
       timelineMap.delete(previousKey);
