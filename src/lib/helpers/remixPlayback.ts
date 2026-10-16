@@ -2,6 +2,30 @@ const YT_PLAYING = 1;
 const YT_PAUSED = 2;
 const JUMP_EPSILON_SECONDS = 0.3;
 
+// Remix uses the original video as the clock. Reaction start time is that
+// clock, not the skip target of whichever play cue is active there.
+export function remixPlaybackStartSeconds(offsetStartTime: number | null | undefined): number {
+  const start = Number(offsetStartTime);
+  if (!Number.isFinite(start) || start < 0) {
+    return 0;
+  }
+  return start;
+}
+
+export function originalLoadStartSeconds({
+  remixMode,
+  offsetStartTime = 0,
+  cueTargetTime = 0,
+}: {
+  remixMode: boolean;
+  offsetStartTime?: number | null;
+  cueTargetTime?: number | null;
+}): number {
+  return remixMode
+    ? remixPlaybackStartSeconds(offsetStartTime)
+    : remixPlaybackStartSeconds(cueTargetTime);
+}
+
 export type RemixTransportPlan = {
   transport: 'play' | 'pause' | 'hold';
   seekTo: number | null;

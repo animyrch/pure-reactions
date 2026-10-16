@@ -13,6 +13,7 @@ import { buildTwinPlayersSetupStatePatch } from '$lib/helpers/twinPlayersSetupSt
 import type { VerifyAndSyncTwinPlayersMetadataParams } from '$lib/helpers/twinPlayersMetadata';
 import type { TwinPlayersState } from '$lib/helpers/twinPlayersStateController';
 import { ensureEmbeddedPlayerHost, restoreEmbeddedPlayerContainer } from '$lib/helpers/twinPlayersTikTokOriginal';
+import { originalLoadStartSeconds } from '$lib/helpers/remixPlayback';
 
 declare const YT: any;
 
@@ -269,6 +270,7 @@ export function createTwinPlayersOrchestrationController({
       playerEventTimeline,
       timelineSources,
       initialTargetTime,
+      remixMode,
       currentPlaybackRate,
       resolvedReactorId,
       resolvedReactorDisplayName,
@@ -396,7 +398,11 @@ export function createTwinPlayersOrchestrationController({
           videoId: originalVideoId,
           playerVars: {
             ...originalPlayerOptions,
-            start: Math.round(initialTargetTime)
+            start: Math.round(originalLoadStartSeconds({
+              remixMode,
+              offsetStartTime,
+              cueTargetTime: initialTargetTime,
+            }))
           },
           ...iframeOptionDefault,
           events: {
@@ -536,6 +542,8 @@ export function createTwinPlayersOrchestrationController({
         youtubePlaylistId,
         initialState,
         initialTargetTime,
+        remixMode,
+        offsetStartTime,
         initialOriginalVolume,
         initialReactionVolume,
         normalizedOriginalMetadata,
@@ -629,6 +637,12 @@ export function createTwinPlayersOrchestrationController({
         }
       }
 
+      const originalStartSeconds = originalLoadStartSeconds({
+        remixMode,
+        offsetStartTime,
+        cueTargetTime: initialTargetTime,
+      });
+
       if (shouldCreateOriginalPlayer) {
         updateState({ originalVideoPlatform: nextOriginalVideoPlatform, playerOriginal: null });
         await waitForDomTick();
@@ -642,7 +656,7 @@ export function createTwinPlayersOrchestrationController({
               videoId: originalVideoId,
               playerVars: {
                 ...originalPlayerOptions,
-                start: Math.round(initialTargetTime)
+                start: Math.round(originalStartSeconds)
               },
               ...iframeOptionDefault,
               events: {
@@ -664,7 +678,7 @@ export function createTwinPlayersOrchestrationController({
             if (typeof snapshotBefore.playerOriginal.cueVideoById === 'function') {
               snapshotBefore.playerOriginal.cueVideoById({
                 videoId: originalVideoId,
-                startSeconds: initialTargetTime
+                startSeconds: originalStartSeconds
               });
               console.debug('[TwinPlayers] Cued original video (different reaction video)', {
                 originalVideoId,
@@ -673,13 +687,13 @@ export function createTwinPlayersOrchestrationController({
             } else {
               snapshotBefore.playerOriginal.loadVideoById({
                 videoId: originalVideoId,
-                startSeconds: initialTargetTime
+                startSeconds: originalStartSeconds
               });
             }
           } else if (shouldCueOriginalAtLoad && typeof snapshotBefore.playerOriginal.cueVideoById === 'function') {
             snapshotBefore.playerOriginal.cueVideoById({
               videoId: originalVideoId,
-              startSeconds: initialTargetTime
+              startSeconds: originalStartSeconds
             });
             console.debug('[TwinPlayers] Cued original video (same reaction video, timeline paused at entry)', {
               originalVideoId,
@@ -689,7 +703,7 @@ export function createTwinPlayersOrchestrationController({
           } else {
             snapshotBefore.playerOriginal.loadVideoById({
               videoId: originalVideoId,
-              startSeconds: initialTargetTime
+              startSeconds: originalStartSeconds
             });
           }
         } catch (error) {

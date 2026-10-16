@@ -1,6 +1,29 @@
 import { describe, expect, it } from 'vitest';
-import { planRemixTransport } from '../../src/lib/helpers/remixPlayback.ts';
+import { originalLoadStartSeconds, planRemixTransport, remixPlaybackStartSeconds } from '../../src/lib/helpers/remixPlayback.ts';
 import { getCurrentStateFromStateConfigs } from '../../src/lib/helpers/reaction.js';
+
+describe('remix start time', () => {
+  it('starts the original clock at the reaction start time', () => {
+    expect(remixPlaybackStartSeconds(95.4)).toBe(95.4);
+    expect(remixPlaybackStartSeconds(0)).toBe(0);
+    expect(remixPlaybackStartSeconds(-3)).toBe(0);
+    expect(remixPlaybackStartSeconds(Number.NaN)).toBe(0);
+  });
+
+  it('cues a remix at the reaction start instead of the play-cue skip target', () => {
+    expect(originalLoadStartSeconds({
+      remixMode: true,
+      offsetStartTime: 90,
+      cueTargetTime: 0,
+    })).toBe(90);
+
+    expect(originalLoadStartSeconds({
+      remixMode: false,
+      offsetStartTime: 90,
+      cueTargetTime: 12.5,
+    })).toBe(12.5);
+  });
+});
 
 describe('planRemixTransport', () => {
   it('plays through when no play or pause cue applies', () => {

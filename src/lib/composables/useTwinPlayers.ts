@@ -748,6 +748,7 @@ export function useTwinPlayers({
       navigateToNextReactionInQueue,
       toggleAutoPlaylist,
       setPlaylistSelectionIndex,
+      loadNextReactionInPlaylist,
       toggleCinematicBars,
       handlePlayStateChange,
       syncVideos,

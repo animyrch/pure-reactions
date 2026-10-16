@@ -799,7 +799,9 @@
               />
             </div>
             <p class="mt-1.5 text-[11px] leading-snug text-text-muted">
-              When you start playback, the reaction video will begin from this timestamp.
+              {remixMode
+                ? "When you start playback, the original video will begin from this timestamp."
+                : "When you start playback, the reaction video will begin from this timestamp."}
             </p>
           </div>
 
@@ -1143,6 +1145,7 @@
               {playerEventTimeline}
               allowPlaybackRate={!isTikTokOriginal}
               timeAxis={remixMode ? "original" : "reaction"}
+              offsetStartTime={remixMode ? offsetStartTime : 0}
               showReactionVolumeTrack={!remixMode}
               showOverlayTrack={!remixMode}
               on:createPlayerConfig={handleCreatePlayerConfig}

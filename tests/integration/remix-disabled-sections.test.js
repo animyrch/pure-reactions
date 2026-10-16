@@ -107,6 +107,33 @@ describe('remix disabled sections', () => {
     ]);
   });
 
+  it('skips the original from the beginning up to the reaction start', () => {
+    const sections = buildRemixDisabledSections([], 120, 90);
+    expect(sections).toEqual([{ start: 0, end: 90, reason: 'skip' }]);
+    expect(isTimeInRemixDisabledSection(0, sections)).toBe(false);
+    expect(isTimeInRemixDisabledSection(45, sections)).toBe(true);
+    expect(isTimeInRemixDisabledSection(90, sections)).toBe(false);
+    expect(remixDisabledLabelAt(45, sections)).toBe('Skipped');
+    expect(canPlaceRemixCue(45, sections)).toBe(false);
+    expect(canPlaceRemixCue(90, sections)).toBe(true);
+    expect(canPlaceRemixCue(45, sections, 45)).toBe(true);
+
+    expect(buildRemixDisabledSections([], 120, 0)).toEqual([]);
+    expect(buildRemixDisabledSections([], 120, 0.04)).toEqual([]);
+  });
+
+  it('keeps a later play-cue skip beside the reaction start skip', () => {
+    const sections = buildRemixDisabledSections(
+      [{ time: 100, state: 1, targetTime: 130 }],
+      200,
+      90,
+    );
+    expect(mergeRemixDisabledSections(sections)).toEqual([
+      { start: 0, end: 90, reasons: ['skip'] },
+      { start: 100, end: 130, reasons: ['skip'] },
+    ]);
+  });
+
   it('ignores cues when the timeline has no duration', () => {
     expect(
       buildRemixDisabledSections([{ time: 10, state: 2, targetTime: 10 }], 0),

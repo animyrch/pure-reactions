@@ -44,15 +44,16 @@
 </script>
 
 <div>
-    {#each visiblePlaylistItems as playlistItem, visibleIndex (playlistItem?.id || playlistItem?.playlistId || playlistItem?.originalVideoId || playlistItem?.snippet?.resourceId?.videoId || visibleIndex)}
+    {#each visiblePlaylistItems as playlistItem, visibleIndex (`${playlistItem?.id || playlistItem?.snippet?.resourceId?.videoId || 'item'}:${visibleIndex}`)}
         {@const index = hideCurrentItem && normalizedCurrentIndex >= 0
             ? normalizedCurrentIndex + visibleIndex + 1
             : visibleIndex}
-        <div key={playlistItem?.id || playlistItem?.playlistId || index}>
+        <div>
                 <PlaylistQueueItem
                     {index}
                     {playlistItem}
                     {currentlyViewed}
+                    currentIndex={normalizedCurrentIndex}
                     {playlistId}
                     {playlistDocumentId}
                     {isCreation}

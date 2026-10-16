@@ -178,6 +178,47 @@ describe('remix fine-tune timeline', () => {
     expect(cleared).not.toContain('data-disabled-section');
   });
 
+  it('marks the time before the reaction start as skipped on the original clock', () => {
+    const { body } = render(InteractiveSynchronizer, {
+      props: {
+        timeAxis: 'original',
+        showReactionVolumeTrack: false,
+        showOverlayTrack: false,
+        allowPlaybackRate: false,
+        currentTime: 0,
+        duration: 120,
+        seekMin: 0,
+        seekMax: 120,
+        offsetStartTime: 30,
+        playerEvents: [{ timeInReaction: 40, state: 1, targetTime: 70 }],
+      },
+    });
+
+    const sections = [
+      ...body.matchAll(
+        /data-disabled-section="(skip|pause|mixed)" data-disabled-start="([^"]+)" data-disabled-end="([^"]+)"/g,
+      ),
+    ];
+    expect(sections.map((match) => match.slice(1))).toEqual([
+      ['skip', '0.000', '30.000'],
+      ['skip', '40.000', '70.000'],
+    ]);
+    expect(body).toContain('Skipped');
+
+    const reactionClock = render(InteractiveSynchronizer, {
+      props: {
+        timeAxis: 'reaction',
+        currentTime: 0,
+        duration: 120,
+        seekMin: 30,
+        seekMax: 120,
+        offsetStartTime: 30,
+        playerEvents: [],
+      },
+    }).body;
+    expect(reactionClock).not.toContain('data-disabled-section');
+  });
+
   it('clips a disabled span to the zoomed timeline', () => {
     const { body } = render(InteractiveSynchronizer, {
       props: {

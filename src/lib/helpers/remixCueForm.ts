@@ -11,3 +11,23 @@ export function floorSkipToOriginalAt(originalAt: number, skipTo: number): numbe
   }
   return skipTo;
 }
+
+// Raising Reaction start slides the cue that sat on the previous start.
+// In remix that cue is on the original clock, so a leftover skip target
+// from the old start (usually 0) cannot stay earlier than the new time.
+export function nextPlayTargetAfterStartMove({
+  remixMode,
+  state,
+  cueTime,
+  targetTime,
+}: {
+  remixMode: boolean;
+  state: number;
+  cueTime: number;
+  targetTime: number;
+}): number {
+  if (!remixMode || Number(state) !== 1) {
+    return targetTime;
+  }
+  return floorSkipToOriginalAt(cueTime, targetTime);
+}

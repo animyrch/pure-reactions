@@ -6,6 +6,7 @@
     export let index = 0;
     export let playlistItem = {};
     export let currentlyViewed = '';
+    export let currentIndex = -1;
     export let playlistId = '';
     export let playlistDocumentId = '';
     export let isCreation = true;
@@ -43,7 +44,12 @@
         location.reload();
     };
 
-    $: isActive = currentlyViewed === (playlistItem?.originalVideoId || playlistItem?.snippet?.resourceId?.videoId);
+    $: itemVideoId = playlistItem?.originalVideoId || playlistItem?.snippet?.resourceId?.videoId || '';
+    // Match the sequence slot, not the original video. The same video can appear more than once.
+    $: hasCurrentIndex = Number.isFinite(Number(currentIndex)) && Number(currentIndex) >= 0;
+    $: isActive = hasCurrentIndex
+        ? index === Math.trunc(Number(currentIndex))
+        : Boolean(itemVideoId) && currentlyViewed === itemVideoId;
     $: title = playlistItem?.title ?? playlistItem?.snippet?.title ?? 'Untitled video';
     $: channelTitle = playlistItem?.channelTitle ?? playlistItem?.snippet?.channelTitle;
     $: thumbnailUrl =
