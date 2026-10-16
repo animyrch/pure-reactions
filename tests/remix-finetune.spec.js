@@ -36,6 +36,27 @@ function markerCenterRatio(markerBox, trackBox) {
   return (markerBox.x + markerBox.width / 2 - trackBox.x) / trackBox.width;
 }
 
+// WebKit does not deliver Playwright mouse moves while the button is down,
+// so drive the same mousedown, mousemove, and mouseup the timeline listens for.
+async function dragInElement(locator, startX, endX) {
+  await locator.evaluate((element, positions) => {
+    const rect = element.getBoundingClientRect();
+    const clientY = rect.top + rect.height / 2;
+    const point = (type, clientX, buttons) => new MouseEvent(type, {
+      bubbles: true,
+      cancelable: true,
+      clientX,
+      clientY,
+      button: 0,
+      buttons,
+      view: window,
+    });
+    element.dispatchEvent(point('mousedown', positions.startX, 1));
+    window.dispatchEvent(point('mousemove', positions.endX, 1));
+    window.dispatchEvent(point('mouseup', positions.endX, 0));
+  }, { startX, endX });
+}
+
 test.describe('Remix fine-tune editing', () => {
   test.describe.configure({ timeout: 90000 });
 
@@ -77,14 +98,12 @@ test.describe('Remix fine-tune editing', () => {
     await expect(page.getByRole('button', { name: 'Reset zoom' })).toHaveCount(0);
 
     const track = page.locator('[data-track-id="originalVideo"]');
+    await track.scrollIntoViewIfNeeded();
     const box = await track.boundingBox();
-    await page.mouse.move(box.x + box.width * 0.05, box.y + box.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(box.x + box.width * 0.35, box.y + box.height / 2, { steps: 8 });
-    await page.mouse.up();
+    await dragInElement(track, box.x + box.width * 0.05, box.x + box.width * 0.35);
 
-    await scroller.scrollIntoViewIfNeeded();
     await expect(scroller).toBeVisible();
+    await scroller.scrollIntoViewIfNeeded();
     await expect(page.getByRole('button', { name: 'Reset zoom' })).toBeVisible();
     const spanBefore = Number(await scroller.getAttribute('data-scroll-span'));
     const startBefore = Number(await scroller.getAttribute('data-scroll-start'));
@@ -92,12 +111,12 @@ test.describe('Remix fine-tune editing', () => {
     await expect(volume).toBeVisible();
 
     const scrollBox = await scroller.boundingBox();
-    const thumb = page.locator('[data-timeline-scroll-thumb]');
-    const thumbBox = await thumb.boundingBox();
-    await page.mouse.move(thumbBox.x + thumbBox.width / 2, thumbBox.y + thumbBox.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(scrollBox.x + scrollBox.width - 2, thumbBox.y + thumbBox.height / 2, { steps: 12 });
-    await page.mouse.up();
+    const thumbBox = await page.locator('[data-timeline-scroll-thumb]').boundingBox();
+    await dragInElement(
+      scroller,
+      thumbBox.x + thumbBox.width / 2,
+      scrollBox.x + scrollBox.width - 2,
+    );
 
     const spanAfter = Number(await scroller.getAttribute('data-scroll-span'));
     const startAfter = Number(await scroller.getAttribute('data-scroll-start'));
