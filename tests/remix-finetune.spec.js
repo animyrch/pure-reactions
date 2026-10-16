@@ -69,6 +69,47 @@ test.describe('Remix fine-tune editing', () => {
     expect(volumeRatio).toBeLessThan(0.3);
   });
 
+  test('scrolls a zoomed timeline without changing the zoom span', async ({ page }) => {
+    await openFineTune(page, 'remixFineTuneCue0001', 'origRemixFineCue');
+
+    const scroller = page.getByRole('scrollbar', { name: 'Scroll zoomed timeline' });
+    await expect(scroller).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Reset zoom' })).toHaveCount(0);
+
+    const track = page.locator('[data-track-id="originalVideo"]');
+    const box = await track.boundingBox();
+    await page.mouse.move(box.x + box.width * 0.05, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width * 0.35, box.y + box.height / 2, { steps: 8 });
+    await page.mouse.up();
+
+    await scroller.scrollIntoViewIfNeeded();
+    await expect(scroller).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Reset zoom' })).toBeVisible();
+    const spanBefore = Number(await scroller.getAttribute('data-scroll-span'));
+    const startBefore = Number(await scroller.getAttribute('data-scroll-start'));
+    const volume = page.getByRole('button', { name: 'Volume 25% at 1:40' });
+    await expect(volume).toBeVisible();
+
+    const scrollBox = await scroller.boundingBox();
+    const thumb = page.locator('[data-timeline-scroll-thumb]');
+    const thumbBox = await thumb.boundingBox();
+    await page.mouse.move(thumbBox.x + thumbBox.width / 2, thumbBox.y + thumbBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(scrollBox.x + scrollBox.width - 2, thumbBox.y + thumbBox.height / 2, { steps: 12 });
+    await page.mouse.up();
+
+    const spanAfter = Number(await scroller.getAttribute('data-scroll-span'));
+    const startAfter = Number(await scroller.getAttribute('data-scroll-start'));
+    expect(Math.abs(spanAfter - spanBefore)).toBeLessThan(0.05);
+    expect(startAfter).toBeGreaterThan(startBefore + 30);
+    await expect(volume).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Reset zoom' }).click();
+    await expect(scroller).toHaveCount(0);
+    await expect(volume).toBeVisible();
+  });
+
   test('moves the fine-tune playhead with the original video', async ({ page }) => {
     await openFineTune(page, 'remixEditorOn000001', 'origRemixEditOn01');
     const playhead = page.getByRole('slider', { name: 'Playhead scrubber' });

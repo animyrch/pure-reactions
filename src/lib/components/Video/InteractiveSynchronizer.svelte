@@ -4,6 +4,11 @@
   import AdvancedVolumeControl from "./AdvancedVolumeControl.svelte";
   import { floorSkipToOriginalAt } from "$lib/helpers/remixCueForm";
   import {
+    panZoomWindow,
+    scrollProgressFromPointer,
+    scrollThumbGeometry,
+  } from "$lib/helpers/timelineZoomPan";
+  import {
     buildRemixDisabledSections,
     canPlaceRemixCue,
     mergeRemixDisabledSections,
@@ -154,6 +159,11 @@
   let visibleTracks = [];
   let hasManualZoom = false;
   let timelineContainer = null;
+  let timelineScrollTrack = null;
+  let timelineScrollDrag = null;
+  let panRangeMin = 0;
+  let panRangeMax = 0;
+  let timelineScrollMetrics = { left: 0, width: 1 };
 
   // Playhead drag state
   let isDraggingPlayhead = false;
@@ -352,6 +362,22 @@
     viewportSpan = Math.max(0.001, safeViewportEnd - safeViewportStart);
   }
   $: isZoomed = hasManualZoom;
+  $: {
+    const min = Number.isFinite(seekMin) ? Math.max(0, seekMin) : 0;
+    const ceiling = Number.isFinite(seekMax)
+      ? seekMax
+      : effectiveDuration > 0
+        ? effectiveDuration
+        : min;
+    panRangeMin = Math.min(min, ceiling);
+    panRangeMax = Math.max(min, ceiling);
+  }
+  $: timelineScrollMetrics = scrollThumbGeometry({
+    rangeMin: panRangeMin,
+    rangeMax: panRangeMax,
+    viewportStart: safeViewportStart,
+    viewportEnd: safeViewportEnd,
+  });
   $: displayProgress = clamp01(
     viewportSpan <= 0
       ? 0
@@ -1163,7 +1189,122 @@
     zoomDragCommitted = false;
   };
 
+  const cleanupTimelineScrollListeners = () => {
+    if (typeof window === "undefined") return;
+    window.removeEventListener("mousemove", handleTimelineScrollMove);
+    window.removeEventListener("mouseup", endTimelineScroll);
+    window.removeEventListener("touchmove", handleTimelineScrollMove);
+    window.removeEventListener("touchend", endTimelineScroll);
+    window.removeEventListener("touchcancel", endTimelineScroll);
+  };
+
+  const timelineScrollClientX = (event) => {
+    const touch = event.touches?.[0] ?? event.changedTouches?.[0];
+    return touch ? touch.clientX : event.clientX;
+  };
+
+  const moveTimelineScroll = (clientX) => {
+    if (!timelineScrollDrag?.rect || timelineScrollDrag.rect.width <= 0) return;
+    const pointerRatio = clamp01(
+      (clientX - timelineScrollDrag.rect.left) / timelineScrollDrag.rect.width,
+    );
+    const progress = scrollProgressFromPointer({
+      pointerRatio,
+      thumbWidth: timelineScrollDrag.thumbWidth,
+      grabRatio: timelineScrollDrag.grabRatio,
+    });
+    const span = Math.max(0.001, safeViewportEnd - safeViewportStart);
+    const maxStart = Math.max(panRangeMin, panRangeMax - span);
+    const panned = panZoomWindow({
+      rangeMin: panRangeMin,
+      rangeMax: panRangeMax,
+      span,
+      nextStart: panRangeMin + progress * (maxStart - panRangeMin),
+    });
+    viewportStart = panned.start;
+    viewportEnd = panned.end;
+  };
+
+  const handleTimelineScrollMove = (event) => {
+    if (!timelineScrollDrag) return;
+    event.preventDefault();
+    moveTimelineScroll(timelineScrollClientX(event));
+  };
+
+  const endTimelineScroll = () => {
+    timelineScrollDrag = null;
+    cleanupTimelineScrollListeners();
+  };
+
+  const startTimelineScroll = (event) => {
+    if (event.button != null && event.button !== 0) return;
+    const rect = timelineScrollTrack?.getBoundingClientRect?.();
+    if (!rect || rect.width <= 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const pointerRatio = clamp01((event.clientX - rect.left) / rect.width);
+    const { left, width } = timelineScrollMetrics;
+    const onThumb =
+      pointerRatio >= left - 0.001 && pointerRatio <= left + width + 0.001;
+    timelineScrollDrag = {
+      rect,
+      thumbWidth: width,
+      grabRatio:
+        onThumb && width > 0 ? clamp01((pointerRatio - left) / width) : 0.5,
+    };
+    moveTimelineScroll(timelineScrollClientX(event));
+    cleanupTimelineScrollListeners();
+    window.addEventListener("mousemove", handleTimelineScrollMove);
+    window.addEventListener("mouseup", endTimelineScroll);
+    window.addEventListener("touchmove", handleTimelineScrollMove, {
+      passive: false,
+    });
+    window.addEventListener("touchend", endTimelineScroll);
+    window.addEventListener("touchcancel", endTimelineScroll);
+  };
+
+  const panViewportBy = (nextStart) => {
+    const span = Math.max(0.001, safeViewportEnd - safeViewportStart);
+    const panned = panZoomWindow({
+      rangeMin: panRangeMin,
+      rangeMax: panRangeMax,
+      span,
+      nextStart,
+    });
+    viewportStart = panned.start;
+    viewportEnd = panned.end;
+  };
+
+  const handleTimelineScrollKeydown = (event) => {
+    const span = Math.max(0.001, safeViewportEnd - safeViewportStart);
+    if (event.key === "Home") {
+      event.preventDefault();
+      panViewportBy(panRangeMin);
+      return;
+    }
+    if (event.key === "End") {
+      event.preventDefault();
+      panViewportBy(panRangeMax);
+      return;
+    }
+    let delta = 0;
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+      delta = span * 0.15;
+    } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+      delta = span * -0.15;
+    } else if (event.key === "PageDown") {
+      delta = span;
+    } else if (event.key === "PageUp") {
+      delta = -span;
+    } else {
+      return;
+    }
+    event.preventDefault();
+    panViewportBy(safeViewportStart + delta);
+  };
+
   const resetZoom = () => {
+    endTimelineScroll();
     cleanupZoomListeners();
     isSelectingZoom = false;
     zoomSelectionActive = false;
@@ -1784,6 +1925,7 @@
 
   onDestroy(cleanupZoomListeners);
   onDestroy(cleanupPlayheadListeners);
+  onDestroy(cleanupTimelineScrollListeners);
 </script>
 
 <svelte:window on:keydown={handleWindowKeydown} />
@@ -1832,6 +1974,7 @@
     role="button"
     tabindex="0"
     aria-label={timelineAriaLabel}
+    id="reaction-timeline"
     bind:this={timelineContainer}
   >
 
@@ -2584,10 +2727,47 @@
     {/if}
   {/snippet}
   {#if isZoomed}
-    <div class="flex justify-end pt-1">
+    <div class="flex items-center gap-3 pt-1">
+      <div
+        class="relative h-6 min-w-0 flex-1 cursor-ew-resize touch-none select-none"
+        data-timeline-scroll="true"
+        data-scroll-start={safeViewportStart.toFixed(3)}
+        data-scroll-span={viewportSpan.toFixed(3)}
+        role="scrollbar"
+        aria-orientation="horizontal"
+        aria-label="Scroll zoomed timeline"
+        aria-controls="reaction-timeline"
+        aria-valuemin={panRangeMin}
+        aria-valuemax={panRangeMax}
+        aria-valuenow={safeViewportStart}
+        aria-valuetext={`${formatTimecode(safeViewportStart)} to ${formatTimecode(safeViewportEnd)}`}
+        tabindex="0"
+        bind:this={timelineScrollTrack}
+        on:mousedown={startTimelineScroll}
+        on:touchstart={startTimelineScroll}
+        on:keydown={handleTimelineScrollKeydown}
+      >
+        <div
+          class="pointer-events-none absolute left-0 right-0 top-1/2 h-2 -translate-y-1/2 rounded-full bg-border-subtle/70"
+          aria-hidden="true"
+        ></div>
+        <div
+          class="pointer-events-none absolute top-1/2 h-3.5 -translate-y-1/2 rounded-full border border-accent-primary/70 bg-accent-primary shadow-sm"
+          style={`left: ${(timelineScrollMetrics.left * 100).toFixed(3)}%; width: ${(timelineScrollMetrics.width * 100).toFixed(3)}%;`}
+          data-timeline-scroll-thumb="true"
+          aria-hidden="true"
+        >
+          <span
+            class="absolute inset-y-1 left-1/2 flex -translate-x-1/2 items-center gap-0.5"
+          >
+            <span class="h-2 w-px bg-background/80"></span>
+            <span class="h-2 w-px bg-background/80"></span>
+          </span>
+        </div>
+      </div>
       <button
         type="button"
-        class="inline-flex items-center rounded-md border border-border-subtle/60 bg-surface/80 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-text-muted transition hover:border-accent-primary/60 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+        class="inline-flex shrink-0 items-center rounded-md border border-border-subtle/60 bg-surface/80 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-text-muted transition hover:border-accent-primary/60 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
         on:click={resetZoom}
       >
         Reset zoom
