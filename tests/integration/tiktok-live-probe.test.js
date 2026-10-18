@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
-    describeTikTokLiveStatus,
+    classifyLiveWatch,
+    describeLiveWatchState,
     isTikTokLiveStatus,
+    isTikTokPlaybackUrl,
     normalizeTikTokUsername,
     parseTikTokLiveHtml,
     tiktokLiveEmbedUrl
@@ -37,7 +39,34 @@ describe('tiktok live probe', () => {
         expect(parsed.uniqueId).toBe('tierisonn');
         expect(parsed.nickname).toBe('tierison');
         expect(parsed.roomId).toBe('7698070297372412693');
-        expect(describeTikTokLiveStatus(parsed.userStatus)).toBe('Offline');
+        expect(parsed.isLive).toBe(false);
+    });
+
+    it('does not trust the logged-out status field when the live page is playing', () => {
+        const watch = classifyLiveWatch({
+            bodyText: 'StayCalmCam Follow',
+            videoCount: 1,
+            playbackUrl: 'https://pull-flv.tiktokcdn-eu.com/stage/stream.flv',
+            playbackType: 'flv'
+        });
+
+        expect(watch.watchState).toBe('live');
+        expect(watch.playbackType).toBe('flv');
+        expect(describeLiveWatchState(watch.watchState)).toBe('Live');
+    });
+
+    it('keeps an age-gated live from playing and does not call it offline', () => {
+        const watch = classifyLiveWatch({
+            bodyText: 'Log in to confirm your age. This LIVE may not be comfortable for some audiences.',
+            videoCount: 0,
+            playbackUrl: 'https://pull-flv.tiktokcdn-eu.com/stage/stream.flv',
+            playbackType: 'flv'
+        });
+
+        expect(watch.watchState).toBe('age-gated');
+        expect(watch.isLive).toBe(true);
+        expect(watch.playbackUrl).toBeNull();
+        expect(isTikTokPlaybackUrl('http://pull.tiktokcdn.com/a.flv')).toBe(false);
     });
 
     it('treats status 4 as live', () => {

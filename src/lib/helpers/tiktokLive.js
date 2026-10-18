@@ -18,16 +18,68 @@ export function tiktokLiveEmbedUrl(username) {
     return `https://www.tiktok.com/embed/@${username}/live`;
 }
 
+const AGE_GATE_TEXT = /log in to confirm your age/i;
+
 export function isTikTokLiveStatus(status) {
     return Number(status) === TIKTOK_STATUS_LIVE;
 }
 
-export function describeTikTokLiveStatus(status) {
-    const value = Number(status);
-    if (value === TIKTOK_STATUS_LIVE) return 'Live';
-    if (value === 2) return 'Offline';
-    if (!Number.isFinite(value)) return 'Unknown';
-    return `Status ${value}`;
+export function isTikTokPlaybackUrl(value) {
+    try {
+        const url = new URL(value);
+        if (url.protocol !== 'https:') return false;
+        const host = url.hostname.toLowerCase();
+        return (
+            host.endsWith('.tiktokcdn.com') ||
+            host.endsWith('.tiktokcdn-eu.com') ||
+            host.endsWith('.tiktokcdn-us.com') ||
+            host.endsWith('.tiktokcdn-in.com')
+        );
+    } catch {
+        return false;
+    }
+}
+
+export function classifyLiveWatch({ bodyText = '', videoCount = 0, playbackUrl = '', playbackType = '' } = {}) {
+    const ageGated = AGE_GATE_TEXT.test(bodyText) && Number(videoCount) < 1;
+    if (ageGated) {
+        return {
+            watchState: 'age-gated',
+            isLive: true,
+            ageGated: true,
+            playbackUrl: null,
+            playbackType: null,
+            detail: 'This LIVE is on, but TikTok asks for an age login before the video plays. The embed hides that and says the creator is offline.'
+        };
+    }
+
+    const type = playbackType === 'hls' ? 'hls' : playbackType === 'flv' ? 'flv' : null;
+    if (isTikTokPlaybackUrl(playbackUrl) && type && Number(videoCount) > 0) {
+        return {
+            watchState: 'live',
+            isLive: true,
+            ageGated: false,
+            playbackUrl,
+            playbackType: type,
+            detail: 'Playing the same public stream as the TikTok live page. Their embed player still reports this room as offline.'
+        };
+    }
+
+    return {
+        watchState: 'offline',
+        isLive: false,
+        ageGated: false,
+        playbackUrl: null,
+        playbackType: null,
+        detail: 'The TikTok live page did not start a public video.'
+    };
+}
+
+export function describeLiveWatchState(state) {
+    if (state === 'live') return 'Live';
+    if (state === 'age-gated') return 'Live, age login required';
+    if (state === 'offline') return 'Offline';
+    return 'Unavailable';
 }
 
 export function parseTikTokLiveHtml(html) {

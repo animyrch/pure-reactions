@@ -78,11 +78,11 @@
     "flowbite": "^2.2.1",
     "flowbite-svelte": "^0.48.4",
     "instantsearch.js": "^4.64.2",
+    "mpegts.js": "^1.7.3",
     "netlify-identity-widget": "^1.9.2",
     "sharp": "^0.34.5",
     "tailwind-merge": "^2.2.0"
-  }
-  ,
+  },
   "overrides": {
     "glob-parent": "6.0.2",
     "minimist": "1.2.8",

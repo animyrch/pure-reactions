@@ -1,8 +1,8 @@
 <script>
     /* global YT */
-    import { onMount } from 'svelte';
+    import { onDestroy, onMount } from 'svelte';
     import SEO from '$lib/components/SEO.svelte';
-    import { describeTikTokLiveStatus } from '$lib/helpers/tiktokLive';
+    import { describeLiveWatchState } from '$lib/helpers/tiktokLive';
 
     export let data;
 
@@ -14,22 +14,12 @@
     let delaySeconds = DELAY_SECONDS;
     let pendingLabel = '';
     let delayTimer = null;
+    let reactorPlayer = null;
+    let reactorError = '';
+    let reactorMuted = true;
 
     $: live = data.live;
-    $: reactorSrc = data.frame === 'direct' ? live.pageUrl : live.embedUrl;
-    $: statusLabel = live.isLive ? 'Live' : describeTikTokLiveStatus(live.userStatus ?? live.roomStatus);
-    $: pageFramingLabel = live.pageFraming?.frameable
-        ? 'Frameable'
-        : live.pageFraming?.xFrameOptions
-          ? `Blocked (${live.pageFraming.xFrameOptions})`
-          : 'Unknown';
-    $: embedFramingLabel = live.embedFraming?.frameable
-        ? 'No frame block on the embed response'
-        : live.embedHeadError
-          ? live.embedHeadError
-          : live.embedFraming?.xFrameOptions
-            ? `Blocked (${live.embedFraming.xFrameOptions})`
-            : 'Unknown';
+    $: statusLabel = describeLiveWatchState(live.watchState);
 
     function clearDelay() {
         if (delayTimer) {
@@ -113,10 +103,55 @@
         }, wait * 1000);
     }
 
+    async function startReactor() {
+        if (live.playbackType !== 'flv' || !live.playbackUrl) return;
+        const video = document.getElementById('tiktok-reactor');
+        if (!video) return;
+
+        const mpegtsModule = await import('mpegts.js');
+        const mpegts = mpegtsModule.default;
+        if (!mpegts.isSupported()) {
+            reactorError = 'This browser cannot play the live stream.';
+            return;
+        }
+
+        reactorPlayer = mpegts.createPlayer(
+            { type: 'flv', isLive: true, url: live.playbackUrl },
+            { enableWorker: false, liveBufferLatencyChasing: true }
+        );
+        reactorPlayer.attachMediaElement(video);
+        reactorPlayer.on(mpegts.Events.ERROR, () => {
+            reactorError = 'The live stream stopped.';
+        });
+        reactorPlayer.load();
+        video.muted = true;
+        try {
+            await reactorPlayer.play();
+        } catch {
+            reactorError = 'Press unmute to start the reactor.';
+        }
+    }
+
+    function toggleReactorMute() {
+        const video = document.getElementById('tiktok-reactor');
+        if (!video) return;
+        video.muted = !video.muted;
+        reactorMuted = video.muted;
+        if (!video.muted) video.play().catch(() => {});
+    }
+
+    function stopReactor() {
+        reactorPlayer?.destroy();
+        reactorPlayer = null;
+    }
+
     onMount(() => {
         ensureYouTubeApi();
+        startReactor();
         return () => clearDelay();
     });
+
+    onDestroy(stopReactor);
 </script>
 
 <SEO
@@ -133,6 +168,7 @@
             Same idea as the Twitch session: the reactor stays on TikTok, and the original plays from YouTube beside it.
             This page uses
             <a class="text-accent-primary underline-offset-2 hover:underline" href={live.pageUrl} target="_blank" rel="noreferrer">@{live.uniqueId}</a>.
+            TikTok’s embed player calls a logged-out room check that returns offline for people who are live, so this test follows the normal live page instead.
             There is no host remote, so the original starts when you press play.
         </p>
     </header>
@@ -145,7 +181,7 @@
         </div>
         <div>
             <p class="text-xs uppercase tracking-wide text-text-muted">Live status</p>
-            <p class="mt-1 text-text-primary" data-live-status={live.isLive ? 'live' : 'offline'}>{statusLabel}</p>
+            <p class="mt-1 text-text-primary" data-live-status={live.watchState || 'offline'}>{statusLabel}</p>
             {#if live.title}
                 <p>{live.title}</p>
             {/if}
@@ -153,13 +189,9 @@
                 <p class="text-danger">{live.error}</p>
             {/if}
         </div>
-        <div>
-            <p class="text-xs uppercase tracking-wide text-text-muted">/@user/live framing</p>
-            <p class="mt-1 text-text-primary">{pageFramingLabel}</p>
-        </div>
-        <div>
-            <p class="text-xs uppercase tracking-wide text-text-muted">/embed/@user/live</p>
-            <p class="mt-1 text-text-primary">{embedFramingLabel}</p>
+        <div class="md:col-span-2">
+            <p class="text-xs uppercase tracking-wide text-text-muted">What the live page did</p>
+            <p class="mt-1 text-text-primary">{live.detail}</p>
         </div>
     </section>
 
@@ -180,16 +212,6 @@
                 value={data.originalVideoId}
             />
         </label>
-        <label class="flex flex-col gap-1 text-xs text-text-muted">
-            Reactor frame
-            <select
-                class="rounded-lg border border-border-subtle bg-elevated px-3 py-2 text-sm text-text-primary"
-                name="frame"
-            >
-                <option value="embed" selected={data.frame === 'embed'}>Embed player</option>
-                <option value="direct" selected={data.frame === 'direct'}>Direct live page</option>
-            </select>
-        </label>
         <button
             class="rounded-full bg-accent-primary px-4 py-2 text-sm font-medium text-background"
             type="submit"
@@ -205,24 +227,37 @@
                     <p class="text-xs uppercase tracking-[0.18em] text-text-muted">Reactor</p>
                     <h2 class="text-base font-semibold text-text-primary">TikTok LIVE</h2>
                 </div>
-                <span class="rounded-full bg-elevated px-2 py-1 text-xs text-text-secondary">
-                    {data.frame === 'direct' ? 'Direct page' : 'Embed player'}
-                </span>
+                <span class="rounded-full bg-elevated px-2 py-1 text-xs text-text-secondary">Public live page</span>
             </div>
-            <div class="bg-black">
-                <iframe
-                    title="TikTok live reactor"
-                    src={reactorSrc}
-                    class="aspect-[9/16] max-h-[78vh] w-full border-0"
-                    allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-                    allowfullscreen
-                    data-reactor-frame={data.frame}
-                ></iframe>
+            <div class="relative bg-black">
+                {#if live.watchState === 'live' && live.playbackType === 'flv'}
+                    <video
+                        id="tiktok-reactor"
+                        class="aspect-[9/16] max-h-[78vh] w-full bg-black"
+                        autoplay
+                        muted
+                        playsinline
+                        data-reactor-player
+                    ></video>
+                    <button
+                        type="button"
+                        class="absolute bottom-3 left-3 rounded-full bg-black/70 px-3 py-1 text-xs text-white"
+                        on:click={toggleReactorMute}
+                    >
+                        {reactorMuted ? 'Unmute reactor' : 'Mute reactor'}
+                    </button>
+                {:else}
+                    <div class="flex aspect-[9/16] max-h-[78vh] w-full items-center justify-center px-6 text-center text-sm text-white">
+                        <p>{live.detail || 'No public live video.'}</p>
+                    </div>
+                {/if}
             </div>
+            {#if reactorError}
+                <p class="px-4 pt-3 text-xs text-danger">{reactorError}</p>
+            {/if}
             <p class="px-4 py-3 text-xs leading-5 text-text-muted">
-                The direct live URL sends a same-origin frame rule, so a Twitch-style iframe of
-                <span class="text-text-secondary">/@{live.uniqueId}/live</span>
-                stays blank. The embed route is the one this test can actually show.
+                <a class="text-accent-primary underline-offset-2 hover:underline" href={live.pageUrl} target="_blank" rel="noreferrer">Open @{live.uniqueId} on TikTok</a>
+                to compare. The live page cannot be framed, and the embed route stays on the offline check.
             </p>
         </section>
 
