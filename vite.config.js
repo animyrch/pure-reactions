@@ -6,9 +6,6 @@ import { SvelteKitPWA } from '@vite-pwa/sveltekit';
 const ONE_YEAR_IN_SECONDS = 60 * 60 * 24 * 365;
 
 export default defineConfig({
-	ssr: {
-		external: ['@playwright/test', 'playwright', 'playwright-core']
-	},
 	plugins: [
 		enhancedImages(),
 		sveltekit(),

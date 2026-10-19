@@ -1,4 +1,3 @@
-const TIKTOK_STATUS_LIVE = 4;
 const USERNAME_PATTERN = /^[A-Za-z0-9._]{2,24}$/;
 
 export const DEFAULT_TIKTOK_LIVE_USERNAME = 'tierisonn';
@@ -12,16 +11,6 @@ export function normalizeTikTokUsername(value) {
 
 export function tiktokLivePageUrl(username) {
     return `https://www.tiktok.com/@${username}/live`;
-}
-
-export function tiktokLiveEmbedUrl(username) {
-    return `https://www.tiktok.com/embed/@${username}/live`;
-}
-
-const AGE_GATE_TEXT = /log in to confirm your age/i;
-
-export function isTikTokLiveStatus(status) {
-    return Number(status) === TIKTOK_STATUS_LIVE;
 }
 
 export function isTikTokPlaybackUrl(value) {
@@ -82,33 +71,29 @@ export function pickTikTokPlayback(room) {
 }
 
 export function classifyLiveWatch({
-    bodyText = '',
-    videoCount = 0,
     playbackUrl = '',
     playbackType = '',
     ageRestricted = false
 } = {}) {
-    const ageGated = Boolean(ageRestricted) || (AGE_GATE_TEXT.test(bodyText) && Number(videoCount) < 1);
-    if (ageGated) {
+    if (ageRestricted) {
         return {
             watchState: 'age-gated',
             isLive: true,
             ageGated: true,
             playbackUrl: null,
             playbackType: null,
-            detail: 'This LIVE is on, but TikTok asks for an age login before the video plays. The embed hides that and says the creator is offline.'
+            detail: 'This LIVE is on, but TikTok asks for an age login before the video plays.'
         };
     }
 
-    const type = playbackType === 'hls' ? 'hls' : playbackType === 'flv' ? 'flv' : null;
-    if (isTikTokPlaybackUrl(playbackUrl) && type) {
+    if (playbackType === 'flv' && isTikTokPlaybackUrl(playbackUrl)) {
         return {
             watchState: 'live',
             isLive: true,
             ageGated: false,
             playbackUrl,
-            playbackType: type,
-            detail: 'Playing the same public stream as the TikTok live page. Their embed player still reports this room as offline.'
+            playbackType: 'flv',
+            detail: 'Playing the public live stream.'
         };
     }
 
@@ -144,24 +129,13 @@ export function parseTikTokLiveHtml(html) {
         return { ok: false, error: 'TikTok live-room payload could not be read.' };
     }
 
-    const room = state?.LiveRoom || {};
-    const info = room.liveRoomUserInfo || {};
-    const user = info.user || {};
-    const liveRoom = info.liveRoom || {};
-    const userStatus = Number(user.status);
-    const roomStatus = Number(liveRoom.status);
+    const user = state?.LiveRoom?.liveRoomUserInfo?.user || {};
+    const liveRoom = state?.LiveRoom?.liveRoomUserInfo?.liveRoom || {};
 
     return {
         ok: true,
-        uniqueId: user.uniqueId || '',
         nickname: user.nickname || '',
-        avatarUrl: user.avatarThumb || user.avatarMedium || '',
         roomId: user.roomId ? String(user.roomId) : '',
-        signature: user.signature || '',
-        userStatus: Number.isFinite(userStatus) ? userStatus : null,
-        roomStatus: Number.isFinite(roomStatus) ? roomStatus : null,
-        title: liveRoom.title || '',
-        viewerCount: liveRoom.liveRoomStats?.userCount ?? null,
-        isLive: isTikTokLiveStatus(userStatus) || isTikTokLiveStatus(roomStatus)
+        title: liveRoom.title || ''
     };
 }

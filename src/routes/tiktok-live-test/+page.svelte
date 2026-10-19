@@ -181,7 +181,7 @@
         </div>
         <div>
             <p class="text-xs uppercase tracking-wide text-text-muted">Live status</p>
-            <p class="mt-1 text-text-primary" data-live-status={live.watchState || 'offline'}>{statusLabel}</p>
+            <p class="mt-1 text-text-primary">{statusLabel}</p>
             {#if live.title}
                 <p>{live.title}</p>
             {/if}
@@ -237,7 +237,6 @@
                         autoplay
                         muted
                         playsinline
-                        data-reactor-player
                     ></video>
                     <button
                         type="button"
@@ -302,12 +301,11 @@
                     class="rounded-full border border-border-strong px-4 py-2 text-sm text-text-primary disabled:opacity-50"
                     on:click={playOriginalAfterDelay}
                     disabled={!playerReady}
-                    data-delay-play
                 >
                     Play after delay
                 </button>
                 {#if pendingLabel}
-                    <p class="text-sm text-accent-tertiary" data-delay-pending>{pendingLabel}</p>
+                    <p class="text-sm text-accent-tertiary">{pendingLabel}</p>
                 {/if}
                 {#if playerError}
                     <p class="text-sm text-danger">{playerError}</p>

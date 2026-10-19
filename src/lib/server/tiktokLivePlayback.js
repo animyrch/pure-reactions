@@ -1,5 +1,6 @@
 import {
     classifyLiveWatch,
+    normalizeTikTokUsername,
     parseTikTokLiveHtml,
     pickTikTokPlayback,
     tiktokLivePageUrl
@@ -48,7 +49,8 @@ async function fetchLivePage(pageUrl) {
     return {
         html: await response.text(),
         cookie: cookieHeader(response),
-        ok: response.ok
+        ok: response.ok,
+        status: response.status
     };
 }
 
@@ -79,22 +81,34 @@ async function fetchRoomInfo(roomId, pageUrl, cookie) {
     return payload?.data || null;
 }
 
-export async function watchTikTokLivePage(pageUrl, username) {
-    const cached = cache.get(username);
+export async function watchTikTokLivePage(username) {
+    const uniqueId = normalizeTikTokUsername(username);
+    const pageUrl = tiktokLivePageUrl(uniqueId);
+    const cached = cache.get(uniqueId);
     if (cached && Date.now() - cached.at < CACHE_MS) {
         return cached.value;
     }
 
-    const livePageUrl = pageUrl || tiktokLivePageUrl(username);
+    const profile = { uniqueId, pageUrl, nickname: '' };
 
     try {
-        const page = await fetchLivePage(livePageUrl);
-        const parsed = page.ok ? parseTikTokLiveHtml(page.html) : { ok: false };
+        const page = await fetchLivePage(pageUrl);
+        const parsed = page.ok ? parseTikTokLiveHtml(page.html) : { ok: false, error: `TikTok returned ${page.status}.` };
+        const identified = {
+            ...profile,
+            nickname: parsed.nickname || '',
+            ...(parsed.title ? { title: parsed.title } : {})
+        };
+
         if (!parsed.roomId) {
-            return remember(username, classifyLiveWatch());
+            return remember(uniqueId, {
+                ...identified,
+                ...classifyLiveWatch(),
+                ...(parsed.error ? { error: parsed.error } : {})
+            });
         }
 
-        const room = await fetchRoomInfo(parsed.roomId, livePageUrl, page.cookie);
+        const room = await fetchRoomInfo(parsed.roomId, pageUrl, page.cookie);
         const playback = pickTikTokPlayback(room) || {};
         const watch = classifyLiveWatch({
             ageRestricted: Boolean(room?.age_restricted?.restricted),
@@ -102,12 +116,16 @@ export async function watchTikTokLivePage(pageUrl, username) {
             playbackType: playback.playbackType
         });
 
-        return remember(username, {
+        return remember(uniqueId, {
+            ...identified,
             ...watch,
             ...(room?.title ? { title: room.title } : {})
         });
     } catch (error) {
         console.error('TikTok live watch failed:', error);
-        return unavailable('Could not reach TikTok to check this LIVE.');
+        return {
+            ...profile,
+            ...unavailable('Could not reach TikTok to check this LIVE.')
+        };
     }
 }
