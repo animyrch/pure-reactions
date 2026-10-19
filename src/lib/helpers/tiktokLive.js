@@ -40,8 +40,55 @@ export function isTikTokPlaybackUrl(value) {
     }
 }
 
-export function classifyLiveWatch({ bodyText = '', videoCount = 0, playbackUrl = '', playbackType = '' } = {}) {
-    const ageGated = AGE_GATE_TEXT.test(bodyText) && Number(videoCount) < 1;
+function streamCodec(entry) {
+    try {
+        return JSON.parse(entry?.main?.sdk_params || '{}').VCodec || '';
+    } catch {
+        return '';
+    }
+}
+
+export function pickTikTokPlayback(room) {
+    const pullRaw = room?.stream_url?.live_core_sdk_data?.pull_data?.stream_data;
+    if (typeof pullRaw !== 'string') return null;
+
+    let parsed;
+    try {
+        parsed = JSON.parse(pullRaw);
+    } catch {
+        return null;
+    }
+
+    const candidates = [];
+    for (const [name, entry] of Object.entries(parsed?.data || {})) {
+        const flvUrl = entry?.main?.flv;
+        if (name === 'ao' || typeof flvUrl !== 'string' || !flvUrl.startsWith('https://')) continue;
+        const codec = String(streamCodec(entry)).toLowerCase();
+        if (codec.includes('265') || codec.includes('hevc')) continue;
+        let path = '';
+        try {
+            path = new URL(flvUrl).pathname;
+        } catch {
+            continue;
+        }
+        const score = /_hd\.flv$/i.test(path) ? 3 : /hd5/i.test(path) ? 0 : 2;
+        candidates.push({ flvUrl, score });
+    }
+
+    candidates.sort((a, b) => b.score - a.score);
+    const best = candidates.find((candidate) => candidate.score > 0);
+    if (!best) return null;
+    return { playbackUrl: best.flvUrl, playbackType: 'flv' };
+}
+
+export function classifyLiveWatch({
+    bodyText = '',
+    videoCount = 0,
+    playbackUrl = '',
+    playbackType = '',
+    ageRestricted = false
+} = {}) {
+    const ageGated = Boolean(ageRestricted) || (AGE_GATE_TEXT.test(bodyText) && Number(videoCount) < 1);
     if (ageGated) {
         return {
             watchState: 'age-gated',
@@ -54,7 +101,7 @@ export function classifyLiveWatch({ bodyText = '', videoCount = 0, playbackUrl =
     }
 
     const type = playbackType === 'hls' ? 'hls' : playbackType === 'flv' ? 'flv' : null;
-    if (isTikTokPlaybackUrl(playbackUrl) && type && Number(videoCount) > 0) {
+    if (isTikTokPlaybackUrl(playbackUrl) && type) {
         return {
             watchState: 'live',
             isLive: true,

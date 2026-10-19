@@ -6,6 +6,7 @@ import {
     isTikTokPlaybackUrl,
     normalizeTikTokUsername,
     parseTikTokLiveHtml,
+    pickTikTokPlayback,
     tiktokLiveEmbedUrl
 } from '../../src/lib/helpers/tiktokLive.js';
 
@@ -53,6 +54,45 @@ describe('tiktok live probe', () => {
         expect(watch.watchState).toBe('live');
         expect(watch.playbackType).toBe('flv');
         expect(describeLiveWatchState(watch.watchState)).toBe('Live');
+    });
+
+    it('plays a public stream url without a browser video element', () => {
+        const watch = classifyLiveWatch({
+            playbackUrl: 'https://pull-flv.tiktokcdn-eu.com/stage/stream_hd.flv',
+            playbackType: 'flv'
+        });
+
+        expect(watch.watchState).toBe('live');
+        expect(watch.playbackUrl).toContain('_hd.flv');
+    });
+
+    it('prefers the h264 hd stream over the hevc rendition', () => {
+        const picked = pickTikTokPlayback({
+            stream_url: {
+                live_core_sdk_data: {
+                    pull_data: {
+                        stream_data: JSON.stringify({
+                            data: {
+                                hd: {
+                                    main: {
+                                        flv: 'https://pull-flv.tiktokcdn-eu.com/stage/stream_hd.flv',
+                                        sdk_params: JSON.stringify({ VCodec: 'h264' })
+                                    }
+                                },
+                                origin: {
+                                    main: {
+                                        flv: 'https://pull-flv.tiktokcdn-eu.com/stage/stream_hd5.flv',
+                                        sdk_params: JSON.stringify({ VCodec: 'h265' })
+                                    }
+                                }
+                            }
+                        })
+                    }
+                }
+            }
+        });
+
+        expect(picked.playbackUrl).toBe('https://pull-flv.tiktokcdn-eu.com/stage/stream_hd.flv');
     });
 
     it('keeps an age-gated live from playing and does not call it offline', () => {

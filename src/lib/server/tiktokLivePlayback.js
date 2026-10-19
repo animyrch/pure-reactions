@@ -1,80 +1,27 @@
-import { execFile } from 'node:child_process';
-import { createRequire } from 'node:module';
-import { promisify } from 'node:util';
-import { classifyLiveWatch } from '$lib/helpers/tiktokLive';
-
-const execFileAsync = promisify(execFile);
-const require = createRequire(import.meta.url);
+import {
+    classifyLiveWatch,
+    parseTikTokLiveHtml,
+    pickTikTokPlayback,
+    tiktokLivePageUrl
+} from '$lib/helpers/tiktokLive';
 
 const CACHE_MS = 15000;
 const cache = new Map();
-let browserPromise = null;
-let installAttempted = false;
+const BROWSER_USER_AGENT =
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36';
 
 function remember(username, value) {
     cache.set(username, { at: Date.now(), value });
     return value;
 }
 
-async function openChromium(chromium) {
-    try {
-        return await chromium.launch({ headless: true });
-    } catch (error) {
-        const missing = /Executable doesn't exist/i.test(String(error?.message || ''));
-        if (missing && !installAttempted) {
-            installAttempted = true;
-            const cli = require.resolve('playwright/cli');
-            await execFileAsync(process.execPath, [cli, 'install', 'chromium'], {
-                timeout: 180000,
-                env: process.env
-            });
-            return chromium.launch({ headless: true });
-        }
-
-        try {
-            return await chromium.launch({ channel: 'chrome', headless: true });
-        } catch {
-            throw error;
-        }
+function cookieHeader(response) {
+    const cookies =
+        typeof response.headers.getSetCookie === 'function' ? response.headers.getSetCookie() : [];
+    if (cookies.length > 0) {
+        return cookies.map((cookie) => cookie.split(';')[0]).join('; ');
     }
-}
-
-async function launchBrowser() {
-    if (browserPromise) {
-        const existing = await browserPromise.catch(() => null);
-        if (existing?.isConnected()) return existing;
-        browserPromise = null;
-    }
-
-    browserPromise = import('@playwright/test')
-        .then(({ chromium }) => openChromium(chromium))
-        .catch((error) => {
-            browserPromise = null;
-            throw error;
-        });
-    return browserPromise;
-}
-
-function playbackFromRoomEnter(payload) {
-    const pullRaw = payload?.data?.stream_url?.live_core_sdk_data?.pull_data?.stream_data;
-    if (typeof pullRaw !== 'string') return null;
-
-    let parsed;
-    try {
-        parsed = JSON.parse(pullRaw);
-    } catch {
-        return null;
-    }
-
-    const entries = parsed?.data || {};
-    for (const name of ['hd', 'sd', 'ld', 'origin']) {
-        const flvUrl = entries[name]?.main?.flv;
-        if (typeof flvUrl === 'string' && flvUrl.startsWith('https://')) {
-            return { playbackUrl: flvUrl, playbackType: 'flv' };
-        }
-    }
-
-    return null;
+    return response.headers.get('set-cookie') || '';
 }
 
 function unavailable(detail) {
@@ -88,85 +35,79 @@ function unavailable(detail) {
     };
 }
 
+async function fetchLivePage(pageUrl) {
+    const response = await fetch(pageUrl, {
+        headers: {
+            'user-agent': BROWSER_USER_AGENT,
+            accept: 'text/html,application/xhtml+xml',
+            'accept-language': 'en-US,en;q=0.9'
+        },
+        redirect: 'follow',
+        signal: AbortSignal.timeout(8000)
+    });
+    return {
+        html: await response.text(),
+        cookie: cookieHeader(response),
+        ok: response.ok
+    };
+}
+
+async function fetchRoomInfo(roomId, pageUrl, cookie) {
+    const params = new URLSearchParams({
+        aid: '1988',
+        app_language: 'en',
+        app_name: 'tiktok_web',
+        browser_language: 'en-US',
+        browser_name: 'Mozilla',
+        browser_online: 'true',
+        cookie_enabled: 'true',
+        device_platform: 'web_pc',
+        room_id: roomId
+    });
+    const response = await fetch(`https://webcast.tiktok.com/webcast/room/info/?${params}`, {
+        headers: {
+            'user-agent': BROWSER_USER_AGENT,
+            accept: 'application/json, text/plain, */*',
+            referer: pageUrl,
+            cookie
+        },
+        signal: AbortSignal.timeout(8000)
+    });
+    if (!response.ok) return null;
+    const payload = await response.json();
+    if (payload?.status_code && payload.status_code !== 0) return null;
+    return payload?.data || null;
+}
+
 export async function watchTikTokLivePage(pageUrl, username) {
     const cached = cache.get(username);
     if (cached && Date.now() - cached.at < CACHE_MS) {
         return cached.value;
     }
 
+    const livePageUrl = pageUrl || tiktokLivePageUrl(username);
+
     try {
-        return await readLivePage(pageUrl, username);
-    } catch (error) {
-        browserPromise = null;
-        try {
-            return await readLivePage(pageUrl, username);
-        } catch (retryError) {
-            console.error('TikTok live watch failed:', retryError || error);
-            return unavailable('Could not open the TikTok live page from this machine.');
+        const page = await fetchLivePage(livePageUrl);
+        const parsed = page.ok ? parseTikTokLiveHtml(page.html) : { ok: false };
+        if (!parsed.roomId) {
+            return remember(username, classifyLiveWatch());
         }
-    }
-}
 
-async function readLivePage(pageUrl, username) {
-    let page = null;
-    try {
-        const browser = await launchBrowser();
-        page = await browser.newPage({ viewport: { width: 900, height: 800 } });
-        let playbackUrl = '';
-        let playbackType = '';
-        let fallbackUrl = '';
-        let fallbackType = '';
-        let roomEnterPromise = null;
-
-        page.on('response', (response) => {
-            if (response.status() !== 200) return;
-            const contentType = response.headers()['content-type'] || '';
-            if (response.url().includes('/webcast/room/enter')) {
-                roomEnterPromise = response
-                    .json()
-                    .then((payload) => playbackFromRoomEnter(payload))
-                    .catch(() => null);
-                return;
-            }
-            if (fallbackUrl) return;
-            if (contentType.includes('video/x-flv')) {
-                fallbackUrl = response.url();
-                fallbackType = 'flv';
-            } else if (contentType.includes('mpegurl')) {
-                fallbackUrl = response.url();
-                fallbackType = 'hls';
-            }
+        const room = await fetchRoomInfo(parsed.roomId, livePageUrl, page.cookie);
+        const playback = pickTikTokPlayback(room) || {};
+        const watch = classifyLiveWatch({
+            ageRestricted: Boolean(room?.age_restricted?.restricted),
+            playbackUrl: playback.playbackUrl,
+            playbackType: playback.playbackType
         });
 
-        await page.goto(pageUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
-
-        const started = Date.now();
-        let bodyText = '';
-        let videoCount = 0;
-        while (Date.now() - started < 12000) {
-            if (roomEnterPromise) {
-                const picked = await roomEnterPromise;
-                if (picked) {
-                    playbackUrl = picked.playbackUrl;
-                    playbackType = picked.playbackType;
-                }
-            }
-            bodyText = await page.locator('body').innerText({ timeout: 2000 }).catch(() => bodyText);
-            videoCount = await page.locator('video').count();
-            if (/log in to confirm your age/i.test(bodyText) && videoCount < 1) break;
-            if (playbackUrl && videoCount > 0) break;
-            await page.waitForTimeout(400);
-        }
-
-        if (!playbackUrl) {
-            playbackUrl = fallbackUrl;
-            playbackType = fallbackType;
-        }
-        return remember(
-            username,
-            classifyLiveWatch({ bodyText, videoCount, playbackUrl, playbackType })
-        );
-    } finally {
-        await page?.close().catch(() => {});
+        return remember(username, {
+            ...watch,
+            ...(room?.title ? { title: room.title } : {})
+        });
+    } catch (error) {
+        console.error('TikTok live watch failed:', error);
+        return unavailable('Could not reach TikTok to check this LIVE.');
     }
 }
