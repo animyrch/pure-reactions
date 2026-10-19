@@ -10,14 +10,18 @@ function remember(username, value) {
 }
 
 async function launchBrowser() {
-    if (!browserPromise) {
-        browserPromise = import('@playwright/test')
-            .then(({ chromium }) => chromium.launch({ headless: true }))
-            .catch((error) => {
-                browserPromise = null;
-                throw error;
-            });
+    if (browserPromise) {
+        const existing = await browserPromise.catch(() => null);
+        if (existing?.isConnected()) return existing;
+        browserPromise = null;
     }
+
+    browserPromise = import('@playwright/test')
+        .then(({ chromium }) => chromium.launch({ headless: true }))
+        .catch((error) => {
+            browserPromise = null;
+            throw error;
+        });
     return browserPromise;
 }
 
@@ -38,6 +42,21 @@ export async function watchTikTokLivePage(pageUrl, username) {
         return cached.value;
     }
 
+    try {
+        return await readLivePage(pageUrl, username);
+    } catch (error) {
+        browserPromise = null;
+        try {
+            return await readLivePage(pageUrl, username);
+        } catch (retryError) {
+            console.error('TikTok live watch failed:', retryError || error);
+            const message = String(retryError?.message || error?.message || error).split('\n')[0].slice(0, 180);
+            return unavailable(message || 'Could not open the TikTok live page to check the real player.');
+        }
+    }
+}
+
+async function readLivePage(pageUrl, username) {
     let page = null;
     try {
         const browser = await launchBrowser();
@@ -72,8 +91,6 @@ export async function watchTikTokLivePage(pageUrl, username) {
             username,
             classifyLiveWatch({ bodyText, videoCount, playbackUrl, playbackType })
         );
-    } catch {
-        return unavailable('Could not open the TikTok live page to check the real player.');
     } finally {
         await page?.close().catch(() => {});
     }
