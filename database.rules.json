@@ -36,6 +36,9 @@
         "playbackRate": {
           ".validate": "newData.isNumber() && newData.val() >= 0.25 && newData.val() <= 2"
         },
+        "twitchChannel": {
+          ".validate": "newData.isString() && (newData.val() === '' || newData.val().matches(/^[a-z0-9][a-z0-9_]{3,24}$/))"
+        },
         "createdAt": {
           ".validate": "newData.exists()"
         },

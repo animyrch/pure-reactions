@@ -13,6 +13,11 @@
         SESSION_STATES
     } from '$lib/helpers/sharedSession';
     import { fetchOriginalVideoMetadata } from '$lib/helpers/originalVideo';
+    import {
+        buildTwitchChatUrl,
+        buildTwitchPlayerUrl,
+        normalizeTwitchChannel
+    } from '$lib/helpers/twitchChannel';
     import { UsersSolid, ArrowLeftOutline } from 'flowbite-svelte-icons';
 
     let sessionId = $page.params.sessionId;
@@ -315,6 +320,9 @@
     });
 
     $: viewerCount = sessionData?.viewers ? Object.keys(sessionData.viewers).length : 0;
+    $: twitchChannel = normalizeTwitchChannel(sessionData?.twitchChannel) || '';
+    $: twitchPlayerSrc = buildTwitchPlayerUrl(twitchChannel, $page.url.hostname);
+    $: twitchChatSrc = buildTwitchChatUrl(twitchChannel, $page.url.hostname);
     $: viewerLabel = viewerCount === 1 ? 'viewer' : 'viewers';
     $: connectionTheme = (() => {
         if (errorMessage) {
@@ -413,26 +421,49 @@
                             <div>
                                 <p class="text-xs uppercase tracking-[0.3em] text-slate-500">Livestream</p>
                                 <h2 class="text-lg font-semibold text-white">Twitch broadcast</h2>
+                                {#if twitchChannel}
+                                    <p class="text-sm text-slate-400">twitch.tv/{twitchChannel}</p>
+                                {/if}
                             </div>
                             <span class="rounded-full bg-slate-950/60 px-3 py-1 text-xs text-slate-400">~{TWITCH_DELAY_SECONDS}s offset</span>
                         </div>
-                        <div class="relative aspect-video w-full bg-black">
-                            <iframe
-                                title="Twitch Player"
-                                src="https://player.twitch.tv/?channel=animy_tr&parent={$page.url.hostname}"
-                                allowfullscreen
-                                loading="lazy"
-                                class="h-full w-full border-0"
-                            ></iframe>
-                        </div>
-                        <div class="hidden border-t border-slate-900/60 lg:block">
-                            <iframe
-                                title="Twitch Chat"
-                                src="https://www.twitch.tv/embed/animy_tr/chat?parent={$page.url.hostname}"
-                                loading="lazy"
-                                class="h-64 w-full border-0"
-                            ></iframe>
-                        </div>
+                        {#if twitchPlayerSrc}
+                            <div class="relative aspect-video w-full bg-black">
+                                {#key twitchPlayerSrc}
+                                    <iframe
+                                        title="Twitch player for {twitchChannel}"
+                                        src={twitchPlayerSrc}
+                                        allowfullscreen
+                                        loading="lazy"
+                                        class="h-full w-full border-0"
+                                        data-testid="twitch-player"
+                                    ></iframe>
+                                {/key}
+                            </div>
+                            {#if twitchChatSrc}
+                                <div class="hidden border-t border-slate-900/60 lg:block">
+                                    {#key twitchChatSrc}
+                                        <iframe
+                                            title="Twitch chat for {twitchChannel}"
+                                            src={twitchChatSrc}
+                                            loading="lazy"
+                                            class="h-64 w-full border-0"
+                                            data-testid="twitch-chat"
+                                        ></iframe>
+                                    {/key}
+                                </div>
+                            {/if}
+                        {:else}
+                            <div
+                                class="flex aspect-video w-full items-center justify-center bg-black px-8 text-center"
+                                data-testid="twitch-channel-missing"
+                            >
+                                <div class="max-w-sm">
+                                    <p class="text-base font-semibold text-white">No Twitch channel yet</p>
+                                    <p class="mt-2 text-sm text-slate-400">This session opens without a stream until the reactor sets a channel and copies the share link again.</p>
+                                </div>
+                            </div>
+                        {/if}
                     </section>
 
                     <aside class="flex flex-col gap-6">
@@ -495,6 +526,7 @@
                             <p><span class="text-slate-500">Session time:</span> {sessionData?.currentTime || 'N/A'}s</p>
                             <p><span class="text-slate-500">Volume:</span> {sessionData?.volume ?? 'N/A'}%</p>
                             <p><span class="text-slate-500">Playback rate:</span> {sessionData?.playbackRate ?? 'N/A'}x</p>
+                            <p><span class="text-slate-500">Twitch channel:</span> {twitchChannel || 'Not set'}</p>
                         </div>
                     </div>
                     <div class="mt-4">

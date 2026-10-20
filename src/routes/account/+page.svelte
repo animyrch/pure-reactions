@@ -314,7 +314,7 @@
             <div>
               <p class="font-medium text-text">Included</p>
               <ul class="list-disc list-inside space-y-1">
-                <li>Account profile details (email, display name, providers)</li>
+                <li>Account profile details (email, display name, providers, Twitch channel)</li>
                 <li>Your reactions and playback timelines</li>
                 <li>Playlists, queues, and bookmarks/follows</li>
                 <li>YouTube channel claim data (if submitted)</li>

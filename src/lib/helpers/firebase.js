@@ -49,6 +49,7 @@ import {
     getPlaylistSequenceItems,
 } from '$lib/helpers/reactionSequence';
 import { generateOriginalVideoSlug } from '$lib/helpers/originalVideo';
+import { normalizeTwitchChannel } from '$lib/helpers/twitchChannel';
 import { assertMomentReady } from '$lib/helpers/moments';
 import { affectsWatchDuration } from '$lib/helpers/watchDuration';
 import {
@@ -1587,6 +1588,22 @@ export const removeFollowWrapper = async (userId, reactorId) => {
     } catch (error) {
         console.error("Error removing user follows: ", error);
     }
+};
+
+export const updateTwitchChannelForUser = async ({ userId, twitchChannel }) => {
+    if (!userId) {
+        throw new Error('You must be logged in to set a Twitch channel.');
+    }
+
+    const normalized = normalizeTwitchChannel(twitchChannel);
+    if (normalized === null) {
+        throw new Error('Enter a Twitch channel name or a twitch.tv link.');
+    }
+
+    const userExtraDataCollection = createCollection(db, COLLECTION_USER_DATA, 'updateTwitchChannelForUser');
+    const userExtraDataRef = doc(userExtraDataCollection, userId);
+    await setDoc(userExtraDataRef, { twitchChannel: normalized }, { merge: true });
+    return normalized;
 };
 
 export const getUserExtraData = async (userId) => {

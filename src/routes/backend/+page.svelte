@@ -9,6 +9,9 @@
         addToPlaylistDocument,
         getPlaylist,
         firestoreDeleteField,
+        auth,
+        getUserExtraData,
+        updateTwitchChannelForUser,
     } from "$lib/helpers/firebase";
     import { handlePrivateRoute, goToRoute } from "$lib/helpers/routing";
     import { isMobileDevice } from "$lib/helpers/system";
@@ -56,6 +59,7 @@
         cleanupInactiveSessions,
         listenToSession,
     } from "$lib/helpers/sharedSession";
+    import { normalizeTwitchChannel } from "$lib/helpers/twitchChannel";
 
     export let data;
 
@@ -203,6 +207,11 @@
         shareUrl = generateShareUrl(sharedSessionId);
     }
     let showShareModal = false;
+    let savedTwitchChannel = "";
+    let twitchChannelDraft = "";
+    let twitchChannelError = "";
+    let isSavingTwitchChannel = false;
+    let isCopyingShareUrl = false;
     let viewerCount = 0;
     let viewerLabel = "viewers";
     let sessionUnsubscribe = null;
@@ -1591,17 +1600,124 @@
         goToReactionConfiguration();
     };
 
-    const onClickShareSession = () => {
+    const loadSavedTwitchChannel = async () => {
+        const userId = auth.currentUser?.uid;
+        if (!userId) {
+            savedTwitchChannel = "";
+            return;
+        }
+
+        const extra = await getUserExtraData(userId);
+        savedTwitchChannel = normalizeTwitchChannel(extra?.twitchChannel) || "";
+        if (savedTwitchChannel) {
+            twitchChannelDraft = "";
+        }
+    };
+
+    const onClickShareSession = async () => {
+        twitchChannelError = "";
+        try {
+            await loadSavedTwitchChannel();
+        } catch (error) {
+            console.error("Failed to load Twitch channel:", error);
+            savedTwitchChannel = "";
+        }
         showShareModal = true;
     };
 
-    const copyShareUrl = async () => {
+    const saveTwitchChannelFromShare = async () => {
+        twitchChannelError = "";
+        const normalized = normalizeTwitchChannel(twitchChannelDraft);
+        if (!normalized) {
+            twitchChannelError = normalized === null
+                ? "Enter a Twitch channel name or a twitch.tv link."
+                : "Enter a Twitch channel to use for shared sessions.";
+            return;
+        }
+
+        isSavingTwitchChannel = true;
         try {
-            await navigator.clipboard.writeText(shareUrl);
-            // You could add a toast notification here
-            console.log("Share URL copied to clipboard");
+            savedTwitchChannel = await updateTwitchChannelForUser({
+                userId: auth.currentUser?.uid,
+                twitchChannel: normalized,
+            });
+            twitchChannelDraft = "";
+            showToast("Twitch channel saved", TOASTS.SUCCESS);
         } catch (error) {
-            console.error("Failed to copy URL:", error);
+            const message = error?.message || "";
+            twitchChannelError = message.includes("Twitch")
+                ? message
+                : "Could not save the Twitch channel.";
+        } finally {
+            isSavingTwitchChannel = false;
+        }
+    };
+
+    const channelForCopy = async () => {
+        if (savedTwitchChannel) {
+            return savedTwitchChannel;
+        }
+
+        const normalized = normalizeTwitchChannel(twitchChannelDraft);
+        if (normalized === null) {
+            twitchChannelError = "Enter a Twitch channel name or a twitch.tv link.";
+            return null;
+        }
+
+        if (!normalized) {
+            return "";
+        }
+
+        savedTwitchChannel = await updateTwitchChannelForUser({
+            userId: auth.currentUser?.uid,
+            twitchChannel: normalized,
+        });
+        twitchChannelDraft = "";
+        return savedTwitchChannel;
+    };
+
+    const copyShareUrl = async () => {
+        if (!sharedSessionId || isCopyingShareUrl) {
+            return;
+        }
+
+        twitchChannelError = "";
+        isCopyingShareUrl = true;
+        try {
+            const channel = await channelForCopy();
+            if (channel === null) {
+                return;
+            }
+
+            await updateSessionState(sharedSessionId, {
+                twitchChannel: channel,
+            });
+
+            try {
+                await navigator.clipboard.writeText(shareUrl);
+                showToast(
+                    channel
+                        ? `Link copied. Viewers open twitch.tv/${channel}.`
+                        : "Link copied. No Twitch channel is set for this session.",
+                    TOASTS.SUCCESS,
+                );
+            } catch (error) {
+                console.error("Failed to copy URL:", error);
+                showToast(
+                    "The channel is saved on this session, but the link could not be copied.",
+                    TOASTS.WARNING,
+                );
+            }
+        } catch (error) {
+            console.error("Failed to publish Twitch channel:", error);
+            const message = error?.message || "";
+            if (message.includes("Twitch")) {
+                twitchChannelError = message;
+                return;
+            }
+            showToast("Could not save the Twitch channel on this session.", TOASTS.WARNING);
+        } finally {
+            isCopyingShareUrl = false;
         }
     };
 
@@ -2551,6 +2667,57 @@
                 Playback stays in sync with your controls.
             </p>
 
+            {#if savedTwitchChannel}
+                <p class="text-sm text-slate-800" data-testid="share-twitch-channel-note">
+                    Copy sends viewers to
+                    <span class="font-semibold text-slate-950">twitch.tv/{savedTwitchChannel}</span>.
+                    Change it in your
+                    <a
+                        class="text-blue-700 underline"
+                        href="/account/edit#twitch-channel"
+                    >account details</a>.
+                </p>
+            {:else}
+                <div class="space-y-2">
+                    <label class="text-sm font-medium text-slate-800" for="share-twitch-channel">
+                        Twitch channel
+                    </label>
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <input
+                            id="share-twitch-channel"
+                            type="text"
+                            bind:value={twitchChannelDraft}
+                            placeholder="yourchannel or twitch.tv/yourchannel"
+                            autocomplete="off"
+                            spellcheck="false"
+                            class="w-full rounded-full border border-slate-300 bg-white px-4 py-2 text-sm text-slate-950 placeholder:text-slate-500"
+                            aria-invalid={twitchChannelError ? "true" : "false"}
+                            on:keydown={(event) => {
+                                if (event.key === "Enter") {
+                                    event.preventDefault();
+                                    saveTwitchChannelFromShare();
+                                }
+                            }}
+                        />
+                        <button
+                            type="button"
+                            class="shrink-0 whitespace-nowrap rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-slate-50 disabled:cursor-wait disabled:text-slate-400"
+                            on:click={saveTwitchChannelFromShare}
+                            disabled={isSavingTwitchChannel}
+                        >
+                            {isSavingTwitchChannel ? "Saving…" : "Save channel"}
+                        </button>
+                    </div>
+                    <p class="text-xs text-slate-600">
+                        Not set yet. Add it here, or in your
+                        <a class="text-blue-700 underline" href="/account/edit#twitch-channel">account details</a>.
+                    </p>
+                </div>
+            {/if}
+            {#if twitchChannelError}
+                <p class="text-sm text-red-700" role="alert">{twitchChannelError}</p>
+            {/if}
+
             <div
                 class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3"
             >
@@ -2561,10 +2728,13 @@
                     class="flex-1 rounded-full border border-slate-800 bg-slate-900/80 px-4 py-2 font-mono text-sm text-slate-200"
                 />
                 <button
-                    class="flex items-center justify-center rounded-full border border-blue-500/50 bg-blue-500/10 px-4 py-2 text-sm font-semibold text-blue-200 transition hover:bg-blue-500/20 focus:outline-none focus:ring-2 focus:ring-blue-400/70"
+                    type="button"
+                    class="flex items-center justify-center rounded-full border border-blue-500/50 bg-blue-500/10 px-4 py-2 text-sm font-semibold text-blue-200 transition hover:bg-blue-500/20 focus:outline-none focus:ring-2 focus:ring-blue-400/70 disabled:cursor-wait disabled:opacity-60"
                     on:click={copyShareUrl}
+                    disabled={isCopyingShareUrl}
+                    data-testid="share-copy"
                 >
-                    Copy
+                    {isCopyingShareUrl ? "Copying…" : "Copy"}
                 </button>
             </div>
 

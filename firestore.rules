@@ -233,6 +233,12 @@ service cloud.firestore {
     match /userdata-local/{userId} {
       allow read, write: if isUserDataOwner(userId);
     }
+    match /userData_local/{userId} {
+      allow read, write: if isUserDataOwner(userId);
+    }
+    match /userdata_local/{userId} {
+      allow read, write: if isUserDataOwner(userId);
+    }
     match /userData-prod/{userId} {
       allow read, write: if isUserDataOwner(userId);
     }
