@@ -44,6 +44,12 @@
     /** Thumbnail type for this watch context: reaction, moment, playlist, queue, or remix. */
     export let itemType = "reaction";
 
+    /** Render the reaction frame from the reaction-player slot instead of a YouTube node. */
+    export let customReactionPlayer = false;
+
+    /** Live co-watch keeps layout and fullscreen, and leaves transport to the host. */
+    export let hostControlled = false;
+
     export let overlayRef;
 
     // Forward touch event handlers for swipe navigation (optional)
@@ -423,10 +429,16 @@
                         ? "half-frame"
                         : "relative h-full w-full"}
                 >
-                    <div
-                        id="player-reaction"
-                        class="absolute inset-0 h-full w-full"
-                    ></div>
+                    {#if customReactionPlayer}
+                        <div class="absolute inset-0 h-full w-full">
+                            <slot name="reaction-player" />
+                        </div>
+                    {:else}
+                        <div
+                            id="player-reaction"
+                            class="absolute inset-0 h-full w-full"
+                        ></div>
+                    {/if}
                     {#if showCinematicBars}
                         <div
                             class="pointer-events-none absolute inset-x-0 top-0 h-[12%] bg-gradient-to-b from-black via-black/80 to-transparent"
@@ -475,8 +487,11 @@
             seekMax={dockSeekMax}
             {remixMode}
             {dockBorderColor}
+            {hostControlled}
             onSeek={handleSeek}
-        />
+        >
+            <slot name="dock-extra" />
+        </ControlDock>
     {/if}
 </div>
 
