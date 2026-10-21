@@ -174,25 +174,28 @@ service cloud.firestore {
       allow get: if true;
       allow list: if resource.data.isPublished == true || isReactionOwner();
       allow create: if isReactionOwnerCreate() && reactionCreateHasNoSensitiveKeys();
-      allow update, delete: if isReactionOwner() &&
+      allow update: if isReactionOwner() &&
         request.resource.data.reactorId == resource.data.reactorId &&
         reactionUpdateHasNoSensitiveKeys();
+      allow delete: if isReactionOwner();
     }
     match /reactions-local/{reactionId} {
       allow get: if true;
       allow list: if resource.data.isPublished == true || isReactionOwner();
       allow create: if isReactionOwnerCreate() && reactionCreateHasNoSensitiveKeys();
-      allow update, delete: if isReactionOwner() &&
+      allow update: if isReactionOwner() &&
         request.resource.data.reactorId == resource.data.reactorId &&
         reactionUpdateHasNoSensitiveKeys();
+      allow delete: if isReactionOwner();
     }
     match /reactions-prod/{reactionId} {
       allow get: if true;
       allow list: if resource.data.isPublished == true || isReactionOwner();
       allow create: if isReactionOwnerCreate() && reactionCreateHasNoSensitiveKeys();
-      allow update, delete: if isReactionOwner() &&
+      allow update: if isReactionOwner() &&
         request.resource.data.reactorId == resource.data.reactorId &&
         reactionUpdateHasNoSensitiveKeys();
+      allow delete: if isReactionOwner();
     }
 
     // Moments (public read; owner write)
@@ -250,30 +253,34 @@ service cloud.firestore {
     match /playlists/{playlistId} {
       allow read: if true;
       allow create: if isPlaylistOwnerCreate() && playlistCreateHasNoSensitiveKeys();
-      allow update, delete: if isPlaylistOwner() &&
+      allow update: if isPlaylistOwner() &&
         request.resource.data.userId == resource.data.userId &&
         playlistUpdateHasNoSensitiveKeys();
+      allow delete: if isPlaylistOwner();
     }
     match /playlists-local/{playlistId} {
       allow read: if true;
       allow create: if isPlaylistOwnerCreate() && playlistCreateHasNoSensitiveKeys();
-      allow update, delete: if isPlaylistOwner() &&
+      allow update: if isPlaylistOwner() &&
         request.resource.data.userId == resource.data.userId &&
         playlistUpdateHasNoSensitiveKeys();
+      allow delete: if isPlaylistOwner();
     }
     match /playlists_local/{playlistId} {
       allow read: if true;
       allow create: if isPlaylistOwnerCreate() && playlistCreateHasNoSensitiveKeys();
-      allow update, delete: if isPlaylistOwner() &&
+      allow update: if isPlaylistOwner() &&
         request.resource.data.userId == resource.data.userId &&
         playlistUpdateHasNoSensitiveKeys();
+      allow delete: if isPlaylistOwner();
     }
     match /playlists-prod/{playlistId} {
       allow read: if true;
       allow create: if isPlaylistOwnerCreate() && playlistCreateHasNoSensitiveKeys();
-      allow update, delete: if isPlaylistOwner() &&
+      allow update: if isPlaylistOwner() &&
         request.resource.data.userId == resource.data.userId &&
         playlistUpdateHasNoSensitiveKeys();
+      allow delete: if isPlaylistOwner();
     }
 
     // Queues (private to owner)

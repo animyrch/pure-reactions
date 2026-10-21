@@ -3,9 +3,8 @@
   import { env } from '$env/dynamic/public';
   import { invalidate } from '$app/navigation';
   import { page } from '$app/stores';
-  import { sendEmailVerification } from 'firebase/auth';
   import { onMount } from 'svelte';
-  import { auth } from '$lib/helpers/firebase';
+  import { auth, sendAccountVerificationEmail } from '$lib/helpers/firebase';
   import { TOASTS } from '$lib/constants/toasts';
   import { goToRoute } from '$lib/helpers/routing';
   import { currentUser } from '$lib/stores/user';
@@ -95,13 +94,9 @@
         verificationUrl.searchParams.set('redirect', redirectTarget);
       }
 
-      await sendEmailVerification(
+      await sendAccountVerificationEmail(
         auth.currentUser,
-        verificationUrl
-          ? {
-              url: verificationUrl.toString()
-            }
-          : undefined
+        verificationUrl ? verificationUrl.toString() : undefined
       );
 
       statusMessage = isUsingFirebaseEmulators

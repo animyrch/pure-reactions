@@ -22,6 +22,13 @@
     export let interactive = false;
     export let linkless = false;
     export let showContextMenu = true;
+    export let onDelete = null;
+
+    const handleDeleteClick = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onDelete?.();
+    };
 
     $: isQueue = itemType === "queue";
     $: isPlaylist = itemType === "playlist";
@@ -473,6 +480,16 @@
                     <p class="text-xs text-text-muted">Collection of reactions</p>
                 {/if}
             </a>
+        {/if}
+        {#if onDelete}
+            <button
+                type="button"
+                class="shrink-0 rounded-full px-2 py-1 text-xs font-semibold text-red-400 hover:bg-red-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                aria-label={isPlaylist ? "Delete playlist" : "Delete reaction"}
+                on:click={handleDeleteClick}
+            >
+                Delete
+            </button>
         {/if}
         {#if !isQueue && showContextMenu}
             <ThumbnailContext {reactionPageId} {reactionVideoAuthor} />
