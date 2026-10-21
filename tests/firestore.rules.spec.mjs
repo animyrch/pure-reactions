@@ -281,3 +281,19 @@ test('non-owner cannot read unpublished queue', async () => {
   await seedQueue('private-queue'); // isPublished is missing/false by default in seedQueue
   await assertFails(getDoc(doc(otherDb(), 'queues', 'private-queue')));
 });
+
+test('owner can save a twitch channel on userData_local', async () => {
+  const ref = doc(ownerDb(), 'userData_local', ownerId);
+  await assertSucceeds(setDoc(ref, { twitchChannel: 'nightbot' }, { merge: true }));
+  await assertSucceeds(getDoc(ref));
+});
+
+test('another user cannot read or write a twitch channel', async () => {
+  const ref = doc(otherDb(), 'userData_local', ownerId);
+  await assertFails(getDoc(ref));
+  await assertFails(setDoc(ref, { twitchChannel: 'nightbot' }));
+});
+
+test('logged out users cannot read userData_local', async () => {
+  await assertFails(getDoc(doc(anonDb(), 'userData_local', ownerId)));
+});

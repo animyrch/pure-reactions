@@ -133,3 +133,44 @@ test('anonymous users cannot write viewer presence', async () => {
     })
   );
 });
+
+test('host can publish or clear a twitch channel and other users cannot', async () => {
+  await seedSession();
+
+  await assertSucceeds(
+    update(sessionRef(hostDb()), {
+      twitchChannel: 'animy_tr',
+      lastUpdated: 1713657660000
+    })
+  );
+
+  await assertSucceeds(
+    update(sessionRef(hostDb()), {
+      twitchChannel: '',
+      lastUpdated: 1713657720000
+    })
+  );
+
+  await assertFails(
+    update(sessionRef(hostDb()), {
+      twitchChannel: 'Not A Channel',
+      lastUpdated: 1713657780000
+    })
+  );
+
+  await assertFails(
+    update(sessionRef(otherDb()), {
+      twitchChannel: 'someoneelse',
+      lastUpdated: 1713657840000
+    })
+  );
+});
+
+test('host cannot write fields outside the session schema', async () => {
+  await seedSession();
+  await assertFails(
+    update(sessionRef(hostDb()), {
+      surprise: 'nope'
+    })
+  );
+});
