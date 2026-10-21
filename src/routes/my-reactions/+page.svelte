@@ -91,7 +91,7 @@
 
 {#if $isLoggedIn}
 	<div>
-		<div class="mx-auto mb-4 max-w-6xl px-4 sm:px-6 lg:px-10">
+		<div class="mb-3">
 			<a
 				href={backHref}
 				class="inline-flex items-center gap-2 text-sm text-text-secondary transition hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
