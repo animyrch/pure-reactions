@@ -90,6 +90,7 @@ describe('session watch layout', () => {
         expect(body).toContain('id="player-original"');
         expect(body).not.toContain('id="player-reaction"');
         expect(body).toContain('Watch layout controls');
+        expect(body).toContain('z-[70]');
         expect(body).toContain('Enter fullscreen');
         expect(body).not.toContain('Seek reaction video');
         expect(body).toContain('data-overlay-corner="bottom-left"');
