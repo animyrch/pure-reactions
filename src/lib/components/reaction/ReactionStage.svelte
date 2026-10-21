@@ -44,6 +44,15 @@
     /** Thumbnail type for this watch context: reaction, moment, playlist, queue, or remix. */
     export let itemType = "reaction";
 
+    /** Render the reaction frame from the reaction-player slot instead of a YouTube node. */
+    export let customReactionPlayer = false;
+
+    /** Live co-watch keeps layout and fullscreen, and leaves transport to the host. */
+    export let hostControlled = false;
+
+    /** Fill the parent instead of centering a max-width stage. Used when chat sits beside it. */
+    export let fullWidth = false;
+
     export let overlayRef;
 
     // Forward touch event handlers for swipe navigation (optional)
@@ -288,6 +297,8 @@
     }${
         isFullscreen
             ? "theater-wrapper--fullscreen fixed inset-0 z-50 m-0 h-screen w-screen overflow-hidden rounded-none bg-black px-0 py-0 text-text-primary shadow-none"
+            : fullWidth
+            ? "relative w-full max-w-none bg-black text-text-primary shadow-none md:rounded-2xl md:bg-surface/80 md:px-4 md:pt-4 md:pb-3 md:shadow-elevated md:backdrop-blur xl:rounded-3xl"
             : isDesktopOverlay
             ? "relative w-full max-w-none bg-black text-text-primary shadow-none md:mx-auto md:mt-6 md:mb-0 md:max-w-[80%] md:rounded-2xl md:bg-surface/80 md:px-4 md:pt-4 md:pb-3 md:shadow-elevated md:backdrop-blur sm:px-6 lg:px-10 xl:rounded-3xl"
             : "relative w-full max-w-none bg-black text-text-primary shadow-none md:shadow-elevated md:mx-auto md:mt-6 md:mb-0 md:rounded-2xl md:bg-surface/80 md:px-4 md:pt-4 md:pb-3 md:backdrop-blur sm:px-6 lg:px-10 xl:rounded-3xl"
@@ -423,10 +434,16 @@
                         ? "half-frame"
                         : "relative h-full w-full"}
                 >
-                    <div
-                        id="player-reaction"
-                        class="absolute inset-0 h-full w-full"
-                    ></div>
+                    {#if customReactionPlayer}
+                        <div class="absolute inset-0 h-full w-full">
+                            <slot name="reaction-player" />
+                        </div>
+                    {:else}
+                        <div
+                            id="player-reaction"
+                            class="absolute inset-0 h-full w-full"
+                        ></div>
+                    {/if}
                     {#if showCinematicBars}
                         <div
                             class="pointer-events-none absolute inset-x-0 top-0 h-[12%] bg-gradient-to-b from-black via-black/80 to-transparent"
@@ -475,8 +492,11 @@
             seekMax={dockSeekMax}
             {remixMode}
             {dockBorderColor}
+            {hostControlled}
             onSeek={handleSeek}
-        />
+        >
+            <slot name="dock-extra" />
+        </ControlDock>
     {/if}
 </div>
 

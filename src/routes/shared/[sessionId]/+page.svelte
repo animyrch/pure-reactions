@@ -1,10 +1,23 @@
 <script>
     /* global YT */
-    import { onMount, onDestroy } from 'svelte';
+    import { onMount, onDestroy, tick } from 'svelte';
+    import { browser } from '$app/environment';
     import { signInAnonymously } from 'firebase/auth';
     import { page } from '$app/stores';
     import { goToRoute } from '$lib/helpers/routing';
     import { auth } from '$lib/constants/firebase';
+    import ReactionStage from '$lib/components/reaction/ReactionStage.svelte';
+    import SessionLayoutControls from '$lib/components/session/SessionLayoutControls.svelte';
+    import { reactionDial } from '$lib/stores/reactionDial';
+    import {
+        normalizeFullscreenOverlayCorner,
+        normalizeFullscreenOverlayWidthPercent,
+        normalizeFullscreenPrimaryVideo,
+    } from '$lib/helpers/twinPlayersReactionData.ts';
+    import {
+        readSessionLayout,
+        writeSessionLayout,
+    } from '$lib/helpers/sessionLayout';
     import {
         getSessionData,
         listenToSession,
@@ -36,6 +49,16 @@
     let isLeaving = false;
 
     let debugMode = $page.url.searchParams.get('debug') === 'true';
+    let isFullscreen = false;
+    let showCinematicBars = false;
+    let fullscreenPrimaryVideo = 'original';
+    let fullscreenOverlayWidthPercent = 35;
+    let fullscreenOverlayCorner = 'top-right';
+    let fullscreenOverlayVisible = true;
+    let layoutReady = false;
+
+    const SESSION_CONTROLS_FADE_CLASS = 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100';
+    const stagePlayerSentinel = { hostControlled: true };
 
     const TWITCH_DELAY_SECONDS = 6;
     let controlTimeouts = new Map();
@@ -97,9 +120,10 @@
 
     function loadYoutubePlayer() {
         const videoIdToLoad = currentVideoId || sessionData?.originalVideoId;
-        if (!videoIdToLoad) return;
+        if (!videoIdToLoad || typeof YT === 'undefined' || typeof YT.Player !== 'function') return;
+        if (!document.getElementById('player-original')) return;
 
-        playerOriginal = new YT.Player('player-viewer', {
+        playerOriginal = new YT.Player('player-original', {
             videoId: videoIdToLoad,
             playerVars: playerOptions,
             events: {
@@ -250,6 +274,7 @@
             await refreshVideoDetails(currentVideoId);
 
             isConnected = true;
+            await tick();
 
             unsubscribe = listenToSession(sessionId, async (newSessionData) => {
                 const previousVideoId = currentVideoId;
@@ -295,6 +320,14 @@
             document.head.appendChild(tag);
         }
 
+        const savedLayout = readSessionLayout(window.localStorage);
+        fullscreenPrimaryVideo = savedLayout.fullscreenPrimaryVideo;
+        fullscreenOverlayWidthPercent = savedLayout.fullscreenOverlayWidthPercent;
+        fullscreenOverlayCorner = savedLayout.fullscreenOverlayCorner;
+        fullscreenOverlayVisible = savedLayout.fullscreenOverlayVisible;
+        showCinematicBars = savedLayout.showCinematicBars;
+        layoutReady = true;
+
         setTimeout(async () => {
             await initializeSession();
             if (isConnected) {
@@ -305,6 +338,10 @@
 
     onDestroy(async () => {
         clearAllControlTimeouts();
+        if (browser) {
+            document.body.classList.remove('reaction-fullscreen');
+            reactionDial.setFullscreen(false);
+        }
 
         if (viewerId && sessionId) {
             try {
@@ -319,11 +356,62 @@
         }
     });
 
+    const enterSessionFullscreen = () => {
+        isFullscreen = true;
+    };
+
+    const exitSessionFullscreen = () => {
+        isFullscreen = false;
+    };
+
+    const rememberLayout = () => {
+        if (!browser || !layoutReady) return;
+        writeSessionLayout(window.localStorage, {
+            fullscreenPrimaryVideo,
+            fullscreenOverlayWidthPercent,
+            fullscreenOverlayCorner,
+            fullscreenOverlayVisible,
+            showCinematicBars,
+        });
+    };
+
+    const setPrimaryVideo = (value) => {
+        fullscreenPrimaryVideo = normalizeFullscreenPrimaryVideo(value);
+        rememberLayout();
+    };
+
+    const setOverlayWidth = (value) => {
+        fullscreenOverlayWidthPercent = normalizeFullscreenOverlayWidthPercent(value);
+        rememberLayout();
+    };
+
+    const setOverlayCorner = (value) => {
+        fullscreenOverlayCorner = normalizeFullscreenOverlayCorner(value);
+        rememberLayout();
+    };
+
+    const setOverlayVisible = (value) => {
+        fullscreenOverlayVisible = Boolean(value);
+        rememberLayout();
+    };
+
+    const toggleCinematicBars = () => {
+        showCinematicBars = !showCinematicBars;
+        rememberLayout();
+    };
+
+    $: if (browser) {
+        document.body.classList.toggle('reaction-fullscreen', isFullscreen);
+        reactionDial.setFullscreen(isFullscreen);
+    }
+    $: stickyControlsClass = isFullscreen ? SESSION_CONTROLS_FADE_CLASS : 'opacity-100';
     $: viewerCount = sessionData?.viewers ? Object.keys(sessionData.viewers).length : 0;
     $: twitchChannel = normalizeTwitchChannel(sessionData?.twitchChannel) || '';
     $: twitchPlayerSrc = buildTwitchPlayerUrl(twitchChannel, $page.url.hostname);
     $: twitchChatSrc = buildTwitchChatUrl(twitchChannel, $page.url.hostname);
     $: viewerLabel = viewerCount === 1 ? 'viewer' : 'viewers';
+    $: sessionHasStream = Boolean(twitchPlayerSrc);
+    $: originalVideoPlatform = sessionData?.originalVideoPlatform || 'youtube';
     $: connectionTheme = (() => {
         if (errorMessage) {
             return {
@@ -365,8 +453,8 @@
     <title>Watching: {originalVideoTitle || 'Shared Reaction'}</title>
 </svelte:head>
 
-<div class="min-h-screen bg-slate-950 text-slate-100">
-    <div class="mx-auto flex min-h-screen max-w-6xl flex-col px-4 py-10 lg:py-14">
+<div class="website-inner-container min-h-screen bg-background text-text-primary">
+    <div class="flex min-h-screen flex-col py-6">
         {#if errorMessage}
             <div class="flex flex-1 items-center justify-center">
                 <div class="max-w-lg rounded-3xl border border-rose-500/20 bg-rose-500/5 p-10 text-center shadow-[0_30px_80px_-60px_rgba(244,63,94,0.9)]">
@@ -383,7 +471,7 @@
                 </div>
             </div>
         {:else}
-            <header class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <header class={`flex flex-col gap-4 px-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-10 ${isFullscreen ? "hidden" : ""}`}>
                 <button
                     type="button"
                     class="inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900/70 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-700 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:cursor-wait disabled:border-slate-800 disabled:text-slate-500"
@@ -415,99 +503,96 @@
                     </div>
                 </div>
             {:else}
-                <main class="mt-10 grid flex-1 gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-                    <section class="flex flex-col overflow-hidden rounded-3xl border border-slate-900/60 bg-slate-900/50 shadow-[0_45px_90px_-70px_rgba(15,23,42,1)]">
-                        <div class="flex items-center justify-between border-b border-slate-900/60 px-6 py-4">
-                            <div>
-                                <p class="text-xs uppercase tracking-[0.3em] text-slate-500">Livestream</p>
-                                <h2 class="text-lg font-semibold text-white">Twitch broadcast</h2>
-                                {#if twitchChannel}
-                                    <p class="text-sm text-slate-400">twitch.tv/{twitchChannel}</p>
-                                {/if}
-                            </div>
-                            <span class="rounded-full bg-slate-950/60 px-3 py-1 text-xs text-slate-400">~{TWITCH_DELAY_SECONDS}s offset</span>
-                        </div>
-                        {#if twitchPlayerSrc}
-                            <div class="relative aspect-video w-full bg-black">
+                <main class="mt-6" data-testid="session-stage" aria-busy={isBuffering}>
+                    {#if !sessionHasStream}
+                        <p
+                            class="mx-auto mb-4 max-w-xl px-4 text-center text-sm text-slate-400"
+                            data-testid="twitch-channel-missing"
+                        >
+                            No Twitch channel yet. The original video still follows the host until they set a channel and copy the share link again.
+                        </p>
+                    {/if}
+                    <div class="flex w-full flex-col gap-4 lg:flex-row lg:items-stretch lg:px-4">
+                        {#if twitchChatSrc}
+                            <aside
+                                class={`${isFullscreen ? "hidden" : "relative hidden lg:block"} w-80 shrink-0 self-stretch overflow-hidden rounded-2xl border border-border-subtle bg-black`}
+                                data-testid="twitch-chat-column"
+                            >
+                                {#key twitchChatSrc}
+                                    <iframe
+                                        title="Twitch chat for {twitchChannel}"
+                                        src={twitchChatSrc}
+                                        loading="lazy"
+                                        class="absolute inset-0 h-full w-full border-0"
+                                        data-testid="twitch-chat"
+                                    ></iframe>
+                                {/key}
+                            </aside>
+                        {/if}
+                        <div class="min-w-0 flex-1">
+                    <ReactionStage
+                        isFullscreen={isFullscreen}
+                        showCinematicBars={showCinematicBars}
+                        playerOriginal={stagePlayerSentinel}
+                        playerReaction={stagePlayerSentinel}
+                        {originalVideoPlatform}
+                        {stickyControlsClass}
+                        bothVideosStarted={true}
+                        hostControlled={true}
+                        customReactionPlayer={sessionHasStream}
+                        remixMode={!sessionHasStream}
+                        fullWidth={Boolean(twitchChatSrc)}
+                        {fullscreenPrimaryVideo}
+                        {fullscreenOverlayWidthPercent}
+                        {fullscreenOverlayCorner}
+                        {fullscreenOverlayVisible}
+                        on:enterFullscreen={enterSessionFullscreen}
+                        on:exitClick={exitSessionFullscreen}
+                        on:toggleCinematicBars={toggleCinematicBars}
+                    >
+                        <svelte:fragment slot="reaction-player">
+                            {#if twitchPlayerSrc}
                                 {#key twitchPlayerSrc}
                                     <iframe
                                         title="Twitch player for {twitchChannel}"
                                         src={twitchPlayerSrc}
                                         allowfullscreen
                                         loading="lazy"
-                                        class="h-full w-full border-0"
+                                        class="absolute inset-0 h-full w-full border-0"
                                         data-testid="twitch-player"
                                     ></iframe>
                                 {/key}
-                            </div>
-                            {#if twitchChatSrc}
-                                <div class="hidden border-t border-slate-900/60 lg:block">
-                                    {#key twitchChatSrc}
-                                        <iframe
-                                            title="Twitch chat for {twitchChannel}"
-                                            src={twitchChatSrc}
-                                            loading="lazy"
-                                            class="h-64 w-full border-0"
-                                            data-testid="twitch-chat"
-                                        ></iframe>
-                                    {/key}
-                                </div>
                             {/if}
-                        {:else}
-                            <div
-                                class="flex aspect-video w-full items-center justify-center bg-black px-8 text-center"
-                                data-testid="twitch-channel-missing"
-                            >
-                                <div class="max-w-sm">
-                                    <p class="text-base font-semibold text-white">No Twitch channel yet</p>
-                                    <p class="mt-2 text-sm text-slate-400">This session opens without a stream until the reactor sets a channel and copies the share link again.</p>
-                                </div>
-                            </div>
-                        {/if}
-                    </section>
+                        </svelte:fragment>
+                        <svelte:fragment slot="dock-extra">
+                            {#if sessionHasStream}
+                                <SessionLayoutControls
+                                    {fullscreenPrimaryVideo}
+                                    {fullscreenOverlayWidthPercent}
+                                    {fullscreenOverlayCorner}
+                                    {fullscreenOverlayVisible}
+                                    onPrimaryChange={setPrimaryVideo}
+                                    onWidthChange={setOverlayWidth}
+                                    onCornerChange={setOverlayCorner}
+                                    onVisibleChange={setOverlayVisible}
+                                />
+                            {/if}
+                        </svelte:fragment>
+                    </ReactionStage>
 
-                    <aside class="flex flex-col gap-6">
-                        <div class="overflow-hidden rounded-3xl border border-slate-900/60 bg-slate-900/50 shadow-[0_45px_90px_-70px_rgba(15,23,42,1)]">
-                            <div class="flex flex-col gap-1 border-b border-slate-900/60 px-6 py-4">
-                                <p class="text-xs uppercase tracking-[0.3em] text-slate-500">Synced video</p>
-                                <h2 class="text-lg font-semibold text-white">{originalVideoTitle || 'Loading video…'}</h2>
-                                {#if originalVideoAuthor}
-                                    <p class="text-sm text-slate-400">by {originalVideoAuthor}</p>
-                                {/if}
-                            </div>
-                            <div class="relative aspect-video w-full bg-black" aria-busy={isBuffering}>
-                                {#if isBuffering}
-                                    <div class="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-400/70 via-blue-200/40 to-blue-400/70 animate-pulse"></div>
-                                {/if}
-                                <div id="player-viewer" class="h-full w-full"></div>
-                            </div>
+                    {#if !isFullscreen}
+                        <div class="mx-auto mt-4 w-full max-w-3xl px-4 text-center sm:px-6">
+                            <h1 class="text-lg font-semibold text-white">{originalVideoTitle || 'Synced video'}</h1>
+                            {#if originalVideoAuthor}
+                                <p class="mt-1 text-sm text-slate-400">by {originalVideoAuthor}</p>
+                            {/if}
+                            {#if twitchChannel}
+                                <p class="mt-1 text-sm text-slate-500">twitch.tv/{twitchChannel} · ~{TWITCH_DELAY_SECONDS}s behind the host</p>
+                            {/if}
                         </div>
-
-                        <div class="rounded-3xl border border-slate-900/60 bg-slate-900/40 p-6 text-sm text-slate-300 shadow-[0_35px_70px_-60px_rgba(15,23,42,1)]">
-                            <h3 class="text-base font-semibold text-white">What to expect</h3>
-                            <p class="mt-2 text-slate-400">
-                                Playback follows the reactor with a gentle ~{TWITCH_DELAY_SECONDS}-second cushion so what you see lines up with the live stream.
-                            </p>
+                    {/if}
                         </div>
-
-                        <div class="rounded-3xl border border-slate-900/60 bg-slate-900/40 p-6 text-sm text-slate-300 shadow-[0_35px_70px_-60px_rgba(15,23,42,1)]">
-                            <h3 class="text-base font-semibold text-white">Viewing tips</h3>
-                            <ul class="mt-3 space-y-2 text-slate-400">
-                                <li class="flex items-start gap-2">
-                                    <span class="mt-1 h-1.5 w-1.5 rounded-full bg-blue-400"></span>
-                                    <span>Stay in this tab to keep your playback aligned with the host.</span>
-                                </li>
-                                <li class="flex items-start gap-2">
-                                    <span class="mt-1 h-1.5 w-1.5 rounded-full bg-blue-400"></span>
-                                    <span>The host controls play, pause and scrubbing. Sit back and enjoy.</span>
-                                </li>
-                                <li class="flex items-start gap-2">
-                                    <span class="mt-1 h-1.5 w-1.5 rounded-full bg-blue-400"></span>
-                                    <span>If the video drifts, a quick refresh restores sync in seconds.</span>
-                                </li>
-                            </ul>
-                        </div>
-                    </aside>
+                    </div>
                 </main>
             {/if}
 
@@ -546,3 +631,9 @@
         {/if}
     </div>
 </div>
+
+<style>
+    :global(body.reaction-fullscreen) {
+        overflow: hidden;
+    }
+</style>

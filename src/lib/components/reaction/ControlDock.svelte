@@ -26,10 +26,12 @@
   export let remixMode = false;
   export let dockBorderColor = "";
   export let onSeek = (_time) => {};
+  /** Live co-watch: layout and fullscreen only. The host owns play, pause, and seek. */
+  export let hostControlled = false;
 </script>
 
 <div
-  class={`controls-dock group pointer-events-none ${isFullscreen ? "controls-dock--fullscreen fixed inset-x-0 z-50 flex w-full px-3 sm:px-6" : "relative z-10 mt-3 w-full px-4 md:mt-4 md:px-4 sm:px-6 lg:px-10"}`}
+  class={`controls-dock group pointer-events-none ${isFullscreen ? "controls-dock--fullscreen fixed inset-x-0 z-[70] flex w-full px-3 sm:px-6" : "relative z-[70] mt-3 w-full px-4 md:mt-4 md:px-4 sm:px-6 lg:px-10"}`}
 >
   <div
     class={`controls-surface pointer-events-auto mx-auto w-full max-w-[920px] transition-opacity duration-slow ease-cinematic ${stickyControlsClass} ${isFullscreen ? "max-w-[720px]" : ""}`}
@@ -50,6 +52,7 @@
       {seekMax}
       {remixMode}
       {dockBorderColor}
+      {hostControlled}
       on:playStateChanged={onPlayStateChanged}
       on:syncVideos={onSyncVideos}
       on:toggleAutoPlaylist={onToggleAutoPlaylist}
@@ -57,7 +60,9 @@
       on:enterFullscreen={onEnterFullscreen}
       on:exitClick={onExitClick}
       on:seek={(e) => onSeek(e.detail.time)}
-    />
+    >
+      <slot />
+    </VideoControl>
   </div>
 </div>
 
@@ -76,7 +81,7 @@
       margin-top: 0;
       padding-left: 12px;
       padding-right: 12px;
-      z-index: 60;
+      z-index: 80;
     }
 
   }
