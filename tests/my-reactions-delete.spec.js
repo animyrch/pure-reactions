@@ -1,4 +1,23 @@
+import { readFileSync } from 'node:fs';
 import { test, expect } from '@playwright/test';
+
+const envOrFile = (name, fallback) => {
+	if (process.env[name]) return process.env[name];
+	try {
+		const line = readFileSync(new URL('../.env', import.meta.url), 'utf8')
+			.split('\n')
+			.find((entry) => entry.startsWith(`${name}=`));
+		const value = line?.slice(name.length + 1).trim();
+		if (value) return value;
+	} catch {
+		// CI has no local .env file.
+	}
+	return fallback;
+};
+
+const REACTION_COLLECTION = envOrFile('PUBLIC_FIREBASE_COLLECTION_REACTION_BINOMES', 'reactions-local');
+const PLAYLIST_COLLECTION = envOrFile('PUBLIC_FIREBASE_COLLECTION_PLAYLISTS', 'playlists_local');
+const MOMENT_COLLECTION = envOrFile('PUBLIC_FIREBASE_COLLECTION_MOMENTS', 'moments_local');
 
 const AUTH_EMULATOR_HOST = process.env.FIREBASE_AUTH_EMULATOR_HOST || '127.0.0.1:9099';
 const FIRESTORE_EMULATOR_HOST = process.env.FIRESTORE_EMULATOR_HOST || '127.0.0.1:8086';
@@ -138,19 +157,19 @@ test('my reactions can delete a reaction or a playlist', async ({ page }) => {
 		createdAt: field.time(createdAt)
 	});
 
-	await createDoc(owner.idToken, 'reactions-local', soloId, reactionFields(soloTitle));
+	await createDoc(owner.idToken, REACTION_COLLECTION, soloId, reactionFields(soloTitle));
 	await createDoc(
 		owner.idToken,
-		'reactions-local',
+		REACTION_COLLECTION,
 		memberId,
 		reactionFields(playlistTitle, { playlist: playlistId })
 	);
-	await createDoc(owner.idToken, 'playlists_local', playlistId, {
+	await createDoc(owner.idToken, PLAYLIST_COLLECTION, playlistId, {
 		userId: field.str(owner.localId),
 		reactionBinomeIds: field.list([field.str(memberId)]),
 		createdAt: field.time(createdAt)
 	});
-	await createDoc(owner.idToken, 'moments-local', momentId, {
+	await createDoc(owner.idToken, MOMENT_COLLECTION, momentId, {
 		creatorId: field.str(owner.localId),
 		title: field.str('Delete moment'),
 		reactionCount: field.int(2),
@@ -158,17 +177,17 @@ test('my reactions can delete a reaction or a playlist', async ({ page }) => {
 	});
 	await createDoc(
 		owner.idToken,
-		'reactions-local',
+		REACTION_COLLECTION,
 		momentReactionId,
 		reactionFields(momentTitle, { published: true, moment: momentId })
 	);
 	await createDoc(
 		owner.idToken,
-		'reactions-local',
+		REACTION_COLLECTION,
 		keptReactionId,
 		reactionFields(keptTitle, { published: true, moment: momentId })
 	);
-	await createDoc(other.payload.idToken, 'reactions-local', otherReactionId, {
+	await createDoc(other.payload.idToken, REACTION_COLLECTION, otherReactionId, {
 		reactorId: field.str(other.payload.localId),
 		playlistId: field.str(''),
 		isPublished: field.bool(false),
@@ -224,13 +243,13 @@ test('my reactions can delete a reaction or a playlist', async ({ page }) => {
 	await expect(momentCard).toHaveCount(0);
 	await expect(page.getByText(keptTitle)).toBeVisible();
 
-	await expect.poll(async () => (await readDoc('reactions-local', soloId)).status).toBe(404);
-	await expect.poll(async () => (await readDoc('reactions-local', memberId)).status).toBe(404);
-	await expect.poll(async () => (await readDoc('playlists_local', playlistId)).status).toBe(404);
-	await expect.poll(async () => (await readDoc('reactions-local', momentReactionId)).status).toBe(404);
-	expect((await readDoc('reactions-local', keptReactionId)).status).toBe(200);
-	expect((await readDoc('reactions-local', otherReactionId)).status).toBe(200);
+	await expect.poll(async () => (await readDoc(REACTION_COLLECTION, soloId)).status).toBe(404);
+	await expect.poll(async () => (await readDoc(REACTION_COLLECTION, memberId)).status).toBe(404);
+	await expect.poll(async () => (await readDoc(PLAYLIST_COLLECTION, playlistId)).status).toBe(404);
+	await expect.poll(async () => (await readDoc(REACTION_COLLECTION, momentReactionId)).status).toBe(404);
+	expect((await readDoc(REACTION_COLLECTION, keptReactionId)).status).toBe(200);
+	expect((await readDoc(REACTION_COLLECTION, otherReactionId)).status).toBe(200);
 
-	const moment = await readDoc('moments-local', momentId);
+	const moment = await readDoc(MOMENT_COLLECTION, momentId);
 	expect(moment.payload.fields?.reactionCount?.integerValue).toBe('1');
 });
