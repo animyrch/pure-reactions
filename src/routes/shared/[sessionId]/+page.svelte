@@ -512,6 +512,24 @@
                             No Twitch channel yet. The original video still follows the host until they set a channel and copy the share link again.
                         </p>
                     {/if}
+                    <div class="flex w-full flex-col gap-4 lg:flex-row lg:items-stretch lg:px-4">
+                        {#if twitchChatSrc}
+                            <aside
+                                class={`${isFullscreen ? "hidden" : "relative hidden lg:block"} w-80 shrink-0 self-stretch overflow-hidden rounded-2xl border border-border-subtle bg-black`}
+                                data-testid="twitch-chat-column"
+                            >
+                                {#key twitchChatSrc}
+                                    <iframe
+                                        title="Twitch chat for {twitchChannel}"
+                                        src={twitchChatSrc}
+                                        loading="lazy"
+                                        class="absolute inset-0 h-full w-full border-0"
+                                        data-testid="twitch-chat"
+                                    ></iframe>
+                                {/key}
+                            </aside>
+                        {/if}
+                        <div class="min-w-0 flex-1">
                     <ReactionStage
                         isFullscreen={isFullscreen}
                         showCinematicBars={showCinematicBars}
@@ -523,6 +541,7 @@
                         hostControlled={true}
                         customReactionPlayer={sessionHasStream}
                         remixMode={!sessionHasStream}
+                        fullWidth={Boolean(twitchChatSrc)}
                         {fullscreenPrimaryVideo}
                         {fullscreenOverlayWidthPercent}
                         {fullscreenOverlayCorner}
@@ -571,20 +590,9 @@
                                 <p class="mt-1 text-sm text-slate-500">twitch.tv/{twitchChannel} · ~{TWITCH_DELAY_SECONDS}s behind the host</p>
                             {/if}
                         </div>
-                        {#if twitchChatSrc}
-                            <div class="mx-auto mt-6 hidden w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-800 lg:block">
-                                {#key twitchChatSrc}
-                                    <iframe
-                                        title="Twitch chat for {twitchChannel}"
-                                        src={twitchChatSrc}
-                                        loading="lazy"
-                                        class="h-80 w-full border-0"
-                                        data-testid="twitch-chat"
-                                    ></iframe>
-                                {/key}
-                            </div>
-                        {/if}
                     {/if}
+                        </div>
+                    </div>
                 </main>
             {/if}
 
