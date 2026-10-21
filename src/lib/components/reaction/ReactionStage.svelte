@@ -50,6 +50,9 @@
     /** Live co-watch keeps layout and fullscreen, and leaves transport to the host. */
     export let hostControlled = false;
 
+    /** Fill the parent instead of centering a max-width stage. Used when chat sits beside it. */
+    export let fullWidth = false;
+
     export let overlayRef;
 
     // Forward touch event handlers for swipe navigation (optional)
@@ -294,6 +297,8 @@
     }${
         isFullscreen
             ? "theater-wrapper--fullscreen fixed inset-0 z-50 m-0 h-screen w-screen overflow-hidden rounded-none bg-black px-0 py-0 text-text-primary shadow-none"
+            : fullWidth
+            ? "relative w-full max-w-none bg-black text-text-primary shadow-none md:rounded-2xl md:bg-surface/80 md:px-4 md:pt-4 md:pb-3 md:shadow-elevated md:backdrop-blur xl:rounded-3xl"
             : isDesktopOverlay
             ? "relative w-full max-w-none bg-black text-text-primary shadow-none md:mx-auto md:mt-6 md:mb-0 md:max-w-[80%] md:rounded-2xl md:bg-surface/80 md:px-4 md:pt-4 md:pb-3 md:shadow-elevated md:backdrop-blur sm:px-6 lg:px-10 xl:rounded-3xl"
             : "relative w-full max-w-none bg-black text-text-primary shadow-none md:shadow-elevated md:mx-auto md:mt-6 md:mb-0 md:rounded-2xl md:bg-surface/80 md:px-4 md:pt-4 md:pb-3 md:backdrop-blur sm:px-6 lg:px-10 xl:rounded-3xl"
