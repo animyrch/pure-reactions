@@ -1488,9 +1488,16 @@ export async function updatePhotoHelper(user, photoURL) {
 }
 export async function updateEmailHelper(user, newEmail) {
     try {
-        await verifyBeforeUpdateEmail(user, newEmail);
+        const continueUrl = typeof window !== 'undefined'
+            ? new URL('/account/edit', window.location.origin).toString()
+            : undefined;
+        await verifyBeforeUpdateEmail(
+            user,
+            newEmail,
+            continueUrl ? { url: continueUrl } : undefined
+        );
     } catch (error) {
-        console.error('Error updating email:', error.message);
+        console.error('Error sending email confirmation:', error.message);
         throw error;
     }
 }
@@ -1503,9 +1510,15 @@ export async function updatePasswordHelper(user, newPassword) {
     }
 }
 
-export const reauthenticateUserHelper = async (user) => {
+export const reauthenticateUserHelper = async (user, message) => {
+    const password = prompt(message || 'Please enter your password to continue:');
+    if (typeof password !== 'string') {
+        const cancelError = new Error('Password entry was canceled.');
+        cancelError.code = 'auth/user-cancelled';
+        throw cancelError;
+    }
+
     try {
-        const password = prompt('Please enter your password to continue:');
         const credential = EmailAuthProvider.credential(user.email, password);
         await reauthenticateWithCredential(auth.currentUser, credential);
     } catch (error) {
