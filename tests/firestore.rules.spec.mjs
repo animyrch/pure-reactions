@@ -11,6 +11,7 @@ import {
   getDoc,
   getDocs,
   query,
+  deleteDoc,
   setDoc,
   updateDoc,
   where
@@ -145,6 +146,37 @@ test('non-owner cannot update reactions', async () => {
       title: 'Nope'
     })
   );
+});
+
+test('owner can delete reactions', async () => {
+  await assertSucceeds(deleteDoc(doc(ownerDb(), 'reactions', reactionIds.draft)));
+});
+
+test('non-owner cannot delete reactions', async () => {
+  await assertFails(deleteDoc(doc(otherDb(), 'reactions', reactionIds.published)));
+});
+
+test('logged out cannot delete reactions', async () => {
+  await assertFails(deleteDoc(doc(anonDb(), 'reactions', reactionIds.published)));
+});
+
+const seedPlaylist = async (playlistId = 'owner-playlist') => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'playlists', playlistId), {
+      userId: ownerId,
+      reactionBinomeIds: ['reaction-public']
+    });
+  });
+};
+
+test('owner can delete playlists', async () => {
+  await seedPlaylist();
+  await assertSucceeds(deleteDoc(doc(ownerDb(), 'playlists', 'owner-playlist')));
+});
+
+test('non-owner cannot delete playlists', async () => {
+  await seedPlaylist();
+  await assertFails(deleteDoc(doc(otherDb(), 'playlists', 'owner-playlist')));
 });
 
 test('owner can create claims', async () => {

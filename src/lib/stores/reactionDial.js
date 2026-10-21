@@ -53,6 +53,12 @@ function createReactionDialStore() {
         };
       });
     },
+    setFullscreen(value) {
+      update((current) => ({
+        ...current,
+        isFullscreen: Boolean(value)
+      }));
+    },
     reset() {
       set(createInitialState());
     }
