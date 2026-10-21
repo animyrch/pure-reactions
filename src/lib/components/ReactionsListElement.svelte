@@ -7,6 +7,11 @@
     import { displayedWatchDurationSeconds } from '$lib/helpers/watchDuration';
 
     export let reaction;
+    export let onDelete = null;
+
+    const requestDelete = () => {
+        onDelete?.(reaction);
+    };
 
     const playlistId = reaction?.data?.playlistId;
     const itemType = resolveReactionListItemType(reaction);
@@ -41,5 +46,6 @@
         queueSlug={queueSlug}
         {watchDurationSeconds}
         interactive
+        onDelete={onDelete ? requestDelete : null}
     />
 </div>

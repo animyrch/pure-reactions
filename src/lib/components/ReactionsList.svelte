@@ -4,6 +4,7 @@
     export let reactions = [];
     export let loading = false;
     export let heading = 'Featured Reactions';
+    export let onDelete = null;
 </script>
 
 {#if reactions.length > 0 || loading}
@@ -28,7 +29,7 @@
     {:else}
         {#each reactions as reaction (reaction?.id)}
             <div class="card-shell" role="listitem">
-                <ReactionsListElement {reaction} />
+                <ReactionsListElement {reaction} {onDelete} />
             </div>
         {/each}
     {/if}

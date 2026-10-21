@@ -20,14 +20,19 @@
   let reduceMotion = false;
   let isMobileLandscapeTheater = false;
   const momentReactionPlaybackPathPattern = /^\/moments\/[^/]+\/reaction\/[^/]+$/;
+  const sharedWatchPathPattern = /^\/shared\/[^/]+/;
 
   $: isReactionRoute = $page.url.pathname?.startsWith("/reaction/");
   $: isPlaylistRoute = $page.url.pathname?.startsWith("/playlist/");
   $: isMomentReactionPlaybackRoute = momentReactionPlaybackPathPattern.test(
     $page.url.pathname || "",
   );
+  $: isSharedWatchRoute = sharedWatchPathPattern.test($page.url.pathname || "");
   $: isPlaybackRoute =
-    isReactionRoute || isPlaylistRoute || isMomentReactionPlaybackRoute;
+    isReactionRoute ||
+    isPlaylistRoute ||
+    isMomentReactionPlaybackRoute ||
+    isSharedWatchRoute;
   $: hideSpeedDial =
     isPlaybackRoute && ($reactionDial.isFullscreen || isMobileLandscapeTheater);
   $: hideFooter = isMomentReactionPlaybackRoute;

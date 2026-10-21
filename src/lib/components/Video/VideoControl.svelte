@@ -35,6 +35,8 @@
     export let remixMode = false;
     /** 1px type accent for queue, playlist, moment, and remix playback. */
     export let dockBorderColor = "";
+    /** Hide play, pause, skip, and seek. Layout buttons stay available. */
+    export let hostControlled = false;
 
     let isPlaying = true;
     let isInteracting = false;
@@ -363,6 +365,7 @@
     }
 
     function handleKeydown(event) {
+        if (hostControlled) return;
         if (event.altKey || event.ctrlKey || event.metaKey || event.isComposing) return;
         if (event.defaultPrevented) return;
 
@@ -466,15 +469,16 @@
         </div>
     {:else}
         <div
-            class={`controls-surface flex w-full flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-3xl border border-border-subtle/70 bg-surface/70 px-3 py-2 backdrop-blur-sm transition-opacity duration-subtle ease-cinematic sm:flex-nowrap sm:rounded-full sm:px-4 ${controlsClasses}`}
+            class={`controls-surface flex w-full flex-wrap items-center gap-x-3 gap-y-2 rounded-3xl border border-border-subtle/70 bg-surface/70 px-3 py-2 backdrop-blur-sm transition-opacity duration-subtle ease-cinematic sm:flex-nowrap sm:rounded-full sm:px-4 ${hostControlled ? "justify-end" : "justify-between"} ${controlsClasses}`}
             style={dockAccentStyle}
             role="toolbar"
-            aria-label="Reaction playback controls"
+            aria-label={hostControlled ? "Watch layout controls" : "Reaction playback controls"}
             data-dock-type-accent={dockBorderColor || undefined}
             tabindex="0"
             on:mouseenter={handleControlsMouseEnter}
             on:mouseleave={handleControlsMouseLeave}
         >
+            {#if !hostControlled}
             <!-- Skip back, play/pause, skip forward -->
             <div class="order-2 flex shrink-0 items-center gap-0.5 sm:order-none sm:gap-1">
                 <button
@@ -546,9 +550,11 @@
                     >{formatTime(displaySeekMax)}</span
                 >
             </div>
+            {/if}
 
             <!-- Other Buttons -->
             <div class="flex items-center gap-2 shrink-0 order-3 sm:order-none">
+                {#if !hostControlled}
                 <div class="group relative">
                     <button
                         type="button"
@@ -560,6 +566,8 @@
                         <span class="sr-only">Sync videos</span>
                     </button>
                 </div>
+                {/if}
+                <slot />
 
                 {#if isPlaylist && showAutoPlayButton}
                     <div class="group relative">

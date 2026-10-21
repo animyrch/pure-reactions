@@ -41,6 +41,7 @@ import {
 } from "$lib/constants/firebase";
 export { app, db, auth, database };
 import { showToast } from '$lib/stores/toast';
+import { sendAccountVerificationEmail as deliverVerificationEmail } from '$lib/helpers/verificationEmail';
 import { SORTINGS } from '$lib/constants/sortings';
 import { FILTERS } from '$lib/constants/filters';
 import {
@@ -1347,6 +1348,10 @@ export const getReactionsByIds = async (reactionIds) => {
     }
 };
 
+export function sendAccountVerificationEmail(user, continueUrl) {
+    return deliverVerificationEmail(user, continueUrl, sendEmailVerification);
+}
+
 export const createUserWithEmailAndPasswordWrapper = async (email, password) => {
     let successful = false;
     let errorDetails = null;
@@ -1364,14 +1369,7 @@ export const createUserWithEmailAndPasswordWrapper = async (email, password) => 
             ? new URL('/account/verify', window.location.origin).toString()
             : undefined;
 
-        await sendEmailVerification(
-            userCreds.user,
-            verificationUrl
-                ? {
-                    url: verificationUrl
-                }
-                : undefined
-        );
+        await sendAccountVerificationEmail(userCreds.user, verificationUrl);
         successful = true;
     } catch (error) {
         const errorCode = error?.code || 'auth/error';
@@ -1488,9 +1486,16 @@ export async function updatePhotoHelper(user, photoURL) {
 }
 export async function updateEmailHelper(user, newEmail) {
     try {
-        await verifyBeforeUpdateEmail(user, newEmail);
+        const continueUrl = typeof window !== 'undefined'
+            ? new URL('/account/edit', window.location.origin).toString()
+            : undefined;
+        await verifyBeforeUpdateEmail(
+            user,
+            newEmail,
+            continueUrl ? { url: continueUrl } : undefined
+        );
     } catch (error) {
-        console.error('Error updating email:', error.message);
+        console.error('Error sending email confirmation:', error.message);
         throw error;
     }
 }
@@ -1503,9 +1508,15 @@ export async function updatePasswordHelper(user, newPassword) {
     }
 }
 
-export const reauthenticateUserHelper = async (user) => {
+export const reauthenticateUserHelper = async (user, message) => {
+    const password = prompt(message || 'Please enter your password to continue:');
+    if (typeof password !== 'string') {
+        const cancelError = new Error('Password entry was canceled.');
+        cancelError.code = 'auth/user-cancelled';
+        throw cancelError;
+    }
+
     try {
-        const password = prompt('Please enter your password to continue:');
         const credential = EmailAuthProvider.credential(user.email, password);
         await reauthenticateWithCredential(auth.currentUser, credential);
     } catch (error) {
