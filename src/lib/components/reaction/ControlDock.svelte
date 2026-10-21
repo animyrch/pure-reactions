@@ -26,6 +26,8 @@
   export let remixMode = false;
   export let dockBorderColor = "";
   export let onSeek = (_time) => {};
+  /** Live co-watch: layout and fullscreen only. The host owns play, pause, and seek. */
+  export let hostControlled = false;
 </script>
 
 <div
@@ -50,6 +52,7 @@
       {seekMax}
       {remixMode}
       {dockBorderColor}
+      {hostControlled}
       on:playStateChanged={onPlayStateChanged}
       on:syncVideos={onSyncVideos}
       on:toggleAutoPlaylist={onToggleAutoPlaylist}
@@ -57,7 +60,9 @@
       on:enterFullscreen={onEnterFullscreen}
       on:exitClick={onExitClick}
       on:seek={(e) => onSeek(e.detail.time)}
-    />
+    >
+      <slot />
+    </VideoControl>
   </div>
 </div>
 
