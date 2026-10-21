@@ -35,11 +35,6 @@
       id: 'lower',
       label: 'Password must contain an lower case character',
       test: (value) => /[a-z]/.test(value)
-    },
-    {
-      id: 'non-alphanumeric',
-      label: 'Password must contain a symbol',
-      test: (value) => /[^a-zA-Z0-9]/.test(value)
     }
   ];
 
