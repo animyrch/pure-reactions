@@ -1,5 +1,7 @@
 <script>
     import { onMount } from 'svelte';
+    import { onAuthStateChanged } from 'firebase/auth';
+    import { env } from '$env/dynamic/public';
     import {
         auth,
         updateDisplayNameHelper,
@@ -16,25 +18,122 @@
     import { handlePrivateRoute } from '$lib/helpers/routing';
 
     let user;
+    let accountReady = false;
     let newName = '';
     let newEmail = '';
     let newPassword = '';
+    let pendingEmail = '';
     let twitchChannel = '';
     let twitchChannelReady = false;
     let savingField = '';
 
-    onMount(async () => {
-      user = auth.currentUser;
-      if (!user) {
-        handlePrivateRoute();
+    const isUsingFirebaseEmulators = env.PUBLIC_FIREBASE_USE_EMULATORS === 'true';
+
+    const pendingEmailStorageKey = (uid) => `pure-reactions:pending-email:${uid}`;
+
+    const readPendingEmail = (uid) => {
+      if (!uid || typeof sessionStorage === 'undefined') {
+        return '';
+      }
+      try {
+        return sessionStorage.getItem(pendingEmailStorageKey(uid)) || '';
+      } catch (error) {
+        return '';
+      }
+    };
+
+    const writePendingEmail = (uid, email) => {
+      if (!uid || typeof sessionStorage === 'undefined') {
         return;
       }
+      try {
+        if (!email) {
+          sessionStorage.removeItem(pendingEmailStorageKey(uid));
+          return;
+        }
+        sessionStorage.setItem(pendingEmailStorageKey(uid), email);
+      } catch (error) {
+        console.error('Could not remember the pending email change:', error);
+      }
+    };
 
-      newName = user?.displayName || '';
-      newEmail = user?.email || '';
-      const extra = await getUserExtraData(user.uid);
-      twitchChannel = typeof extra?.twitchChannel === 'string' ? extra.twitchChannel : '';
-      twitchChannelReady = true;
+    const normalizeEmail = (value) => (typeof value === 'string' ? value.trim() : '');
+
+    const emailsMatch = (left, right) => normalizeEmail(left).toLowerCase() === normalizeEmail(right).toLowerCase();
+
+    const isPlausibleEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(value));
+
+    const syncPendingEmail = (account) => {
+      const stored = readPendingEmail(account?.uid);
+      if (stored && emailsMatch(stored, account?.email)) {
+        writePendingEmail(account.uid, '');
+        pendingEmail = '';
+        return;
+      }
+      pendingEmail = stored;
+    };
+
+    const emailChangeErrorMessage = (error) => {
+      const code = error?.code || '';
+      if (code === 'auth/user-cancelled') {
+        return 'Enter your current password to send the confirmation.';
+      }
+      if (code === 'auth/wrong-password' || code === 'auth/invalid-credential' || code === 'auth/invalid-login-credentials') {
+        return 'Incorrect password. Your sign-in email is unchanged.';
+      }
+      if (code === 'auth/invalid-email') {
+        return 'Enter a valid email address.';
+      }
+      if (code === 'auth/email-already-in-use') {
+        return 'That email already belongs to another account.';
+      }
+      if (code === 'auth/requires-recent-login') {
+        return 'Enter your current password again to send the confirmation.';
+      }
+      if (code === 'auth/too-many-requests') {
+        return 'Too many attempts. Wait a moment and try again.';
+      }
+      if (code === 'auth/network-request-failed') {
+        return 'Network error. Your sign-in email is unchanged.';
+      }
+      return 'Could not send the confirmation email. Your sign-in email is unchanged.';
+    };
+
+    onMount(() => {
+      let started = false;
+      const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
+        if (!nextUser) {
+          user = null;
+          accountReady = false;
+          handlePrivateRoute();
+          return;
+        }
+
+        if (started) {
+          user = auth.currentUser || nextUser;
+          syncPendingEmail(user);
+          return;
+        }
+
+        started = true;
+        try {
+          await nextUser.reload();
+        } catch (error) {
+          console.error('Could not refresh the signed-in account:', error);
+        }
+
+        user = auth.currentUser || nextUser;
+        newName = user?.displayName || '';
+        syncPendingEmail(user);
+        newEmail = pendingEmail || user?.email || '';
+        accountReady = true;
+
+        const extra = await getUserExtraData(user.uid);
+        twitchChannel = typeof extra?.twitchChannel === 'string' ? extra.twitchChannel : '';
+        twitchChannelReady = true;
+      });
+
+      return unsubscribe;
     });
 
     const updateDisplayName = async () => {
@@ -58,12 +157,6 @@
         }
     };
 
-    const setNewEmail = async () => {
-      await updateEmailHelper(user, newEmail);
-      showToast('Email updated successfully', TOASTS.SUCCESS);
-      location.reload();
-    };
-
     const setNewPassword = async () => {
         if (newPassword) {
             await updatePasswordHelper(user, newPassword);
@@ -72,13 +165,61 @@
     };
 
     const updateEmail = async () => {
+      const nextEmail = normalizeEmail(newEmail);
+      const signedInEmail = normalizeEmail(user?.email);
+
+      if (!isPlausibleEmail(nextEmail)) {
+        showToast('Enter a valid email address.', TOASTS.WARNING);
+        return;
+      }
+      if (emailsMatch(nextEmail, signedInEmail)) {
+        showToast('That is already your sign-in email.', TOASTS.WARNING);
+        return;
+      }
+
       savingField = 'email';
       try {
-        await performSensitiveOperation(setNewEmail);
+        await reauthenticateUserHelper(
+          user,
+          'Enter your current password to email a confirmation link to the new address.'
+        );
+        const replacedPending = Boolean(pendingEmail) && !emailsMatch(pendingEmail, nextEmail);
+        await updateEmailHelper(user, nextEmail);
+        writePendingEmail(user?.uid, nextEmail);
+        pendingEmail = nextEmail;
+        newEmail = nextEmail;
+        user = auth.currentUser || user;
+        showToast(
+          replacedPending
+            ? `Confirmation sent to ${nextEmail}. An earlier link can still switch this account if it is opened.`
+            : 'Confirmation email sent. Your sign-in email stays the same until you open that link.',
+          TOASTS.SUCCESS,
+          8000
+        );
+      } catch (error) {
+        console.error('Error sending email confirmation:', error);
+        showToast(emailChangeErrorMessage(error), TOASTS.WARNING);
       } finally {
         savingField = '';
       }
     };
+
+    const cancelEmailChange = () => {
+      const signedInEmail = normalizeEmail(user?.email);
+      writePendingEmail(user?.uid, '');
+      pendingEmail = '';
+      newEmail = signedInEmail;
+      showToast(
+        `Email change canceled. You still sign in as ${signedInEmail}. Ignore the link already sent. Opening it can still switch this account.`,
+        TOASTS.SUCCESS,
+        8000
+      );
+    };
+
+    $: emailUnchanged = emailsMatch(newEmail, user?.email);
+    $: emailActionLabel = pendingEmail && emailsMatch(newEmail, pendingEmail)
+      ? 'Resend confirmation'
+      : 'Send confirmation';
 
     const updatePassword = async () => {
       savingField = 'password';
@@ -171,31 +312,64 @@
       <div class="mb-5">
         <h2 id="signin-heading" class="text-lg font-semibold text-text-primary">Sign-in</h2>
         <p class="mt-1 text-sm leading-6 text-text-secondary">
-          Email and password changes ask for your current password before they are saved.
+          A new email is not saved until you open its confirmation link. You can correct that address or cancel before you open it. Password changes ask for your current password.
         </p>
       </div>
       <div class="space-y-5">
-        <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-          <div class="space-y-2">
-            <label for="new-email-input" class="text-sm font-medium text-text-primary">Email</label>
-            <input
-              id="new-email-input"
-              class={fieldClass}
-              type="email"
-              autocomplete="email"
-              bind:value={newEmail}
-            />
+        <div class="space-y-3">
+          <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+            <div class="space-y-2">
+              <label for="new-email-input" class="text-sm font-medium text-text-primary">New email</label>
+              <input
+                id="new-email-input"
+                class={fieldClass}
+                type="email"
+                autocomplete="email"
+                bind:value={newEmail}
+                disabled={!accountReady || savingField === 'email'}
+                aria-describedby="email-change-help"
+                placeholder={accountReady ? 'name@example.com' : 'Loading your email…'}
+              />
+            </div>
+            <CinematicButton
+              type="button"
+              size="sm"
+              variant="secondary"
+              loading={savingField === 'email'}
+              disabled={!accountReady || emailUnchanged || (savingField !== '' && savingField !== 'email')}
+              on:click={updateEmail}
+            >
+              {emailActionLabel}
+            </CinematicButton>
           </div>
-          <CinematicButton
-            type="button"
-            size="sm"
-            variant="secondary"
-            loading={savingField === 'email'}
-            disabled={savingField !== '' && savingField !== 'email'}
-            on:click={updateEmail}
-          >
-            Save email
-          </CinematicButton>
+          <p id="email-change-help" class="text-sm leading-6 text-text-muted">
+            Enter the address you want to switch to. We email a confirmation link there. You keep signing in with the current email until you open the newest link.
+          </p>
+          {#if pendingEmail}
+            <div class="rounded-xl border border-accent-primary/40 bg-accent-primary/10 px-4 py-3 text-sm leading-6 text-text-primary" role="status">
+              <p>
+                Confirmation sent to <span class="font-medium">{pendingEmail}</span>.
+                {#if isUsingFirebaseEmulators}
+                  Open the link printed by the Firebase Auth emulator.
+                {:else}
+                  Open the link in that inbox.
+                {/if}
+                You still sign in as <span class="font-medium">{user?.email}</span> until you do.
+                Change the address above to send the link somewhere else.
+              </p>
+              <div class="mt-3">
+                <CinematicButton
+                  type="button"
+                  size="sm"
+                  variant="muted"
+                  disabled={savingField !== ''}
+                  on:click={cancelEmailChange}
+                >
+                  Cancel change
+                </CinematicButton>
+              </div>
+            </div>
+          {/if}
         </div>
 
         <div class="border-t border-border-subtle"></div>
