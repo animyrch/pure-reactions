@@ -22,7 +22,7 @@
 
 	$: sortBy = $page.url.searchParams.get("sortBy") || SORTINGS.NEW;
 
-	$: if (sortBy === SORTINGS.FOLLOWING && !$isLoggedIn) {
+	$: if (browser && sortBy === SORTINGS.FOLLOWING && !$isLoggedIn) {
 		goto(`/?sortBy=${SORTINGS.NEW}`);
 	}
 

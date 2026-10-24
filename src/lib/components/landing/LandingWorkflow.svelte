@@ -3,7 +3,7 @@
     {
       number: "01",
       title: "Record yourself",
-      description: "Hit play on any YouTube or TikTok video. We capture your controls—play, pause, volume—as a sync timeline.",
+      description: "Hit React in the header. Enter the YouTube or TikTok URL for the content you are using. Use the on-screen buttons to start your reaction. We record your play, pause, and volume controls for you.",
       icon: "record",
       accent: "accent-secondary",
     },
@@ -17,7 +17,7 @@
     {
       number: "03",
       title: "Publish on Pure Reactions",
-      description: "Paste your reaction URL, connect the original—done. Viewers see both streams perfectly synced.",
+      description: "Paste your reaction URL—done. Viewers see both streams perfectly synced.",
       icon: "publish",
       accent: "accent-primary",
     },
@@ -33,7 +33,7 @@
         "@type": "HowToStep",
         "position": 1,
         "name": "Record yourself",
-        "text": "Hit play on any YouTube or TikTok video. Pure Reactions captures your playback controls as a sync timeline."
+        "text": "Hit React in the header. Enter the YouTube or TikTok URL for the content you are using. Use the on-screen buttons to start your reaction. Pure Reactions records your play, pause, and volume controls."
       },
       {
         "@type": "HowToStep",
@@ -45,7 +45,7 @@
         "@type": "HowToStep",
         "position": 3,
         "name": "Publish on Pure Reactions",
-        "text": "Paste your reaction URL and connect the original video URL. Viewers see both streams perfectly synced side by side."
+        "text": "Paste your reaction URL. The original is already connected from the first step. Viewers see both streams perfectly synced side by side."
       }
     ]
   });
@@ -58,7 +58,7 @@
 </svelte:head>
 
 <section
-  class="relative px-4 py-24 md:py-32"
+  class="relative px-4 py-14 md:py-20"
   aria-label="How the workflow works"
 >
   <!-- Subtle background gradient -->
@@ -66,7 +66,7 @@
 
   <div class="relative mx-auto max-w-5xl">
     <!-- Header -->
-    <div class="mb-16 text-center md:mb-20">
+    <div class="mb-10 text-center md:mb-12">
       <p class="mb-3 text-sm font-medium uppercase tracking-widest text-accent-primary">
         Three steps
       </p>

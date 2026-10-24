@@ -29,7 +29,7 @@
 </script>
 
 <section
-  class="relative flex min-h-[90vh] flex-col items-center justify-center overflow-hidden px-4 py-20 text-center md:min-h-screen"
+  class="relative flex flex-col items-center overflow-hidden px-4 pb-6 pt-16 text-center md:pt-24"
   aria-label="Hero"
 >
   <!-- Ambient glow -->
@@ -98,51 +98,10 @@
         Browse Reactions
       </button>
     </div>
-
-    <!-- Visual hint: dual-stream preview -->
-    <div class="mt-16 flex items-center justify-center gap-3 flex-col md:flex-row md:gap-5">
-      <div class="relative aspect-video w-40 overflow-hidden rounded-lg bg-surface ring-1 ring-border-subtle sm:w-52 md:w-64">
-        <div class="flex h-full items-center justify-center">
-          <div class="text-center">
-            <svg class="mx-auto mb-1 h-8 w-8 text-accent-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.986V5.653z" />
-            </svg>
-            <span class="text-xs font-medium text-text-muted">Original Video</span>
-          </div>
-        </div>
-        <div class="absolute bottom-0 left-0 right-0 h-1 bg-accent-primary/30">
-          <div class="hero-progress h-full w-3/5 bg-accent-primary" />
-        </div>
-      </div>
-
-      <!-- Sync indicator -->
-      <div class="flex flex-col items-center gap-1" aria-hidden="true">
-        <div class="flex h-10 w-10 items-center justify-center rounded-full bg-accent-primary/10 ring-1 ring-accent-primary/30">
-          <svg class="h-5 w-5 text-accent-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
-          </svg>
-        </div>
-        <span class="text-[10px] font-medium uppercase tracking-widest text-accent-primary">Sync</span>
-      </div>
-
-      <div class="relative aspect-video w-40 overflow-hidden rounded-lg bg-surface ring-1 ring-border-subtle sm:w-52 md:w-64">
-        <div class="flex h-full items-center justify-center">
-          <div class="text-center">
-            <svg class="mx-auto mb-1 h-8 w-8 text-accent-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0" />
-            </svg>
-            <span class="text-xs font-medium text-text-muted">Your Reaction</span>
-          </div>
-        </div>
-        <div class="absolute bottom-0 left-0 right-0 h-1 bg-accent-secondary/30">
-          <div class="hero-progress h-full w-3/5 bg-accent-secondary" />
-        </div>
-      </div>
-    </div>
   </div>
 
   <!-- Scroll cue -->
-  <div class="absolute bottom-8 left-1/2 -translate-x-1/2" aria-hidden="true">
+  <div class="relative z-10 mt-10" aria-hidden="true">
     <div class="scroll-cue flex flex-col items-center gap-2 text-text-muted">
       <span class="text-xs uppercase tracking-widest">Scroll</span>
       <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -153,15 +112,6 @@
 </section>
 
 <style>
-  .hero-progress {
-    animation: hero-progress-fill 3s 1.2s cubic-bezier(0.33, 1, 0.68, 1) both;
-  }
-
-  @keyframes hero-progress-fill {
-    from { width: 0; }
-    to   { width: 60%; }
-  }
-
   .scroll-cue {
     animation: scroll-bounce 2s 2s ease-in-out infinite;
   }
@@ -171,7 +121,6 @@
     50% { transform: translateY(6px); opacity: 1; }
   }
 
-  :global(.motion-reduce) .hero-progress { animation: none; width: 60%; }
   :global(.motion-reduce) .scroll-cue { animation: none; opacity: 0.5; }
 
   .creator-type {

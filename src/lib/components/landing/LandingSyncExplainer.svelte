@@ -21,12 +21,12 @@
 
 <section
   bind:this={sectionEl}
-  class="relative px-4 py-24 md:py-32"
+  class="relative px-4 pb-14 pt-8 md:pb-20 md:pt-12"
   aria-label="How sync works"
 >
   <div class="mx-auto max-w-5xl">
     <!-- Section header -->
-    <div class="mb-16 text-center">
+    <div class="mb-10 text-center md:mb-12">
       <p class="mb-3 text-sm font-medium uppercase tracking-widest text-accent-primary">
         The core idea
       </p>
