@@ -8,7 +8,7 @@
 	import { onMount, onDestroy } from "svelte";
 	import { fade } from "svelte/transition";
 	import { isLoggedIn } from "$lib/stores/user";
-	import { goto } from "$app/navigation";
+	import { afterNavigate, goto } from "$app/navigation";
 
 	import LandingHero from "$lib/components/landing/LandingHero.svelte";
 	import LandingSyncExplainer from "$lib/components/landing/LandingSyncExplainer.svelte";
@@ -21,9 +21,11 @@
 	const pageSize = 15;
 
 	$: sortBy = $page.url.searchParams.get("sortBy") || SORTINGS.NEW;
+	$: filterBy = $page.url.searchParams.get("filterBy");
+	$: showingFollowing = sortBy === SORTINGS.FOLLOWING || filterBy === SORTINGS.FOLLOWING;
 
-	$: if (sortBy === SORTINGS.FOLLOWING && !$isLoggedIn) {
-		goto(`/?sortBy=${SORTINGS.NEW}`);
+	$: if (browser && showingFollowing && !$isLoggedIn) {
+		goto("/");
 	}
 
 	// The default grid is the server payload. Following needs the signed-in
@@ -61,20 +63,32 @@
 		}
 	};
 
-	$: if (browser && sortBy === SORTINGS.FOLLOWING && $isLoggedIn && !followingStarted) {
+	$: if (browser && showingFollowing && $isLoggedIn && !followingStarted) {
 		followingStarted = true;
 		loadFollowingReactions();
 	}
 
-	$: if (sortBy !== SORTINGS.FOLLOWING) {
+	$: if (!showingFollowing) {
 		followingStarted = false;
 	}
 
-	$: reactions = sortBy === SORTINGS.FOLLOWING
+	const scrollToFollowingList = () => {
+		requestAnimationFrame(() => {
+			document.getElementById("creator-proof")?.scrollIntoView({ behavior: "auto", block: "start" });
+		});
+	};
+
+	afterNavigate(() => {
+		if (browser && filterBy === SORTINGS.FOLLOWING && $isLoggedIn) {
+			scrollToFollowingList();
+		}
+	});
+
+	$: reactions = showingFollowing
 		? followingReactions
 		: (data.reactions || []).slice(0, pageSize);
-	$: isLoading = sortBy === SORTINGS.FOLLOWING && followingLoading;
-	$: hasLoadedInitialResults = sortBy === SORTINGS.FOLLOWING ? followingLoaded : true;
+	$: isLoading = showingFollowing && followingLoading;
+	$: hasLoadedInitialResults = showingFollowing ? followingLoaded : true;
 
 	let creatorProofVisible = false;
 	let pillMounted = false;
@@ -144,6 +158,7 @@
 	title="Pure Reactions — Sync Your Transformative Content (Reaction, Commentary & Translation Videos)"
 	description="Record reaction videos, commentary, translations, voiceovers and more—perfectly synchronized with the original video. Your content stays copyright-safe on your own channel. Free to use."
 	canonical="/"
+	robots={filterBy ? "noindex, follow" : "index, follow"}
 	keywords="reaction video tool, commentary creator, translation video sync, voiceover sync, synchronized video player, twin player, copyright safe reactions, reaction content creator, video sync platform, accessibility creator, mixer, synced reaction recording"
 	image="/og-preview.png"
 />

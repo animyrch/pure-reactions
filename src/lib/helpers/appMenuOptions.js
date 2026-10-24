@@ -85,7 +85,7 @@ export function buildBaseMenuOptions({ onShare }) {
     {
       name: "Reactors I Follow",
       icon: BellActiveAltSolid,
-      href: "/?sortBy=following",
+      href: "/?filterBy=following",
     },
     { name: "Share Current Page", icon: ShareNodesSolid, onSelect: onShare },
   ];

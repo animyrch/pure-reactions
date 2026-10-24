@@ -9,7 +9,7 @@
 
 <section
   id="creator-proof"
-  class="relative px-4 py-24 md:py-32"
+  class="creator-proof relative px-4 py-24 md:py-32"
   aria-label="Creator content"
 >
   <div class="mx-auto max-w-6xl">
@@ -75,3 +75,9 @@
     </div>
   </div>
 </section>
+
+<style>
+  .creator-proof {
+    scroll-margin-top: 5.5rem;
+  }
+</style>
