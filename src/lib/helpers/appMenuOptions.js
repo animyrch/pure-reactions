@@ -3,7 +3,6 @@ import {
   BookmarkSolid,
   HomeSolid,
   UserCircleSolid,
-  SearchOutline,
   BellActiveAltSolid,
   PenSolid,
   CheckCircleSolid,
@@ -38,6 +37,14 @@ export function buildReactionMenuOptions(state) {
     });
   }
 
+  if (canShowEditPlaylistButton && handlers.editPlaylist) {
+    itemList.push({
+      name: "Edit Playlist",
+      icon: ListMusicSolid,
+      onSelect: handlers.editPlaylist,
+    });
+  }
+
   if (isUsersOwnVideo && canShowCloseEditModeButton && handlers.closeEditMode) {
     itemList.push({
       name: "Finish Editing",
@@ -67,28 +74,19 @@ export function buildReactionMenuOptions(state) {
     });
   }
 
-  if (canShowEditPlaylistButton && handlers.editPlaylist) {
-    itemList.push({
-      name: "Edit Playlist",
-      icon: ListMusicSolid,
-      onSelect: handlers.editPlaylist,
-    });
-  }
-
   return itemList;
 }
 
-export function buildBaseMenuOptions({ onShare, onSearch }) {
+export function buildBaseMenuOptions({ onShare }) {
   return [
-    { name: "Share Current Page", icon: ShareNodesSolid, onSelect: onShare },
-    { name: "Search", icon: SearchOutline, onSelect: onSearch },
+    { name: "Home", icon: HomeSolid, href: "/" },
     { name: "My Account", icon: UserCircleSolid, href: "/account" },
+    { name: "My Bookmarks", icon: BookmarkSolid, href: "/bookmark" },
     {
       name: "Reactors I Follow",
       icon: BellActiveAltSolid,
       href: "/?sortBy=following",
     },
-    { name: "My Bookmarks", icon: BookmarkSolid, href: "/bookmark" },
-    { name: "Home", icon: HomeSolid, href: "/" },
+    { name: "Share Current Page", icon: ShareNodesSolid, onSelect: onShare },
   ];
 }

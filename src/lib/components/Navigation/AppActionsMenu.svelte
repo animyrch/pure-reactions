@@ -1,8 +1,7 @@
 <script>
   import { onMount, tick } from "svelte";
-  import { goto } from "$app/navigation";
   import { page } from "$app/stores";
-  import { ChevronDownOutline } from "flowbite-svelte-icons";
+
   import { copyToClipboard } from "$lib/helpers/system";
   import { showToast } from "$lib/stores/toast";
   import { TOASTS } from "$lib/constants/toasts";
@@ -35,7 +34,6 @@
     ...reactionOptions,
     ...buildBaseMenuOptions({
       onShare: copyCurrentUrl,
-      onSearch: () => goto("/search"),
     }),
   ];
 
@@ -127,18 +125,31 @@
     <button
       bind:this={triggerRef}
       type="button"
-      class="inline-flex items-center gap-1.5 rounded-full border border-border-strong/60 bg-surface/70 px-4 py-2 text-sm font-medium text-text-primary shadow-surface transition-all duration-300 ease-cinematic hover:bg-surface/90 hover:shadow-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      class="inline-flex h-9 w-9 items-center justify-center rounded-full text-text-secondary transition-colors hover:bg-surface/50 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      aria-label="Menu"
       aria-haspopup="menu"
       aria-expanded={isOpen}
       aria-controls={menuId}
       on:click={toggleMenu}
       on:keydown={handleTriggerKeydown}
     >
-      Menu
-      <ChevronDownOutline
-        class={`h-4 w-4 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
-        aria-hidden="true"
-      />
+      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        {#if isOpen}
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M6 18L18 6M6 6l12 12"
+          />
+        {:else}
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M4 6h16M4 12h16M4 18h16"
+          />
+        {/if}
+      </svg>
     </button>
 
     {#if isOpen}

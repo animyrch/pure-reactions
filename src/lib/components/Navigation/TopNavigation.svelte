@@ -40,7 +40,7 @@
 </script>
 
 <header
-  class={`nav-shell fixed inset-x-0 top-0 z-40 transition-transform duration-500 ease-cinematic ${isHidden ? "-translate-y-full" : "translate-y-0"}`}
+  class={`nav-shell fixed inset-x-0 top-0 z-[90] transition-transform duration-500 ease-cinematic ${isHidden ? "-translate-y-full" : "translate-y-0"}`}
 >
   <nav class="mx-auto flex w-full items-center justify-between px-4 py-3">
     <a
