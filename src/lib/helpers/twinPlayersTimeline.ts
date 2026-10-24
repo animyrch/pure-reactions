@@ -57,7 +57,7 @@ export const timelineArrayToMap = (timeline: any[] = []) => {
     if (!entry) continue;
     const rawReactionTime = Number(entry?.t);
     if (!Number.isFinite(rawReactionTime)) continue;
-    const roundedReactionTime = roundReactionTime(Math.max(0, rawReactionTime));
+    const roundedReactionTime = roundReactionTime(rawReactionTime);
     const rawStateValue = Number(entry?.state);
     const sanitizedState = Number.isFinite(rawStateValue) ? rawStateValue : 2;
     const rawTarget = Number(entry?.targetTime ?? entry?.time);
@@ -78,7 +78,7 @@ export const volumeTimelineArrayToMap = (timeline: any[] = []) => {
     if (!entry) continue;
     const rawReactionTime = Number(entry?.t);
     if (!Number.isFinite(rawReactionTime)) continue;
-    const roundedReactionTime = roundReactionTime(Math.max(0, rawReactionTime));
+    const roundedReactionTime = roundReactionTime(rawReactionTime);
     const rawVolumeValue = Number(entry?.volume ?? entry?.value);
     const sanitizedVolume = Number.isFinite(rawVolumeValue) ? roundVolume(rawVolumeValue) : 100;
     map.set(roundedReactionTime.toFixed(3), {
@@ -95,7 +95,7 @@ export const playbackTimelineArrayToMap = (timeline: any[] = []) => {
     if (!entry) continue;
     const rawReactionTime = Number(entry?.t);
     if (!Number.isFinite(rawReactionTime)) continue;
-    const roundedReactionTime = roundReactionTime(Math.max(0, rawReactionTime));
+    const roundedReactionTime = roundReactionTime(rawReactionTime);
     const rawRateValue = Number(entry?.rate ?? entry?.value);
     const sanitizedRate =
       Number.isFinite(rawRateValue) && rawRateValue > 0 ? roundPlaybackRate(rawRateValue) : 1;
@@ -130,7 +130,7 @@ export const overlayVisibilityTimelineArrayToMap = (
 
   let lastPrimary: OverlayPrimaryVideo = normalizeOverlayPrimaryValue(defaultPrimary, 'original');
   for (const entry of sortedTimeline) {
-    const roundedReactionTime = roundReactionTime(Math.max(0, Number(entry.t)));
+    const roundedReactionTime = roundReactionTime(Number(entry.t));
     const visible = entry?.visible !== false;
     const primary = normalizeOverlayPrimaryValue(entry?.primary, lastPrimary);
     lastPrimary = primary;

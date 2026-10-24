@@ -8,9 +8,7 @@
   import { page } from "$app/stores";
   import { fade } from "svelte/transition";
   import TopNavigation from "$lib/components/Navigation/TopNavigation.svelte";
-  import SpeedDialNavigation from "$lib/components/Navigation/SpeedDialNavigation.svelte";
   import Footer from "$lib/components/Footer.svelte";
-  import { reactionDial } from "$lib/stores/reactionDial";
   import { prefersReducedMotion } from "$lib/stores/motion";
   import GoogleAnalytics from "$lib/components/Analytics/GoogleAnalytics.svelte";
   import ArticleHeadingAnchors from "$lib/components/ArticleHeadingAnchors.svelte";
@@ -18,23 +16,11 @@
   $: currentToasts = $toasts; // Access the store value
 
   let reduceMotion = false;
-  let isMobileLandscapeTheater = false;
   const momentReactionPlaybackPathPattern = /^\/moments\/[^/]+\/reaction\/[^/]+$/;
-  const sharedWatchPathPattern = /^\/shared\/[^/]+/;
 
-  $: isReactionRoute = $page.url.pathname?.startsWith("/reaction/");
-  $: isPlaylistRoute = $page.url.pathname?.startsWith("/playlist/");
   $: isMomentReactionPlaybackRoute = momentReactionPlaybackPathPattern.test(
     $page.url.pathname || "",
   );
-  $: isSharedWatchRoute = sharedWatchPathPattern.test($page.url.pathname || "");
-  $: isPlaybackRoute =
-    isReactionRoute ||
-    isPlaylistRoute ||
-    isMomentReactionPlaybackRoute ||
-    isSharedWatchRoute;
-  $: hideSpeedDial =
-    isPlaybackRoute && ($reactionDial.isFullscreen || isMobileLandscapeTheater);
   $: hideFooter = isMomentReactionPlaybackRoute;
 
   onMount(() => {
@@ -50,30 +36,8 @@
       document.documentElement.classList.toggle("motion-reduce", value);
     });
 
-    const mediaQuery =
-      "(hover: none) and (pointer: coarse) and (orientation: landscape) and (max-width: 1023px)";
-    const media = window.matchMedia(mediaQuery);
-
-    const updateMobileLandscapeTheater = () => {
-      isMobileLandscapeTheater = Boolean(media?.matches);
-    };
-
-    updateMobileLandscapeTheater();
-
-    if (typeof media?.addEventListener === "function") {
-      media.addEventListener("change", updateMobileLandscapeTheater);
-    } else if (typeof media?.addListener === "function") {
-      media.addListener(updateMobileLandscapeTheater);
-    }
-
     return () => {
       unsubscribe?.();
-
-      if (typeof media?.removeEventListener === "function") {
-        media.removeEventListener("change", updateMobileLandscapeTheater);
-      } else if (typeof media?.removeListener === "function") {
-        media.removeListener(updateMobileLandscapeTheater);
-      }
     };
   });
 
@@ -128,10 +92,6 @@
     </div>
   {/key}
 </div>
-
-{#if !hideSpeedDial}
-  <SpeedDialNavigation />
-{/if}
 
 {#if !hideFooter}
   <Footer />
