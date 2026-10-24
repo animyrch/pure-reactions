@@ -7,7 +7,7 @@
     export let onDelete = null;
 </script>
 
-{#if reactions.length > 0 || loading}
+{#if heading && (reactions.length > 0 || loading)}
   <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-10">
     <h2 class="text-xl font-semibold text-text-primary mb-6">{heading}</h2>
   </div>

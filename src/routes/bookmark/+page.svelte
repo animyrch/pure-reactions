@@ -1,27 +1,27 @@
 <script>
-    import { handlePrivateRoute } from '$lib/helpers/routing';
-    import { userExtraDataStore } from '$lib/stores/userExtraData';
-    import { isLoggedIn, currentUser } from '$lib/stores/user';
-    import ReactionsList from '$lib/components/ReactionsList.svelte';
-	import { getReactionsByIds, getUserQueues } from '$lib/helpers/firebase';
-	import { page } from '$app/stores';
+    import PersonalPage from "$lib/components/PersonalPage.svelte";
+    import PersonalListSection from "$lib/components/PersonalListSection.svelte";
+    import { userExtraDataStore } from "$lib/stores/userExtraData";
+    import { isLoggedIn, currentUser } from "$lib/stores/user";
+    import { getReactionsByIds, getUserQueues } from "$lib/helpers/firebase";
+    import { page } from "$app/stores";
 
     let reactions = [];
     let queues = [];
     let isLoading = false;
     let isLoadingQueues = false;
-    let lastQueuesUserId = '';
+    let lastQueuesUserId = "";
     let hasLoadedQueues = false;
 
     $: authedUserId = $page?.data?.userId || $currentUser?.uid;
 
     const loadReactions = async () => {
-        isLoading = true; 
-		reactions = [];
+        isLoading = true;
+        reactions = [];
         const result = await getReactionsByIds($userExtraDataStore.userExtraData?.bookmarks);
         reactions = Array.isArray(result) ? result : [];
-        isLoading = false; 
-	};
+        isLoading = false;
+    };
 
     const loadQueues = async () => {
         if (!authedUserId) return;
@@ -49,32 +49,21 @@
     }
 </script>
 
-<div>
-    {#if $isLoggedIn}
-        <div class="mb-10">
-            <div class="mb-4">
-                <p class="text-xs uppercase tracking-[0.35em] text-text-muted">Queues</p>
-                <h2 class="mt-1 text-lg font-semibold text-text-primary">Your queues</h2>
-            </div>
-            {#if isLoadingQueues}
-                <div>Loading...</div>
-            {:else if queues.length}
-                <ReactionsList reactions={queues} />
-            {:else}
-                <div class="text-sm text-text-muted">No queues yet.</div>
-            {/if}
-        </div>
+<PersonalPage>
+    <PersonalListSection
+        eyebrow="Queues"
+        loading={isLoadingQueues}
+        items={queues}
+        empty="No queues yet."
+    />
 
-        {#if $userExtraDataStore.userExtraData?.bookmarks}
-            <div class="mb-4">
-                <p class="text-xs uppercase tracking-[0.35em] text-text-muted">Bookmarks</p>
-                <h2 class="mt-1 text-lg font-semibold text-text-primary">Saved reactions</h2>
-            </div>
-            {#if isLoading}
-                <div>Loading...</div>
-            {:else}
-                <ReactionsList {reactions}/>
-            {/if}
-        {/if}
-    {:else}{handlePrivateRoute()}{/if}
-</div>
+    {#if $userExtraDataStore.userExtraData?.bookmarks}
+        <PersonalListSection
+            eyebrow="Bookmarks"
+            loading={isLoading}
+            items={reactions}
+            emptyMessage={false}
+            sectionClass=""
+        />
+    {/if}
+</PersonalPage>

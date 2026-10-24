@@ -8,7 +8,7 @@
 	import { onMount, onDestroy } from "svelte";
 	import { fade } from "svelte/transition";
 	import { isLoggedIn } from "$lib/stores/user";
-	import { afterNavigate, goto } from "$app/navigation";
+	import { goto } from "$app/navigation";
 
 	import LandingHero from "$lib/components/landing/LandingHero.svelte";
 	import LandingSyncExplainer from "$lib/components/landing/LandingSyncExplainer.svelte";
@@ -21,11 +21,9 @@
 	const pageSize = 15;
 
 	$: sortBy = $page.url.searchParams.get("sortBy") || SORTINGS.NEW;
-	$: filterBy = $page.url.searchParams.get("filterBy");
-	$: showingFollowing = sortBy === SORTINGS.FOLLOWING || filterBy === SORTINGS.FOLLOWING;
 
-	$: if (browser && showingFollowing && !$isLoggedIn) {
-		goto("/");
+	$: if (browser && sortBy === SORTINGS.FOLLOWING && !$isLoggedIn) {
+		goto(`/?sortBy=${SORTINGS.NEW}`);
 	}
 
 	// The default grid is the server payload. Following needs the signed-in
@@ -63,50 +61,20 @@
 		}
 	};
 
-	$: if (browser && showingFollowing && $isLoggedIn && !followingStarted) {
+	$: if (browser && sortBy === SORTINGS.FOLLOWING && $isLoggedIn && !followingStarted) {
 		followingStarted = true;
 		loadFollowingReactions();
 	}
 
-	$: if (!showingFollowing) {
+	$: if (sortBy !== SORTINGS.FOLLOWING) {
 		followingStarted = false;
 	}
 
-	const scrollToFollowingList = () => {
-		let attempts = 0;
-		const run = () => {
-			if ($page.url.searchParams.get("filterBy") !== SORTINGS.FOLLOWING) return;
-			const section = document.getElementById("creator-proof");
-			const top = section?.getBoundingClientRect().top ?? Number.POSITIVE_INFINITY;
-			// The router resets scroll after the page updates, and view transitions
-			// can do it again when they finish. Keep going until the list is under the header.
-			if (section && top <= 120) return;
-			section?.scrollIntoView({ behavior: "auto", block: "start" });
-			if (attempts < 8) {
-				attempts += 1;
-				setTimeout(run, attempts < 4 ? 50 : 200);
-			}
-		};
-		run();
-	};
-
-	// Fires for later query changes. A full load registers this too late, so the
-	// reactive statement below covers that case.
-	afterNavigate(() => {
-		if (browser && filterBy === SORTINGS.FOLLOWING && $isLoggedIn) {
-			scrollToFollowingList();
-		}
-	});
-
-	$: if (browser && filterBy === SORTINGS.FOLLOWING && $isLoggedIn) {
-		scrollToFollowingList();
-	}
-
-	$: reactions = showingFollowing
+	$: reactions = sortBy === SORTINGS.FOLLOWING
 		? followingReactions
 		: (data.reactions || []).slice(0, pageSize);
-	$: isLoading = showingFollowing && followingLoading;
-	$: hasLoadedInitialResults = showingFollowing ? followingLoaded : true;
+	$: isLoading = sortBy === SORTINGS.FOLLOWING && followingLoading;
+	$: hasLoadedInitialResults = sortBy === SORTINGS.FOLLOWING ? followingLoaded : true;
 
 	let creatorProofVisible = false;
 	let pillMounted = false;
@@ -176,7 +144,6 @@
 	title="Pure Reactions — Sync Your Transformative Content (Reaction, Commentary & Translation Videos)"
 	description="Record reaction videos, commentary, translations, voiceovers and more—perfectly synchronized with the original video. Your content stays copyright-safe on your own channel. Free to use."
 	canonical="/"
-	robots={filterBy ? "noindex, follow" : "index, follow"}
 	keywords="reaction video tool, commentary creator, translation video sync, voiceover sync, synchronized video player, twin player, copyright safe reactions, reaction content creator, video sync platform, accessibility creator, mixer, synced reaction recording"
 	image="/og-preview.png"
 />

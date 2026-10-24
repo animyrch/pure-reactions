@@ -7,11 +7,10 @@ const PAGE_SIZE = 15;
 /** @type {import('./$types').PageServerLoad} */
 export async function load({ url }) {
   const sortBy = url.searchParams.get('sortBy') || SORTINGS.NEW;
-  const filterBy = url.searchParams.get('filterBy');
 
   // Server-side fetch is only available for the default 'new' sort.
-  // FOLLOWING sort and the following filter need the user's follow list, which is not available during SSR.
-  if (sortBy !== SORTINGS.NEW || filterBy === SORTINGS.FOLLOWING) {
+  // FOLLOWING sort requires the user's follow list which is not available during SSR.
+  if (sortBy !== SORTINGS.NEW) {
     return { reactions: [], lastCursorMs: null };
   }
 
