@@ -18,7 +18,6 @@
 
   let query = '';
   let sortBy = DEFAULT_MOMENT_SORT;
-  let tagFilter = '';
   let loading = false;
   let loadingMore = false;
   let results = [];
@@ -51,9 +50,10 @@
     const url = $page.url.searchParams;
     query = url.get('q') || '';
     sortBy = url.get('sort') || DEFAULT_MOMENT_SORT;
-    tagFilter = url.get('tag') || '';
+    const hadTag = url.has('tag');
     await loadResults(0);
     initialLoadDone = true;
+    if (hadTag) syncUrl();
   });
 
   onDestroy(() => {
@@ -65,7 +65,6 @@
     const params = new URLSearchParams();
     if (query.trim()) params.set('q', query.trim());
     if (sortBy && sortBy !== DEFAULT_MOMENT_SORT) params.set('sort', sortBy);
-    if (tagFilter.trim()) params.set('tag', tagFilter.trim());
     const suffix = params.toString();
     goto(suffix ? `/moments?${suffix}` : '/moments', { replaceState: true, keepFocus: true });
   }
@@ -84,7 +83,6 @@
         page: pageNum,
         hitsPerPage: HITS_PER_PAGE,
         sortBy,
-        tag: tagFilter,
         lastFirestoreDoc: pageNum === 0 ? null : lastFirestoreDoc
       });
 
@@ -131,11 +129,6 @@
 
   function handleSortChange(event) {
     sortBy = event.currentTarget.value;
-    applyFilters();
-  }
-
-  function handleTagChange(event) {
-    tagFilter = event.currentTarget.value;
     applyFilters();
   }
 
@@ -196,44 +189,32 @@
     </a>
   </div>
 
-  <form class="mb-6 space-y-4" on:submit={handleSubmit}>
-    <div class="relative">
-      <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
-        <SearchIcon class="h-5 w-5 text-text-secondary" aria-hidden="true" />
-      </div>
-      <input
-        bind:value={query}
-        on:input={handleInput}
-        type="search"
-        class="block w-full rounded-2xl border border-border-strong/50 bg-surface/80 py-4 pl-12 pr-4 text-base text-text-primary placeholder:text-text-muted focus:border-focus focus:outline-none focus:ring-2 focus:ring-focus focus:ring-offset-2 focus:ring-offset-background"
-        placeholder="Search by moment title, original video, tags, or creator…"
-        autocomplete="off"
-      />
-    </div>
-
+  <form class="mb-6" on:submit={handleSubmit}>
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-      <label class="flex flex-col gap-1 text-sm text-text-secondary sm:flex-1">
-        <span>Sort</span>
-        <select
-          class="rounded-xl border border-border-strong/50 bg-surface/80 px-3 py-2 text-text-primary"
-          value={sortBy}
-          on:change={handleSortChange}
-        >
-          {#each Object.entries(MOMENT_SORT_LABELS) as [value, label]}
-            <option {value}>{label}</option>
-          {/each}
-        </select>
-      </label>
-      <label class="flex flex-col gap-1 text-sm text-text-secondary sm:flex-1">
-        <span>Tag filter</span>
+      <div class="relative min-w-0 sm:flex-1">
+        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+          <SearchIcon class="h-5 w-5 text-text-secondary" aria-hidden="true" />
+        </div>
         <input
-          bind:value={tagFilter}
-          on:change={handleTagChange}
-          type="text"
-          class="rounded-xl border border-border-strong/50 bg-surface/80 px-3 py-2 text-text-primary"
-          placeholder="e.g. breakdown"
+          bind:value={query}
+          on:input={handleInput}
+          type="search"
+          class="block w-full rounded-2xl border border-border-strong/50 bg-surface/80 py-4 pl-12 pr-4 text-base text-text-primary placeholder:text-text-muted focus:border-focus focus:outline-none focus:ring-2 focus:ring-focus focus:ring-offset-2 focus:ring-offset-background"
+          placeholder="Search by moment title, original video, tags, or creator…"
+          autocomplete="off"
+          aria-label="Search moments"
         />
-      </label>
+      </div>
+      <select
+        class="h-[3.625rem] w-full rounded-2xl border border-border-strong/50 bg-surface/80 px-4 text-base text-text-primary focus:border-focus focus:outline-none focus:ring-2 focus:ring-focus focus:ring-offset-2 focus:ring-offset-background sm:w-auto sm:shrink-0"
+        value={sortBy}
+        on:change={handleSortChange}
+        aria-label="Sort moments"
+      >
+        {#each Object.entries(MOMENT_SORT_LABELS) as [value, label]}
+          <option {value}>{label}</option>
+        {/each}
+      </select>
     </div>
   </form>
 
