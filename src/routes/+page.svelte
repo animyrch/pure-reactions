@@ -73,16 +73,34 @@
 	}
 
 	const scrollToFollowingList = () => {
-		requestAnimationFrame(() => {
-			document.getElementById("creator-proof")?.scrollIntoView({ behavior: "auto", block: "start" });
-		});
+		let attempts = 0;
+		const run = () => {
+			if ($page.url.searchParams.get("filterBy") !== SORTINGS.FOLLOWING) return;
+			const section = document.getElementById("creator-proof");
+			const top = section?.getBoundingClientRect().top ?? Number.POSITIVE_INFINITY;
+			// The router resets scroll after the page updates, and view transitions
+			// can do it again when they finish. Keep going until the list is under the header.
+			if (section && top <= 120) return;
+			section?.scrollIntoView({ behavior: "auto", block: "start" });
+			if (attempts < 8) {
+				attempts += 1;
+				setTimeout(run, attempts < 4 ? 50 : 200);
+			}
+		};
+		run();
 	};
 
+	// Fires for later query changes. A full load registers this too late, so the
+	// reactive statement below covers that case.
 	afterNavigate(() => {
 		if (browser && filterBy === SORTINGS.FOLLOWING && $isLoggedIn) {
 			scrollToFollowingList();
 		}
 	});
+
+	$: if (browser && filterBy === SORTINGS.FOLLOWING && $isLoggedIn) {
+		scrollToFollowingList();
+	}
 
 	$: reactions = showingFollowing
 		? followingReactions
