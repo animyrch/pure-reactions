@@ -391,7 +391,7 @@
           timeInReaction: sanitizeNumber(event?.timeInReaction),
           targetTime: sanitizeNumber(event?.targetTime ?? event?.time),
         }))
-        .filter((event) => Number.isFinite(event.timeInReaction))
+        .filter((event) => Number.isFinite(event.timeInReaction) && event.timeInReaction >= 0)
         .sort((a, b) => a.timeInReaction - b.timeInReaction)
     : [];
   $: volumeEventsSorted = Array.isArray(volumeEvents)
@@ -404,6 +404,7 @@
         .filter(
           (event) =>
             Number.isFinite(event.timeInReaction) &&
+            event.timeInReaction >= 0 &&
             Number.isFinite(event.volume),
         )
         .sort((a, b) => a.timeInReaction - b.timeInReaction)
@@ -418,6 +419,7 @@
         .filter(
           (event) =>
             Number.isFinite(event.timeInReaction) &&
+            event.timeInReaction >= 0 &&
             Number.isFinite(event.volume),
         )
         .sort((a, b) => a.timeInReaction - b.timeInReaction)
@@ -432,6 +434,7 @@
         .filter(
           (event) =>
             Number.isFinite(event.timeInReaction) &&
+            event.timeInReaction >= 0 &&
             Number.isFinite(event.rate),
         )
         .sort((a, b) => a.timeInReaction - b.timeInReaction)
@@ -441,7 +444,7 @@
         const normalizedEvents = [];
         for (const event of overlayVisibilityEvents) {
           const timeInReaction = sanitizeNumber(event?.timeInReaction ?? event?.t);
-          if (!Number.isFinite(timeInReaction)) {
+          if (!Number.isFinite(timeInReaction) || timeInReaction < 0) {
             continue;
           }
           normalizedEvents.push({

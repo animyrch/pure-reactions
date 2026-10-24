@@ -6,7 +6,7 @@ const getClosestSmallerKey = (timedConfigs, searchKey) => {
     }
     const keys = Object.keys(timedConfigs).map(Number);
     // Include exact matches so configs at t=0.0 apply immediately on refresh.
-    const smallerKeys = keys.filter(currentKey => currentKey <= searchKey);
+    const smallerKeys = keys.filter(currentKey => currentKey >= 0 && currentKey <= searchKey);
     return smallerKeys.reduce((prev, curr) => (curr > prev ? curr : prev), -Infinity);
 };
 
@@ -17,12 +17,18 @@ const findLastEventAtOrBefore = (timelineArray, t) => {
     if (!Array.isArray(timelineArray) || timelineArray.length === 0) {
         return null;
     }
+    // Cues stored before 0 stay in the document so a later lead-in can
+    // bring them back. Playback does not apply them.
+    const applicable = timelineArray.filter((event) => Number(event?.t) >= 0);
+    if (applicable.length === 0) {
+        return null;
+    }
     let low = 0;
-    let high = timelineArray.length - 1;
+    let high = applicable.length - 1;
     let ansIndex = -1;
     while (low <= high) {
         const mid = (low + high) >> 1;
-        const midTime = Number(timelineArray[mid].t);
+        const midTime = Number(applicable[mid].t);
         if (midTime <= t) {
             ansIndex = mid;
             low = mid + 1;
@@ -30,7 +36,7 @@ const findLastEventAtOrBefore = (timelineArray, t) => {
             high = mid - 1;
         }
     }
-    return ansIndex >= 0 ? timelineArray[ansIndex] : null;
+    return ansIndex >= 0 ? applicable[ansIndex] : null;
 };
 
 // Backward-compatible: accepts either an object map (old) or an array of { t, volume } (new)
@@ -127,6 +133,9 @@ export const getCurrentOverlaySnapshotFromConfigs = (
     let active = { ...fallback };
     for (const entry of sortedTimeline) {
         const entryTime = Number(entry.t);
+        if (entryTime < 0) {
+            continue;
+        }
         if (entryTime > effectiveTime) {
             break;
         }
