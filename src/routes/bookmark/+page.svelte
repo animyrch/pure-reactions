@@ -3,7 +3,7 @@
     import PersonalListSection from "$lib/components/PersonalListSection.svelte";
     import { userExtraDataStore } from "$lib/stores/userExtraData";
     import { isLoggedIn, currentUser } from "$lib/stores/user";
-    import { getPlaylist, getReactionsByIds, getUserQueues } from "$lib/helpers/firebase";
+    import { getPlaylist, getReactionsByIds, getUserQueues, getUserQueues } from "$lib/helpers/firebase";
     import { attachQueueCovers } from "$lib/helpers/queueCover";
     import { page } from "$app/stores";
 
