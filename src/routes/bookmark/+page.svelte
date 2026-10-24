@@ -3,7 +3,8 @@
     import PersonalListSection from "$lib/components/PersonalListSection.svelte";
     import { userExtraDataStore } from "$lib/stores/userExtraData";
     import { isLoggedIn, currentUser } from "$lib/stores/user";
-    import { getReactionsByIds, getUserQueues } from "$lib/helpers/firebase";
+    import { getPlaylist, getReactionsByIds, getUserQueues, getUserQueues } from "$lib/helpers/firebase";
+    import { attachQueueCovers } from "$lib/helpers/queueCover";
     import { page } from "$app/stores";
 
     let reactions = [];
@@ -30,7 +31,13 @@
         isLoadingQueues = true;
         try {
             const result = await getUserQueues(authedUserId);
-            queues = Array.isArray(result) ? result : [];
+            const list = Array.isArray(result) ? result : [];
+            try {
+                queues = await attachQueueCovers(list, { getReactionsByIds, getPlaylist });
+            } catch (error) {
+                console.error('Failed to load queue covers', error);
+                queues = list;
+            }
             lastQueuesUserId = authedUserId;
             hasLoadedQueues = true;
         } finally {
