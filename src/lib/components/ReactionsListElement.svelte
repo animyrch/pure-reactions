@@ -26,6 +26,9 @@
     const originalVideoTitle = reaction?.data?.originalVideoTitle;
     const queueTitle = reaction?.data?.title;
     const queueSlug = reaction?.data?.slug;
+    $: coverVideoIds = Array.isArray(reaction?.data?.coverVideoIds)
+        ? reaction.data.coverVideoIds
+        : [];
     $: watchDurationSeconds = displayedWatchDurationSeconds(reaction);
 </script>
 
@@ -44,6 +47,7 @@
         {itemType}
         queueTitle={queueTitle}
         queueSlug={queueSlug}
+        {coverVideoIds}
         {watchDurationSeconds}
         interactive
         onDelete={onDelete ? requestDelete : null}
