@@ -4,8 +4,10 @@ import { ALGOLIA_MOMENTS_INDEX } from '$lib/constants/algolia';
 import { getMomentsByPage } from '$lib/helpers/momentsFirestore';
 import { MOMENT_SORT_OPTIONS } from '$lib/constants/moments';
 import {
+  compareMoments,
   mergeUnindexedMomentHits,
   momentMatchesQuery,
+  normalizeMomentSort,
   shouldListMomentsFromFirestore
 } from '$lib/helpers/moments';
 
@@ -111,6 +113,10 @@ export async function searchMoments({
     const merged = mergeUnindexedMomentHits(freshMatches, hits);
     extraCount = merged.length - hits.length;
     hits = merged;
+  }
+
+  if (normalizeMomentSort(sortBy) === MOMENT_SORT_OPTIONS.MOST_REACTIONS) {
+    hits = [...hits].sort((left, right) => compareMoments(left, right, sortBy));
   }
 
   return {

@@ -7,6 +7,7 @@
   import MomentDiscoveryCard from '$lib/components/Moments/MomentDiscoveryCard.svelte';
   import { searchMoments } from '$lib/helpers/momentsSearch';
   import { DEFAULT_MOMENT_SORT, MOMENT_SORT_LABELS } from '$lib/constants/moments';
+  import { normalizeMomentSort } from '$lib/helpers/moments';
   import { currentUser } from '$lib/stores/user';
   import { handlePrivateRoute } from '$lib/helpers/routing';
   import { showToast } from '$lib/stores/toast';
@@ -49,11 +50,12 @@
   onMount(async () => {
     const url = $page.url.searchParams;
     query = url.get('q') || '';
-    sortBy = url.get('sort') || DEFAULT_MOMENT_SORT;
+    const requestedSort = url.get('sort') || '';
+    sortBy = normalizeMomentSort(requestedSort);
     const hadTag = url.has('tag');
     await loadResults(0);
     initialLoadDone = true;
-    if (hadTag) syncUrl();
+    if (hadTag || (requestedSort && requestedSort !== sortBy)) syncUrl();
   });
 
   onDestroy(() => {

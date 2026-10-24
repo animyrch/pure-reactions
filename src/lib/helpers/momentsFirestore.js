@@ -15,7 +15,12 @@ import {
 import { db, auth } from '$lib/constants/firebase';
 import { COLLECTION_MOMENTS, COLLECTION_REACTION_BINOMES } from '$lib/constants/firebase';
 import { MOMENT_SORT_OPTIONS } from '$lib/constants/moments';
-import { slugifyMomentTitle } from '$lib/helpers/moments';
+import {
+  normalizeMomentSort,
+  pageRankedMoments,
+  rankMoments,
+  slugifyMomentTitle
+} from '$lib/helpers/moments';
 
 const createMomentsCollection = () => collection(db, COLLECTION_MOMENTS);
 const createReactionsCollection = () => collection(db, COLLECTION_REACTION_BINOMES);
@@ -72,21 +77,22 @@ export const getMomentsByPage = async ({
       constraints.push(where('tags', 'array-contains', normalizedTag));
     }
 
-    if (sortBy === MOMENT_SORT_OPTIONS.MOST_REACTIONS || sortBy === MOMENT_SORT_OPTIONS.TRENDING) {
-      constraints.push(orderBy('reactionCount', 'desc'), orderBy('createdAt', 'desc'));
-    } else {
-      constraints.push(orderBy('createdAt', 'desc'));
-    }
+    // Newest can page with createdAt alone. Most reactions cannot: ordering by
+    // reactionCount and createdAt together needs a composite index that is not
+    // deployed, and that query comes back empty. Rank the createdAt read in memory.
+    const rankByReactionCount = normalizeMomentSort(sortBy) === MOMENT_SORT_OPTIONS.MOST_REACTIONS;
+    constraints.push(orderBy('createdAt', 'desc'));
 
     let baseQuery = query(momentsCollection, ...constraints);
-    if (lastDoc) {
+    if (!rankByReactionCount && lastDoc) {
       baseQuery = query(baseQuery, startAfter(lastDoc));
     }
-    baseQuery = query(baseQuery, limit(limitBy));
+    if (!rankByReactionCount) {
+      baseQuery = query(baseQuery, limit(limitBy));
+    }
 
     const snapshot = await getDocs(baseQuery);
-    lastVisible = snapshot.docs[snapshot.docs.length - 1] ?? null;
-    moments = snapshot.docs.map((entry) => {
+    const toMoment = (entry) => {
       const data = entry.data();
       const reactionCount = Number(data.reactionCount);
       return {
@@ -95,7 +101,18 @@ export const getMomentsByPage = async ({
         ...data,
         reactionCount: Number.isFinite(reactionCount) ? reactionCount : 0
       };
-    });
+    };
+
+    if (rankByReactionCount) {
+      const ranked = rankMoments(snapshot.docs.map(toMoment), MOMENT_SORT_OPTIONS.MOST_REACTIONS);
+      const page = pageRankedMoments(ranked, lastDoc?.id || '', limitBy);
+      const lastId = page[page.length - 1]?.id;
+      lastVisible = lastId ? snapshot.docs.find((entry) => entry.id === lastId) ?? null : null;
+      moments = page;
+    } else {
+      lastVisible = snapshot.docs[snapshot.docs.length - 1] ?? null;
+      moments = snapshot.docs.map(toMoment);
+    }
   } catch (error) {
     console.error('Error loading moments page:', error);
   }
