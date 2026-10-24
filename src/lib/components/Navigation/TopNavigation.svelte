@@ -3,6 +3,7 @@
   import { goto } from "$app/navigation";
   import { goToRoute } from "$lib/helpers/routing";
   import PurePureactionsLogo from "../PurePureactionsLogo.svelte";
+  import AppActionsMenu from "./AppActionsMenu.svelte";
   import { SearchOutline as SearchIcon } from "flowbite-svelte-icons";
 
   let lastScrollY = 0;
@@ -81,6 +82,7 @@
       >
         Insights
       </a>
+      <AppActionsMenu variant="dropdown" />
       <button
         type="button"
         class="react-cta rounded-full border border-border-strong px-md py-xs text-sm font-medium text-text-primary transition duration-subtle ease-cinematic hover:bg-border-strong/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
@@ -105,6 +107,8 @@
         class="text-text-secondary hover:text-text-primary transition-colors p-2"
         on:click={toggleMenu}
         aria-label="Toggle menu"
+        aria-expanded={showMenu}
+        aria-controls="mobile-app-menu"
       >
         <svg
           class="h-5 w-5"
@@ -142,6 +146,7 @@
   <!-- Mobile Menu -->
   {#if showMenu}
     <div
+      id="mobile-app-menu"
       class="mobile-menu border-t border-border-subtle bg-surface px-4 py-4 md:hidden"
     >
       <div class="flex flex-col gap-3">
@@ -166,6 +171,7 @@
         >
           Insights
         </a>
+        <AppActionsMenu variant="inline" onChosen={() => (showMenu = false)} />
       </div>
     </div>
   {/if}
