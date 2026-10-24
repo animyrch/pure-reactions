@@ -9,12 +9,12 @@
 
 <section
   id="creator-proof"
-  class="relative px-4 py-24 md:py-32"
+  class="relative px-4 py-14 md:py-20"
   aria-label="Creator content"
 >
   <div class="mx-auto max-w-6xl">
     <!-- Divider line -->
-    <div class="mb-12 flex items-center gap-4">
+    <div class="mb-8 flex items-center gap-4">
       <div class="h-px flex-1 bg-gradient-to-r from-transparent to-border-subtle" aria-hidden="true" />
       <p class="shrink-0 text-sm font-medium uppercase tracking-widest text-accent-primary">
         Live on the platform
@@ -23,7 +23,7 @@
     </div>
 
     <!-- Section header -->
-    <div class="mb-12 text-center md:mb-16">
+    <div class="mb-8 text-center md:mb-10">
       <h2
         class="text-3xl font-bold leading-tight text-text-primary sm:text-4xl md:text-5xl"
         style="font-family: var(--font-display, 'Manrope', 'Inter', sans-serif);"

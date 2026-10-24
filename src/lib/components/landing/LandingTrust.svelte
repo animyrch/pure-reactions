@@ -1,10 +1,10 @@
 <section
-  class="relative px-4 py-24 md:py-32"
+  class="relative px-4 py-14 md:py-20"
   aria-label="Why it's safe and clean"
 >
   <div class="mx-auto max-w-5xl">
     <!-- Header -->
-    <div class="mb-16 text-center">
+    <div class="mb-10 text-center md:mb-12">
       <p class="mb-3 text-sm font-medium uppercase tracking-widest text-accent-primary">
         No copyright headaches
       </p>
