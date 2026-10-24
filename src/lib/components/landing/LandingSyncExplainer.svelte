@@ -21,7 +21,7 @@
 
 <section
   bind:this={sectionEl}
-  class="relative px-4 py-24 md:py-32"
+  class="relative px-4 pb-24 pt-10 md:pb-32 md:pt-16"
   aria-label="How sync works"
 >
   <div class="mx-auto max-w-5xl">

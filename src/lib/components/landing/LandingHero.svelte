@@ -29,7 +29,7 @@
 </script>
 
 <section
-  class="relative flex min-h-[90vh] flex-col items-center justify-center overflow-hidden px-4 py-20 text-center md:min-h-screen"
+  class="relative flex flex-col items-center overflow-hidden px-4 pb-6 pt-16 text-center md:pt-24"
   aria-label="Hero"
 >
   <!-- Ambient glow -->
@@ -101,7 +101,7 @@
   </div>
 
   <!-- Scroll cue -->
-  <div class="absolute bottom-8 left-1/2 -translate-x-1/2" aria-hidden="true">
+  <div class="relative z-10 mt-10" aria-hidden="true">
     <div class="scroll-cue flex flex-col items-center gap-2 text-text-muted">
       <span class="text-xs uppercase tracking-widest">Scroll</span>
       <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
