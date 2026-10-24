@@ -42,10 +42,10 @@
 <header
   class={`nav-shell fixed inset-x-0 top-0 z-[90] transition-transform duration-500 ease-cinematic ${isHidden ? "-translate-y-full" : "translate-y-0"}`}
 >
-  <nav class="mx-auto flex w-full items-center justify-between px-4 py-3">
+  <nav class="relative mx-auto flex w-full items-center px-5 py-3 md:px-8">
     <a
       href="/"
-      class="flex items-center gap-3 text-text-primary transition-opacity duration-subtle ease-cinematic hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      class="relative z-10 flex shrink-0 items-center text-text-primary transition-opacity duration-subtle ease-cinematic hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       aria-label="Pure Reactions home"
     >
       <div class="logo-wrapper">
@@ -53,47 +53,37 @@
       </div>
     </a>
 
-    <!-- Desktop Navigation Links -->
-    <div class="hidden items-center gap-6 md:flex">
+    <!-- Desktop links sit in the true center of the bar -->
+    <div class="pointer-events-none absolute inset-0 hidden items-center justify-center md:flex">
+      <div class="pointer-events-auto flex items-center gap-10">
+        <a href="/moments" class="desktop-nav-link">Moments</a>
+        <a href="/how-it-works" class="desktop-nav-link">How It Works</a>
+        <a href="/insights" class="desktop-nav-link">Insights</a>
+      </div>
+    </div>
+
+    <div class="relative z-10 ml-auto hidden items-center gap-5 md:flex">
       <button
         type="button"
-        class="inline-flex items-center gap-2 rounded-full border border-border-strong/60 bg-surface/70 px-4 py-2 text-sm font-medium text-text-primary shadow-surface transition-all duration-300 ease-cinematic hover:bg-surface/90 hover:shadow-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        class="inline-flex items-center gap-2 text-sm font-medium text-white transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         on:click={handleSearchClick}
         aria-label="Search"
       >
         <SearchIcon class="h-5 w-5" aria-hidden="true" />
         <span>Search</span>
       </button>
-      <a
-        href="/moments"
-        class="text-sm font-medium text-text-secondary transition-colors hover:text-text-primary"
-      >
-        Moments
-      </a>
-      <a
-        href="/how-it-works"
-        class="text-sm font-medium text-text-secondary transition-colors hover:text-text-primary"
-      >
-        How It Works
-      </a>
-      <a
-        href="/insights"
-        class="text-sm font-medium text-text-secondary transition-colors hover:text-text-primary"
-      >
-        Insights
-      </a>
-      <AppActionsMenu variant="dropdown" />
       <button
         type="button"
-        class="react-cta rounded-full border border-border-strong px-md py-xs text-sm font-medium text-text-primary transition duration-subtle ease-cinematic hover:bg-border-strong/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        class="react-cta rounded-full bg-[#e10600] px-5 py-2 text-sm font-semibold text-white transition duration-subtle ease-cinematic hover:bg-[#c10500] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         on:click={goReact}
       >
         React
       </button>
+      <AppActionsMenu variant="dropdown" />
     </div>
 
     <!-- Mobile Menu Button and Search -->
-    <div class="flex items-center gap-3 md:hidden">
+    <div class="relative z-10 ml-auto flex items-center gap-3 md:hidden">
       <button
         type="button"
         class="inline-flex h-9 w-9 items-center justify-center rounded-full text-text-primary transition-colors hover:bg-surface/50"
@@ -179,10 +169,20 @@
 
 <style>
   .nav-shell {
-    background: rgba(10, 12, 16, 0.65);
-    backdrop-filter: blur(14px);
+    background: #000;
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     padding-top: var(--safe-area-inset-top);
+  }
+
+  .desktop-nav-link {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #fff;
+    transition: opacity 180ms ease;
+  }
+
+  .desktop-nav-link:hover {
+    opacity: 0.75;
   }
 
   .logo-wrapper :global(svg) {
