@@ -34,7 +34,7 @@
     import { page } from "$app/stores";
     import { get } from "svelte/store";
     import { afterNavigate } from "$app/navigation";
-    import { Modal } from "flowbite-svelte";
+    import ShareSessionModal from "$lib/components/session/ShareSessionModal.svelte";
     import { showToast } from "$lib/stores/toast";
     import { TOASTS } from "$lib/constants/toasts";
     import {
@@ -2660,90 +2660,19 @@
         </div>
     </div>
 
-    <Modal bind:open={showShareModal} title="Share Your Reaction Session">
-        <div class="space-y-4 text-slate-200">
-            <p class="text-sm text-slate-400">
-                Share this link so collaborators can watch your reaction live.
-                Playback stays in sync with your controls.
-            </p>
-
-            {#if savedTwitchChannel}
-                <p class="text-sm text-slate-800" data-testid="share-twitch-channel-note">
-                    Copy sends viewers to
-                    <span class="font-semibold text-slate-950">twitch.tv/{savedTwitchChannel}</span>.
-                    Change it in your
-                    <a
-                        class="text-blue-700 underline"
-                        href="/account/edit#twitch-channel"
-                    >account details</a>.
-                </p>
-            {:else}
-                <div class="space-y-2">
-                    <label class="text-sm font-medium text-slate-800" for="share-twitch-channel">
-                        Twitch channel
-                    </label>
-                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
-                        <input
-                            id="share-twitch-channel"
-                            type="text"
-                            bind:value={twitchChannelDraft}
-                            placeholder="yourchannel or twitch.tv/yourchannel"
-                            autocomplete="off"
-                            spellcheck="false"
-                            class="w-full rounded-full border border-slate-300 bg-white px-4 py-2 text-sm text-slate-950 placeholder:text-slate-500"
-                            aria-invalid={twitchChannelError ? "true" : "false"}
-                            on:keydown={(event) => {
-                                if (event.key === "Enter") {
-                                    event.preventDefault();
-                                    saveTwitchChannelFromShare();
-                                }
-                            }}
-                        />
-                        <button
-                            type="button"
-                            class="shrink-0 whitespace-nowrap rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-slate-50 disabled:cursor-wait disabled:text-slate-400"
-                            on:click={saveTwitchChannelFromShare}
-                            disabled={isSavingTwitchChannel}
-                        >
-                            {isSavingTwitchChannel ? "Saving…" : "Save channel"}
-                        </button>
-                    </div>
-                    <p class="text-xs text-slate-600">
-                        Not set yet. Add it here, or in your
-                        <a class="text-blue-700 underline" href="/account/edit#twitch-channel">account details</a>.
-                    </p>
-                </div>
-            {/if}
-            {#if twitchChannelError}
-                <p class="text-sm text-red-700" role="alert">{twitchChannelError}</p>
-            {/if}
-
-            <div
-                class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3"
-            >
-                <input
-                    type="text"
-                    value={shareUrl}
-                    readonly
-                    class="flex-1 rounded-full border border-slate-800 bg-slate-900/80 px-4 py-2 font-mono text-sm text-slate-200"
-                />
-                <button
-                    type="button"
-                    class="flex items-center justify-center rounded-full border border-blue-500/50 bg-blue-500/10 px-4 py-2 text-sm font-semibold text-blue-200 transition hover:bg-blue-500/20 focus:outline-none focus:ring-2 focus:ring-blue-400/70 disabled:cursor-wait disabled:opacity-60"
-                    on:click={copyShareUrl}
-                    disabled={isCopyingShareUrl}
-                    data-testid="share-copy"
-                >
-                    {isCopyingShareUrl ? "Copying…" : "Copy"}
-                </button>
-            </div>
-
-            <div class="grid gap-2 text-xs text-slate-400">
-                <p>👥 Viewers: {viewerCount}</p>
-                <p>📹 Video: {originalVideoTitle}</p>
-            </div>
-        </div>
-    </Modal>
+    <ShareSessionModal
+        bind:open={showShareModal}
+        {shareUrl}
+        {savedTwitchChannel}
+        bind:twitchChannelDraft
+        {twitchChannelError}
+        {isSavingTwitchChannel}
+        {isCopyingShareUrl}
+        {viewerCount}
+        {originalVideoTitle}
+        onSaveChannel={saveTwitchChannelFromShare}
+        onCopy={copyShareUrl}
+    />
 {:else}
     {handlePrivateRoute()}
 {/if}
