@@ -5,6 +5,7 @@
 
     export let actions = [];
     export let visible = false;
+    export let docked = false;
     export let scrubCurrentTime = 0;
     export let scrubDuration = 0;
     export let scrubSeekMin = 0;
@@ -15,9 +16,11 @@
 
     const dispatch = createEventDispatcher();
 
-    const handleDismiss = () => {
-        dispatch("dismiss");
+    const handleToggleDock = () => {
+        dispatch("toggledock");
     };
+
+    $: isShown = docked || visible;
 
     const handleDockInteractStart = () => {
         dispatch("dockinteractstart");
@@ -35,13 +38,19 @@
 </script>
 
 <div
-    class={`pointer-events-none absolute inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-4 transition-opacity duration-200 ${
-        visible ? "opacity-100" : "opacity-0"
-    }`}
-    aria-hidden={!visible}
+    class={docked
+        ? "relative z-40 flex w-full shrink-0 justify-center"
+        : `pointer-events-none absolute inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-4 transition-opacity duration-200 ${
+            isShown ? "opacity-100" : "opacity-0"
+        }`}
+    aria-hidden={docked ? undefined : !isShown}
+    data-testid="fullscreen-action-dock"
+    data-docked={docked ? "true" : "false"}
 >
     <section
-        class="pointer-events-auto w-full max-w-5xl rounded-2xl border border-slate-700/80 bg-slate-950/80 p-3 shadow-[0_30px_90px_-40px_rgba(15,23,42,1)] backdrop-blur-md sm:p-4"
+        class={docked
+            ? "pointer-events-auto w-full rounded-none border-x-0 border-b-0 border-t border-slate-700/80 bg-slate-950 p-3 sm:px-6 sm:py-4"
+            : "pointer-events-auto w-full max-w-5xl rounded-2xl border border-slate-700/80 bg-slate-950/80 p-3 shadow-[0_30px_90px_-40px_rgba(15,23,42,1)] backdrop-blur-md sm:p-4"}
         aria-label="Fullscreen action dock"
         on:mouseenter={handleDockInteractStart}
         on:mouseleave={handleDockInteractEnd}
@@ -56,9 +65,16 @@
             </p>
             <button
                 type="button"
-                class="inline-flex items-center gap-2 rounded-full border border-slate-700/80 bg-slate-900/80 px-3 py-1 text-xs font-semibold text-slate-200 transition hover:border-slate-500 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70"
-                on:click={handleDismiss}
-                aria-label="Hide control dock"
+                class={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70 ${
+                    docked
+                        ? "border-blue-500/70 bg-blue-500/15 text-blue-100 hover:border-blue-400 hover:text-white"
+                        : "border-slate-700/80 bg-slate-900/80 text-slate-200 hover:border-slate-500 hover:text-white"
+                }`}
+                on:click={handleToggleDock}
+                aria-label={docked
+                    ? "Undock session controls"
+                    : "Dock controls to the bottom"}
+                aria-pressed={docked}
             >
                 <svg
                     class="h-3.5 w-3.5"
@@ -70,10 +86,10 @@
                     stroke-linejoin="round"
                     aria-hidden="true"
                 >
-                    <path d="M18 6 6 18" />
-                    <path d="m6 6 12 12" />
+                    <rect x="4" y="4" width="16" height="16" rx="2" />
+                    <path d="M4 15h16" />
                 </svg>
-                Hide
+                {docked ? "Undock" : "Dock"}
             </button>
         </div>
 
@@ -164,7 +180,9 @@
         </div>
 
         <p class="mt-3 text-[11px] text-slate-500">
-            Press Esc to exit fullscreen while controls are hidden.
+            {docked
+                ? "Press Esc to exit fullscreen."
+                : "Press Esc to exit fullscreen. Move the pointer to show controls."}
         </p>
     </section>
 </div>

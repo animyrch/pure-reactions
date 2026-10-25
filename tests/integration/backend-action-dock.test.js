@@ -34,6 +34,35 @@ describe('backend fullscreen action dock scrubber', () => {
         expect(body.indexOf('Session Controls')).toBeLessThan(
             body.indexOf('fullscreen-dock-scrubber'),
         );
+        expect(body).toContain('aria-label="Dock controls to the bottom"');
+        expect(body).toContain('Dock</button>');
+        expect(body).not.toContain('Hide control dock');
+        expect(body).toContain('data-docked="false"');
+    });
+
+    it('pins the controls as a bottom bar when docked', () => {
+        const { body } = render(BackendActionDock, {
+            props: {
+                visible: true,
+                docked: true,
+                scrubCurrentTime: 0,
+                scrubDuration: 120,
+                scrubSeekMin: 0,
+                scrubSeekMax: 120,
+                scrubDisabled: false,
+                actions: [],
+            },
+        });
+
+        expect(body).toContain('data-docked="true"');
+        expect(body).toContain('Undock</button>');
+        expect(body).toContain('aria-label="Undock session controls"');
+        expect(body).toContain('aria-pressed="true"');
+        expect(body).toContain('relative z-40 flex w-full shrink-0');
+        expect(body).toContain('rounded-none border-x-0 border-b-0 border-t');
+        expect(body).not.toContain('absolute inset-x-0 bottom-0');
+        expect(body).toContain('Press Esc to exit fullscreen.');
+        expect(body).not.toContain('Move the pointer to show controls.');
     });
 
     it('disables the dock scrubber when seeking is unavailable', () => {

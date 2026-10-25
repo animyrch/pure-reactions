@@ -106,7 +106,7 @@
     let playerFullscreenHostNode;
     let isPlayerFullscreen = false;
     let isActionDockVisible = false;
-    let isActionDockDismissed = false;
+    let isActionDockPinned = false;
     let isActionDockHovered = false;
     let actionDockHideTimeout;
 
@@ -1226,7 +1226,7 @@
         scrubCurrentTime = nextTime;
         armPendingScrub(nextTime);
         queueScrubSeek(nextTime, { syncSession: true });
-        if (isPlayerFullscreen && !isActionDockHovered) {
+        if (isPlayerFullscreen && !isActionDockPinned && !isActionDockHovered) {
             scheduleActionDockHide();
         }
     };
@@ -1742,12 +1742,12 @@
 
     const scheduleActionDockHide = () => {
         clearActionDockHideTimeout();
-        if (!isPlayerFullscreen || isActionDockDismissed) {
+        if (!isPlayerFullscreen || isActionDockPinned) {
             return;
         }
 
         actionDockHideTimeout = setTimeout(() => {
-            if (isPlayerFullscreen && !isActionDockDismissed && !isScrubbing) {
+            if (isPlayerFullscreen && !isActionDockPinned && !isScrubbing) {
                 isActionDockVisible = false;
             }
         }, ACTION_DOCK_HIDE_DELAY_MS);
@@ -1756,16 +1756,16 @@
     const syncPlayerFullscreenUiState = (isFullscreen) => {
         isPlayerFullscreen = isFullscreen;
         if (isFullscreen) {
-            isActionDockDismissed = false;
             isActionDockHovered = false;
             isActionDockVisible = true;
-            scheduleActionDockHide();
+            if (!isActionDockPinned) {
+                scheduleActionDockHide();
+            }
             return;
         }
 
         clearActionDockHideTimeout();
         isActionDockVisible = false;
-        isActionDockDismissed = false;
         isActionDockHovered = false;
     };
 
@@ -1849,16 +1849,18 @@
     };
 
     const revealActionDock = () => {
-        if (!isPlayerFullscreen || isActionDockDismissed) {
+        if (!isPlayerFullscreen) {
             return;
         }
 
         isActionDockVisible = true;
-        scheduleActionDockHide();
+        if (!isActionDockPinned) {
+            scheduleActionDockHide();
+        }
     };
 
     const keepActionDockVisible = () => {
-        if (!isPlayerFullscreen || isActionDockDismissed) {
+        if (!isPlayerFullscreen) {
             return;
         }
 
@@ -1869,18 +1871,25 @@
 
     const releaseActionDock = () => {
         isActionDockHovered = false;
-        scheduleActionDockHide();
+        if (!isActionDockPinned) {
+            scheduleActionDockHide();
+        }
     };
 
-    const dismissActionDock = () => {
+    const toggleActionDockPinned = () => {
         if (!isPlayerFullscreen) {
             return;
         }
 
-        isActionDockDismissed = true;
+        isActionDockPinned = !isActionDockPinned;
+        isActionDockVisible = true;
         isActionDockHovered = false;
-        isActionDockVisible = false;
-        clearActionDockHideTimeout();
+        if (isActionDockPinned) {
+            clearActionDockHideTimeout();
+            return;
+        }
+
+        scheduleActionDockHide();
     };
 
     $: stageActions = [
@@ -2232,7 +2241,7 @@
                         bind:this={playerFullscreenHostNode}
                         class={`relative overflow-hidden rounded-3xl border border-slate-900/60 bg-slate-900/60 shadow-[0_30px_60px_-40px_rgba(15,23,42,0.8)] ${
                             isPlayerFullscreen
-                                ? "h-full w-full rounded-none border-0 bg-black shadow-none"
+                                ? `h-full w-full rounded-none border-0 bg-black shadow-none ${isActionDockPinned ? "flex flex-col" : ""}`
                                 : ""
                         }`}
                         role="region"
@@ -2247,7 +2256,9 @@
                             <div
                                 class={`relative w-full bg-black ${
                                     isPlayerFullscreen
-                                        ? "h-full"
+                                        ? isActionDockPinned
+                                            ? "min-h-0 flex-1"
+                                            : "h-full"
                                         : "aspect-video"
                                 }`}
                                 aria-busy={isBuffering}
@@ -2272,7 +2283,9 @@
                             <div
                                 class={`relative w-full bg-black ${
                                     isPlayerFullscreen
-                                        ? "h-full"
+                                        ? isActionDockPinned
+                                            ? "min-h-0 flex-1"
+                                            : "h-full"
                                         : "aspect-video"
                                 }`}
                                 aria-busy={isBuffering}
@@ -2296,6 +2309,7 @@
                             <BackendActionDock
                                 actions={stageActions}
                                 visible={isActionDockVisible}
+                                docked={isActionDockPinned}
                                 scrubCurrentTime={scrubDisplayTime}
                                 scrubDuration={scrubSafeSeekMax}
                                 scrubSeekMin={scrubSeekMin}
@@ -2303,7 +2317,7 @@
                                 scrubDisabled={!isScrubberSeekable}
                                 onScrubInput={handleScrubInput}
                                 onScrubChange={handleScrubCommit}
-                                on:dismiss={dismissActionDock}
+                                on:toggledock={toggleActionDockPinned}
                                 on:dockinteractstart={keepActionDockVisible}
                                 on:dockinteractend={releaseActionDock}
                             />
