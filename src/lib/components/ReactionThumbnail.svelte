@@ -445,7 +445,7 @@
                 {/if}
             </a>
         {/if}
-        {#if onDelete}
+        {#if onDelete && !isQueue}
             <button
                 type="button"
                 class="shrink-0 rounded-full px-2 py-1 text-xs font-semibold text-red-400 hover:bg-red-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
@@ -455,8 +455,13 @@
                 Delete
             </button>
         {/if}
-        {#if !isQueue && showContextMenu}
-            <ThumbnailContext {reactionPageId} {reactionVideoAuthor} />
+        {#if showContextMenu && (!isQueue || onDelete)}
+            <ThumbnailContext
+                {reactionPageId}
+                {reactionVideoAuthor}
+                {itemType}
+                onDelete={isQueue ? onDelete : null}
+            />
         {/if}
     </div>
 </div>

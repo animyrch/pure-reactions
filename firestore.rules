@@ -289,22 +289,26 @@ service cloud.firestore {
       // OR if the queue is published
       allow read: if resource == null || isQueueOwner() || resource.data.isPublished == true;
       allow create: if isQueueOwnerCreate();
-      allow update, delete: if isQueueOwner() && request.resource.data.ownerId == resource.data.ownerId;
+      allow update: if isQueueOwner() && request.resource.data.ownerId == resource.data.ownerId;
+      allow delete: if isQueueOwner();
     }
     match /queues-local/{queueId} {
       allow read: if resource == null || isQueueOwner() || resource.data.isPublished == true;
       allow create: if isQueueOwnerCreate();
-      allow update, delete: if isQueueOwner() && request.resource.data.ownerId == resource.data.ownerId;
+      allow update: if isQueueOwner() && request.resource.data.ownerId == resource.data.ownerId;
+      allow delete: if isQueueOwner();
     }
     match /queues_local/{queueId} {
       allow read: if resource == null || isQueueOwner() || resource.data.isPublished == true;
       allow create: if isQueueOwnerCreate();
-      allow update, delete: if isQueueOwner() && request.resource.data.ownerId == resource.data.ownerId;
+      allow update: if isQueueOwner() && request.resource.data.ownerId == resource.data.ownerId;
+      allow delete: if isQueueOwner();
     }
     match /queues-prod/{queueId} {
       allow read: if resource == null || isQueueOwner() || resource.data.isPublished == true;
       allow create: if isQueueOwnerCreate();
-      allow update, delete: if isQueueOwner() && request.resource.data.ownerId == resource.data.ownerId;
+      allow update: if isQueueOwner() && request.resource.data.ownerId == resource.data.ownerId;
+      allow delete: if isQueueOwner();
     }
 
     // Youtube channel claims (V1)
