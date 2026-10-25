@@ -34,7 +34,7 @@
                 Share Your Reaction Session
             </h3>
             <p class="mt-1 text-sm text-text-muted">
-                Share this link so collaborators can watch your reaction live.
+                Share this link so the audience can watch your reaction live.
                 Playback stays in sync with your controls.
             </p>
         </div>
