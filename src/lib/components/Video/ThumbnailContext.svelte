@@ -35,6 +35,12 @@
 
 	$: isQueueItem = itemType === 'queue';
 	$: canDelete = typeof onDelete === 'function';
+	$: deleteLabel =
+		itemType === 'queue'
+			? 'Delete queue'
+			: itemType === 'playlist'
+				? 'Delete playlist'
+				: 'Delete reaction';
 	$: buttonId = reactionPageId ? `offset-${reactionPageId}` : `offset-fallback-${fallbackSuffix}`;
 	$: inputId = `queue-new-${buttonId}`;
 	$: authedUserId = $page?.data?.userId || $currentUser?.uid;
@@ -240,17 +246,7 @@
 			role="menu"
 			aria-label="Thumbnail actions"
 		>
-			{#if isQueueItem}
-				{#if canDelete}
-					<li>
-						<ReactionAction
-							buttonText="Delete queue"
-							className="w-full justify-start rounded-sm px-sm py-1 text-left text-red-400 hover:text-red-300 focus-visible:ring-0 focus-visible:outline-none focus-visible:text-red-300"
-							on:change={handleDelete}
-						/>
-					</li>
-				{/if}
-			{:else}
+			{#if !isQueueItem}
 			{#if reactionVideoAuthor}
 				<li>
 					<ReactionAction
@@ -357,6 +353,15 @@
 					</div>
 				{/if}
 			</li>
+			{/if}
+			{#if canDelete}
+				<li class={isQueueItem ? '' : 'mt-1 border-t border-white/10 pt-2'}>
+					<ReactionAction
+						buttonText={deleteLabel}
+						className="w-full justify-start rounded-sm px-sm py-1 text-left text-red-400 hover:text-red-300 focus-visible:ring-0 focus-visible:outline-none focus-visible:text-red-300"
+						on:change={handleDelete}
+					/>
+				</li>
 			{/if}
 		</ul>
 	{/if}
