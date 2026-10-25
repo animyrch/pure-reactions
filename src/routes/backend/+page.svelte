@@ -29,6 +29,7 @@
     } from "$lib/helpers/audioLead";
     import HelpfulTip from "$lib/components/design-system/HelpfulTip.svelte";
     import BackendActionDock from "$lib/components/Video/BackendActionDock.svelte";
+    import BackendScrubber from "$lib/components/Video/BackendScrubber.svelte";
     import PlaylistQueue from "$lib/components/Video/PlaylistQueue.svelte";
     import { isLoggedIn } from "$lib/stores/user";
     import { page } from "$app/stores";
@@ -105,7 +106,8 @@
     let playerFullscreenHostNode;
     let isPlayerFullscreen = false;
     let isActionDockVisible = false;
-    let isActionDockDismissed = false;
+    let isActionDockPinned = false;
+    let isActionDockHovered = false;
     let actionDockHideTimeout;
 
     let timer;
@@ -1108,13 +1110,6 @@
         requestAnimationFrame(updateSeekBar);
     }
 
-    // Function to format time in HH:MM format
-    function formatTime(time) {
-        const minutes = Math.floor(time / 60);
-        const seconds = Math.floor(time % 60);
-        return minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
-    }
-
     const clampNumber = (value, min, max) => {
         const normalized = Number(value);
         if (!Number.isFinite(normalized)) {
@@ -1191,13 +1186,24 @@
         });
     };
 
+    const readScrubValue = (event) => {
+        const raw =
+            event?.currentTarget?.value ??
+            event?.target?.value ??
+            event?.detail?.time;
+        return Number.parseFloat(raw);
+    };
+
     const handleScrubInput = (event) => {
         if (!isScrubberSeekable) {
             return;
         }
 
-        const rawValue = Number.parseFloat(event.currentTarget?.value);
-        const nextTime = clampNumber(rawValue, scrubSeekMin, scrubSafeSeekMax);
+        const nextTime = clampNumber(
+            readScrubValue(event),
+            scrubSeekMin,
+            scrubSafeSeekMax,
+        );
 
         isScrubbing = true;
         scrubCurrentTime = nextTime;
@@ -1210,13 +1216,19 @@
             return;
         }
 
-        const rawValue = Number.parseFloat(event.currentTarget?.value);
-        const nextTime = clampNumber(rawValue, scrubSeekMin, scrubSafeSeekMax);
+        const nextTime = clampNumber(
+            readScrubValue(event),
+            scrubSeekMin,
+            scrubSafeSeekMax,
+        );
 
         isScrubbing = false;
         scrubCurrentTime = nextTime;
         armPendingScrub(nextTime);
         queueScrubSeek(nextTime, { syncSession: true });
+        if (isPlayerFullscreen && !isActionDockPinned && !isActionDockHovered) {
+            scheduleActionDockHide();
+        }
     };
 
     $: scrubSeekMin = 0;
@@ -1730,12 +1742,12 @@
 
     const scheduleActionDockHide = () => {
         clearActionDockHideTimeout();
-        if (!isPlayerFullscreen || isActionDockDismissed) {
+        if (!isPlayerFullscreen || isActionDockPinned) {
             return;
         }
 
         actionDockHideTimeout = setTimeout(() => {
-            if (isPlayerFullscreen && !isActionDockDismissed) {
+            if (isPlayerFullscreen && !isActionDockPinned && !isScrubbing) {
                 isActionDockVisible = false;
             }
         }, ACTION_DOCK_HIDE_DELAY_MS);
@@ -1744,15 +1756,17 @@
     const syncPlayerFullscreenUiState = (isFullscreen) => {
         isPlayerFullscreen = isFullscreen;
         if (isFullscreen) {
-            isActionDockDismissed = false;
+            isActionDockHovered = false;
             isActionDockVisible = true;
-            scheduleActionDockHide();
+            if (!isActionDockPinned) {
+                scheduleActionDockHide();
+            }
             return;
         }
 
         clearActionDockHideTimeout();
         isActionDockVisible = false;
-        isActionDockDismissed = false;
+        isActionDockHovered = false;
     };
 
     const getCurrentFullscreenElement = () => {
@@ -1835,31 +1849,47 @@
     };
 
     const revealActionDock = () => {
-        if (!isPlayerFullscreen || isActionDockDismissed) {
-            return;
-        }
-
-        isActionDockVisible = true;
-        scheduleActionDockHide();
-    };
-
-    const keepActionDockVisible = () => {
-        if (!isPlayerFullscreen || isActionDockDismissed) {
-            return;
-        }
-
-        isActionDockVisible = true;
-        clearActionDockHideTimeout();
-    };
-
-    const dismissActionDock = () => {
         if (!isPlayerFullscreen) {
             return;
         }
 
-        isActionDockDismissed = true;
-        isActionDockVisible = false;
+        isActionDockVisible = true;
+        if (!isActionDockPinned) {
+            scheduleActionDockHide();
+        }
+    };
+
+    const keepActionDockVisible = () => {
+        if (!isPlayerFullscreen) {
+            return;
+        }
+
+        isActionDockHovered = true;
+        isActionDockVisible = true;
         clearActionDockHideTimeout();
+    };
+
+    const releaseActionDock = () => {
+        isActionDockHovered = false;
+        if (!isActionDockPinned) {
+            scheduleActionDockHide();
+        }
+    };
+
+    const toggleActionDockPinned = () => {
+        if (!isPlayerFullscreen) {
+            return;
+        }
+
+        isActionDockPinned = !isActionDockPinned;
+        isActionDockVisible = true;
+        isActionDockHovered = false;
+        if (isActionDockPinned) {
+            clearActionDockHideTimeout();
+            return;
+        }
+
+        scheduleActionDockHide();
     };
 
     $: stageActions = [
@@ -2211,7 +2241,7 @@
                         bind:this={playerFullscreenHostNode}
                         class={`relative overflow-hidden rounded-3xl border border-slate-900/60 bg-slate-900/60 shadow-[0_30px_60px_-40px_rgba(15,23,42,0.8)] ${
                             isPlayerFullscreen
-                                ? "h-full w-full rounded-none border-0 bg-black shadow-none"
+                                ? `h-full w-full rounded-none border-0 bg-black shadow-none ${isActionDockPinned ? "flex flex-col" : ""}`
                                 : ""
                         }`}
                         role="region"
@@ -2226,7 +2256,9 @@
                             <div
                                 class={`relative w-full bg-black ${
                                     isPlayerFullscreen
-                                        ? "h-full"
+                                        ? isActionDockPinned
+                                            ? "min-h-0 flex-1"
+                                            : "h-full"
                                         : "aspect-video"
                                 }`}
                                 aria-busy={isBuffering}
@@ -2251,7 +2283,9 @@
                             <div
                                 class={`relative w-full bg-black ${
                                     isPlayerFullscreen
-                                        ? "h-full"
+                                        ? isActionDockPinned
+                                            ? "min-h-0 flex-1"
+                                            : "h-full"
                                         : "aspect-video"
                                 }`}
                                 aria-busy={isBuffering}
@@ -2275,50 +2309,36 @@
                             <BackendActionDock
                                 actions={stageActions}
                                 visible={isActionDockVisible}
-                                on:dismiss={dismissActionDock}
+                                docked={isActionDockPinned}
+                                scrubCurrentTime={scrubDisplayTime}
+                                scrubDuration={scrubSafeSeekMax}
+                                scrubSeekMin={scrubSeekMin}
+                                scrubSeekMax={scrubSafeSeekMax}
+                                scrubDisabled={!isScrubberSeekable}
+                                onScrubInput={handleScrubInput}
+                                onScrubChange={handleScrubCommit}
+                                on:toggledock={toggleActionDockPinned}
                                 on:dockinteractstart={keepActionDockVisible}
-                                on:dockinteractend={scheduleActionDockHide}
+                                on:dockinteractend={releaseActionDock}
                             />
                         {/if}
                     </div>
 
-                    <div
-                        class="group relative overflow-hidden rounded-3xl border border-slate-900/60 bg-slate-900/40 px-6 py-5 text-left transition hover:border-slate-800 hover:bg-slate-900/60"
-                    >
-                        <div class="flex items-baseline justify-between">
-                            <span
-                                class="text-xs uppercase tracking-[0.3em] text-slate-500"
-                                >Scrub</span
-                            >
-                            <span class="font-mono text-sm text-slate-200"
-                                >{formatTime(scrubDisplayTime)} / {formatTime(
-                                    scrubSafeSeekMax,
-                                )}</span
-                            >
-                        </div>
-                        <div class="mt-4 flex items-center gap-3">
-                            <span
-                                class="hidden min-w-[32px] text-right font-mono text-xs text-slate-400 sm:block"
-                                >{formatTime(scrubDisplayTime)}</span
-                            >
-                            <input
-                                type="range"
-                                min={scrubSeekMin}
-                                max={scrubSafeSeekMax}
-                                step="0.1"
-                                value={scrubDisplayTime}
-                                class="backend-scrubber-range w-full cursor-pointer"
-                                on:input={handleScrubInput}
-                                on:change={handleScrubCommit}
+                    {#if !isPlayerFullscreen}
+                        <div
+                            class="group relative overflow-hidden rounded-3xl border border-slate-900/60 bg-slate-900/40 px-6 py-5 text-left transition hover:border-slate-800 hover:bg-slate-900/60"
+                        >
+                            <BackendScrubber
+                                currentTime={scrubDisplayTime}
+                                duration={scrubSafeSeekMax}
+                                seekMin={scrubSeekMin}
+                                seekMax={scrubSafeSeekMax}
                                 disabled={!isScrubberSeekable}
-                                aria-label="Seek original video"
+                                onInput={handleScrubInput}
+                                onChange={handleScrubCommit}
                             />
-                            <span
-                                class="hidden min-w-[32px] font-mono text-xs text-slate-400 sm:block"
-                                >{formatTime(scrubSafeSeekMax)}</span
-                            >
                         </div>
-                    </div>
+                    {/if}
 
                     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                         {#each stageActions as action}
@@ -2677,58 +2697,4 @@
     {handlePrivateRoute()}
 {/if}
 
-<style lang="postcss">
-    .backend-scrubber-range {
-        -webkit-appearance: none;
-        appearance: none;
-        background: transparent;
-        height: 28px;
-        touch-action: manipulation;
-    }
 
-    .backend-scrubber-range:focus {
-        outline: none;
-    }
-
-    .backend-scrubber-range::-webkit-slider-runnable-track {
-        height: 4px;
-        border-radius: 999px;
-        background: rgba(100, 116, 139, 0.45);
-    }
-
-    .backend-scrubber-range::-moz-range-track {
-        height: 4px;
-        border-radius: 999px;
-        background: rgba(100, 116, 139, 0.45);
-    }
-
-    .backend-scrubber-range::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        height: 12px;
-        width: 12px;
-        margin-top: -4px;
-        border-radius: 999px;
-        border: 1px solid rgba(226, 232, 240, 0.5);
-        background: rgb(226, 232, 240);
-        transition: transform 0.1s ease;
-    }
-
-    .backend-scrubber-range::-moz-range-thumb {
-        height: 12px;
-        width: 12px;
-        border: 1px solid rgba(226, 232, 240, 0.5);
-        border-radius: 999px;
-        background: rgb(226, 232, 240);
-        transition: transform 0.1s ease;
-    }
-
-    .backend-scrubber-range:hover::-webkit-slider-thumb,
-    .backend-scrubber-range:hover::-moz-range-thumb {
-        transform: scale(1.08);
-    }
-
-    .backend-scrubber-range:disabled {
-        cursor: not-allowed;
-        opacity: 0.5;
-    }
-</style>
