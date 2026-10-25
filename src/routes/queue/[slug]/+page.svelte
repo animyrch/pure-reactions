@@ -3,10 +3,12 @@
     import { page } from '$app/stores';
     import { goto } from '$app/navigation';
     import QueueBinomeCard from '$lib/components/QueueBinomeCard.svelte';
+    import QueueCover from '$lib/components/QueueCover.svelte';
     import SEO from '$lib/components/SEO.svelte';
     import { getReactionsByIds, getPlaylist, getQueueBySlug, updateQueueDocument } from '$lib/helpers/firebase';
     import { handlePrivateRoute } from '$lib/helpers/routing';
     import { readQueueProgress } from '$lib/helpers/queueProgress';
+    import { coverVideoIdsForItems } from '$lib/helpers/queueCover';
     import { reactionThumbnailSourceTitle } from '$lib/helpers/reactionListItem';
 
     export let data;
@@ -31,6 +33,7 @@
     let resumeReactionId = '';
 
     $: queueTitle = queueDefinition?.data?.title || 'Untitled queue';
+    $: queueCoverVideoIds = coverVideoIdsForItems(resolvedItems);
     $: totalBinomes = queueDefinition?.data?.items?.length ?? 0;
     $: currentSetIndexParam = Number($page.url?.searchParams?.get('queueIndex') ?? 0);
     $: currentSetIndex = Number.isFinite(currentSetIndexParam) ? currentSetIndexParam : 0;
@@ -259,7 +262,13 @@
 
 <main class="set-page bg-background text-text-primary">
     <div class="mx-auto max-w-6xl px-4 py-10 sm:py-14">
-        <div class="mb-8 space-y-3">
+        <div class="mb-8 flex flex-col gap-6 md:flex-row md:items-start">
+            {#if !isLoading && queueCoverVideoIds.length}
+                <div class="queue-cover-frame">
+                    <QueueCover videoIds={queueCoverVideoIds} />
+                </div>
+            {/if}
+            <div class="min-w-0 flex-1 space-y-3">
             <p class="text-xs uppercase tracking-[0.35em] text-text-muted">Queue</p>
             <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                 <div class="space-y-2">
@@ -330,6 +339,7 @@
                     </div>
                 </div>
             {/if}
+            </div>
         </div>
 
         {#if isLoading}
@@ -395,6 +405,17 @@
 </main>
 
 <style>
+    .queue-cover-frame {
+        width: 100%;
+        max-width: 22rem;
+        aspect-ratio: 16 / 9;
+        overflow: hidden;
+        border-radius: 1rem;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.04);
+        flex-shrink: 0;
+    }
+
     .set-page {
         min-height: 100vh;
         background: radial-gradient(circle at 15% 20%, rgba(88, 112, 193, 0.08), transparent 35%),

@@ -2,6 +2,7 @@
     import { onMount } from "svelte";
     import VideoAuthor from "$lib/components/VideoAuthor.svelte";
     import ThumbnailContext from "$lib/components/Video/ThumbnailContext.svelte";
+    import QueueCover from "$lib/components/QueueCover.svelte";
     import { buildReactionCardHref, reactionThumbnailSourceTitle } from "$lib/helpers/reactionListItem";
     import { formatWatchDuration } from "$lib/helpers/watchDuration";
 
@@ -18,17 +19,12 @@
     export let itemType = "reaction";
     export let queueTitle = "";
     export let queueSlug = "";
+    export let coverVideoIds = [];
     export let watchDurationSeconds = null;
     export let interactive = false;
     export let linkless = false;
     export let showContextMenu = true;
     export let onDelete = null;
-
-    const handleDeleteClick = (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        onDelete?.();
-    };
 
     $: isQueue = itemType === "queue";
     $: isPlaylist = itemType === "playlist";
@@ -231,26 +227,7 @@
                     </div>
                 {/if}
                 {#if isQueue}
-                    <div class="queue-placeholder">
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="64"
-                            height="64"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="1.5"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                        >
-                            <path d="M4 7V4h3" />
-                            <path d="M20 4h-3v3" />
-                            <path d="M4 17v3h3" />
-                            <path d="M20 20h-3v-3" />
-                            <rect x="9" y="9" width="6" height="6" />
-                        </svg>
-                        <p class="queue-placeholder-text">Reaction Queue</p>
-                    </div>
+                    <QueueCover videoIds={coverVideoIds} />
                 {:else}
                     <div
                         class="thumbnail-skeleton"
@@ -381,26 +358,7 @@
                     </div>
                 {/if}
                 {#if isQueue}
-                    <div class="queue-placeholder">
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="64"
-                            height="64"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="1.5"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                        >
-                            <path d="M4 7V4h3" />
-                            <path d="M20 4h-3v3" />
-                            <path d="M4 17v3h3" />
-                            <path d="M20 20h-3v-3" />
-                            <rect x="9" y="9" width="6" height="6" />
-                        </svg>
-                        <p class="queue-placeholder-text">Reaction Queue</p>
-                    </div>
+                    <QueueCover videoIds={coverVideoIds} />
                 {:else}
                     <div
                         class="thumbnail-skeleton"
@@ -481,18 +439,13 @@
                 {/if}
             </a>
         {/if}
-        {#if onDelete}
-            <button
-                type="button"
-                class="shrink-0 rounded-full px-2 py-1 text-xs font-semibold text-red-400 hover:bg-red-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-                aria-label={isPlaylist ? "Delete playlist" : "Delete reaction"}
-                on:click={handleDeleteClick}
-            >
-                Delete
-            </button>
-        {/if}
-        {#if !isQueue && showContextMenu}
-            <ThumbnailContext {reactionPageId} {reactionVideoAuthor} />
+        {#if showContextMenu && (!isQueue || onDelete)}
+            <ThumbnailContext
+                {reactionPageId}
+                {reactionVideoAuthor}
+                {itemType}
+                {onDelete}
+            />
         {/if}
     </div>
 </div>
@@ -657,30 +610,6 @@
             rgba(15, 17, 21, 0.9),
             rgba(25, 29, 36, 0.8)
         );
-    }
-    .queue-placeholder {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 0.75rem;
-        background: linear-gradient(
-            135deg,
-            rgba(99, 102, 241, 0.15),
-            rgba(139, 92, 246, 0.15)
-        );
-        color: rgba(167, 139, 250, 0.9);
-    }
-    .queue-placeholder svg {
-        opacity: 0.8;
-    }
-    .queue-placeholder-text {
-        font-size: 0.875rem;
-        font-weight: 600;
-        letter-spacing: 0.025em;
-        opacity: 0.9;
     }
     .thumbnail-content {
         padding: 1rem;

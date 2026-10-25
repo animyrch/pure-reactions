@@ -314,6 +314,16 @@ test('non-owner cannot read unpublished queue', async () => {
   await assertFails(getDoc(doc(otherDb(), 'queues', 'private-queue')));
 });
 
+test('owner can delete their queue', async () => {
+  await seedQueue('owner-delete-queue');
+  await assertSucceeds(deleteDoc(doc(ownerDb(), 'queues', 'owner-delete-queue')));
+});
+
+test('non-owner cannot delete another user\'s queue', async () => {
+  await seedQueue('owner-protected-queue');
+  await assertFails(deleteDoc(doc(otherDb(), 'queues', 'owner-protected-queue')));
+});
+
 test('owner can save a twitch channel on userData_local', async () => {
   const ref = doc(ownerDb(), 'userData_local', ownerId);
   await assertSucceeds(setDoc(ref, { twitchChannel: 'nightbot' }, { merge: true }));

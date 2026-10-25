@@ -1,6 +1,12 @@
 const DEFAULT_BATCH_LIMIT = 450;
 
-const itemKind = (kind) => (kind === 'playlist' ? 'playlist' : 'reaction');
+const OWNED_CONTENT_KINDS = new Set(['reaction', 'playlist', 'queue']);
+
+const itemKind = (kind) => {
+	if (kind === 'playlist') return 'playlist';
+	if (kind === 'queue') return 'queue';
+	return 'reaction';
+};
 
 const cleanId = (value) => (typeof value === 'string' ? value.trim() : '');
 
@@ -145,8 +151,9 @@ async function clearReactionFromPlaylistOp(adminDb, playlistsCollection, userId,
 }
 
 /**
- * Delete one reaction or playlist owned by userId.
+ * Delete one reaction, playlist, or queue owned by userId.
  * A playlist delete also deletes the owner's reactions in that playlist.
+ * A queue delete removes the queue document only; items stay as their own docs.
  * Returns { ok: true, deletedReactionIds } or { ok: false, status, error }.
  */
 export async function deleteOwnedContent({
@@ -160,7 +167,7 @@ export async function deleteOwnedContent({
 }) {
 	const contentId = cleanId(id);
 	const contentKind = itemKind(kind);
-	if ((kind !== 'reaction' && kind !== 'playlist') || !contentId || contentId.includes('/')) {
+	if (!OWNED_CONTENT_KINDS.has(kind) || !contentId || contentId.includes('/')) {
 		return { ok: false, status: 400, error: 'Invalid request' };
 	}
 	if (!userId || !adminDb) {
@@ -176,7 +183,18 @@ export async function deleteOwnedContent({
 	const deletedReactionIds = [];
 	const ops = [];
 
-	if (contentKind === 'playlist') {
+	if (contentKind === 'queue') {
+		const queueRef = adminDb.collection(queuesCollection).doc(contentId);
+		const queueSnapshot = await queueRef.get();
+		if (!queueSnapshot.exists) {
+			return { ok: false, status: 404, error: 'Queue not found.' };
+		}
+		const queueData = queueSnapshot.data() || {};
+		if (queueData.ownerId !== userId) {
+			return { ok: false, status: 403, error: 'You can only delete your own queues.' };
+		}
+		ops.push({ type: 'delete', ref: queueRef });
+	} else if (contentKind === 'playlist') {
 		const playlistRef = adminDb.collection(playlistsCollection).doc(contentId);
 		const playlistSnapshot = await playlistRef.get();
 		if (!playlistSnapshot.exists) {

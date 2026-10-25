@@ -361,7 +361,7 @@ export function computeTwinPlayersSyncTick(
     while (idx < timeline.length) {
       const entry = timeline[idx];
       const eventTime = Number(entry?.t);
-      if (!Number.isFinite(eventTime)) {
+      if (!Number.isFinite(eventTime) || eventTime < 0) {
         idx += 1;
         continue;
       }

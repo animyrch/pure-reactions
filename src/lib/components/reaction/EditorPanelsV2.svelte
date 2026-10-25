@@ -390,6 +390,9 @@
     isSavingGeneral = true;
     try {
       await onSaveGeneralSettings(patch);
+      if (!remixMode && "introBufferTime" in patch) {
+        introBufferTimeValue = "0";
+      }
       showToast("Settings saved.", TOASTS.SUCCESS);
     } catch (error) {
       console.error("Failed to save reaction settings", error);
@@ -833,7 +836,9 @@
             <div class="flex items-center gap-1.5">
               <h3 class="text-xs font-medium text-text-secondary">Original video lead-in</h3>
               <HelpfulTip variant="tooltip" placement="top" label="About original video lead-in">
-                How long to play the original clip before your reaction starts. Negative values and fractions are allowed. Every cue shifts by this many seconds, which helps when the recording started out of sync.
+                {remixMode
+                  ? "How long to play the original clip before your reaction starts. Negative values and fractions are allowed."
+                  : "Saving moves every cue by this many seconds on the reaction timeline, then clears this field. Positive values move cues later. Negative values move them earlier. Cues that land before the start stay saved and are ignored until a later adjustment brings them back."}
               </HelpfulTip>
             </div>
             <div class="mt-1.5">
@@ -847,7 +852,9 @@
               />
             </div>
             <p class="mt-1.5 text-[11px] leading-snug text-text-muted">
-              How long to play the original clip before your reaction starts.
+              {remixMode
+                ? "How long to play the original clip before your reaction starts."
+                : "Saving moves every cue by this many seconds, then clears this field."}
             </p>
           </div>
         </div>

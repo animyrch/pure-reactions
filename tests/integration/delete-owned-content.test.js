@@ -238,6 +238,80 @@ describe('deleteOwnedContent', () => {
 		expect(deletedIds.sort()).toEqual(['in-list', 'linked-only']);
 	});
 
+	it('deletes an owned queue and leaves its reactions and other queues', async () => {
+		const db = createMemoryDb();
+		db.seed('queues', 'my-queue', {
+			ownerId,
+			title: 'Late night',
+			items: [
+				{ type: 'reaction', id: 'kept-reaction' },
+				{ type: 'playlist', id: 'kept-playlist' }
+			]
+		});
+		db.seed('queues', 'other-queue', {
+			ownerId,
+			title: 'Keep me',
+			items: [{ type: 'reaction', id: 'kept-reaction' }]
+		});
+		db.seed('queues', 'their-queue', {
+			ownerId: otherId,
+			title: 'Theirs',
+			items: [{ type: 'reaction', id: 'kept-reaction' }]
+		});
+		db.seed('reactions', 'kept-reaction', { reactorId: ownerId, playlistId: '' });
+		db.seed('userData', ownerId, { bookmarks: ['kept-reaction'] });
+
+		const result = await deleteOwnedContent({
+			adminDb: db,
+			userId: ownerId,
+			kind: 'queue',
+			id: 'my-queue',
+			collections
+		});
+
+		expect(result.ok).toBe(true);
+		expect(result.deletedReactionIds).toEqual([]);
+		expect(db.read('queues', 'my-queue')).toBeUndefined();
+		expect(db.read('queues', 'other-queue')?.title).toBe('Keep me');
+		expect(db.read('queues', 'their-queue')?.ownerId).toBe(otherId);
+		expect(db.read('reactions', 'kept-reaction')?.reactorId).toBe(ownerId);
+		expect(db.read('userData', ownerId).bookmarks).toEqual(['kept-reaction']);
+	});
+
+	it('does not delete another user\'s queue', async () => {
+		const db = createMemoryDb();
+		db.seed('queues', 'their-queue', {
+			ownerId: otherId,
+			title: 'Theirs',
+			items: [{ type: 'reaction', id: 'theirs' }]
+		});
+
+		const result = await deleteOwnedContent({
+			adminDb: db,
+			userId: ownerId,
+			kind: 'queue',
+			id: 'their-queue',
+			collections
+		});
+
+		expect(result).toMatchObject({ ok: false, status: 403 });
+		expect(db.read('queues', 'their-queue')?.ownerId).toBe(otherId);
+		expect(db.commits).toBe(0);
+	});
+
+	it('rejects a missing queue', async () => {
+		const db = createMemoryDb();
+		const result = await deleteOwnedContent({
+			adminDb: db,
+			userId: ownerId,
+			kind: 'queue',
+			id: 'missing',
+			collections
+		});
+		expect(result).toMatchObject({ ok: false, status: 404 });
+		expect(db.commits).toBe(0);
+	});
+
 	it('does not delete another user\'s playlist', async () => {
 		const db = createMemoryDb();
 		db.seed('playlists', 'their-playlist', {

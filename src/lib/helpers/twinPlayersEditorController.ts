@@ -23,6 +23,7 @@ import { downloadBasicVideoDetails, parseYouTubeUrl } from '$lib/helpers/youtube
 import { validateMomentReaction } from '$lib/helpers/momentReactionValidation';
 import { canPublishReactionMedia } from '$lib/helpers/reactionPublish';
 import { nextPlayTargetAfterStartMove } from '$lib/helpers/remixCueForm';
+import { shiftCueTimelinesByLeadIn } from '$lib/helpers/shiftCueTimelines';
 import { showToast } from '$lib/stores/toast';
 import { TOASTS } from '$lib/constants/toasts';
 
@@ -393,12 +394,98 @@ export function createTwinPlayersEditorController({
 
   const setIntroBufferTime = async (value: number) => {
     const parsed = Number(value);
-    if (Number.isNaN(parsed)) {
+    if (!Number.isFinite(parsed)) {
       return;
     }
 
-    await updateFirebaseDocument({ timeOffset: parsed });
-    updateState({ timeOffset: parsed, introBufferTime: parsed });
+    const snapshot = getSnapshot();
+    const storedOffset = Number(snapshot.timeOffset);
+    const delta = parsed - (Number.isFinite(storedOffset) ? storedOffset : 0);
+
+    // Remix cues sit on the original clock. The lead-in is a reaction-clock shift.
+    if (snapshot.remixMode || delta === 0) {
+      const didStore = await updateFirebaseDocument({ timeOffset: parsed });
+      if (!didStore) {
+        throw new Error('Failed to update lead-in');
+      }
+      updateState({ timeOffset: parsed, introBufferTime: parsed });
+      return;
+    }
+
+    const shifted = shiftCueTimelinesByLeadIn({
+      stateTimeline: snapshot.stateTimeline,
+      volumeTimeline: snapshot.volumeTimeline,
+      reactionVolumeTimeline: snapshot.reactionVolumeTimeline,
+      playbackRateTimeline: snapshot.playbackRateTimeline,
+      overlayVisibilityTimeline: snapshot.overlayVisibilityTimeline
+    }, delta);
+
+    const playerConfigs = Object.fromEntries(
+      shifted.stateTimeline.map((entry) => [
+        Number(entry.t).toFixed(1),
+        {
+          state: Number(entry.state),
+          time: Number(entry.targetTime ?? 0).toFixed(2)
+        }
+      ])
+    );
+    const volumeConfigs = Object.fromEntries(
+      shifted.volumeTimeline.map((entry) => [
+        Number(entry.t).toFixed(1),
+        { volume: entry.volume }
+      ])
+    );
+    const reactionVolumeConfigs = Object.fromEntries(
+      shifted.reactionVolumeTimeline.map((entry) => [
+        Number(entry.t).toFixed(1),
+        { volume: entry.volume }
+      ])
+    );
+    const playbackRateConfigs = Object.fromEntries(
+      shifted.playbackRateTimeline.map((entry) => [
+        Number(entry.t).toFixed(1),
+        { rate: entry.rate }
+      ])
+    );
+
+    const didShift = await updateFirebaseDocument({
+      stateTimeline: shifted.stateTimeline,
+      volumeTimeline: shifted.volumeTimeline,
+      reactionVolumeTimeline: shifted.reactionVolumeTimeline,
+      playbackTimeline: shifted.playbackRateTimeline,
+      overlayVisibilityTimeline: shifted.overlayVisibilityTimeline,
+      timeOffset: 0,
+      reactionConfigs: firestoreDeleteField(),
+      volumeConfigs: firestoreDeleteField(),
+      reactionVolumeConfigs: firestoreDeleteField(),
+      playbackRateConfigs: firestoreDeleteField()
+    });
+    if (!didShift) {
+      throw new Error('Failed to shift cue timings');
+    }
+
+    if (typeof window !== 'undefined') {
+      (window as any).playerConfigs = shifted.stateTimeline;
+      (window as any).volumeConfigs = shifted.volumeTimeline;
+      (window as any).reactionVolumeConfigs = shifted.reactionVolumeTimeline;
+      (window as any).playbackRateConfigs = shifted.playbackRateTimeline;
+      (window as any).overlayVisibilityTimeline = shifted.overlayVisibilityTimeline;
+    }
+
+    updateState({
+      timeOffset: 0,
+      introBufferTime: 0,
+      stateTimeline: shifted.stateTimeline,
+      volumeTimeline: shifted.volumeTimeline,
+      reactionVolumeTimeline: shifted.reactionVolumeTimeline,
+      playbackRateTimeline: shifted.playbackRateTimeline,
+      overlayVisibilityTimeline: shifted.overlayVisibilityTimeline,
+      playerConfigs,
+      volumeConfigs,
+      reactionVolumeConfigs,
+      playbackRateConfigs,
+      playerEventTimeline: buildPlayerEventTimeline(shifted.stateTimeline)
+    });
   };
 
   const setReactionFinishTime = async (value: number) => {
