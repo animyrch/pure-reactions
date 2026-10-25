@@ -26,6 +26,9 @@ describe('share session modal contrast', () => {
 
         expect(body).toContain('data-testid="share-session-modal"');
         expect(body).toContain('Share Your Reaction Session');
+        expect(body).toContain('p-6');
+        expect(body).toContain('sm:p-8');
+        expect(body).toContain('pe-8');
         expect(body).toContain('text-text-primary');
         expect(body).toContain('text-text-muted');
         expect(body).toContain('bg-surface');

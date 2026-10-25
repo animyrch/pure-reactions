@@ -169,6 +169,31 @@ test('share session modal text meets AA contrast', async ({ page }, testInfo) =>
     expect(ratios.copy).toBeGreaterThanOrEqual(4.5);
     expect(ratios.link).toBeGreaterThanOrEqual(4.5);
 
+    const inset = await page.evaluate(() => {
+        const content = document.querySelector('[data-testid="share-session-modal"]');
+        const dialog = content?.closest('[role="dialog"]');
+        const panel = dialog?.querySelector('.relative.flex.flex-col');
+        const closeButton = dialog?.querySelector('button[aria-label="Close modal"]');
+        if (!content || !panel) return null;
+        const contentBox = content.getBoundingClientRect();
+        const panelBox = panel.getBoundingClientRect();
+        const headingBox = content.querySelector('h3')?.getBoundingClientRect();
+        const closeBox = closeButton?.getBoundingClientRect();
+        return {
+            top: contentBox.top - panelBox.top,
+            right: panelBox.right - contentBox.right,
+            bottom: panelBox.bottom - contentBox.bottom,
+            left: contentBox.left - panelBox.left,
+            headingToClose: closeBox && headingBox ? closeBox.left - headingBox.right : 0,
+        };
+    });
+    expect(inset).toBeTruthy();
+    expect(inset.top).toBeGreaterThanOrEqual(24);
+    expect(inset.right).toBeGreaterThanOrEqual(24);
+    expect(inset.bottom).toBeGreaterThanOrEqual(24);
+    expect(inset.left).toBeGreaterThanOrEqual(24);
+    expect(inset.headingToClose).toBeGreaterThanOrEqual(16);
+
     await modal.screenshot({
         path: 'test-results/share-session-modal-contrast.png',
     });

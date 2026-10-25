@@ -26,9 +26,9 @@
     autoclose={false}
     color="none"
     class="!bg-surface !text-text-primary border border-white/20 shadow-[0_25px_80px_rgba(0,0,0,0.65)] ring-1 ring-white/10"
-    bodyClass="bg-transparent"
+    bodyClass="relative bg-transparent p-6 sm:p-8"
 >
-    <div class="space-y-4 text-text-primary" data-testid="share-session-modal">
+    <div class="space-y-5 pe-8 text-text-primary" data-testid="share-session-modal">
         <div>
             <h3 class="text-lg font-semibold text-text-primary">
                 Share Your Reaction Session
