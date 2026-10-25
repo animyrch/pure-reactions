@@ -16,6 +16,8 @@
 
 	export let reactionPageId;
 	export let reactionVideoAuthor;
+	export let itemType = 'reaction';
+	export let onDelete = null;
 
 	const fallbackSuffix = Math.random().toString(36).slice(2, 8);
 	const menuOpenEventName = 'thumbnail-context-open';
@@ -31,6 +33,14 @@
 	let isQueuesSectionOpen = false;
 	let menuEl;
 
+	$: isQueueItem = itemType === 'queue';
+	$: canDelete = typeof onDelete === 'function';
+	$: deleteLabel =
+		itemType === 'queue'
+			? 'Delete queue'
+			: itemType === 'playlist'
+				? 'Delete playlist'
+				: 'Delete reaction';
 	$: buttonId = reactionPageId ? `offset-${reactionPageId}` : `offset-fallback-${fallbackSuffix}`;
 	$: inputId = `queue-new-${buttonId}`;
 	$: authedUserId = $page?.data?.userId || $currentUser?.uid;
@@ -42,7 +52,7 @@
 	});
 
 	// Auto-load queues once the user id becomes available or when menu opens
-	$: if (authedUserId && !hasLoadedQueues && !isLoadingQueues && isOpen) {
+	$: if (!isQueueItem && authedUserId && !hasLoadedQueues && !isLoadingQueues && isOpen) {
 		loadUserQueues(false);
 	}
 
@@ -160,6 +170,13 @@
 		isQueuesSectionOpen = false;
 	};
 
+	const handleDelete = (event) => {
+		event?.stopPropagation?.();
+		if (!canDelete) return;
+		closeMenu();
+		onDelete();
+	};
+
 	const toggleMenu = (event) => {
 		event?.stopPropagation?.();
 		isOpen = !isOpen;
@@ -169,7 +186,7 @@
 		}
 
 		// Opportunistic load when opening the menu
-		if (!isOpen && authedUserId && !hasLoadedQueues && !isLoadingQueues) {
+		if (!isQueueItem && !isOpen && authedUserId && !hasLoadedQueues && !isLoadingQueues) {
 			loadUserQueues(false);
 		}
 	};
@@ -194,7 +211,9 @@
 	};
 
 	onMount(() => {
-		loadUserQueues(false);
+		if (!isQueueItem) {
+			loadUserQueues(false);
+		}
 		window.addEventListener('click', handleClickOutside);
 		window.addEventListener('keydown', handleEscape);
 		window.addEventListener(menuOpenEventName, handleAnotherMenuOpen);
@@ -213,6 +232,7 @@
 		color="white"
 		outline="true"
 		id={buttonId}
+		aria-label="Thumbnail actions"
 		on:click={toggleMenu}
 		aria-expanded={isOpen}
 		aria-controls={`menu-${buttonId}`}
@@ -226,6 +246,7 @@
 			role="menu"
 			aria-label="Thumbnail actions"
 		>
+			{#if !isQueueItem}
 			{#if reactionVideoAuthor}
 				<li>
 					<ReactionAction
@@ -332,6 +353,16 @@
 					</div>
 				{/if}
 			</li>
+			{/if}
+			{#if canDelete}
+				<li class={isQueueItem ? '' : 'mt-1 border-t border-white/10 pt-2'}>
+					<ReactionAction
+						buttonText={deleteLabel}
+						className="w-full justify-start rounded-sm px-sm py-1 text-left text-red-400 hover:text-red-300 focus-visible:ring-0 focus-visible:outline-none focus-visible:text-red-300"
+						on:change={handleDelete}
+					/>
+				</li>
+			{/if}
 		</ul>
 	{/if}
 </div>

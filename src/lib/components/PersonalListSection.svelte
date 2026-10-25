@@ -9,6 +9,7 @@
   /** Bookmarks renders the list even when it is empty. Queues shows a message. */
   export let emptyMessage = true;
   export let sectionClass = "mb-10";
+  export let onDelete = null;
 </script>
 
 <div class={sectionClass}>
@@ -21,7 +22,7 @@
   {#if loading}
     <div>Loading...</div>
   {:else if items.length || !emptyMessage}
-    <ReactionsList reactions={items} heading="" />
+    <ReactionsList reactions={items} heading="" {onDelete} />
   {:else}
     <div class="text-sm text-text-muted">{empty}</div>
   {/if}
