@@ -1,9 +1,17 @@
 <script>
     import { createEventDispatcher } from "svelte";
     import HelpfulTip from "$lib/components/design-system/HelpfulTip.svelte";
+    import BackendScrubber from "$lib/components/Video/BackendScrubber.svelte";
 
     export let actions = [];
     export let visible = false;
+    export let scrubCurrentTime = 0;
+    export let scrubDuration = 0;
+    export let scrubSeekMin = 0;
+    export let scrubSeekMax = 0;
+    export let scrubDisabled = true;
+    export let onScrubInput = (_event) => {};
+    export let onScrubChange = (_event) => {};
 
     const dispatch = createEventDispatcher();
 
@@ -67,6 +75,22 @@
                 </svg>
                 Hide
             </button>
+        </div>
+
+        <div
+            class="mb-3 w-full min-w-0 rounded-2xl border border-slate-700/80 bg-slate-900/70 px-3 py-2.5"
+            data-testid="fullscreen-dock-scrubber"
+        >
+            <BackendScrubber
+                compact
+                currentTime={scrubCurrentTime}
+                duration={scrubDuration}
+                seekMin={scrubSeekMin}
+                seekMax={scrubSeekMax}
+                disabled={scrubDisabled}
+                onInput={onScrubInput}
+                onChange={onScrubChange}
+            />
         </div>
 
         <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
