@@ -219,26 +219,35 @@ test('my reactions can delete a reaction or a playlist', async ({ page }) => {
 	await expect(playlistCard).toBeVisible();
 	await expect(momentCard).toBeVisible();
 	await expect(page.getByText(keptTitle)).toBeVisible();
+	await expect(soloCard.getByRole('button', { name: 'Thumbnail actions' })).toBeVisible();
+	await expect(soloCard.getByRole('button', { name: 'Delete reaction' })).toHaveCount(0);
+	await expect(playlistCard.getByRole('button', { name: 'Delete playlist' })).toHaveCount(0);
 
-	await soloCard.getByRole('button', { name: 'Delete reaction' }).click();
+	const openDeleteFromMenu = async (card, actionName) => {
+		await card.getByRole('button', { name: 'Thumbnail actions' }).click();
+		await expect(card.getByRole('button', { name: actionName })).toBeVisible();
+		await card.getByRole('button', { name: actionName }).click();
+	};
+
+	await openDeleteFromMenu(soloCard, 'Delete reaction');
 	const dialog = page.getByRole('dialog');
 	await expect(dialog.getByRole('heading', { name: 'Delete this reaction?' })).toBeVisible();
 	await dialog.getByRole('button', { name: 'Cancel' }).click();
 	await expect(dialog).toBeHidden();
 	await expect(soloCard).toBeVisible();
 
-	await soloCard.getByRole('button', { name: 'Delete reaction' }).click();
+	await openDeleteFromMenu(soloCard, 'Delete reaction');
 	await dialog.getByRole('button', { name: 'Delete', exact: true }).click();
 	await expect(page.getByText('Reaction deleted.')).toBeVisible();
 	await expect(soloCard).toHaveCount(0);
 
-	await playlistCard.getByRole('button', { name: 'Delete playlist' }).click();
+	await openDeleteFromMenu(playlistCard, 'Delete playlist');
 	await expect(dialog.getByRole('heading', { name: 'Delete this playlist?' })).toBeVisible();
 	await dialog.getByRole('button', { name: 'Delete', exact: true }).click();
 	await expect(page.getByText('Playlist deleted.')).toBeVisible();
 	await expect(playlistCard).toHaveCount(0);
 
-	await momentCard.getByRole('button', { name: 'Delete reaction' }).click();
+	await openDeleteFromMenu(momentCard, 'Delete reaction');
 	await dialog.getByRole('button', { name: 'Delete', exact: true }).click();
 	await expect(momentCard).toHaveCount(0);
 	await expect(page.getByText(keptTitle)).toBeVisible();
