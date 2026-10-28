@@ -11,7 +11,7 @@
 </script>
 
 {#if ready && $analyticsConsent === null}
-	<div class="analytics-consent" role="dialog" aria-labelledby="analytics-consent-title">
+	<div class="analytics-consent" role="region" aria-labelledby="analytics-consent-title">
 		<div>
 			<p id="analytics-consent-title">Analytics</p>
 			<p>Google Analytics page views stay off unless you accept. Sign-in does not depend on this choice.</p>
