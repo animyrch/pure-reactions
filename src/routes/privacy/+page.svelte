@@ -39,7 +39,7 @@
         <li>Consent: for Google Analytics page views. Reject leaves that script unloaded. You can change your mind by clearing this site's saved analytics choice in your browser.</li>
         <li>Legitimate interest: to keep the service secure and to fix failures. Sign-in storage is essential and is not part of the analytics choice.</li>
       </ul>
-      <p class="mt-4">We use your email to operate your account.</p>
+      <p class="mt-4">Account email is limited to verifying the address and to security messages required to operate the account.</p>
       <p class="mt-4"><strong class="text-text-primary">We do not sell your personal information.</strong></p>
     </section>
 
