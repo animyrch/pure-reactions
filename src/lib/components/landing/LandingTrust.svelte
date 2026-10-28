@@ -6,16 +6,16 @@
     <!-- Header -->
     <div class="mb-10 text-center md:mb-12">
       <p class="mb-3 text-sm font-medium uppercase tracking-widest text-accent-primary">
-        No copyright headaches
+        Official embeds
       </p>
       <h2
         class="text-3xl font-bold leading-tight text-text-primary sm:text-4xl md:text-5xl"
         style="font-family: var(--font-display, 'Manrope', 'Inter', sans-serif);"
       >
-        Clean separation. Zero risk.
+        Both videos stay where they were uploaded.
       </h2>
       <p class="mx-auto mt-4 max-w-xl text-base text-text-secondary md:text-lg">
-        The original video is never re-uploaded or embedded in your file. It streams from its source—always.
+        Your recording stays on your channel. The original stays on its platform. Pure Reactions plays both through the official YouTube and TikTok embeds.
       </p>
     </div>
 

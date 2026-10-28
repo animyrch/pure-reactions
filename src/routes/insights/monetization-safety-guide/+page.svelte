@@ -119,14 +119,6 @@
           </ul>
         </div>
 
-        <div>
-          <h3 class="mb-3 text-xl font-medium text-text-primary">Platform-Native Monetization (Coming Soon)</h3>
-          <ul class="ml-6 list-disc space-y-2">
-            <li>PureReactions is developing native tipping and subscription features</li>
-            <li>Monetize directly on the platform where viewers watch synchronized reactions</li>
-            <li>Keep more of your revenue without middlemen or revenue-sharing complexities</li>
-          </ul>
-        </div>
       </div>
     </section>
 
