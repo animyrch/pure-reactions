@@ -4,7 +4,7 @@
 
 <SEO 
   title="Privacy Policy - Pure Reactions"
-  description="Pure Reactions values your privacy. Learn about what information we collect, how we use it, and your rights regarding your data."
+  description="How Pure Reactions handles accounts, sync data, and optional analytics."
   canonical="/privacy"
   keywords="privacy policy, data protection, user privacy"
 />
@@ -14,156 +14,83 @@
     <h1 class="mb-6 text-4xl font-bold leading-tight text-text-primary md:text-5xl">
       Privacy Policy
     </h1>
-    <p class="text-sm text-text-muted">Effective Date: January 30, 2026</p>
+    <p class="text-sm text-text-muted">Effective Date: October 28, 2026</p>
   </header>
 
   <div class="prose-custom space-y-8 text-text-secondary">
     <p class="text-lg">
-      Pure Reactions ("we," "our," or "the platform") values your privacy. This Privacy Policy explains what information we collect, how we use it, and your rights regarding your data.
+      Pure Reactions is the controller for the personal data described here. Contact <a href="mailto:purereactions.app+privacy@gmail.com" class="text-accent-primary hover:text-accent-primary/80 transition-colors">purereactions.app+privacy@gmail.com</a>.
     </p>
 
     <section>
-      <h2 class="mb-4 text-2xl font-semibold text-text-primary">Information We Collect</h2>
-      
-      <div class="space-y-4">
-        <div>
-          <h3 class="mb-2 text-lg font-medium text-text-primary">a. Account Information</h3>
-          <p class="mb-2">When you create an account, we may collect:</p>
-          <ul class="ml-6 list-disc space-y-1">
-            <li>Name, email address, and sign-in provider identifiers</li>
-            <li>Profile information you provide (display name, photo)</li>
-            <li>Account settings and preferences</li>
-          </ul>
-        </div>
-
-        <div>
-          <h3 class="mb-2 text-lg font-medium text-text-primary">b. User-Generated Content</h3>
-          <p>We process content you upload, link, or synchronize with the platform (e.g., reaction videos, playlists, queues, bookmarks, follows, and channel claims).</p>
-        </div>
-
-        <div>
-          <h3 class="mb-2 text-lg font-medium text-text-primary">c. Usage Data</h3>
-          <p class="mb-2">We collect information about how you use the platform, including:</p>
-          <ul class="ml-6 list-disc space-y-1">
-            <li>Player interactions (pause, play, scrub)</li>
-            <li>Device and browser information</li>
-            <li>Analytics data for platform improvement</li>
-          </ul>
-          <p class="mt-3">Some operational data (such as infrastructure logs) is transient and not stored as part of your account data export.</p>
-        </div>
-
-        <div>
-          <h3 class="mb-2 text-lg font-medium text-text-primary">d. Cookies and Tracking</h3>
-          <p class="mb-2">We use cookies and similar technologies for:</p>
-          <ul class="ml-6 list-disc space-y-1">
-            <li>Session management</li>
-            <li>Platform analytics</li>
-            <li>Functional preferences</li>
-          </ul>
-        </div>
-
-        <div>
-          <h3 class="mb-2 text-lg font-medium text-text-primary">e. Search Index</h3>
-          <p>We maintain a search index of published reactions (titles, tags, and channel handles) to power search.</p>
-        </div>
-      </div>
-    </section>
-
-    <section>
-      <h2 class="mb-4 text-2xl font-semibold text-text-primary">How We Use Your Information</h2>
-      <p class="mb-4">We use the information to:</p>
+      <h2 class="mb-4 text-2xl font-semibold text-text-primary">Information we collect</h2>
       <ul class="ml-6 list-disc space-y-2">
-        <li>Provide, maintain, and improve the platform</li>
-        <li>Synchronize and display your content alongside original media</li>
-        <li>Analyze usage to enhance performance and usability</li>
-        <li>Communicate updates, technical notices, or support information</li>
+        <li>Account data: email address, sign-in identifiers, display name, and the time you confirm you are 15 or older. We do not collect a birth date.</li>
+        <li>Content you create in the product: titles, playlists, queues, bookmarks, follows, channel claims, and sync timings. Video files stay on YouTube or TikTok. We store the link, not the file.</li>
+        <li>Optional analytics: page views, only after you accept Google Analytics.</li>
+        <li>Security and hosting logs kept by our processors.</li>
       </ul>
-      <p class="mt-4"><strong class="text-text-primary">We do not sell your personal information to third parties.</strong></p>
     </section>
 
     <section>
-      <h2 class="mb-4 text-2xl font-semibold text-text-primary">Sharing and Disclosure</h2>
-      <p class="mb-4">We may share information in limited cases:</p>
+      <h2 class="mb-4 text-2xl font-semibold text-text-primary">Why we use it</h2>
       <ul class="ml-6 list-disc space-y-2">
-        <li><strong class="text-text-primary">Service Providers:</strong> Third parties who assist with hosting, analytics, or platform functionality.</li>
-        <li><strong class="text-text-primary">Legal Requirements:</strong> When required by law, regulation, or court order.</li>
-        <li><strong class="text-text-primary">Business Transfers:</strong> If the platform is sold, merged, or reorganized.</li>
+        <li>Contract: to create your account and run the sync service you ask for.</li>
+        <li>Consent: for Google Analytics page views. Reject leaves that script unloaded. You can change your mind by clearing this site's saved analytics choice in your browser.</li>
+        <li>Legitimate interest: to keep the service secure and to fix failures. Sign-in storage is essential and is not part of the analytics choice.</li>
       </ul>
-      <p class="mt-4">We do not share your content with advertisers or external platforms for monetization.</p>
+      <p class="mt-4">We use your email to operate your account.</p>
+      <p class="mt-4"><strong class="text-text-primary">We do not sell your personal information.</strong></p>
     </section>
 
     <section>
-      <h2 class="mb-4 text-2xl font-semibold text-text-primary">User Rights</h2>
-      <p class="mb-4">Depending on your jurisdiction, you may have the following rights:</p>
+      <h2 class="mb-4 text-2xl font-semibold text-text-primary">Processors</h2>
+      <p class="mb-4">These services process data for Pure Reactions:</p>
       <ul class="ml-6 list-disc space-y-2">
-        <li>Access the personal data we hold about you</li>
-        <li>Request correction or deletion of your personal data</li>
-        <li>Object to or restrict certain processing</li>
-        <li>Withdraw consent for data collection (where applicable)</li>
-        <li>Request export of your personal data in a machine-readable format</li>
+        <li>Google Firebase, for authentication, Firestore, and the Realtime Database.</li>
+        <li>YouTube and TikTok, when their official players load. This app uses YouTube API Services. Google's privacy policy is at <a href="https://policies.google.com/privacy" class="text-accent-primary hover:text-accent-primary/80 transition-colors">https://policies.google.com/privacy</a>.</li>
+        <li>Google Analytics, only after you accept.</li>
+        <li>Algolia, for search of published reactions.</li>
+        <li>Netlify, for hosting the application.</li>
+        <li>Cloudflare, for the public site edge.</li>
       </ul>
-      <p class="mt-4">
-        You can download a data export directly from Account Settings. The export includes account profile data, your reactions,
-        playlists/queues, bookmarks/follows, channel claims, and search index entries for published reactions. It does not include
-        transient infrastructure logs, real-time co-watch session state, or deleted data.
-      </p>
-      <p class="mt-4">
-        For other requests, contact us at <a href="mailto:purereactions.app+privacy@gmail.com" class="text-accent-primary hover:text-accent-primary/80 transition-colors">purereactions.app+privacy@gmail.com</a>.
-      </p>
     </section>
 
     <section>
-      <h2 class="mb-4 text-2xl font-semibold text-text-primary">Data Retention</h2>
-      <p class="mb-4">
-        We retain your account information and content as long as you maintain your account.
-      </p>
-      <p class="mb-4">
-        Usage data may be retained for analytics and system improvement, anonymized where possible.
-      </p>
-      <p>
-        If you delete your account, your content and personal data will be removed within a reasonable timeframe, except as required by law.
-      </p>
+      <h2 class="mb-4 text-2xl font-semibold text-text-primary">Cookies and similar storage</h2>
+      <p>Firebase Authentication keeps you signed in with its own storage. That storage is required for the account. Google Analytics uses cookies only after you press Accept. YouTube and TikTok players can set their own cookies when a video loads.</p>
     </section>
 
     <section>
-      <h2 class="mb-4 text-2xl font-semibold text-text-primary">Security</h2>
-      <p class="mb-4">
-        We implement reasonable technical and organizational measures to protect your data.
-        However, no method of electronic storage or transmission is completely secure.
-      </p>
-      <p>Use of the platform is at your own risk.</p>
+      <h2 class="mb-4 text-2xl font-semibold text-text-primary">California notice</h2>
+      <p class="mb-4">If you are a California resident, this notice covers the categories we collect: identifiers such as email and account id, user content such as titles and sync data, and internet activity in the form of page views when you accept analytics.</p>
+      <p>We use those categories to run the service, secure it, and, with consent, measure page views. We do not sell personal information. You can download a copy and delete your account from Account settings, or email the privacy address above.</p>
     </section>
 
     <section>
-      <h2 class="mb-4 text-2xl font-semibold text-text-primary">Third-Party Links</h2>
-      <p class="mb-4">
-        The platform may include links to external websites (e.g., YouTube).
-        We are not responsible for the privacy practices of those sites.
-      </p>
-      <p>Users should review the privacy policies of linked services.</p>
+      <h2 class="mb-4 text-2xl font-semibold text-text-primary">Your rights</h2>
+      <ul class="ml-6 list-disc space-y-2">
+        <li>Download a machine-readable export from Account settings. One export is available every 24 hours. It includes your profile, reactions, playlists, queues, bookmarks, follows, channel claims, and search records for your published reactions.</li>
+        <li>Delete your account from Account settings. Export and deletion stay available even if you have not confirmed your age.</li>
+        <li>Ask for a correction, or object to processing, at the privacy email.</li>
+        <li>Complain to the CNIL, the French data protection authority, at <a href="https://www.cnil.fr" class="text-accent-primary hover:text-accent-primary/80 transition-colors">cnil.fr</a>.</li>
+      </ul>
     </section>
 
     <section>
-      <h2 class="mb-4 text-2xl font-semibold text-text-primary">International Users</h2>
-      <p>
-        Pure Reactions operates internationally.
-        Users are responsible for compliance with local data protection laws, including GDPR, CCPA, and other applicable regulations.
-      </p>
-    </section>
-
-    <section>
-      <h2 class="mb-4 text-2xl font-semibold text-text-primary">Changes to This Privacy Policy</h2>
-      <p class="mb-4">
-        We may update this policy periodically.
-        Changes will be posted here with an updated effective date.
-      </p>
-      <p>Continued use of the platform constitutes acceptance of any revised policy.</p>
+      <h2 class="mb-4 text-2xl font-semibold text-text-primary">Retention</h2>
+      <ul class="ml-6 list-disc space-y-2">
+        <li>Account data and the content tied to it stay for the life of the account.</li>
+        <li>A deletion request removes that data as part of the request. Search records are removed in the same request.</li>
+        <li>Google Analytics retention should be set to the shortest period the property allows.</li>
+        <li>Security logs are kept no longer than 12 months where the host allows that setting.</li>
+      </ul>
     </section>
 
     <section>
       <h2 class="mb-4 text-2xl font-semibold text-text-primary">Contact</h2>
       <p>
-        For questions or concerns regarding your privacy or this policy:<br>
+        Pure Reactions<br>
         Email: <a href="mailto:purereactions.app+privacy@gmail.com" class="text-accent-primary hover:text-accent-primary/80 transition-colors">purereactions.app+privacy@gmail.com</a>
       </p>
     </section>

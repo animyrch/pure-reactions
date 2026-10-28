@@ -10,6 +10,7 @@
   import TopNavigation from "$lib/components/Navigation/TopNavigation.svelte";
   import Footer from "$lib/components/Footer.svelte";
   import { prefersReducedMotion } from "$lib/stores/motion";
+  import AnalyticsConsent from "$lib/components/AnalyticsConsent.svelte";
   import GoogleAnalytics from "$lib/components/Analytics/GoogleAnalytics.svelte";
   import AgeConfirmation from "$lib/components/AgeConfirmation.svelte";
   import ArticleHeadingAnchors from "$lib/components/ArticleHeadingAnchors.svelte";
@@ -72,6 +73,7 @@
 
 <GoogleAnalytics />
 <AgeConfirmation />
+<AnalyticsConsent />
 
 <header class="w-full safe-padding-x">
   <TopNavigation />
