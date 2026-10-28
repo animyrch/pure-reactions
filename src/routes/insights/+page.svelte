@@ -4,9 +4,9 @@
 
 <SEO 
   title="Insights - Synchronized Video Architecture & Creative Freedom"
-  description="Deep dives into how synchronized twin-player architecture eliminates copyright anxiety, enables safe monetization, and gives creators complete freedom for any synchronized content."
+  description="How synchronized playback keeps each video on its own platform, and what Content ID can see in the file you upload."
   canonical="/insights"
-  keywords="synchronized video insights, copyright free video sync, creator monetization, twin player architecture"
+  keywords="synchronized video insights, official embeds, creator monetization, twin player architecture"
 />
 
 <div class="container mx-auto max-w-5xl px-4 py-12 md:py-20">
@@ -32,10 +32,10 @@
         Architecture
       </div>
       <h2 class="mb-3 text-xl font-semibold text-text-primary group-hover:text-accent-primary transition-colors">
-        Why Synced Content Can't Be Claimed
+        What Content ID sees
       </h2>
       <p class="mb-4 text-text-secondary">
-        The technical and legal explanation of why structurally separated content is unclaimable by Content ID and copyright holders.
+        Content ID scans the file you upload. Leaving the original out of that file gives the scan no original picture or audio from that source to match.
       </p>
       <span class="inline-flex items-center gap-2 text-sm text-accent-primary">
         Read article
@@ -55,7 +55,7 @@
         Monetization Safety Guide
       </h2>
       <p class="mb-4 text-text-secondary">
-        How to safely monetize your synchronized content without revenue sharing or legal complexity. Your content, your income.
+        How monetization follows the file you upload, and what changes when that file leaves the original out.
       </p>
       <span class="inline-flex items-center gap-2 text-sm text-accent-primary">
         Read article
@@ -75,7 +75,7 @@
         Synchronized Content Legality
       </h2>
       <p class="mb-4 text-text-secondary">
-        Understanding the legal framework of synchronized video content, fair use doctrine, and why separation eliminates the complexity.
+        How fair use works, and what this site does and does not decide about a synced page.
       </p>
       <span class="inline-flex items-center gap-2 text-sm text-accent-primary">
         Read article

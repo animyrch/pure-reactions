@@ -107,7 +107,7 @@
 
     <!-- Reassurance footnote -->
     <p class="mx-auto mt-10 max-w-lg text-center text-sm text-text-muted">
-      Since each stream lives at its source, there's nothing to claim. Your content stays yours.
+      Each video stays on the platform where it was uploaded. The original plays from that host.
     </p>
   </div>
 </section>

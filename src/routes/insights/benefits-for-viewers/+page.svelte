@@ -107,7 +107,7 @@
         For the reactor, merging copyrighted content into their upload is a constant legal risk. Videos get taken down, monetization is stripped, or ad revenue is transferred entirely to the original creator via Content ID — all because of a single merged file. For the original creator, their work is consumed through someone else's upload, missing out on direct views and watch time.
       </p>
       <p class="mb-4">
-        PureReactions sidesteps both problems by keeping the streams separate. The reactor's content never contains the original audio or video, so there is nothing to claim or take down. At the same time, every play of the original registers directly on the original creator's channel.
+        Pure Reactions keeps the streams separate. The recording is meant to leave the original audio and video out. The original plays from the host, and that publisher controls whether it stays up. A play of the original still registers on that host.
       </p>
       <div class="my-6 rounded-lg border border-success/30 bg-success/5 p-6">
         <p class="text-text-primary">
@@ -199,10 +199,10 @@
         class="group rounded-lg border border-border-strong bg-elevated p-6 transition-all duration-subtle hover:border-accent-primary/50"
       >
         <h4 class="mb-2 font-medium text-text-primary group-hover:text-accent-primary transition-colors">
-          Why Synced Content Can't Be Claimed →
+          What Content ID sees →
         </h4>
         <p class="text-sm text-text-secondary">
-          The architectural reason original content stays free from copyright claims.
+          What Content ID can see when the original stays out of your file.
         </p>
       </a>
       <a
@@ -213,7 +213,7 @@
           Monetization Safety Guide →
         </h4>
         <p class="text-sm text-text-secondary">
-          How creators safely keep 100% of their revenue on PureReactions.
+          How monetization follows the file you upload.
         </p>
       </a>
     </div>

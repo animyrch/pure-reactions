@@ -52,7 +52,7 @@
         </p>
       </div>
       <p class="mb-4">
-        There is a way to start using Pure Reactions that requires <strong class="text-text-primary">zero changes to your existing workflow</strong> and carries <strong class="text-text-primary">zero risk to your channel performance</strong> — while building a structural safety net you'll be glad to have later.
+        There is a way to start using Pure Reactions that leaves your current uploads and posting rhythm unchanged, while keeping a second file ready if a claim hits the main one.
       </p>
     </section>
 
@@ -342,10 +342,10 @@
         class="group rounded-lg border border-border-strong bg-elevated p-6 transition-all duration-subtle hover:border-accent-primary/50"
       >
         <h4 class="mb-2 font-medium text-text-primary transition-colors group-hover:text-accent-primary">
-          Why Synced Content Can't Be Claimed →
+          What Content ID sees →
         </h4>
         <p class="text-sm text-text-secondary">
-          The technical reason your unlisted alternate video stays claim-free.
+          What Content ID can match in a file that leaves the original out.
         </p>
       </a>
     </div>

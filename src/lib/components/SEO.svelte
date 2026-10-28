@@ -1,10 +1,10 @@
 <script>
-  export let title = "Pure Reactions - Fair-Use-Free Reaction Videos";
-  export let description = "Create and share reaction videos without copyright anxiety. PureReactions structurally separates original content from reactions, making your videos legally unclaimable.";
+  export let title = "Pure Reactions";
+  export let description = "Play a reaction and the original together. Both stay on their own platforms and load through the official embeds.";
   export let canonical = "";
   export let type = "website";
   export let image = "/icon-512.png";
-  export let keywords = "reaction videos, fair use, copyright free reactions, youtube reactions, video reactions, creator monetization";
+  export let keywords = "reaction videos, official embeds, youtube reactions, video reactions, creator monetization";
   export let robots = "index, follow";
   
   const siteName = "Pure Reactions";
