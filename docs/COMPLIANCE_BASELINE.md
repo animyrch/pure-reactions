@@ -10,17 +10,14 @@ Penalty figures below are the statutory maximums named in the review request. Th
 - Signup blocks anyone under 15. That covers COPPA's under-13 line and France's digital-consent age of 15. Store a confirmation timestamp only. Do not collect a birth date.
 - Do not build a marketing-email program or a subscription program. Make the email and billing behavior that already exists conform.
 - Self-host Manrope and Inter. Remove the service worker's Google Fonts cache rules.
+- The public contact stays the existing addresses: `purereactions.app+privacy@gmail.com` and `purereactions.app+copyright@gmail.com`. Do not publish a personal name, postal address, or phone number.
+- The app does not upload or host video. Originals and reactions play through the official YouTube and TikTok embeds. The copyright minimum is to say that on the copyright page, keep the copyright email, and remove absolute risk claims. Registering a DMCA agent is optional and later.
 
-## Facts the operator still has to supply
+## Operator input still needed
 
-These block the legal-page pull request. They do not block fonts, the age gate, or the analytics consent gate.
+No personal identity facts are required for any pull request in this stack.
 
-- Legal name of the publisher (person or company)
-- Postal address
-- Telephone number
-- Company identifiers if the publisher is a company (RCS, share capital, VAT)
-- Name, postal address, phone, and email of the DMCA designated agent
-- Confirmation, from the Firebase console, that the verification email template contains no promotional copy
+The email pull request still needs one check in the Firebase console: the verification template identifies Pure Reactions, the subject line matches a verification message, and the body has no promotional copy. That check does not block fonts, the age gate, or the privacy pages.
 
 ## Summary
 
@@ -31,9 +28,9 @@ These block the legal-page pull request. They do not block fonts, the age gate, 
 | 3 | Session replay | No replay tool is installed | Leave it that way. Do not add one. | None. Covered by the analytics consent PR for what GA actually does. |
 | 4 | Email | One transactional verification email. No list, no campaign. | Keep that email transactional. Do not add a campaign. | `compliance-transactional-email` (console check plus a short policy sentence) |
 | 5 | Subscriptions | No checkout. A public article says native tipping and subscriptions are coming soon. The repo license forbids commercial use. | Do not add billing. Remove the coming-soon claim. Fix the license page so it matches `LICENSE`. | `compliance-license-and-claims` |
-| 6 | Copyright notices | Email intake only. No registered agent, no counter-notice, no unpublish path. | Register the agent, publish the notice details, add repeat-infringer terms, and unpublish on a valid notice. | `compliance-dmca` |
-| 7 | GDPR and US privacy | Privacy page, export, and account deletion exist. Consent, controller identity, and complete erasure do not. | Consent before Google Analytics. Name the controller and processors. Fix deletion so it matches the schema. | `compliance-privacy-consent`, then `compliance-erasure` |
-| 8 | Other public claims | `/open-source` says Apache 2.0. Landing copy says copyright risk is zero. | Match the real license. Qualify the copyright claims. | Same PR as subscriptions |
+| 6 | Copyright | No media upload. Both streams play through official YouTube and TikTok embeds. The copyright page is an email intake. The homepage promises zero copyright risk. | Keep the copyright email. Describe the embed model on the copyright page. Remove the absolute risk lines. | `compliance-license-and-claims` |
+| 7 | GDPR and US privacy | Privacy page, export, and account deletion exist. Analytics loads before consent. Erasure does not match the schema. | Consent before Google Analytics. Identify the controller by the product name and the privacy email. Name the processors. Fix deletion so it matches the schema. | `compliance-privacy-consent`, then `compliance-erasure` |
+| 8 | Other public claims | `/open-source` says Apache 2.0. Landing copy says copyright risk is zero. | Match the real license. Describe the embed model instead of guaranteeing a legal outcome. | Same PR as the copyright copy |
 
 Suggested stack, each branched from the previous:
 
@@ -42,9 +39,8 @@ Suggested stack, each branched from the previous:
 3. `compliance-age-gate`
 4. `compliance-privacy-consent`
 5. `compliance-erasure`
-6. `compliance-dmca`
-7. `compliance-license-and-claims`
-8. `compliance-transactional-email`
+6. `compliance-license-and-claims`
+7. `compliance-transactional-email`
 
 Player-host work for YouTube and TikTok is called out inside the privacy section. Ship it only after a playback check, as its own PR if the privacy-enhanced host breaks sync.
 
@@ -142,7 +138,7 @@ CAN-SPAM's unsubscribe and postal-address duties apply to commercial email. A me
 - Do not add a launch list, newsletter, drip campaign, or any other marketing send.
 - In the Firebase console, confirm the verification template identifies Pure Reactions, has a subject line that matches a verification message, and contains no promotional copy. Record that confirmation in the PR.
 - Add one sentence to the privacy policy: account email is limited to verifying the address and to security messages required to operate the account.
-- If a commercial message is ever proposed later, it needs a prior opt-in, the publisher's postal address, and a working unsubscribe. That work is outside this baseline.
+- If a commercial message is ever proposed later, it needs a prior opt-in and a working unsubscribe. That work is outside this baseline. A postal address is a commercial-email duty only if that program is added.
 
 ### Out of scope
 
@@ -170,40 +166,32 @@ California's automatic-renewal rules, and the federal ROSCA rules, attach when a
 
 - A billing provider, a pricing page, or a fake purchase button used only to display terms
 
-## 6. Copyright notices and user content
+## 6. Copyright
 
 ### Current situation
 
-Creators do not upload video files to Pure Reactions. The landing page and the record flow tell them to put the recording on their own YouTube channel and paste the URL. Original videos play from YouTube or TikTok embeds. The YouTube IFrame API is loaded from `https://www.youtube.com/iframe_api`. TikTok is embedded as an iframe. There is no Firebase Storage upload of media in `src/`.
+The app has no media upload. There is no file input and no Firebase Storage upload in `src/`. A creator pastes a YouTube or TikTok URL. The original and the reaction both stay on those platforms and play through their official embeds. The YouTube IFrame API is loaded from `https://www.youtube.com/iframe_api`. TikTok is embedded as an iframe.
 
-The platform does store user-generated material:
+What this app stores is the URL, the sync timings, titles, playlists, queues, moment labels, and channel-claim records. Those records are not copies of the video.
 
-- Reaction documents, including titles, sync timelines, and links to third-party videos
-- Playlists and queues, including titles and descriptions
-- Moments, including a title, tags, `creatorId`, and `creatorDisplayName`
-- YouTube channel-claim documents
+`src/routes/copyright/+page.svelte` already says Pure Reactions does not host or reupload original third-party videos, and it already gives rightsholders `purereactions.app+copyright@gmail.com`. Terms point at the same inbox. Removing a reaction deletes the link and the sync record. The video file stays on YouTube or TikTok.
 
-`src/routes/copyright/+page.svelte` asks rightsholders to email `purereactions.app+copyright@gmail.com` with a work identification, URLs, a description, and contact information. It does not name a designated agent, postal address, or phone number. Terms point at the same inbox. There is no counter-notice, no repeat-infringer rule, and no admin or API path whose job is to unpublish a reaction after a notice.
+The homepage still promises a legal outcome the embed design does not deliver: "Copyright-safe. Always.", "No copyright headaches", and "Clean separation. Zero risk."
 
-A registered agent is necessary for the DMCA safe-harbor notice process. Registration does not, by itself, create safe harbor. The service also has to adopt and reasonably implement a repeat-infringer policy, and it has to respond to valid notices.
+The DMCA storage safe harbor, the $6 designated-agent registration, and statutory damages for a willfully infringed copy are about a service that stores the copyrighted file. This app does not. Registering an agent also publishes a name, street address, and phone. That registration is optional insurance for the links and the index, not part of this minimum.
 
 ### Minimal requirement
 
-- Register a designated agent with the US Copyright Office and publish the agent's name, postal address, phone number, and email on `/copyright`.
-- Accept notices that include the elements in 17 USC 512(c)(3): signature, work identified, material identified by URL, contact information, good-faith statement, and accuracy statement under penalty of perjury.
-- On a complete notice, unpublish the identified reaction, playlist, queue, or moment. Keep a private log of the notice, the URLs, the date, and the action taken.
-- Send the poster a description of what was removed and how to submit a counter-notice.
-- Restore material only after a valid counter-notice and the waiting period the statute requires, unless the rightsholder has filed an action.
-- Add a repeat-infringer rule to the Terms: accounts that are the subject of repeated valid notices are terminated.
-- State on the copyright page that video files stay on YouTube or TikTok, and that Pure Reactions stores the sync data, titles, and links.
-
-The agent's postal address and phone are operator facts. The PR can land the page structure and the unpublish path before those facts are filled in, and the page should not go to production with placeholders.
+- On `/copyright`, state the product model in plain language: Pure Reactions does not upload or host the original or the reaction. Both play from YouTube or TikTok through those platforms' official embeds. The app stores the link and the sync timings.
+- Keep `purereactions.app+copyright@gmail.com` as the contact. Do not add an agent name, postal address, or phone.
+- A rightsholder who wants a reaction page removed uses that email. Taking the page down is the existing deletion of the reaction record. Do not build a notice log, a counter-notice flow, or a separate unpublish tool.
+- Remove the absolute risk lines on the homepage. The replacement describes the embed model. It does not say the copyright risk is zero. That copy lands in `compliance-license-and-claims` with the license-page fix.
 
 ### Out of scope
 
-- Hosting video files
+- DMCA designated-agent registration, a repeat-infringer policy, and a counter-notice process
+- Hosting video files, or a file upload
 - An automated copyright scanner
-- A public counter-notice form that accepts anonymous submissions. Email replies to the notice address are enough for the minimum.
 
 ## 7. GDPR and the US privacy notices
 
@@ -218,7 +206,7 @@ What already exists:
 
 What is missing or wrong:
 
-- The privacy policy does not name a controller, a postal address, a legal basis, a retention period, or a supervisory authority. The international-users section says users are responsible for complying with GDPR and CCPA. That duty belongs to the operator.
+- The privacy policy does not state a legal basis, a retention period, or a supervisory authority. The contact email is already `purereactions.app+privacy@gmail.com`. The international-users section says users are responsible for complying with GDPR and CCPA. That duty belongs to the operator.
 - Signup does not link the Terms or the Privacy Policy.
 - Google Analytics loads before any choice. There is no consent banner and no prior opt-out.
 - The policy does not name the processors the app actually uses: Google (Firebase Authentication, Firestore, Realtime Database, YouTube, Google Analytics), Algolia, Netlify, and Cloudflare. The live site is behind Cloudflare.
@@ -228,7 +216,6 @@ What is missing or wrong:
 - Account deletion does not delete `youtubeChannelClaims` or `youtubeChannelVerifications`. The export includes both.
 - Moments store `creatorId` and `creatorDisplayName`. Account deletion updates `reactionCount` and does not remove the creator's identity from moments they created.
 - Algolia removal waits for a later reindex. `docs/ACCOUNT_DELETION.md` says that can take up to five business days.
-- There is no mentions légales page. A French site has to identify its publisher.
 
 US additions under the stricter-of-both decision:
 
@@ -242,10 +229,10 @@ Privacy consent PR:
 - Add a banner with Accept and Reject. Reject is as easy to use as Accept. Nothing is pre-selected.
 - Load `GoogleAnalytics.svelte` only after Accept. Remember the choice. Do not write the choice into Google Analytics before consent.
 - Treat Firebase Authentication persistence as essential. Do not block login on the analytics choice.
-- Rewrite `/privacy` so it names the controller, the contact email, the postal address once the operator supplies it, the purposes, the legal bases (contract for the account and the sync service, consent for Google Analytics, legitimate interest for security logs), the processors listed above, the retention rule, and the right to complain to the CNIL.
+- Rewrite `/privacy` so it identifies the controller as Pure Reactions, gives `purereactions.app+privacy@gmail.com` as the contact, and states the purposes, the legal bases (contract for the account and the sync service, consent for Google Analytics, legitimate interest for security logs), the processors listed above, the retention rule, and the right to complain to the CNIL. Do not add a personal name, postal address, or phone.
 - Remove the sentence that makes users responsible for GDPR and CCPA compliance.
 - Disclose YouTube API Services use and link to `https://policies.google.com/privacy`.
-- Add `/legal` (mentions légales) with the publisher identity, and link it from the footer. Ship the route with the fields filled only when the operator facts exist.
+- Do not add a mentions légales page in this stack. A professional French publisher notice would publish a name and street address. That notice is optional and later, same as the DMCA agent.
 - Describe retention in concrete terms: account data for the life of the account; deleted account data removed as part of the deletion request; analytics data under Google's retention setting, which should be set to the shortest period the property allows; security logs for no more than 12 months where the host allows that setting.
 
 Erasure PR:
@@ -279,17 +266,15 @@ Minimal requirement: rewrite `/open-source` so it describes CC BY-NC 4.0, links 
 
 ### Absolute copyright claims on the landing page
 
-The live homepage says "Copyright-safe. Always.", "No copyright headaches", and "Clean separation. Zero risk." The copyright page itself says creators are responsible for their own content and that the platform does not pre-review it.
+The live homepage says "Copyright-safe. Always.", "No copyright headaches", and "Clean separation. Zero risk."
 
-Minimal requirement: replace those absolute lines with a description of what the product actually does. The recording and the original stay in separate files, and the original plays from its source. Do not claim that copyright risk is zero. Include this in `compliance-license-and-claims`.
+Minimal requirement: replace those lines with the embed model from section 6. Both videos stay on YouTube or TikTok and play through the official embeds. Do not claim that copyright risk is zero. Include this in `compliance-license-and-claims` with the copyright-page wording.
 
-### EU hosting duties that share the DMCA path
+### Removal requests
 
-Pure Reactions stores user-generated text, links, and sync data for the public. Under the DSA, a hosting service needs a contact point, terms that explain what content is disallowed and how notices are handled, and a notice-and-action path.
+Rightsholder mail already goes to `purereactions.app+copyright@gmail.com`. Terms already tell people not to infringe. Deleting the reaction record removes the link and the sync data.
 
-Minimal requirement: the Terms list illegal content and copyright infringement as grounds for removal, name the contact email, and point at the notice process built in the DMCA PR. One intake path serves both. Do not add a separate moderation product.
-
-A small service can still owe a transparency report. Leave the report as an annual operational task, not an application feature.
+Do not add a registered agent, a counter-notice flow, or a moderation product in this stack. A transparency report, if one is ever owed, stays an operational task outside the app.
 
 ### Not in the minimal stack
 
@@ -303,6 +288,5 @@ A small service can still owe a transparency report. Leave the report as an annu
 - Age gate: signup with the checkbox off does not create a Firebase user. Signup with the checkbox on writes `ageConfirmedAt` and no birth date. An existing user without the flag can still export and delete.
 - Analytics: with Reject, no request to `googletagmanager.com`. With Accept, page views still arrive. Login still works in both states.
 - Erasure: the regression test above, plus an Algolia get that misses the deleted reaction ids.
-- DMCA: a fixture notice unpublishes one reaction and writes a log entry. An incomplete notice does not.
-- License and claims: `/open-source` matches `LICENSE`. The homepage and the monetization article no longer promise zero copyright risk or native subscriptions.
+- License and claims: `/open-source` matches `LICENSE`. `/copyright` describes the embed model and still shows only the copyright email. The homepage and the monetization article no longer promise zero copyright risk or native subscriptions.
 - Email: the PR records the Firebase template check. No new send is added.
