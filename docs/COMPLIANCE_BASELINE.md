@@ -183,8 +183,8 @@ The DMCA storage safe harbor, the $6 designated-agent registration, and statutor
 ### Minimal requirement
 
 - On `/copyright`, state the product model in plain language: Pure Reactions does not upload or host the original or the reaction. Both play from YouTube or TikTok through those platforms' official embeds. The app stores the link and the sync timings.
-- Keep `purereactions.app+copyright@gmail.com` as the contact. Do not add an agent name, postal address, or phone.
-- A rightsholder who wants a reaction page removed uses that email. Taking the page down is the existing deletion of the reaction record. Do not build a notice log, a counter-notice flow, or a separate unpublish tool.
+- Keep `purereactions.app+copyright@gmail.com` as a contact for questions. Do not add an agent name, postal address, or phone.
+- Say that the video stays on YouTube or TikTok, under the control of whoever published it. They can make it private, turn embedding off, or ask that platform to remove an unauthorized upload. Do not offer the copyright email as a way to have a reaction page deleted. Do not build a notice log, a counter-notice flow, or a separate unpublish tool.
 - Remove the absolute risk lines on the homepage. The replacement describes the embed model. It does not say the copyright risk is zero. That copy lands in `compliance-license-and-claims` with the license-page fix.
 
 ### Out of scope
@@ -272,7 +272,7 @@ Minimal requirement: replace those lines with the embed model from section 6. Bo
 
 ### Removal requests
 
-Rightsholder mail already goes to `purereactions.app+copyright@gmail.com`. Terms already tell people not to infringe. Deleting the reaction record removes the link and the sync data.
+The copyright page explains that playback stops when the host stops serving the video. The copyright email stays as a contact for questions. It is not a promise to delete a reaction page.
 
 Do not add a registered agent, a counter-notice flow, or a moderation product in this stack. A transparency report, if one is ever owed, stays an operational task outside the app.
 
@@ -288,5 +288,5 @@ Do not add a registered agent, a counter-notice flow, or a moderation product in
 - Age gate: signup with the checkbox off does not create a Firebase user. Signup with the checkbox on writes `ageConfirmedAt` and no birth date. An existing user without the flag can still export and delete.
 - Analytics: with Reject, no request to `googletagmanager.com`. With Accept, page views still arrive. Login still works in both states.
 - Erasure: the regression test above, plus an Algolia get that misses the deleted reaction ids.
-- License and claims: `/open-source` matches `LICENSE`. `/copyright` describes the embed model and still shows only the copyright email. The homepage and the monetization article no longer promise zero copyright risk or native subscriptions.
+- License and claims: `/open-source` matches `LICENSE`. `/copyright` describes the embed model, says the host controls the video, and does not offer to delete a reaction page. The homepage and the monetization article no longer promise zero copyright risk or native subscriptions.
 - Email: the PR records the Firebase template check. No new send is added.

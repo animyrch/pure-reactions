@@ -26,7 +26,7 @@
         Pure Reactions does not upload or host the original video or the reaction video. Both stay on YouTube or TikTok and play through those platforms' official embeds.
       </p>
       <p>
-        What this site stores is the link and the sync timings, plus titles and playlists you write here. To ask for a reaction page to be removed, email <a href="mailto:purereactions.app+copyright@gmail.com" class="text-accent-primary hover:text-accent-primary/80 transition-colors">purereactions.app+copyright@gmail.com</a>.
+        What this site stores is the link and the sync timings, plus titles and playlists you write here. The video itself stays on YouTube or TikTok, under the control of whoever published it.
       </p>
     </section>
 
@@ -64,22 +64,12 @@
     </section>
 
     <section>
-      <h2 class="mb-4 text-2xl font-semibold text-text-primary">Copyright Concerns and Takedown Requests</h2>
+      <h2 class="mb-4 text-2xl font-semibold text-text-primary">Stopping a video</h2>
       <p class="mb-4">
-        If you are a copyright owner or an authorized representative and believe that content displayed on Pure Reactions infringes your rights, you may contact us with the relevant information.
+        A rightsholder who wants a video to stop playing does that on YouTube or TikTok. If they published it, they can make it private or turn embedding off. If someone else uploaded it without permission, they ask that platform to remove it. When the host stops serving the video, the embed on Pure Reactions stops too.
       </p>
-      <p class="mb-4">Please include:</p>
-      <ul class="ml-6 list-disc space-y-2">
-        <li>Identification of the copyrighted work</li>
-        <li>The URL(s) where the content appears</li>
-        <li>A description of the alleged infringement</li>
-        <li>Contact information and proof of authorization</li>
-      </ul>
-      <p class="mt-4">
-        <strong class="text-text-primary">Contact:</strong> <a href="mailto:purereactions.app+copyright@gmail.com" class="text-accent-primary hover:text-accent-primary/80 transition-colors">purereactions.app+copyright@gmail.com</a>
-      </p>
-      <p class="mt-4">
-        Requests will be reviewed and handled in accordance with applicable laws and platform policies.
+      <p>
+        Questions can go to <a href="mailto:purereactions.app+copyright@gmail.com" class="text-accent-primary hover:text-accent-primary/80 transition-colors">purereactions.app+copyright@gmail.com</a>. That address is not a request to delete a reaction page.
       </p>
     </section>
 

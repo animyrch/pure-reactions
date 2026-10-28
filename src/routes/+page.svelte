@@ -144,7 +144,7 @@
 	title="Pure Reactions — Sync Your Transformative Content (Reaction, Commentary & Translation Videos)"
 	description="Record reaction videos, commentary, translations, and voiceovers, then play them in sync with the original. Both videos stay on their own platforms and load through official embeds. Free to use."
 	canonical="/"
-	keywords="reaction video tool, commentary creator, translation video sync, voiceover sync, synchronized video player, twin player, copyright safe reactions, reaction content creator, video sync platform, accessibility creator, mixer, synced reaction recording"
+	keywords="reaction video tool, commentary creator, translation video sync, voiceover sync, synchronized video player, twin player, official embed playback, reaction content creator, video sync platform, accessibility creator, mixer, synced reaction recording"
 	image="/og-preview.png"
 />
 
