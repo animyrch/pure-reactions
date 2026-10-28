@@ -11,6 +11,7 @@
   import Footer from "$lib/components/Footer.svelte";
   import { prefersReducedMotion } from "$lib/stores/motion";
   import GoogleAnalytics from "$lib/components/Analytics/GoogleAnalytics.svelte";
+  import AgeConfirmation from "$lib/components/AgeConfirmation.svelte";
   import ArticleHeadingAnchors from "$lib/components/ArticleHeadingAnchors.svelte";
 
   $: currentToasts = $toasts; // Access the store value
@@ -70,6 +71,7 @@
 </script>
 
 <GoogleAnalytics />
+<AgeConfirmation />
 
 <header class="w-full safe-padding-x">
   <TopNavigation />

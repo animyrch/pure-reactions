@@ -11,6 +11,8 @@ test('logout from account returns to the home page', async ({ page }) => {
     }).toPass({ timeout: 15000 });
     await page.getByPlaceholder('Email').fill(email);
     await page.getByPlaceholder('Password').fill('Logout1!');
+    await page.getByRole('checkbox', { name: 'I am 15 or older.' }).check();
+    await page.getByRole('checkbox', { name: /I have read the Terms/ }).check();
     await page.getByRole('button', { name: 'Sign Up' }).click();
     await expect(page).toHaveURL(/\/account\/verify/, { timeout: 20000 });
 
