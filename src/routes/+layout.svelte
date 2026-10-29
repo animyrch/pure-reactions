@@ -26,6 +26,8 @@
   $: hideFooter = isMomentReactionPlaybackRoute;
 
   onMount(() => {
+    document.documentElement.dataset.hydrated = 'true';
+
     // Register service worker
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(err => {
