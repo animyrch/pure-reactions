@@ -6,16 +6,16 @@
     <!-- Header -->
     <div class="mb-10 text-center md:mb-12">
       <p class="mb-3 text-sm font-medium uppercase tracking-widest text-accent-primary">
-        Official embeds
+        No headaches
       </p>
       <h2
         class="text-3xl font-bold leading-tight text-text-primary sm:text-4xl md:text-5xl"
         style="font-family: var(--font-display, 'Manrope', 'Inter', sans-serif);"
       >
-        Both videos stay where they were uploaded.
+        Clean separation. No reuploaded content to claim.
       </h2>
       <p class="mx-auto mt-4 max-w-xl text-base text-text-secondary md:text-lg">
-        Your recording stays on your channel. The original stays on its platform. Pure Reactions plays both through the official YouTube and TikTok embeds.
+        The original video is never re-uploaded into your file. It streams from its source.
       </p>
     </div>
 
@@ -107,7 +107,7 @@
 
     <!-- Reassurance footnote -->
     <p class="mx-auto mt-10 max-w-lg text-center text-sm text-text-muted">
-      Your file contains none of the original. Content ID has nothing from it to match. The original plays from its host.
+      Nothing from the original is reuploaded into your file, so Content ID has nothing from it to match.
     </p>
   </div>
 </section>

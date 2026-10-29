@@ -7,7 +7,7 @@
 
 <SEO
   title="How It Works - Synchronized Twin-Player Architecture"
-  description="Record separately, then play your video and the original together through their official embeds."
+  description="Discover how PureReactions synchronizes any content with original videos. Record separately, track your viewing, sync perfectly. Reactions, translations, voiceovers—all without the original in your file."
   canonical="/how-it-works"
   keywords="synchronized video player, twin player architecture, how sync works, official embeds, reaction platform"
 />

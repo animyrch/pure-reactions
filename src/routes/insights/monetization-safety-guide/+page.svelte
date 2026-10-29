@@ -61,7 +61,7 @@
     <section>
       <h2 class="mb-4 text-2xl font-semibold text-text-primary">How PureReactions Solves This</h2>
       <p class="mb-4">
-        When the file you upload leaves the original out, monetization follows that file:
+        Because your file contains only your content, the monetization story is simple:
       </p>
       <div class="space-y-4">
         <div class="rounded-lg bg-surface p-6">
@@ -77,9 +77,9 @@
           </p>
         </div>
         <div class="rounded-lg bg-surface p-6">
-          <h3 class="mb-3 text-lg font-medium text-text-primary">✓ Revenue follows the upload</h3>
+          <h3 class="mb-3 text-lg font-medium text-text-primary">✓ No Revenue Sharing</h3>
           <p>
-            The original is not in your file, so Content ID has nothing from it to match. Revenue on that upload follows your channel.
+            Nothing from the original is in your file, so there is no split with its owner. You keep the revenue on your upload, minus the platform's usual cut.
           </p>
         </div>
       </div>

@@ -62,15 +62,15 @@
       style="font-family: var(--font-display, 'Manrope', 'Inter', sans-serif);"
     >
       Sync your transformative videos.<br class="hidden sm:block" />
-      <span class="text-accent-primary">Played from their own platforms.</span>
+      <span class="text-accent-primary">Nothing reuploaded.</span>
     </h1>
 
     <!-- Subheading -->
     <p
       class="mx-auto mb-10 max-w-2xl text-lg leading-relaxed text-text-secondary md:text-xl"
     >
-      A creator tool that plays your recording and the original video together.
-      Both stay on their own platforms and load through the official embeds.
+      A creator tool that separates your recording from the original video—perfectly
+      synchronized, with nothing reuploaded, and ready to share.
     </p>
 
     <!-- CTA -->
