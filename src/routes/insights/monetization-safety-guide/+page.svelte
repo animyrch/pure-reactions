@@ -113,9 +113,9 @@
         <div>
           <h3 class="mb-3 text-xl font-medium text-text-primary">Direct Sponsorships</h3>
           <ul class="ml-6 list-disc space-y-2">
-            <li>Integrate sponsored content into the file you upload</li>
-            <li>The original is not in the sponsored file. Content ID has nothing from it to match.</li>
-            <li>Your content stays live and monetized, making you more attractive to sponsors</li>
+            <li>Nothing from the original is in your file, so Content ID has nothing from it to match and the video stays up</li>
+            <li>A video that stays up keeps collecting views</li>
+            <li>Sponsors pay on those views and on the conversions they produce</li>
           </ul>
         </div>
 
