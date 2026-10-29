@@ -282,8 +282,8 @@
       Want the Technical Details?
     </h3>
     <p class="mb-6 text-text-secondary">
-      See what Content ID can match when the original stays out of the file
-      you upload, and how the synced page plays that original from its host.
+      Your file contains none of the original. Content ID scans that file and
+      has nothing from the original to match. The original plays from its host.
     </p>
     <a
       href="/insights/why-synced-content-cant-be-claimed"

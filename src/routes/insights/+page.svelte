@@ -4,7 +4,7 @@
 
 <SEO 
   title="Insights - Synchronized Video Architecture & Creative Freedom"
-  description="How synchronized playback keeps each video on its own platform, and what Content ID can see in the file you upload."
+  description="Your file contains none of the original. Content ID scans that file and has nothing from the original to match."
   canonical="/insights"
   keywords="synchronized video insights, official embeds, creator monetization, twin player architecture"
 />
@@ -35,7 +35,7 @@
         What Content ID sees
       </h2>
       <p class="mb-4 text-text-secondary">
-        Content ID scans the file you upload. Leaving the original out of that file gives the scan no original picture or audio from that source to match.
+        Your file contains none of the original. Content ID has nothing from it to match.
       </p>
       <span class="inline-flex items-center gap-2 text-sm text-accent-primary">
         Read article
@@ -55,7 +55,7 @@
         Monetization Safety Guide
       </h2>
       <p class="mb-4 text-text-secondary">
-        How monetization follows the file you upload, and what changes when that file leaves the original out.
+        Your upload contains your recording. Content ID has nothing from the original to match in that file.
       </p>
       <span class="inline-flex items-center gap-2 text-sm text-accent-primary">
         Read article
@@ -75,7 +75,7 @@
         Synchronized Content Legality
       </h2>
       <p class="mb-4 text-text-secondary">
-        How fair use works, and what this site does and does not decide about a synced page.
+        How the original and your recording stay in separate files, and how the original plays from its host.
       </p>
       <span class="inline-flex items-center gap-2 text-sm text-accent-primary">
         Read article

@@ -107,7 +107,7 @@
 
     <!-- Reassurance footnote -->
     <p class="mx-auto mt-10 max-w-lg text-center text-sm text-text-muted">
-      Each video stays on the platform where it was uploaded. The original plays from that host.
+      Your file contains none of the original. Content ID has nothing from it to match. The original plays from its host.
     </p>
   </div>
 </section>

@@ -6,7 +6,7 @@
 
 <SEO 
   title="What Content ID Sees - Twin-Player Architecture"
-  description="Content ID scans the file you upload. Leaving the original out of that file gives the scan no original picture or audio from that source to match."
+  description="Your file contains none of the original. Content ID scans that file and has nothing from the original to match."
   canonical="/insights/why-synced-content-cant-be-claimed"
   keywords="content id claims, copyright claims, youtube content id, separate upload, twin player architecture"
   type="article"
@@ -31,7 +31,7 @@
       What Content ID sees
     </h1>
     <p class="text-xl text-text-secondary">
-      Content ID scans the file you upload. Leaving the original out of that file gives the scan no original picture or audio from that source to match. This page does not decide a copyright dispute about the synced viewing page.
+      Your file contains none of the original. Content ID scans that file and has nothing from the original to match.
     </p>
   </header>
 
@@ -66,7 +66,7 @@
       </ol>
       <div class="my-6 rounded-lg border border-success/30 bg-success/5 p-6">
         <p class="text-text-primary">
-          <strong>What the scan can see:</strong> Content ID matches what is inside the uploaded file. A file that leaves the original out gives that scan no original footage to match. Other audio or video in the file can still match.
+          <strong>Nothing from the original to match:</strong> Content ID scans your file, finds none of the original, and moves on.
         </p>
       </div>
     </section>
@@ -83,32 +83,32 @@
         <li><strong class="text-text-primary">No original fingerprints:</strong> Zero copyrighted audio waveforms or video fingerprints from the source material</li>
       </ul>
       <p class="mb-4">
-        Content ID has no copy of the original inside that file to match. It can still match something else you included.
+        There is nothing from the original for Content ID to match.
       </p>
     </section>
 
     <section>
-      <h2 class="mb-4 text-2xl font-semibold text-text-primary">The Legal Framework</h2>
+      <h2 class="mb-4 text-2xl font-semibold text-text-primary">Where each video lives</h2>
       <p class="mb-4">
-        The file and the synced page are different things:
+        The original and your recording stay in different places:
       </p>
       <div class="space-y-4">
         <div>
-          <h3 class="mb-2 text-xl font-medium text-text-primary">No Distribution of Copyrighted Material</h3>
+          <h3 class="mb-2 text-xl font-medium text-text-primary">The original is not in your upload</h3>
           <p>
             The original plays from YouTube or TikTok through the official player. Pure Reactions stores the link and the sync timings. It does not upload that video.
           </p>
         </div>
         <div>
-          <h3 class="mb-2 text-xl font-medium text-text-primary">No Reproduction</h3>
+          <h3 class="mb-2 text-xl font-medium text-text-primary">Your file is your recording</h3>
           <p>
             The file you upload is your recording. The synced page plays the original from the host next to it. The publisher of that host video controls whether it stays public and whether embedding stays on.
           </p>
         </div>
         <div>
-          <h3 class="mb-2 text-xl font-medium text-text-primary">Fair use is a separate question</h3>
+          <h3 class="mb-2 text-xl font-medium text-text-primary">The original plays from its host</h3>
           <p>
-            Fair use is a defense when a file includes someone else's work. The file you upload is meant to leave that work out. This page does not decide the legal status of watching the two players together.
+            The synced page loads the official YouTube or TikTok player. Whoever published that video controls whether it stays public and whether embedding stays on.
           </p>
         </div>
       </div>
@@ -120,19 +120,19 @@
         <div class="rounded-lg bg-surface p-6">
           <h3 class="mb-3 text-lg font-medium text-text-primary">✓ React to Music Videos</h3>
           <p>
-            Music labels are notoriously aggressive with Content ID. With PureReactions, their audio never enters your file, so their claims never trigger.
+            Their audio never enters your file. Content ID has nothing from that track to match.
           </p>
         </div>
         <div class="rounded-lg bg-surface p-6">
           <h3 class="mb-3 text-lg font-medium text-text-primary">✓ Translate Global Content</h3>
           <p>
-            Provide translations for foreign language content. Your translated audio stays separate, avoiding any claims on the original language track.
+            Your translated audio stays in your file. The original language track stays on the host. Content ID has nothing from that track to match.
           </p>
         </div>
         <div class="rounded-lg bg-surface p-6">
           <h3 class="mb-3 text-lg font-medium text-text-primary">✓ Add Educational Commentary</h3>
           <p>
-            Provide expert analysis or educational voiceovers. Your expertise is separate, your monetization is secure.
+            Your commentary stays in your file. The original stays on the host. Content ID has nothing from that original to match.
           </p>
         </div>
       </div>
@@ -158,7 +158,7 @@
             <tr class="border-b border-border-subtle">
               <td class="p-4 font-medium text-text-primary">Content ID Risk</td>
               <td class="p-4 text-danger">Automatic claims</td>
-              <td class="p-4 text-success">Original is not in your file</td>
+              <td class="p-4 text-success">Nothing from the original to match</td>
             </tr>
             <tr class="border-b border-border-subtle">
               <td class="p-4 font-medium text-text-primary">Monetization</td>
@@ -166,9 +166,9 @@
               <td class="p-4 text-success">Follows your own upload</td>
             </tr>
             <tr class="border-b border-border-subtle">
-              <td class="p-4 font-medium text-text-primary">Legal Defense</td>
-              <td class="p-4 text-warning">Fair use required</td>
-              <td class="p-4 text-success">Not decided here</td>
+              <td class="p-4 font-medium text-text-primary">Original inside your file</td>
+              <td class="p-4 text-warning">Yes</td>
+              <td class="p-4 text-success">None</td>
             </tr>
             <tr class="border-b border-border-subtle">
               <td class="p-4 font-medium text-text-primary">Viewing Experience</td>
@@ -183,7 +183,7 @@
     <section>
       <h2 class="mb-4 text-2xl font-semibold text-text-primary">The Bottom Line</h2>
       <p class="mb-4 text-lg">
-        The file you upload does not include the original. The synced page plays that original from YouTube or TikTok. Content ID can match only what is inside a file. None of that is a ruling that the synced page is free of a claim or a dispute.
+        Your file contains none of the original. Content ID scans that file and has nothing from the original to match. The synced page plays the original from YouTube or TikTok, next to your recording.
       </p>
       <p class="text-lg">
         Whoever published the original controls that video. They can make it private, turn embedding off, or leave it public. Your recording stays on your channel.

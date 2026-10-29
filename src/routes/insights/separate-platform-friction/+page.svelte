@@ -345,7 +345,7 @@
           What Content ID sees →
         </h4>
         <p class="text-sm text-text-secondary">
-          What Content ID can match in a file that leaves the original out.
+          Your unlisted file contains none of the original. Content ID has nothing from it to match.
         </p>
       </a>
     </div>

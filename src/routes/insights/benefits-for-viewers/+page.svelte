@@ -107,7 +107,7 @@
         For the reactor, merging copyrighted content into their upload is a constant legal risk. Videos get taken down, monetization is stripped, or ad revenue is transferred entirely to the original creator via Content ID — all because of a single merged file. For the original creator, their work is consumed through someone else's upload, missing out on direct views and watch time.
       </p>
       <p class="mb-4">
-        Pure Reactions keeps the streams separate. The recording is meant to leave the original audio and video out. The original plays from the host, and that publisher controls whether it stays up. A play of the original still registers on that host.
+        Pure Reactions keeps the streams separate. The recording contains none of the original audio or video. Content ID has nothing from that original to match. The original plays from the host, and a play still registers on that channel.
       </p>
       <div class="my-6 rounded-lg border border-success/30 bg-success/5 p-6">
         <p class="text-text-primary">
@@ -202,7 +202,7 @@
           What Content ID sees →
         </h4>
         <p class="text-sm text-text-secondary">
-          What Content ID can see when the original stays out of your file.
+          Your file contains none of the original. Content ID has nothing from it to match.
         </p>
       </a>
       <a

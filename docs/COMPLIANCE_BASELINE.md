@@ -268,7 +268,7 @@ Minimal requirement: rewrite `/open-source` so it describes CC BY-NC 4.0, links 
 
 The live homepage says "Copyright-safe. Always.", "No copyright headaches", and "Clean separation. Zero risk."
 
-Minimal requirement: replace those lines with the embed model from section 6. Both videos stay on YouTube or TikTok and play through the official embeds. Do not claim that copyright risk is zero. The insight articles, the footer, and the default page description use the same rule: describe what Content ID can see in the uploaded file, and do not call the synced page unclaimable. Include this in `compliance-license-and-claims` with the copyright-page wording.
+Minimal requirement: replace those lines with the embed model from section 6. Both videos stay on YouTube or TikTok and play through the official embeds. Do not claim that copyright risk is zero. The insight articles, the footer, and the default page description may say, definitively, that the uploaded file contains none of the original and that Content ID has nothing from that original to match. They do not say the synced page is legally risk-free or unclaimable in court. Include this in `compliance-license-and-claims` with the copyright-page wording.
 
 ### Removal requests
 
