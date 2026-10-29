@@ -62,7 +62,7 @@
         <li><strong class="text-text-primary">You record your content separately</strong> — Use any camera, software, or workflow. Your file contains only YOUR content—zero seconds of the original.</li>
         <li><strong class="text-text-primary">We track your viewing experience</strong> — As you watch the original on our platform, we record your controls: play, pause, scrub, focus changes. This is just data, not copyrighted content.</li>
         <li><strong class="text-text-primary">You upload to YouTube separately</strong> — Your recording goes to YouTube as its own video.</li>
-        <li><strong class="text-text-primary">We sync during playback</strong> — When viewers watch, their browser loads the original from YouTube and your content from YouTube, then our platform synchronizes them in real-time.</li>
+        <li><strong class="text-text-primary">We sync during playback</strong> — When viewers watch, their browser loads the original from YouTube or TikTok and your content from YouTube, then our platform synchronizes them in real-time.</li>
       </ol>
       <div class="my-6 rounded-lg border border-success/30 bg-success/5 p-6">
         <p class="text-text-primary">
