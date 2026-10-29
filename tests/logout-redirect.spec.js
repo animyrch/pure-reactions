@@ -17,6 +17,7 @@ test('logout from account returns to the home page', async ({ page }) => {
     await expect(page).toHaveURL(/\/account\/verify/, { timeout: 20000 });
 
     await page.goto('/account');
+    await page.locator('html[data-hydrated]').waitFor({ state: 'attached', timeout: 15000 });
     const logoutButton = page.getByRole('button', { name: 'Logout' });
     await expect(logoutButton).toBeVisible({ timeout: 15000 });
     await logoutButton.click();
