@@ -69,12 +69,12 @@ export async function load({ depends }) {
             try {
                 await signOutWrapper();
                 currentUser.set({});
-                await invalidate('app:auth');
                 showToast('You have been logged out successfully', TOASTS.SUCCESS, 5000);
                 await goToRoute('/');
                 return { successful: true };
             } finally {
-                setLogoutRedirectInProgress(false);
+                invalidate('app:auth');
+                setTimeout(() => setLogoutRedirectInProgress(false), 1000);
             }
         }
         return { successful: false };
