@@ -102,7 +102,7 @@
         <div>
           <h3 class="mb-2 text-xl font-medium text-text-primary">Your file is your recording</h3>
           <p>
-            The file you upload is your recording. The synced page plays the original from the host next to it. The publisher of that host video controls whether it stays public and whether embedding stays on.
+            The file you upload is your voice, your image, and your edit.
           </p>
         </div>
         <div>
