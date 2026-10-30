@@ -13,6 +13,7 @@ import {
   query,
   deleteDoc,
   setDoc,
+  Timestamp,
   updateDoc,
   where
 } from 'firebase/firestore';
@@ -132,10 +133,61 @@ test('logged out cannot list draft reactions', async () => {
   await assertFails(getDocs(draftsQuery));
 });
 
+const seedAgeConfirmation = async (collectionName = 'userData') => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), collectionName, ownerId), {
+      ageConfirmedAt: Timestamp.fromDate(new Date('2024-01-01T00:00:00Z'))
+    }, { merge: true });
+  });
+};
+
 test('owner can update reactions', async () => {
+  await seedAgeConfirmation();
   await assertSucceeds(
     updateDoc(doc(ownerDb(), 'reactions', reactionIds.published), {
       title: 'Updated title'
+    })
+  );
+});
+
+test('owner cannot publish a reaction without age confirmation', async () => {
+  await assertFails(
+    setDoc(doc(ownerDb(), 'reactions', 'new-public-reaction'), {
+      reactorId: ownerId,
+      isPublished: true,
+      title: 'Too young'
+    })
+  );
+});
+
+test('owner can publish a reaction after age confirmation', async () => {
+  await seedAgeConfirmation();
+  await assertSucceeds(
+    setDoc(doc(ownerDb(), 'reactions', 'confirmed-public-reaction'), {
+      reactorId: ownerId,
+      isPublished: true,
+      title: 'Confirmed'
+    })
+  );
+});
+
+test('owner cannot publish a local reaction without the local age confirmation', async () => {
+  await assertFails(
+    setDoc(doc(ownerDb(), 'reactions-local', 'local-public-reaction'), {
+      reactorId: ownerId,
+      isPublished: true,
+      title: 'Local'
+    })
+  );
+});
+
+test('owner can publish a local reaction from the local age confirmation', async () => {
+  await seedAgeConfirmation('userData_local');
+  await assertSucceeds(
+    setDoc(doc(ownerDb(), 'reactions-local', 'local-confirmed-reaction'), {
+      reactorId: ownerId,
+      isPublished: true,
+      title: 'Local confirmed'
     })
   );
 });
@@ -285,10 +337,36 @@ test('user can read non-existent queue to check availability', async () => {
   await assertSucceeds(getDoc(doc(ownerDb(), 'queues', 'new-non-existent-queue')));
 });
 
-test('owner can publish their queue', async () => {
+test('owner cannot publish a queue without age confirmation', async () => {
   await seedQueue('owner-publish-queue');
-  await assertSucceeds(
+  await assertFails(
     updateDoc(doc(ownerDb(), 'queues', 'owner-publish-queue'), {
+      isPublished: true
+    })
+  );
+});
+
+test('owner can publish a queue after age confirmation', async () => {
+  await seedQueue('owner-confirmed-queue');
+  await seedAgeConfirmation();
+  await assertSucceeds(
+    updateDoc(doc(ownerDb(), 'queues', 'owner-confirmed-queue'), {
+      isPublished: true
+    })
+  );
+});
+
+test('owner cannot publish a local queue without the local age confirmation', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'queues_local', 'local-queue'), {
+      ownerId,
+      slug: 'local-queue',
+      title: 'Local queue',
+      items: []
+    });
+  });
+  await assertFails(
+    updateDoc(doc(ownerDb(), 'queues_local', 'local-queue'), {
       isPublished: true
     })
   );
@@ -338,4 +416,16 @@ test('another user cannot read or write a twitch channel', async () => {
 
 test('logged out users cannot read userData_local', async () => {
   await assertFails(getDoc(doc(anonDb(), 'userData_local', ownerId)));
+});
+
+test('owner cannot write ageConfirmedAt on user data', async () => {
+  const ref = doc(ownerDb(), 'userData_local', ownerId);
+  await assertFails(setDoc(ref, {
+    ageConfirmedAt: Timestamp.fromDate(new Date('2024-01-01T00:00:00Z'))
+  }));
+  await seedAgeConfirmation('userData_local');
+  await assertFails(updateDoc(ref, {
+    ageConfirmedAt: Timestamp.fromDate(new Date('2024-02-01T00:00:00Z'))
+  }));
+  await assertSucceeds(setDoc(ref, { twitchChannel: 'nightbot' }, { merge: true }));
 });

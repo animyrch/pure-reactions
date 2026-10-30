@@ -1,6 +1,6 @@
 import { writable } from 'svelte/store';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore/lite';
-import { COLLECTION_USER_DATA, db } from '$lib/constants/firebase';
+import { doc, getDoc } from 'firebase/firestore/lite';
+import { auth, COLLECTION_USER_DATA, db } from '$lib/constants/firebase';
 
 export const ageConfirmationRequest = writable(null);
 
@@ -13,12 +13,16 @@ export async function hasAgeConfirmation(userId) {
 }
 
 export async function recordAgeConfirmation(userId) {
-	if (!db || !userId) return;
-	await setDoc(
-		doc(db, COLLECTION_USER_DATA, userId),
-		{ ageConfirmedAt: serverTimestamp() },
-		{ merge: true }
-	);
+	const user = auth?.currentUser;
+	if (!userId || !user || user.uid !== userId) return;
+	const idToken = await user.getIdToken();
+	const response = await fetch('/api/account/age-confirmation', {
+		method: 'POST',
+		headers: { Authorization: `Bearer ${idToken}` }
+	});
+	if (!response.ok) {
+		throw new Error('Could not record age confirmation');
+	}
 }
 
 export function ensureAgeConfirmed(userId) {

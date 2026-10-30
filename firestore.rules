@@ -96,6 +96,31 @@ service cloud.firestore {
       return isSignedIn() && request.resource.data.ownerId == request.auth.uid;
     }
 
+    function confirmedIn(userCollection) {
+      return exists(/databases/$(database)/documents/$(userCollection)/$(request.auth.uid))
+        && get(/databases/$(database)/documents/$(userCollection)/$(request.auth.uid)).data.ageConfirmedAt is timestamp;
+    }
+
+    // Publication reads the age timestamp from user data. Owners cannot write that field.
+    function hasAgeConfirmation(primary, secondary) {
+      return confirmedIn(primary) || confirmedIn(secondary);
+    }
+
+    function isPublishing() {
+      return request.resource.data.keys().hasAny(['isPublished'])
+        && request.resource.data.isPublished == true;
+    }
+
+    function publicationAllowed(primary, secondary) {
+      return !isPublishing() || hasAgeConfirmation(primary, secondary);
+    }
+
+    function ageFieldUntouched() {
+      return resource == null
+        ? !request.resource.data.keys().hasAny(['ageConfirmedAt'])
+        : !request.resource.data.diff(resource.data).affectedKeys().hasAny(['ageConfirmedAt']);
+    }
+
     function isUserDataOwner(docUserId) {
       return isSignedIn() && request.auth.uid == docUserId;
     }
@@ -173,28 +198,31 @@ service cloud.firestore {
     match /reactions/{reactionId} {
       allow get: if true;
       allow list: if resource.data.isPublished == true || isReactionOwner();
-      allow create: if isReactionOwnerCreate() && reactionCreateHasNoSensitiveKeys();
+      allow create: if isReactionOwnerCreate() && reactionCreateHasNoSensitiveKeys() && publicationAllowed('userData', 'userdata');
       allow update: if isReactionOwner() &&
         request.resource.data.reactorId == resource.data.reactorId &&
-        reactionUpdateHasNoSensitiveKeys();
+        reactionUpdateHasNoSensitiveKeys() &&
+        publicationAllowed('userData', 'userdata');
       allow delete: if isReactionOwner();
     }
     match /reactions-local/{reactionId} {
       allow get: if true;
       allow list: if resource.data.isPublished == true || isReactionOwner();
-      allow create: if isReactionOwnerCreate() && reactionCreateHasNoSensitiveKeys();
+      allow create: if isReactionOwnerCreate() && reactionCreateHasNoSensitiveKeys() && publicationAllowed('userData_local', 'userData-local');
       allow update: if isReactionOwner() &&
         request.resource.data.reactorId == resource.data.reactorId &&
-        reactionUpdateHasNoSensitiveKeys();
+        reactionUpdateHasNoSensitiveKeys() &&
+        publicationAllowed('userData_local', 'userData-local');
       allow delete: if isReactionOwner();
     }
     match /reactions-prod/{reactionId} {
       allow get: if true;
       allow list: if resource.data.isPublished == true || isReactionOwner();
-      allow create: if isReactionOwnerCreate() && reactionCreateHasNoSensitiveKeys();
+      allow create: if isReactionOwnerCreate() && reactionCreateHasNoSensitiveKeys() && publicationAllowed('userData-prod', 'userdata-prod');
       allow update: if isReactionOwner() &&
         request.resource.data.reactorId == resource.data.reactorId &&
-        reactionUpdateHasNoSensitiveKeys();
+        reactionUpdateHasNoSensitiveKeys() &&
+        publicationAllowed('userData-prod', 'userdata-prod');
       allow delete: if isReactionOwner();
     }
 
@@ -225,28 +253,44 @@ service cloud.firestore {
 
     // User data (private to the user)
     match /userData/{userId} {
-      allow read, write: if isUserDataOwner(userId);
+      allow read: if isUserDataOwner(userId);
+      allow create, update: if isUserDataOwner(userId) && ageFieldUntouched();
+      allow delete: if isUserDataOwner(userId);
     }
     match /userdata/{userId} {
-      allow read, write: if isUserDataOwner(userId);
+      allow read: if isUserDataOwner(userId);
+      allow create, update: if isUserDataOwner(userId) && ageFieldUntouched();
+      allow delete: if isUserDataOwner(userId);
     }
     match /userData-local/{userId} {
-      allow read, write: if isUserDataOwner(userId);
+      allow read: if isUserDataOwner(userId);
+      allow create, update: if isUserDataOwner(userId) && ageFieldUntouched();
+      allow delete: if isUserDataOwner(userId);
     }
     match /userdata-local/{userId} {
-      allow read, write: if isUserDataOwner(userId);
+      allow read: if isUserDataOwner(userId);
+      allow create, update: if isUserDataOwner(userId) && ageFieldUntouched();
+      allow delete: if isUserDataOwner(userId);
     }
     match /userData_local/{userId} {
-      allow read, write: if isUserDataOwner(userId);
+      allow read: if isUserDataOwner(userId);
+      allow create, update: if isUserDataOwner(userId) && ageFieldUntouched();
+      allow delete: if isUserDataOwner(userId);
     }
     match /userdata_local/{userId} {
-      allow read, write: if isUserDataOwner(userId);
+      allow read: if isUserDataOwner(userId);
+      allow create, update: if isUserDataOwner(userId) && ageFieldUntouched();
+      allow delete: if isUserDataOwner(userId);
     }
     match /userData-prod/{userId} {
-      allow read, write: if isUserDataOwner(userId);
+      allow read: if isUserDataOwner(userId);
+      allow create, update: if isUserDataOwner(userId) && ageFieldUntouched();
+      allow delete: if isUserDataOwner(userId);
     }
     match /userdata-prod/{userId} {
-      allow read, write: if isUserDataOwner(userId);
+      allow read: if isUserDataOwner(userId);
+      allow create, update: if isUserDataOwner(userId) && ageFieldUntouched();
+      allow delete: if isUserDataOwner(userId);
     }
 
     // Playlists (public read; owner write)
@@ -288,26 +332,34 @@ service cloud.firestore {
       // Allow read if owner OR if document doesn't exist (resource == null)
       // OR if the queue is published
       allow read: if resource == null || isQueueOwner() || resource.data.isPublished == true;
-      allow create: if isQueueOwnerCreate();
-      allow update: if isQueueOwner() && request.resource.data.ownerId == resource.data.ownerId;
+      allow create: if isQueueOwnerCreate() && publicationAllowed('userData', 'userdata');
+      allow update: if isQueueOwner() &&
+        request.resource.data.ownerId == resource.data.ownerId &&
+        publicationAllowed('userData', 'userdata');
       allow delete: if isQueueOwner();
     }
     match /queues-local/{queueId} {
       allow read: if resource == null || isQueueOwner() || resource.data.isPublished == true;
-      allow create: if isQueueOwnerCreate();
-      allow update: if isQueueOwner() && request.resource.data.ownerId == resource.data.ownerId;
+      allow create: if isQueueOwnerCreate() && publicationAllowed('userData_local', 'userData-local');
+      allow update: if isQueueOwner() &&
+        request.resource.data.ownerId == resource.data.ownerId &&
+        publicationAllowed('userData_local', 'userData-local');
       allow delete: if isQueueOwner();
     }
     match /queues_local/{queueId} {
       allow read: if resource == null || isQueueOwner() || resource.data.isPublished == true;
-      allow create: if isQueueOwnerCreate();
-      allow update: if isQueueOwner() && request.resource.data.ownerId == resource.data.ownerId;
+      allow create: if isQueueOwnerCreate() && publicationAllowed('userData_local', 'userData-local');
+      allow update: if isQueueOwner() &&
+        request.resource.data.ownerId == resource.data.ownerId &&
+        publicationAllowed('userData_local', 'userData-local');
       allow delete: if isQueueOwner();
     }
     match /queues-prod/{queueId} {
       allow read: if resource == null || isQueueOwner() || resource.data.isPublished == true;
-      allow create: if isQueueOwnerCreate();
-      allow update: if isQueueOwner() && request.resource.data.ownerId == resource.data.ownerId;
+      allow create: if isQueueOwnerCreate() && publicationAllowed('userData-prod', 'userdata-prod');
+      allow update: if isQueueOwner() &&
+        request.resource.data.ownerId == resource.data.ownerId &&
+        publicationAllowed('userData-prod', 'userdata-prod');
       allow delete: if isQueueOwner();
     }
 
