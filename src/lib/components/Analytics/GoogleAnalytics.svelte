@@ -30,7 +30,7 @@
 
         if (typeof window.gtag === "function") {
             console.log(`[GA] Tracking page view: ${path}`);
-            window.gtag("config", GA_MEASUREMENT_ID, {
+            window.gtag("event", "page_view", {
                 page_path: path,
             });
         } else {
