@@ -24,7 +24,7 @@ export const colors = {
 };
 
 export const typography = {
-  fontFamilyDisplay: '"Manrope", "Inter", "Helvetica Neue", Arial, sans-serif',
+  fontFamilyDisplay: '"Inter", "Helvetica Neue", Arial, sans-serif',
   fontFamilyBody: '"Inter", "Helvetica Neue", Arial, sans-serif',
   scale: {
     xs: { size: '0.75rem', lineHeight: '1rem', letterSpacing: '0.02em' },

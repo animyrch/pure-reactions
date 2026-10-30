@@ -7,9 +7,9 @@
 
 <SEO
   title="How It Works - Synchronized Twin-Player Architecture"
-  description="Discover how PureReactions synchronizes any content with original videos. Record separately, track your viewing, sync perfectly. Reactions, translations, voiceovers—all without copyright claims."
+  description="Discover how PureReactions synchronizes any content with original videos. Record separately, track your viewing, sync perfectly. Reactions, translations, voiceovers—all without the original in your file."
   canonical="/how-it-works"
-  keywords="synchronized video player, twin player architecture, how sync works, copyright free video sync, reaction platform"
+  keywords="synchronized video player, twin player architecture, how sync works, official embeds, reaction platform"
 />
 
 <ValuePropositionBanner />
@@ -282,15 +282,14 @@
       Want the Technical Details?
     </h3>
     <p class="mb-6 text-text-secondary">
-      Learn exactly why synchronized twin-player content is structurally
-      unclaimable, including the legal framework and technical architecture that
-      makes this possible.
+      Your file contains none of the original. Content ID scans that file and
+      has nothing from the original to match. The original plays from its host.
     </p>
     <a
       href="/insights/why-synced-content-cant-be-claimed"
       class="inline-flex items-center gap-2 text-accent-primary hover:text-accent-primary/80 transition-colors"
     >
-      Read: Why Synced Content Can't Be Claimed
+      Read: What Content ID sees
       <span aria-hidden="true">→</span>
     </a>
   </section>

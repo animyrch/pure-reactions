@@ -9,6 +9,7 @@ import { goToRoute, setLogoutRedirectInProgress } from '$lib/helpers/routing';
 import { TOASTS } from '$lib/constants/toasts';
 import { currentUser } from '$lib/stores/user';
 import { userExtraDataStore } from '$lib/stores/userExtraData';
+import { recordAgeConfirmation } from '$lib/helpers/ageConfirmation';
 
 export async function load({ depends }) {
     depends('app:auth');
@@ -50,6 +51,13 @@ export async function load({ depends }) {
                 showToast(signupMessage, TOASTS.SUCCESS, 12000);
                 const user = await checkUserSignInStatusWrapper();
                 currentUser.set(user);
+                if (user?.uid) {
+                    try {
+                        await recordAgeConfirmation(user.uid);
+                    } catch (error) {
+                        console.error('Could not record age confirmation:', error);
+                    }
+                }
                 await userExtraDataStore.fetchUserData(user?.uid);
                 await invalidate('app:auth');
                 await goToRoute('/account/verify');
@@ -61,12 +69,12 @@ export async function load({ depends }) {
             try {
                 await signOutWrapper();
                 currentUser.set({});
-                await invalidate('app:auth');
                 showToast('You have been logged out successfully', TOASTS.SUCCESS, 5000);
                 await goToRoute('/');
                 return { successful: true };
             } finally {
-                setLogoutRedirectInProgress(false);
+                invalidate('app:auth');
+                setTimeout(() => setLogoutRedirectInProgress(false), 1000);
             }
         }
         return { successful: false };

@@ -1,120 +1,35 @@
 import { json } from '@sveltejs/kit';
+import { env } from '$env/dynamic/private';
 import { initializeFirebaseAdmin } from '$lib/server/firebaseAdmin';
+import { deleteAccountData } from '$lib/server/deleteAccountData';
 
 const RECENT_AUTH_THRESHOLD_SECONDS = 5 * 60;
 
-async function deleteUserData(userId, adminDb) {
-	const {
-		COLLECTION_REACTION_BINOMES,
-		COLLECTION_USER_DATA,
-		COLLECTION_PLAYLISTS,
-		COLLECTION_QUEUES,
-		COLLECTION_MOMENTS
-	} = await import('$lib/constants/firebase');
-	if (!adminDb) {
-		throw new Error('Firestore not initialized');
-	}
+const readEnv = (name) => {
+	const fromPrivate = env?.[name];
+	if (typeof fromPrivate === 'string' && fromPrivate.trim()) return fromPrivate.trim();
+	const fromProcess = process.env[name];
+	return typeof fromProcess === 'string' ? fromProcess.trim() : '';
+};
 
-	const batch = adminDb.batch();
-	let deletionCount = 0;
-	const impactedMomentIds = new Set();
+async function deleteSearchRecords(reactionIds) {
+	const ids = (reactionIds || []).filter((id) => typeof id === 'string' && id.trim());
+	if (!ids.length) return;
 
-	// Delete user profile document
-	const userDocRef = adminDb.collection(COLLECTION_USER_DATA).doc(userId);
-	batch.delete(userDocRef);
-	deletionCount++;
+	const appId = readEnv('PUBLIC_ALGOLIA_APP_ID');
+	const adminKey = readEnv('ALGOLIA_ADMIN_KEY');
+	const indexName = readEnv('PUBLIC_ALGOLIA_REACTIONS_INDEX');
+	if (!appId || !adminKey || !indexName) return;
 
-	// Delete all reactions created by the user
-	const reactionsSnapshot = await adminDb
-		.collection(COLLECTION_REACTION_BINOMES)
-		.where('reactorId', '==', userId)
-		.get();
-
-	reactionsSnapshot.docs.forEach(doc => {
-		const reactionData = doc.data() || {};
-		if (
-			reactionData.isMomentReaction === true &&
-			reactionData.isPublished === true &&
-			typeof reactionData.momentId === 'string' &&
-			reactionData.momentId.trim()
-		) {
-			impactedMomentIds.add(reactionData.momentId.trim());
+	try {
+		const { default: algoliasearch } = await import('algoliasearch');
+		const index = algoliasearch(appId, adminKey).initIndex(indexName);
+		for (let start = 0; start < ids.length; start += 1000) {
+			await index.deleteObjects(ids.slice(start, start + 1000));
 		}
-
-		batch.delete(doc.ref);
-		deletionCount++;
-	});
-
-	// Delete bookmarks (stored in user's extra data)
-	const bookmarksRef = adminDb.collection('userExtraData').doc(userId);
-	const bookmarksDoc = await bookmarksRef.get();
-	if (bookmarksDoc.exists) {
-		batch.delete(bookmarksRef);
-		deletionCount++;
+	} catch (error) {
+		console.error('Failed to remove deleted reactions from search index:', error);
 	}
-
-	// Delete follows (stored in user's extra data follows subcollection or as a field)
-	const followsSnapshot = await adminDb
-		.collection('userExtraData')
-		.doc(userId)
-		.collection('follows')
-		.get();
-
-	followsSnapshot.docs.forEach(doc => {
-		batch.delete(doc.ref);
-		deletionCount++;
-	});
-
-	// Delete playlists created by the user
-	const playlistsSnapshot = await adminDb
-		.collection(COLLECTION_PLAYLISTS)
-		.where('reactorId', '==', userId)
-		.get();
-
-	playlistsSnapshot.docs.forEach(doc => {
-		batch.delete(doc.ref);
-		deletionCount++;
-	});
-
-	// Delete queues created by the user
-	const queuesSnapshot = await adminDb
-		.collection(COLLECTION_QUEUES)
-		.where('reactorId', '==', userId)
-		.get();
-
-	queuesSnapshot.docs.forEach(doc => {
-		batch.delete(doc.ref);
-		deletionCount++;
-	});
-
-	// Commit all deletions
-	await batch.commit();
-
-	if (impactedMomentIds.size > 0) {
-		await Promise.all(
-			Array.from(impactedMomentIds).map(async (momentId) => {
-				try {
-					const remainingPublishedMomentReactions = await adminDb
-						.collection(COLLECTION_REACTION_BINOMES)
-						.where('momentId', '==', momentId)
-						.where('isMomentReaction', '==', true)
-						.where('isPublished', '==', true)
-						.get();
-
-					await adminDb
-						.collection(COLLECTION_MOMENTS)
-						.doc(momentId)
-						.update({ reactionCount: remainingPublishedMomentReactions.size });
-				} catch (error) {
-					console.error('Failed to recount moment reaction count during account deletion:', error, {
-						momentId
-					});
-				}
-			})
-		);
-	}
-
-	return deletionCount;
 }
 
 export const POST = async ({ request }) => {
@@ -156,9 +71,30 @@ export const POST = async ({ request }) => {
 		const userId = decodedToken.uid;
 
 		try {
-			// Delete all user data from Firestore
-			const deletionCount = await deleteUserData(userId, adminDb);
-			console.log(`Deleted ${deletionCount} documents for user ${userId}`);
+			const {
+				COLLECTION_REACTION_BINOMES,
+				COLLECTION_USER_DATA,
+				COLLECTION_PLAYLISTS,
+				COLLECTION_QUEUES,
+				COLLECTION_MOMENTS,
+				COLLECTION_YOUTUBE_CHANNEL_CLAIMS,
+				COLLECTION_YOUTUBE_CHANNEL_VERIFICATIONS
+			} = await import('$lib/constants/firebase');
+			const { deleted, reactionIds } = await deleteAccountData({
+				adminDb,
+				userId,
+				collections: {
+					reactions: COLLECTION_REACTION_BINOMES,
+					userData: COLLECTION_USER_DATA,
+					playlists: COLLECTION_PLAYLISTS,
+					queues: COLLECTION_QUEUES,
+					moments: COLLECTION_MOMENTS,
+					claims: COLLECTION_YOUTUBE_CHANNEL_CLAIMS,
+					verifications: COLLECTION_YOUTUBE_CHANNEL_VERIFICATIONS
+				}
+			});
+			await deleteSearchRecords(reactionIds);
+			console.log(`Deleted ${deleted} documents for user ${userId}`);
 
 			// Revoke all refresh tokens (invalidate all sessions)
 			await adminAuth.revokeRefreshTokens(userId);

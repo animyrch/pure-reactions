@@ -91,9 +91,7 @@ The following data is permanently deleted:
 - All refresh tokens revoked via `revokeRefreshTokens(userId)`
 
 ### Algolia Search Index
-- Reaction deletion from Firestore triggers automatic removal from Algolia during next indexing cycle
-- May take up to 5 business days to fully propagate
-- Users are informed of this delay in the UI
+- Reaction records are removed from Algolia in the same account-deletion request when the admin search key is configured
 
 ## Configuration
 

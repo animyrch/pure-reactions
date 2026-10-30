@@ -6,16 +6,16 @@
     <!-- Header -->
     <div class="mb-10 text-center md:mb-12">
       <p class="mb-3 text-sm font-medium uppercase tracking-widest text-accent-primary">
-        No copyright headaches
+        No headaches
       </p>
       <h2
         class="text-3xl font-bold leading-tight text-text-primary sm:text-4xl md:text-5xl"
-        style="font-family: var(--font-display, 'Manrope', 'Inter', sans-serif);"
+        style="font-family: var(--font-display, 'Inter', 'Helvetica Neue', Arial, sans-serif);"
       >
-        Clean separation. Zero risk.
+        Clean separation. No reuploaded content to claim.
       </h2>
       <p class="mx-auto mt-4 max-w-xl text-base text-text-secondary md:text-lg">
-        The original video is never re-uploaded or embedded in your file. It streams from its source—always.
+        The original video is never re-uploaded into your file. It streams from its source.
       </p>
     </div>
 
@@ -107,7 +107,7 @@
 
     <!-- Reassurance footnote -->
     <p class="mx-auto mt-10 max-w-lg text-center text-sm text-text-muted">
-      Since each stream lives at its source, there's nothing to claim. Your content stays yours.
+      Nothing from the original is reuploaded into your file, so Content ID has nothing from it to match.
     </p>
   </div>
 </section>

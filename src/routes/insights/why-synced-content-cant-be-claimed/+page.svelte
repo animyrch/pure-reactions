@@ -5,10 +5,10 @@
 </script>
 
 <SEO 
-  title="Why Synced Content Can't Be Claimed - Twin-Player Architecture"
-  description="Deep dive into why synchronized twin-player content is structurally unclaimable. No fair use defense needed—nothing is combined, nothing is copied."
+  title="What Content ID Sees - Twin-Player Architecture"
+  description="Your file contains none of the original. Content ID scans that file and has nothing from the original to match."
   canonical="/insights/why-synced-content-cant-be-claimed"
-  keywords="content id claims, copyright claims, youtube content id, unclaimable content, twin player architecture"
+  keywords="content id claims, copyright claims, youtube content id, separate upload, twin player architecture"
   type="article"
 />
 
@@ -18,7 +18,7 @@
     <ol class="flex items-center gap-2">
       <li><a href="/insights" class="hover:text-accent-primary transition-colors">Insights</a></li>
       <li aria-hidden="true">/</li>
-      <li class="text-text-primary">Why Synced Content Can't Be Claimed</li>
+      <li class="text-text-primary">What Content ID sees</li>
     </ol>
   </nav>
 
@@ -28,10 +28,10 @@
       Architecture
     </div>
     <h1 class="mb-6 text-4xl font-bold leading-tight text-text-primary md:text-5xl">
-      Why Synced Content Can't Be Claimed
+      What Content ID sees
     </h1>
     <p class="text-xl text-text-secondary">
-      The technical and legal explanation of why structurally separated, synchronized content is unclaimable by Content ID and copyright holders.
+      Your file contains none of the original. Content ID scans that file and has nothing from the original to match.
     </p>
   </header>
 
@@ -56,17 +56,17 @@
     <section>
       <h2 class="mb-4 text-2xl font-semibold text-text-primary">How PureReactions Changes the Game</h2>
       <p class="mb-4">
-        PureReactions eliminates the problem at the architectural level. We never combine original content with your work. Instead:
+        Pure Reactions keeps the original out of the file you upload:
       </p>
       <ol class="mb-4 ml-6 list-decimal space-y-2">
         <li><strong class="text-text-primary">You record your content separately</strong> — Use any camera, software, or workflow. Your file contains only YOUR content—zero seconds of the original.</li>
         <li><strong class="text-text-primary">We track your viewing experience</strong> — As you watch the original on our platform, we record your controls: play, pause, scrub, focus changes. This is just data, not copyrighted content.</li>
-        <li><strong class="text-text-primary">You upload to YouTube separately</strong> — Your content goes to YouTube as its own video. You own it 100%.</li>
-        <li><strong class="text-text-primary">We sync during playback</strong> — When viewers watch, their browser loads the original from YouTube and your content from YouTube, then our platform synchronizes them in real-time.</li>
+        <li><strong class="text-text-primary">You upload to YouTube separately</strong> — Your recording goes to YouTube as its own video.</li>
+        <li><strong class="text-text-primary">We sync during playback</strong> — When viewers watch, their browser loads the original from YouTube or TikTok and your content from YouTube, then our platform synchronizes them in real-time.</li>
       </ol>
       <div class="my-6 rounded-lg border border-success/30 bg-success/5 p-6">
         <p class="text-text-primary">
-          <strong>The architectural advantage:</strong> Your uploaded file contains only YOUR content. Content ID scans it, finds nothing from the original to claim, and moves on.
+          <strong>Nothing from the original to match:</strong> Content ID scans your file, finds none of the original, and moves on.
         </p>
       </div>
     </section>
@@ -83,32 +83,32 @@
         <li><strong class="text-text-primary">No original fingerprints:</strong> Zero copyrighted audio waveforms or video fingerprints from the source material</li>
       </ul>
       <p class="mb-4">
-        There's literally nothing for Content ID to match against. The system is looking for copyrighted content—and your file contains none from the original.
+        There is nothing from the original for Content ID to match.
       </p>
     </section>
 
     <section>
-      <h2 class="mb-4 text-2xl font-semibold text-text-primary">The Legal Framework</h2>
+      <h2 class="mb-4 text-2xl font-semibold text-text-primary">Where each video lives</h2>
       <p class="mb-4">
-        Beyond the technical architecture, the legal framework is clear:
+        The original and your recording stay in different places:
       </p>
       <div class="space-y-4">
         <div>
-          <h3 class="mb-2 text-xl font-medium text-text-primary">No Distribution of Copyrighted Material</h3>
+          <h3 class="mb-2 text-xl font-medium text-text-primary">The original is not in your upload</h3>
           <p>
-            Copyright law protects the right to distribute copies of a work. With PureReactions, you're not distributing any copy of the original work—you're linking to where it already exists legally on YouTube.
+            The original plays from YouTube or TikTok through the official player. Pure Reactions stores the link and the sync timings. It does not upload that video.
           </p>
         </div>
         <div>
-          <h3 class="mb-2 text-xl font-medium text-text-primary">No Reproduction</h3>
+          <h3 class="mb-2 text-xl font-medium text-text-primary">Your file is your recording</h3>
           <p>
-            You're not reproducing the original work in any form. Your video file is entirely your own creation, which happens to be viewed alongside someone else's legally hosted content.
+            The file you upload is your voice, your image, and your edit.
           </p>
         </div>
         <div>
-          <h3 class="mb-2 text-xl font-medium text-text-primary">No Fair Use Defense Needed</h3>
+          <h3 class="mb-2 text-xl font-medium text-text-primary">The original plays from its host</h3>
           <p>
-            Traditional creators rely on fair use as a defense—meaning they admit to using copyrighted material but argue it's legally permissible. With PureReactions, there's nothing to defend because nothing is copied.
+            The synced page loads the official YouTube or TikTok player. Whoever published that video controls whether it stays public and whether embedding stays on.
           </p>
         </div>
       </div>
@@ -120,19 +120,19 @@
         <div class="rounded-lg bg-surface p-6">
           <h3 class="mb-3 text-lg font-medium text-text-primary">✓ React to Music Videos</h3>
           <p>
-            Music labels are notoriously aggressive with Content ID. With PureReactions, their audio never enters your file, so their claims never trigger.
+            Their audio never enters your file. Content ID has nothing from that track to match.
           </p>
         </div>
         <div class="rounded-lg bg-surface p-6">
           <h3 class="mb-3 text-lg font-medium text-text-primary">✓ Translate Global Content</h3>
           <p>
-            Provide translations for foreign language content. Your translated audio stays separate, avoiding any claims on the original language track.
+            Your translated audio stays in your file. The original language track stays on the host. Content ID has nothing from that track to match.
           </p>
         </div>
         <div class="rounded-lg bg-surface p-6">
           <h3 class="mb-3 text-lg font-medium text-text-primary">✓ Add Educational Commentary</h3>
           <p>
-            Provide expert analysis or educational voiceovers. Your expertise is separate, your monetization is secure.
+            Your commentary stays in your file. The original stays on the host. Content ID has nothing from that original to match.
           </p>
         </div>
       </div>
@@ -158,17 +158,17 @@
             <tr class="border-b border-border-subtle">
               <td class="p-4 font-medium text-text-primary">Content ID Risk</td>
               <td class="p-4 text-danger">Automatic claims</td>
-              <td class="p-4 text-success">Nothing to claim</td>
+              <td class="p-4 text-success">Nothing from the original to match</td>
             </tr>
             <tr class="border-b border-border-subtle">
               <td class="p-4 font-medium text-text-primary">Monetization</td>
               <td class="p-4 text-danger">Shared or blocked</td>
-              <td class="p-4 text-success">100% yours</td>
+              <td class="p-4 text-success">Follows your own upload</td>
             </tr>
             <tr class="border-b border-border-subtle">
-              <td class="p-4 font-medium text-text-primary">Legal Defense</td>
-              <td class="p-4 text-warning">Fair use required</td>
-              <td class="p-4 text-success">No defense needed</td>
+              <td class="p-4 font-medium text-text-primary">Original inside your file</td>
+              <td class="p-4 text-warning">Yes</td>
+              <td class="p-4 text-success">None</td>
             </tr>
             <tr class="border-b border-border-subtle">
               <td class="p-4 font-medium text-text-primary">Viewing Experience</td>
@@ -183,10 +183,10 @@
     <section>
       <h2 class="mb-4 text-2xl font-semibold text-text-primary">The Bottom Line</h2>
       <p class="mb-4 text-lg">
-        Synchronized twin-player content can't be claimed because it doesn't contain claimable content. It's not a legal loophole or clever interpretation—it's fundamental architectural design that respects copyright while enabling creative freedom.
+        Your file contains none of the original. Content ID scans that file and has nothing from the original to match. The synced page plays the original from YouTube or TikTok, next to your recording.
       </p>
       <p class="text-lg">
-        You own your content. The original creator owns theirs. PureReactions keeps them separate during distribution and syncs them during playback, protecting both parties.
+        Whoever published the original controls that video. They can make it private, turn embedding off, or leave it public. Your recording stays on your channel.
       </p>
     </section>
 

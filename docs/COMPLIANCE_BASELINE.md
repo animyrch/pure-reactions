@@ -9,7 +9,7 @@ Penalty figures below are the statutory maximums named in the review request. Th
 - The bar is the stricter of a French establishment and US-user rules. Terms already choose French law. The live site is `https://purereactions.com`.
 - Signup blocks anyone under 15. That covers COPPA's under-13 line and France's digital-consent age of 15. Store a confirmation timestamp only. Do not collect a birth date.
 - Do not build a marketing-email program or a subscription program. Make the email and billing behavior that already exists conform.
-- Self-host Manrope and Inter. Remove the service worker's Google Fonts cache rules.
+- Self-host Inter. Remove the service worker's Google Fonts cache rules.
 - The public contact stays the existing addresses: `purereactions.app+privacy@gmail.com` and `purereactions.app+copyright@gmail.com`. Do not publish a personal name, postal address, or phone number.
 - The app does not upload or host video. Originals and reactions play through the official YouTube and TikTok embeds. The copyright minimum is to say that on the copyright page, keep the copyright email, and remove absolute risk claims. Registering a DMCA agent is optional and later.
 
@@ -24,7 +24,7 @@ The email pull request still needs one check in the Firebase console: the verifi
 | # | Topic | Current situation | Minimal requirement | Proposed PR |
 | --- | --- | --- | --- | --- |
 | 1 | Age | Signup collects email and password only | Block under 15 before the account exists. Confirm existing users once. Keep export and deletion available. | `compliance-age-gate` |
-| 2 | Fonts | Named faces are not loaded. The live service worker still caches Google Fonts hosts. | Self-host Manrope and Inter. Delete those cache rules. | `compliance-self-host-fonts` |
+| 2 | Fonts | Named faces are not loaded. The live service worker still caches Google Fonts hosts. | Self-host Inter. Delete those cache rules. | `compliance-self-host-fonts` |
 | 3 | Session replay | No replay tool is installed | Leave it that way. Do not add one. | None. Covered by the analytics consent PR for what GA actually does. |
 | 4 | Email | One transactional verification email. No list, no campaign. | Keep that email transactional. Do not add a campaign. | `compliance-transactional-email` (console check plus a short policy sentence) |
 | 5 | Subscriptions | No checkout. A public article says native tipping and subscriptions are coming soon. The repo license forbids commercial use. | Do not add billing. Remove the coming-soon claim. Fix the license page so it matches `LICENSE`. | `compliance-license-and-claims` |
@@ -86,11 +86,11 @@ The Munich court case about Google Fonts concerned the browser contacting Google
 
 ### Minimal requirement
 
-- Self-host Manrope and Inter as `.woff2` files under `static/fonts/`.
-- Declare them with `@font-face` from the site origin. Set `font-display: swap`.
-- Point `--font-display` and the body font family at those faces, then the existing Helvetica/Arial fallbacks.
+- Self-host Inter as a `.woff2` file under `static/fonts/`. Landing titles use the same face. Do not ship a second family.
+- Declare it with `@font-face` from the site origin. Set `font-display: swap`.
+- Point `--font-body` and `--font-display` at Inter, then the existing Helvetica/Arial fallbacks.
 - Remove both Google Fonts `runtimeCaching` entries from `vite.config.js`.
-- Keep the SIL Open Font License text beside the font files. Manrope and Inter allow self-hosting under that license.
+- Keep the SIL Open Font License text beside the font file. Inter allows self-hosting under that license.
 - After deploy, the homepage, a reaction page, and `sw.js` should contain no `fonts.googleapis.com` or `fonts.gstatic.com` URL.
 
 ### Out of scope
@@ -183,8 +183,8 @@ The DMCA storage safe harbor, the $6 designated-agent registration, and statutor
 ### Minimal requirement
 
 - On `/copyright`, state the product model in plain language: Pure Reactions does not upload or host the original or the reaction. Both play from YouTube or TikTok through those platforms' official embeds. The app stores the link and the sync timings.
-- Keep `purereactions.app+copyright@gmail.com` as the contact. Do not add an agent name, postal address, or phone.
-- A rightsholder who wants a reaction page removed uses that email. Taking the page down is the existing deletion of the reaction record. Do not build a notice log, a counter-notice flow, or a separate unpublish tool.
+- Keep `purereactions.app+copyright@gmail.com` as a contact for questions. Do not add an agent name, postal address, or phone.
+- Say that the video stays on YouTube or TikTok, under the control of whoever published it. They can make it private, turn embedding off, or ask that platform to remove an unauthorized upload. Do not offer the copyright email as a way to have a reaction page deleted. Do not build a notice log, a counter-notice flow, or a separate unpublish tool.
 - Remove the absolute risk lines on the homepage. The replacement describes the embed model. It does not say the copyright risk is zero. That copy lands in `compliance-license-and-claims` with the license-page fix.
 
 ### Out of scope
@@ -233,7 +233,7 @@ Privacy consent PR:
 - Remove the sentence that makes users responsible for GDPR and CCPA compliance.
 - Disclose YouTube API Services use and link to `https://policies.google.com/privacy`.
 - Do not add a mentions légales page in this stack. A professional French publisher notice would publish a name and street address. That notice is optional and later, same as the DMCA agent.
-- Describe retention in concrete terms: account data for the life of the account; deleted account data removed as part of the deletion request; analytics data under Google's retention setting, which should be set to the shortest period the property allows; security logs for no more than 12 months where the host allows that setting.
+- Describe retention in concrete terms: account data for the life of the account; deleted account data removed as part of the deletion request; Google Analytics event data and user data for 14 months, which is the property setting; security and hosting logs for the default period of the service that stores them, because this project does not set its own period.
 
 Erasure PR:
 
@@ -268,11 +268,11 @@ Minimal requirement: rewrite `/open-source` so it describes CC BY-NC 4.0, links 
 
 The live homepage says "Copyright-safe. Always.", "No copyright headaches", and "Clean separation. Zero risk."
 
-Minimal requirement: replace those lines with the embed model from section 6. Both videos stay on YouTube or TikTok and play through the official embeds. Do not claim that copyright risk is zero. Include this in `compliance-license-and-claims` with the copyright-page wording.
+Minimal requirement: replace those lines with the embed model from section 6. Both videos stay on YouTube or TikTok and play through the official embeds. Do not claim that copyright risk is zero. The insight articles, the footer, and the default page description may say, definitively, that the uploaded file contains none of the original and that Content ID has nothing from that original to match. They do not say the synced page is legally risk-free or unclaimable in court. Include this in `compliance-license-and-claims` with the copyright-page wording.
 
 ### Removal requests
 
-Rightsholder mail already goes to `purereactions.app+copyright@gmail.com`. Terms already tell people not to infringe. Deleting the reaction record removes the link and the sync data.
+The copyright page explains that playback stops when the host stops serving the video. The copyright email stays as a contact for questions. It is not a promise to delete a reaction page.
 
 Do not add a registered agent, a counter-notice flow, or a moderation product in this stack. A transparency report, if one is ever owed, stays an operational task outside the app.
 
@@ -284,9 +284,9 @@ Do not add a registered agent, a counter-notice flow, or a moderation product in
 
 ## Verification for each later PR
 
-- Fonts: load the homepage and a reaction page, confirm Manrope or Inter comes from the site origin, and confirm `sw.js` has no Google Fonts host.
+- Fonts: load the homepage and a reaction page, confirm Inter comes from the site origin, confirm Manrope is not requested, and confirm `sw.js` has no Google Fonts host.
 - Age gate: signup with the checkbox off does not create a Firebase user. Signup with the checkbox on writes `ageConfirmedAt` and no birth date. An existing user without the flag can still export and delete.
 - Analytics: with Reject, no request to `googletagmanager.com`. With Accept, page views still arrive. Login still works in both states.
 - Erasure: the regression test above, plus an Algolia get that misses the deleted reaction ids.
-- License and claims: `/open-source` matches `LICENSE`. `/copyright` describes the embed model and still shows only the copyright email. The homepage and the monetization article no longer promise zero copyright risk or native subscriptions.
+- License and claims: `/open-source` matches `LICENSE`. `/copyright` describes the embed model, says the host controls the video, and does not offer to delete a reaction page. The homepage and the monetization article no longer promise zero copyright risk or native subscriptions.
 - Email: the PR records the Firebase template check. No new send is added.

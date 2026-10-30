@@ -4,6 +4,8 @@
   export let data;
 
   let email = '';
+  let isOldEnough = false;
+  let acceptedTerms = false;
   let password = '';
   let isSignUp = false;
   let passwordRulesWithStatus = [];
@@ -152,7 +154,7 @@
   }));
   $: unmetPasswordRules = passwordRulesWithStatus.filter((rule) => !rule.satisfied);
   $: isPasswordValid = unmetPasswordRules.length === 0;
-  $: canSubmitSignUp = Boolean(email) && isPasswordValid;
+  $: canSubmitSignUp = Boolean(email) && isPasswordValid && isOldEnough && acceptedTerms;
 </script>
 
 <div class="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
@@ -228,6 +230,17 @@
             </div>
           {/if}
         </div>
+      </div>
+      <div class="mb-4 space-y-3 text-sm text-gray-700">
+        <p>People under 15 can't create an account.</p>
+        <label class="flex items-start gap-2">
+          <input type="checkbox" bind:checked={isOldEnough} disabled={isSubmitting} />
+          <span>I am 15 or older.</span>
+        </label>
+        <label class="flex items-start gap-2">
+          <input type="checkbox" bind:checked={acceptedTerms} disabled={isSubmitting} />
+          <span>I have read the <a class="text-blue-600 underline" href="/terms">Terms</a> and the <a class="text-blue-600 underline" href="/privacy">Privacy Policy</a>.</span>
+        </label>
       </div>
       <button
         type="submit"

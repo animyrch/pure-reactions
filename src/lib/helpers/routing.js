@@ -11,6 +11,10 @@ export function setLogoutRedirectInProgress(value) {
     logoutRedirectInProgress = value;
 }
 
+export function isLogoutRedirectInProgress() {
+    return logoutRedirectInProgress;
+}
+
 function buildVerificationRoute() {
     if (!browser) {
         return '/account/verify';

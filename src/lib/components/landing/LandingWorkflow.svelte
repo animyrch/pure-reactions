@@ -27,7 +27,7 @@
     "@context": "https://schema.org",
     "@type": "HowTo",
     "name": "How to create synchronized reaction and commentary videos with Pure Reactions",
-    "description": "Record reaction, commentary, translation or voiceover videos synchronized with the original source. Your recording stays copyright-safe on your own channel.",
+    "description": "Record reaction, commentary, translation, or voiceover videos, then play them in sync with the original. Both stay on their own platforms and load through official embeds.",
     "step": [
       {
         "@type": "HowToStep",
@@ -72,7 +72,7 @@
       </p>
       <h2
         class="text-3xl font-bold leading-tight text-text-primary sm:text-4xl md:text-5xl"
-        style="font-family: var(--font-display, 'Manrope', 'Inter', sans-serif);"
+        style="font-family: var(--font-display, 'Inter', 'Helvetica Neue', Arial, sans-serif);"
       >
         Simple by design
       </h2>

@@ -1,5 +1,6 @@
 <script>
     import { onMount } from 'svelte';
+    import { goto } from '$app/navigation';
     import { onAuthStateChanged } from 'firebase/auth';
     import { env } from '$env/dynamic/public';
     import {
@@ -12,6 +13,7 @@
         getUserExtraData,
         updateTwitchChannelForUser
     } from '$lib/helpers/firebase';
+    import { ensureAgeConfirmed } from '$lib/helpers/ageConfirmation';
     import { showToast } from '$lib/stores/toast';
     import { TOASTS } from '$lib/constants/toasts';
     import CinematicButton from '$lib/components/design-system/CinematicButton.svelte';
@@ -123,6 +125,11 @@
         }
 
         user = auth.currentUser || nextUser;
+        const allowed = await ensureAgeConfirmed(user.uid);
+        if (!allowed) {
+          await goto('/account');
+          return;
+        }
         newName = user?.displayName || '';
         syncPendingEmail(user);
         newEmail = pendingEmail || user?.email || '';

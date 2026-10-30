@@ -74,11 +74,12 @@
         const userId = $page.data?.userId;
         
         try {
-            await updateQueueDocument({
+            const updated = await updateQueueDocument({
                 slug: queueDefinition.id,
                 isPublished: newState,
                 userId
             });
+            if (!updated) return;
             isPublished = newState;
             if (queueDefinition?.data) queueDefinition.data.isPublished = newState;
         } catch (error) {
