@@ -3,6 +3,7 @@ import { get } from 'svelte/store';
 import {
 	ANALYTICS_CONSENT_KEY,
 	analyticsConsent,
+	loadAnalyticsConsent,
 	readStoredAnalyticsConsent,
 	storeAnalyticsConsent
 } from '../../src/lib/helpers/analyticsConsent.js';
@@ -39,5 +40,18 @@ describe('analytics consent', () => {
 		expect(get(analyticsConsent)).toBe('reject');
 		storeAnalyticsConsent('accept');
 		expect(get(analyticsConsent)).toBe('accept');
+	});
+
+	it('reloads the stored choice into the store', () => {
+		installLocalStorage();
+		localStorage.setItem(ANALYTICS_CONSENT_KEY, 'reject');
+		loadAnalyticsConsent();
+		expect(get(analyticsConsent)).toBe('reject');
+		localStorage.setItem(ANALYTICS_CONSENT_KEY, 'accept');
+		loadAnalyticsConsent();
+		expect(get(analyticsConsent)).toBe('accept');
+		localStorage.removeItem(ANALYTICS_CONSENT_KEY);
+		loadAnalyticsConsent();
+		expect(get(analyticsConsent)).toBeNull();
 	});
 });

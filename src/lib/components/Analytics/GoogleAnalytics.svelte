@@ -1,8 +1,13 @@
 <script>
+    import { onMount } from "svelte";
     import { browser, dev } from "$app/environment";
     import { page } from "$app/stores";
     import { env } from "$env/dynamic/public";
-    import { analyticsConsent } from "$lib/helpers/analyticsConsent";
+    import {
+        ANALYTICS_CONSENT_KEY,
+        analyticsConsent,
+        loadAnalyticsConsent,
+    } from "$lib/helpers/analyticsConsent";
 
     // Use dynamic public env to ensure it's picked up on Netlify
     const GA_MEASUREMENT_ID = env.PUBLIC_GA_MEASUREMENT_ID;
@@ -20,6 +25,8 @@
         ) {
             return;
         }
+
+        if ($analyticsConsent !== "accept") return;
 
         if (typeof window.gtag === "function") {
             console.log(`[GA] Tracking page view: ${path}`);
@@ -50,6 +57,7 @@
         }
 
         started = true;
+        setAnalyticsTagDisabled(false);
 
         // Initialize GA script
         const script = document.createElement("script");
@@ -79,11 +87,27 @@
         console.log("[GA] gtag initialized");
     }
 
+    function setAnalyticsTagDisabled(disabled) {
+        if (!browser || !GA_MEASUREMENT_ID || GA_MEASUREMENT_ID === "G-PLACEHOLDER") return;
+        window[`ga-disable-${GA_MEASUREMENT_ID}`] = disabled;
+    }
+
+    onMount(() => {
+        const onStorage = (event) => {
+            if (event.key !== ANALYTICS_CONSENT_KEY) return;
+            loadAnalyticsConsent();
+        };
+        window.addEventListener("storage", onStorage);
+        return () => window.removeEventListener("storage", onStorage);
+    });
+
+    $: setAnalyticsTagDisabled($analyticsConsent !== "accept");
+
     $: if ($analyticsConsent === "accept") {
         startAnalytics();
     }
 
-    $: if ($page.url.pathname && started) {
+    $: if ($page.url.pathname && started && $analyticsConsent === "accept") {
         trackPageView($page.url.pathname);
     }
 </script>
