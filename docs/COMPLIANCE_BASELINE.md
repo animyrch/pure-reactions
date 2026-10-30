@@ -233,7 +233,7 @@ Privacy consent PR:
 - Remove the sentence that makes users responsible for GDPR and CCPA compliance.
 - Disclose YouTube API Services use and link to `https://policies.google.com/privacy`.
 - Do not add a mentions légales page in this stack. A professional French publisher notice would publish a name and street address. That notice is optional and later, same as the DMCA agent.
-- Describe retention in concrete terms: account data for the life of the account; deleted account data removed as part of the deletion request; analytics data under Google's retention setting, which should be set to the shortest period the property allows; security logs for no more than 12 months where the host allows that setting.
+- Describe retention in concrete terms: account data for the life of the account; deleted account data removed as part of the deletion request; Google Analytics event data and user data for 14 months, which is the property setting; security and hosting logs for the default period of the service that stores them, because this project does not set its own period.
 
 Erasure PR:
 
