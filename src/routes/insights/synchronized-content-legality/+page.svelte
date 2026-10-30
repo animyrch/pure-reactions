@@ -359,7 +359,7 @@
         <h4
           class="mb-2 font-medium text-text-primary group-hover:text-accent-primary transition-colors"
         >
-          Why Synced Content Can't Be Claimed →
+          What Content ID sees →
         </h4>
         <p class="text-sm text-text-secondary">
           The technical explanation of why Content ID can't claim synchronized

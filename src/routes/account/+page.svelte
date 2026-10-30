@@ -8,7 +8,7 @@
       reauthenticateWithPopup
     } from 'firebase/auth';
     import { auth } from '$lib/helpers/firebase';
-    import { handlePrivateRoute } from '$lib/helpers/routing';
+    import { handlePrivateRoute, isLogoutRedirectInProgress } from '$lib/helpers/routing';
     import { isLoggedIn, currentUser } from '$lib/stores/user';
     import { onAuthStateChanged } from 'firebase/auth';
     import { Button, Modal } from 'flowbite-svelte';
@@ -22,7 +22,7 @@
       // Ensure the user is signed in
       const unsubscribe = onAuthStateChanged(auth, (u) => {
         user = u;
-        if (!u && browser) {
+        if (!u && browser && !isLogoutRedirectInProgress()) {
           handlePrivateRoute();
         }
       });

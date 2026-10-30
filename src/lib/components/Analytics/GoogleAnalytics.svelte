@@ -1,8 +1,8 @@
 <script>
     import { browser, dev } from "$app/environment";
     import { page } from "$app/stores";
-    import { onMount } from "svelte";
     import { env } from "$env/dynamic/public";
+    import { analyticsConsent } from "$lib/helpers/analyticsConsent";
 
     // Use dynamic public env to ensure it's picked up on Netlify
     const GA_MEASUREMENT_ID = env.PUBLIC_GA_MEASUREMENT_ID;
@@ -31,15 +31,11 @@
         }
     }
 
-    // Watch for page changes
-    $: if ($page.url.pathname) {
-        trackPageView($page.url.pathname);
-    }
+    let started = false;
 
-    onMount(() => {
-        console.log("[GA] Component mounted");
-        console.log("[GA] Environment:", dev ? "development" : "production");
-        console.log("[GA] Measurement ID:", GA_MEASUREMENT_ID);
+    function startAnalytics() {
+        if (started || !browser) return;
+        if ($analyticsConsent !== "accept") return;
 
         if (dev) {
             console.info("[GA] Disabled in development mode.");
@@ -52,6 +48,8 @@
             );
             return;
         }
+
+        started = true;
 
         // Initialize GA script
         const script = document.createElement("script");
@@ -79,5 +77,13 @@
         gtag("config", GA_MEASUREMENT_ID);
 
         console.log("[GA] gtag initialized");
-    });
+    }
+
+    $: if ($analyticsConsent === "accept") {
+        startAnalytics();
+    }
+
+    $: if ($page.url.pathname && started) {
+        trackPageView($page.url.pathname);
+    }
 </script>
