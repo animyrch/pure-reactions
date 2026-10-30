@@ -82,8 +82,8 @@
       <ul class="ml-6 list-disc space-y-2">
         <li>Account data and the content tied to it stay for the life of the account.</li>
         <li>A deletion request removes that data as part of the request. Search records are removed in the same request.</li>
-        <li>Google Analytics retention should be set to the shortest period the property allows.</li>
-        <li>Security logs are kept no longer than 12 months where the host allows that setting.</li>
+        <li>Google Analytics keeps event data and user data for 14 months.</li>
+        <li>Security and hosting logs are kept for the default retention period of the service that stores them. This project does not set a different period.</li>
       </ul>
     </section>
 
