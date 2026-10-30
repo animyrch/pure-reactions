@@ -21,6 +21,16 @@
 
   <div class="prose-custom space-y-8 text-text-secondary">
     <section>
+      <h2 class="mb-4 text-2xl font-semibold text-text-primary">Where the videos live</h2>
+      <p class="mb-4">
+        Pure Reactions does not upload or host the original video or the reaction video. Both stay on YouTube or TikTok and play through those platforms' official embeds.
+      </p>
+      <p>
+        What this site stores is the link and the sync timings, plus titles and playlists you write here. The video itself stays on YouTube or TikTok, under the control of whoever published it.
+      </p>
+    </section>
+
+    <section>
       <h2 class="mb-4 text-2xl font-semibold text-text-primary">Ownership of Content</h2>
       <p class="mb-4">
         All copyrights, trademarks, and other intellectual property rights in original videos, audio, images, or other media remain the property of their respective owners.

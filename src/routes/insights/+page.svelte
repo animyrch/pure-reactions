@@ -4,9 +4,9 @@
 
 <SEO 
   title="Insights - Synchronized Video Architecture & Creative Freedom"
-  description="Deep dives into how synchronized twin-player architecture eliminates copyright anxiety, enables safe monetization, and gives creators complete freedom for any synchronized content."
+  description="Your file contains none of the original. Content ID scans that file and has nothing from the original to match."
   canonical="/insights"
-  keywords="synchronized video insights, copyright free video sync, creator monetization, twin player architecture"
+  keywords="synchronized video insights, official embeds, creator monetization, twin player architecture"
 />
 
 <div class="container mx-auto max-w-5xl px-4 py-12 md:py-20">
@@ -32,10 +32,10 @@
         Architecture
       </div>
       <h2 class="mb-3 text-xl font-semibold text-text-primary group-hover:text-accent-primary transition-colors">
-        Why Synced Content Can't Be Claimed
+        What Content ID sees
       </h2>
       <p class="mb-4 text-text-secondary">
-        The technical and legal explanation of why structurally separated content is unclaimable by Content ID and copyright holders.
+        Your file contains none of the original. Content ID has nothing from it to match.
       </p>
       <span class="inline-flex items-center gap-2 text-sm text-accent-primary">
         Read article
@@ -55,7 +55,7 @@
         Monetization Safety Guide
       </h2>
       <p class="mb-4 text-text-secondary">
-        How to safely monetize your synchronized content without revenue sharing or legal complexity. Your content, your income.
+        Your upload contains your recording. Content ID has nothing from the original to match in that file.
       </p>
       <span class="inline-flex items-center gap-2 text-sm text-accent-primary">
         Read article
@@ -75,7 +75,7 @@
         Synchronized Content Legality
       </h2>
       <p class="mb-4 text-text-secondary">
-        Understanding the legal framework of synchronized video content, fair use doctrine, and why separation eliminates the complexity.
+        How the original and your recording stay in separate files, and how the original plays from its host.
       </p>
       <span class="inline-flex items-center gap-2 text-sm text-accent-primary">
         Read article

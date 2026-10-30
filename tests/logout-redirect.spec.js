@@ -17,14 +17,11 @@ test('logout from account returns to the home page', async ({ page }) => {
     await expect(page).toHaveURL(/\/account\/verify/, { timeout: 20000 });
 
     await page.goto('/account');
+    await page.locator('html[data-hydrated]').waitFor({ state: 'attached', timeout: 15000 });
     const logoutButton = page.getByRole('button', { name: 'Logout' });
     await expect(logoutButton).toBeVisible({ timeout: 15000 });
-    await expect(async () => {
-        await logoutButton.click();
-        await expect(page).toHaveURL(/\/$/, { timeout: 2000 });
-    }).toPass({ timeout: 20000 });
-
-    await expect(page).toHaveURL(/\/$/, { timeout: 15000 });
+    await logoutButton.click();
+    await expect(page).toHaveURL(/\/$/, { timeout: 20000 });
     await expect(page).not.toHaveURL(/login/);
     await expect(page.getByText('You have been logged out successfully')).toBeVisible();
     await expect(page.getByText('You need to login to do this action!')).toHaveCount(0);

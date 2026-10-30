@@ -78,7 +78,7 @@
             </li>
             <li>
               <a href="/insights/why-synced-content-cant-be-claimed" class="text-text-secondary transition-colors hover:text-accent-primary">
-                Why It Can't Be Claimed
+                What Content ID sees
               </a>
             </li>
             <li>
