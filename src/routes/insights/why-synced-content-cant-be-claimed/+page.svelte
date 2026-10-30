@@ -6,7 +6,7 @@
 
 <SEO 
   title="What Content ID Sees - Twin-Player Architecture"
-  description="Your file contains none of the original. Content ID scans that file and has nothing from the original to match."
+  description="Leave the original out of the file you upload. Sync does not remove original audio or video. Content ID scans that file."
   canonical="/insights/why-synced-content-cant-be-claimed"
   keywords="content id claims, copyright claims, youtube content id, separate upload, twin player architecture"
   type="article"
@@ -31,7 +31,7 @@
       What Content ID sees
     </h1>
     <p class="text-xl text-text-secondary">
-      Your file contains none of the original. Content ID scans that file and has nothing from the original to match.
+      Leave the original out of the file you upload. Sync does not remove original audio or video. Content ID scans that file.
     </p>
   </header>
 
@@ -56,17 +56,17 @@
     <section>
       <h2 class="mb-4 text-2xl font-semibold text-text-primary">How PureReactions Changes the Game</h2>
       <p class="mb-4">
-        Pure Reactions keeps the original out of the file you upload:
+        Synchronization does not remove original audio or video from a recording. Leave the original out of the file you upload:
       </p>
       <ol class="mb-4 ml-6 list-decimal space-y-2">
-        <li><strong class="text-text-primary">You record your content separately</strong> — Use any camera, software, or workflow. Your file contains only YOUR content—zero seconds of the original.</li>
+        <li><strong class="text-text-primary">You record your content separately</strong> — Use any camera, software, or workflow. Leave the original out of that recording. Sync does not remove it later.</li>
         <li><strong class="text-text-primary">We track your viewing experience</strong> — As you watch the original on our platform, we record your controls: play, pause, scrub, focus changes. This is just data, not copyrighted content.</li>
         <li><strong class="text-text-primary">You upload to YouTube separately</strong> — Your recording goes to YouTube as its own video.</li>
         <li><strong class="text-text-primary">We sync during playback</strong> — When viewers watch, their browser loads the original from YouTube or TikTok and your content from YouTube, then our platform synchronizes them in real-time.</li>
       </ol>
       <div class="my-6 rounded-lg border border-success/30 bg-success/5 p-6">
         <p class="text-text-primary">
-          <strong>Nothing from the original to match:</strong> Content ID scans your file, finds none of the original, and moves on.
+          <strong>Nothing from the original to match:</strong> When the original stays out of the file you upload, Content ID scans that file, finds none of it, and moves on.
         </p>
       </div>
     </section>
@@ -74,7 +74,7 @@
     <section>
       <h2 class="mb-4 text-2xl font-semibold text-text-primary">What Content ID Actually Sees</h2>
       <p class="mb-4">
-        When you upload your synchronized content to YouTube:
+        When the original stays out of the file you upload, this is what Content ID sees:
       </p>
       <ul class="mb-4 ml-6 list-disc space-y-2">
         <li><strong class="text-text-primary">Audio:</strong> Only your voice, music, or sounds you created</li>
@@ -83,7 +83,7 @@
         <li><strong class="text-text-primary">No original fingerprints:</strong> Zero copyrighted audio waveforms or video fingerprints from the source material</li>
       </ul>
       <p class="mb-4">
-        There is nothing from the original for Content ID to match.
+        There is then nothing from the original for Content ID to match.
       </p>
     </section>
 
@@ -120,19 +120,19 @@
         <div class="rounded-lg bg-surface p-6">
           <h3 class="mb-3 text-lg font-medium text-text-primary">✓ React to Music Videos</h3>
           <p>
-            Their audio never enters your file. Content ID has nothing from that track to match.
+            Leave their audio out of your file. Sync does not remove it. Content ID then has nothing from that track to match.
           </p>
         </div>
         <div class="rounded-lg bg-surface p-6">
           <h3 class="mb-3 text-lg font-medium text-text-primary">✓ Translate Global Content</h3>
           <p>
-            Your translated audio stays in your file. The original language track stays on the host. Content ID has nothing from that track to match.
+            Leave the original language track out of your file. Sync does not remove it. It stays on the host, and Content ID then has nothing from that track to match.
           </p>
         </div>
         <div class="rounded-lg bg-surface p-6">
           <h3 class="mb-3 text-lg font-medium text-text-primary">✓ Add Educational Commentary</h3>
           <p>
-            Your commentary stays in your file. The original stays on the host. Content ID has nothing from that original to match.
+            Leave the original out of your file. Sync does not remove it. It stays on the host, and Content ID then has nothing from it to match.
           </p>
         </div>
       </div>
@@ -183,7 +183,7 @@
     <section>
       <h2 class="mb-4 text-2xl font-semibold text-text-primary">The Bottom Line</h2>
       <p class="mb-4 text-lg">
-        Your file contains none of the original. Content ID scans that file and has nothing from the original to match. The synced page plays the original from YouTube or TikTok, next to your recording.
+        Leave the original out of the file you upload. Sync does not remove original audio or video. Content ID scans that file. The synced page plays the original from YouTube or TikTok, next to your recording.
       </p>
       <p class="text-lg">
         Whoever published the original controls that video. They can make it private, turn embedding off, or leave it public. Your recording stays on your channel.

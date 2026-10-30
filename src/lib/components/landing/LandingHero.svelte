@@ -69,8 +69,9 @@
     <p
       class="mx-auto mb-10 max-w-2xl text-lg leading-relaxed text-text-secondary md:text-xl"
     >
-      A creator tool that separates your recording from the original video—perfectly
-      synchronized, with nothing reuploaded, and ready to share.
+      A creator tool that plays your recording beside the original, synchronized and
+      ready to share. Sync does not remove original audio or video. Leave it out of
+      the file you upload.
     </p>
 
     <!-- CTA -->

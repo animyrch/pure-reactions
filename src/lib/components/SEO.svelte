@@ -1,6 +1,6 @@
 <script>
   export let title = "Pure Reactions";
-  export let description = "Your recording contains none of the original. Content ID has nothing from the original to match. Both play from their own platforms.";
+  export let description = "Leave the original out of the file you upload. Sync does not remove original audio or video. Content ID scans that file.";
   export let canonical = "";
   export let type = "website";
   export let image = "/icon-512.png";

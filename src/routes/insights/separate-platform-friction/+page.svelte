@@ -143,7 +143,7 @@
         Use your unlisted video as the reaction source when creating a Pure Reactions experience. The platform will pair it with the original content from YouTube, generating a synchronized twin-player experience your audience can watch together.
       </p>
       <p class="mb-4">
-        Because the unlisted video contains only your content — no original audio, no original video — it passes Content ID scanning cleanly and can be used by Pure Reactions without any claims.
+        Leave original audio and video out of that unlisted file. Sync does not remove them. Content ID then scans a file that has nothing from the original to match.
       </p>
       <p class="mb-4">
         You will also need to add the original video's playback controls — moments where the original is paused, muted, or resumed — to the reaction experience. This is where the fine-tune editor comes in.
@@ -345,7 +345,7 @@
           What Content ID sees →
         </h4>
         <p class="text-sm text-text-secondary">
-          Your unlisted file contains none of the original. Content ID has nothing from it to match.
+          Leave the original out of the unlisted file you upload. Sync does not remove it. Content ID scans that file.
         </p>
       </a>
     </div>

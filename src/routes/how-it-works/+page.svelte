@@ -7,7 +7,7 @@
 
 <SEO
   title="How It Works - Synchronized Twin-Player Architecture"
-  description="Discover how PureReactions synchronizes any content with original videos. Record separately, track your viewing, sync perfectly. Reactions, translations, voiceovers—all without the original in your file."
+  description="Discover how PureReactions synchronizes any content with original videos. Record separately, track your viewing, sync perfectly. Leave the original out of the file you upload. Sync does not remove it."
   canonical="/how-it-works"
   keywords="synchronized video player, twin player architecture, how sync works, official embeds, reaction platform"
 />
@@ -211,8 +211,8 @@
             No Content ID Claims
           </h3>
           <p class="text-text-secondary">
-            Your content file contains zero seconds of the original video.
-            Content ID has nothing to detect or claim. Your monetization stays
+            Leave the original out of the file you upload. Sync does not remove
+            it. Content ID then has nothing from it to match. Your monetization stays
             yours.
           </p>
         </div>
@@ -282,8 +282,8 @@
       Want the Technical Details?
     </h3>
     <p class="mb-6 text-text-secondary">
-      Your file contains none of the original. Content ID scans that file and
-      has nothing from the original to match. The original plays from its host.
+      Leave the original out of the file you upload. Sync does not remove original
+      audio or video. Content ID scans that file. The original plays from its host.
     </p>
     <a
       href="/insights/why-synced-content-cant-be-claimed"

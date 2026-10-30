@@ -15,7 +15,7 @@
         Clean separation. No reuploaded content to claim.
       </h2>
       <p class="mx-auto mt-4 max-w-xl text-base text-text-secondary md:text-lg">
-        The original video is never re-uploaded into your file. It streams from its source.
+        The original streams from its source. Sync does not remove it from your recording. Leave it out of the file you upload.
       </p>
     </div>
 
@@ -87,7 +87,7 @@
             <svg class="mt-0.5 h-4 w-4 shrink-0 text-success/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            No copyrighted content in your file
+            Leave the original out of the file you upload
           </li>
           <li class="flex items-start gap-2 text-sm text-text-secondary">
             <svg class="mt-0.5 h-4 w-4 shrink-0 text-success/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -107,7 +107,7 @@
 
     <!-- Reassurance footnote -->
     <p class="mx-auto mt-10 max-w-lg text-center text-sm text-text-muted">
-      Nothing from the original is reuploaded into your file, so Content ID has nothing from it to match.
+      Leave the original out of the file you upload. Sync does not remove it. Content ID then has nothing from it to match.
     </p>
   </div>
 </section>

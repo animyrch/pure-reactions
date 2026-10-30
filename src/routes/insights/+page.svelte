@@ -4,7 +4,7 @@
 
 <SEO 
   title="Insights - Synchronized Video Architecture & Creative Freedom"
-  description="Your file contains none of the original. Content ID scans that file and has nothing from the original to match."
+  description="Leave the original out of the file you upload. Sync does not remove original audio or video. Content ID scans that file."
   canonical="/insights"
   keywords="synchronized video insights, official embeds, creator monetization, twin player architecture"
 />
@@ -35,7 +35,7 @@
         What Content ID sees
       </h2>
       <p class="mb-4 text-text-secondary">
-        Your file contains none of the original. Content ID has nothing from it to match.
+        Leave the original out of the file you upload. Sync does not remove it. Content ID scans that file.
       </p>
       <span class="inline-flex items-center gap-2 text-sm text-accent-primary">
         Read article
