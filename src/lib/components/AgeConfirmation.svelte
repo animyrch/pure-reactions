@@ -33,6 +33,63 @@
 		settleAgeConfirmation(false);
 		reset();
 	};
+
+	const tabbableSelector = [
+		'a[href]',
+		'button:not([disabled])',
+		'input:not([disabled])',
+		'select:not([disabled])',
+		'textarea:not([disabled])',
+		'[tabindex]:not([tabindex="-1"])'
+	].join(',');
+
+	function trapDialogFocus(node) {
+		const previouslyFocused = document.activeElement instanceof HTMLElement
+			? document.activeElement
+			: null;
+
+		const focusInitial = () => {
+			const checkbox = node.querySelector('input[type="checkbox"]');
+			if (checkbox instanceof HTMLElement) checkbox.focus();
+		};
+		focusInitial();
+
+		const onKeydown = (event) => {
+			if (event.key === 'Escape') {
+				event.preventDefault();
+				dismiss();
+				return;
+			}
+			if (event.key !== 'Tab') return;
+
+			const tabbable = [...node.querySelectorAll(tabbableSelector)];
+			if (tabbable.length === 0) {
+				event.preventDefault();
+				return;
+			}
+
+			const first = tabbable[0];
+			const last = tabbable[tabbable.length - 1];
+			const active = document.activeElement;
+			const leavingBackward = event.shiftKey && (active === first || !node.contains(active));
+			const leavingForward = !event.shiftKey && (active === last || !node.contains(active));
+
+			if (!leavingBackward && !leavingForward) return;
+
+			event.preventDefault();
+			(leavingBackward ? last : first).focus();
+		};
+
+		document.addEventListener('keydown', onKeydown, true);
+		return {
+			destroy() {
+				document.removeEventListener('keydown', onKeydown, true);
+				if (previouslyFocused?.isConnected && !node.contains(previouslyFocused)) {
+					previouslyFocused.focus();
+				}
+			}
+		};
+	}
 </script>
 
 {#if request}
@@ -42,6 +99,7 @@
 			role="dialog"
 			aria-modal="true"
 			aria-labelledby="age-confirmation-title"
+			use:trapDialogFocus
 		>
 			<h2 id="age-confirmation-title">Confirm your age</h2>
 			<p>People under 15 can't publish or edit an account. This does not store a birth date.</p>
