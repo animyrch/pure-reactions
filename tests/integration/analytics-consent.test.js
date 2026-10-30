@@ -26,6 +26,18 @@ afterEach(() => {
 });
 
 describe('analytics consent', () => {
+	it('treats a blocked storage access as no choice', () => {
+		Object.defineProperty(globalThis, 'localStorage', {
+			configurable: true,
+			get() {
+				throw new Error('storage blocked');
+			}
+		});
+		expect(readStoredAnalyticsConsent()).toBeNull();
+		expect(() => loadAnalyticsConsent()).not.toThrow();
+		expect(get(analyticsConsent)).toBeNull();
+	});
+
 	it('treats a missing or unknown value as no choice', () => {
 		installLocalStorage();
 		expect(readStoredAnalyticsConsent()).toBeNull();

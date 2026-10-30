@@ -5,8 +5,8 @@ export const ANALYTICS_CONSENT_KEY = 'pure-reactions:analytics-consent';
 export const analyticsConsent = writable(null);
 
 export function readStoredAnalyticsConsent() {
-	if (typeof localStorage === 'undefined') return null;
 	try {
+		if (typeof localStorage === 'undefined') return null;
 		const value = localStorage.getItem(ANALYTICS_CONSENT_KEY);
 		return value === 'accept' || value === 'reject' ? value : null;
 	} catch {
