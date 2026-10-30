@@ -12,10 +12,7 @@
 
 {#if ready && $analyticsConsent === null}
 	<div class="analytics-consent" role="region" aria-labelledby="analytics-consent-title">
-		<div>
-			<p id="analytics-consent-title">Analytics</p>
-			<p>Google Analytics page views stay off unless you accept. Sign-in does not depend on this choice.</p>
-		</div>
+		<p id="analytics-consent-title">This site measures visits only if you allow it.</p>
 		<div class="analytics-consent-actions">
 			<button type="button" on:click={() => storeAnalyticsConsent('reject')}>Reject</button>
 			<button type="button" on:click={() => storeAnalyticsConsent('accept')}>Accept</button>
@@ -45,14 +42,10 @@
 		box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
 	}
 
-	p:first-child {
-		font-weight: 600;
-	}
-
-	p:last-child {
-		margin-top: 0.25rem;
-		color: #c7cbd7;
-		font-size: 0.92rem;
+	p {
+		max-width: 36rem;
+		font-size: 0.95rem;
+		line-height: 1.4;
 	}
 
 	.analytics-consent-actions {
