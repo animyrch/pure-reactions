@@ -243,7 +243,7 @@
     <h3 class="mb-6 text-xl font-semibold text-text-primary">Continue Reading</h3>
     <div class="grid gap-6 md:grid-cols-2">
       <a 
-        href="/insights/why-pure-reactions-cant-be-claimed"
+        href="/insights/why-synced-content-cant-be-claimed"
         class="group rounded-lg border border-border-strong bg-elevated p-6 transition-all duration-subtle hover:border-accent-primary/50"
       >
         <h4 class="mb-2 font-medium text-text-primary group-hover:text-accent-primary transition-colors">
@@ -254,7 +254,7 @@
         </p>
       </a>
       <a 
-        href="/insights/reaction-video-legality"
+        href="/insights/synchronized-content-legality"
         class="group rounded-lg border border-border-strong bg-elevated p-6 transition-all duration-subtle hover:border-accent-primary/50"
       >
         <h4 class="mb-2 font-medium text-text-primary group-hover:text-accent-primary transition-colors">
