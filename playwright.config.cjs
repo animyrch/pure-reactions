@@ -29,6 +29,25 @@ module.exports = defineConfig({
         },
         // Disable service workers in tests for stability
         serviceWorkers: 'block',
+        // The analytics banner sits over the page until a choice is stored.
+        // Tests reject it up front so it does not cover controls or count as a dialog.
+        storageState: {
+            cookies: [],
+            origins: [
+                {
+                    origin: 'http://localhost:5173',
+                    localStorage: [
+                        { name: 'pure-reactions:analytics-consent', value: 'reject' }
+                    ]
+                },
+                {
+                    origin: 'http://127.0.0.1:5173',
+                    localStorage: [
+                        { name: 'pure-reactions:analytics-consent', value: 'reject' }
+                    ]
+                }
+            ]
+        },
     },
     projects: [
         {

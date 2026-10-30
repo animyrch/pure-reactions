@@ -1,8 +1,13 @@
 <script>
+    import { onMount } from "svelte";
     import { browser, dev } from "$app/environment";
     import { page } from "$app/stores";
-    import { onMount } from "svelte";
     import { env } from "$env/dynamic/public";
+    import {
+        ANALYTICS_CONSENT_KEY,
+        analyticsConsent,
+        loadAnalyticsConsent,
+    } from "$lib/helpers/analyticsConsent";
 
     // Use dynamic public env to ensure it's picked up on Netlify
     const GA_MEASUREMENT_ID = env.PUBLIC_GA_MEASUREMENT_ID;
@@ -21,9 +26,11 @@
             return;
         }
 
+        if ($analyticsConsent !== "accept") return;
+
         if (typeof window.gtag === "function") {
             console.log(`[GA] Tracking page view: ${path}`);
-            window.gtag("config", GA_MEASUREMENT_ID, {
+            window.gtag("event", "page_view", {
                 page_path: path,
             });
         } else {
@@ -31,15 +38,11 @@
         }
     }
 
-    // Watch for page changes
-    $: if ($page.url.pathname) {
-        trackPageView($page.url.pathname);
-    }
+    let started = false;
 
-    onMount(() => {
-        console.log("[GA] Component mounted");
-        console.log("[GA] Environment:", dev ? "development" : "production");
-        console.log("[GA] Measurement ID:", GA_MEASUREMENT_ID);
+    function startAnalytics() {
+        if (started || !browser) return;
+        if ($analyticsConsent !== "accept") return;
 
         if (dev) {
             console.info("[GA] Disabled in development mode.");
@@ -52,6 +55,9 @@
             );
             return;
         }
+
+        started = true;
+        setAnalyticsTagDisabled(false);
 
         // Initialize GA script
         const script = document.createElement("script");
@@ -76,8 +82,32 @@
         window.gtag = gtag;
 
         gtag("js", new Date());
-        gtag("config", GA_MEASUREMENT_ID);
+        gtag("config", GA_MEASUREMENT_ID, { send_page_view: false });
 
         console.log("[GA] gtag initialized");
+    }
+
+    function setAnalyticsTagDisabled(disabled) {
+        if (!browser || !GA_MEASUREMENT_ID || GA_MEASUREMENT_ID === "G-PLACEHOLDER") return;
+        window[`ga-disable-${GA_MEASUREMENT_ID}`] = disabled;
+    }
+
+    onMount(() => {
+        const onStorage = (event) => {
+            if (event.key !== ANALYTICS_CONSENT_KEY) return;
+            loadAnalyticsConsent();
+        };
+        window.addEventListener("storage", onStorage);
+        return () => window.removeEventListener("storage", onStorage);
     });
+
+    $: setAnalyticsTagDisabled($analyticsConsent !== "accept");
+
+    $: if ($analyticsConsent === "accept") {
+        startAnalytics();
+    }
+
+    $: if ($page.url.pathname && started && $analyticsConsent === "accept") {
+        trackPageView($page.url.pathname);
+    }
 </script>

@@ -59,18 +59,19 @@
     <!-- Headline -->
     <h1
       class="mb-6 text-4xl font-bold leading-[1.1] tracking-tight text-text-primary sm:text-5xl md:text-6xl lg:text-7xl"
-      style="font-family: var(--font-display, 'Manrope', 'Inter', sans-serif);"
+      style="font-family: var(--font-display, 'Inter', 'Helvetica Neue', Arial, sans-serif);"
     >
       Sync your transformative videos.<br class="hidden sm:block" />
-      <span class="text-accent-primary">Copyright-safe. Always.</span>
+      <span class="text-accent-primary">Nothing reuploaded.</span>
     </h1>
 
     <!-- Subheading -->
     <p
       class="mx-auto mb-10 max-w-2xl text-lg leading-relaxed text-text-secondary md:text-xl"
     >
-      A creator tool that separates your recording from the original video—perfectly
-      synchronized, copyright-safe, and ready to share.
+      A creator tool that plays your recording beside the original, synchronized and
+      ready to share. Sync does not remove original audio or video. Leave it out of
+      the file you upload.
     </p>
 
     <!-- CTA -->

@@ -121,11 +121,11 @@
 		"url": "https://purereactions.com",
 		"applicationCategory": "MultimediaApplication",
 		"operatingSystem": "Web",
-		"description": "A creator tool for recording synchronized reaction, commentary, translation, and voiceover content. Your recording and the original video stay separate—copyright-safe and perfectly synced.",
+		"description": "A creator tool for synchronized reaction, commentary, translation, and voiceover playback. The recording and the original stay on their own platforms and play through official embeds.",
 		"offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
 		"featureList": [
 			"Synchronized twin-player playback",
-			"Copyright-safe reaction recording",
+			"Playback through official embeds",
 			"YouTube and TikTok source support",
 			"Reaction, commentary, translation and voiceover workflows"
 		]
@@ -142,9 +142,9 @@
 
 <SEO
 	title="Pure Reactions — Sync Your Transformative Content (Reaction, Commentary & Translation Videos)"
-	description="Record reaction videos, commentary, translations, voiceovers and more—perfectly synchronized with the original video. Your content stays copyright-safe on your own channel. Free to use."
+	description="Record reaction videos, commentary, translations, and voiceovers, then play them in sync with the original. Both videos stay on their own platforms and load through official embeds. Free to use."
 	canonical="/"
-	keywords="reaction video tool, commentary creator, translation video sync, voiceover sync, synchronized video player, twin player, copyright safe reactions, reaction content creator, video sync platform, accessibility creator, mixer, synced reaction recording"
+	keywords="reaction video tool, commentary creator, translation video sync, voiceover sync, synchronized video player, twin player, official embed playback, reaction content creator, video sync platform, accessibility creator, mixer, synced reaction recording"
 	image="/og-preview.png"
 />
 

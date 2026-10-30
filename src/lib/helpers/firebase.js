@@ -29,6 +29,7 @@ import {
     EmailAuthProvider,
     verifyBeforeUpdateEmail
 } from "firebase/auth";
+import { ensureAgeConfirmed } from '$lib/helpers/ageConfirmation';
 import {
     COLLECTION_REACTION_BINOMES,
     COLLECTION_USER_DATA,
@@ -552,6 +553,12 @@ export const updateQueueDocument = async ({ slug, title, description, isPublishe
         if (title !== undefined) updates.title = title.trim();
         if (description !== undefined) updates.description = description.trim();
         if (isPublished !== undefined) updates.isPublished = Boolean(isPublished);
+        if (isPublished === true) {
+            const allowed = await ensureAgeConfirmed(userId);
+            if (!allowed) {
+                return null;
+            }
+        }
 
         await updateDoc(queueRef, updates);
         return slug;
@@ -724,6 +731,11 @@ export const updateFirebaseDocument = async (dataToUpdate, documentId) => {
         if (!targetDocumentId) {
             console.error('Error updating document: missing reaction document id');
             return false;
+        }
+
+        if (dataToUpdate?.isPublished === true) {
+            const allowed = await ensureAgeConfirmed(auth?.currentUser?.uid);
+            if (!allowed) return false;
         }
 
         const documentRef = doc(reactionsCollection, targetDocumentId);

@@ -21,11 +21,17 @@ Frontend → POST /api/account/delete (Authorization: Bearer <token>)
     ↓
 Backend verifies token + recent sign-in (auth_time)
     ↓
-Delete user data (atomic batch):
-    - User profile document
-    - All reactions (reactorId == userId)
-    - Bookmarks and follows
-    - Playlists and queues
+Delete user data (not one atomic write):
+    - Recount affected moments. Delete a created moment when no other
+      published moment reaction remains. Otherwise anonymize the creator
+      and set reactionCount.
+    - Delete a channel verification when no claims remain for that channel
+    - Delete the collected documents in batches of 400:
+        - User profile document
+        - Reactions (reactorId == userId)
+        - Bookmarks and follows
+        - Playlists (reactorId or userId) and queues (reactorId or ownerId)
+        - YouTube channel claims (userId)
     ↓
 Revoke all refresh tokens
     ↓
@@ -71,29 +77,31 @@ Redirect to homepage
 - Expired or invalid tokens rejected with 401 Unauthorized
 
 ### 4. Atomic Operations
-- Firestore batch writes ensure all-or-nothing deletion
+- Firestore deletes are committed in batches of 400 documents. Each batch is atomic. The full account deletion is not.
+- Moment updates and channel-verification deletes are separate writes and run before those batches. If a moment update fails, the collected documents have not been deleted yet.
 - Refresh tokens revoked to invalidate sessions
 
 ## Data Deletion
 
-The following data is permanently deleted:
+The helper handles the following Firestore data. Deletes of the collected documents run after the moment and verification writes, in batches of 400:
 
 ### Firestore Collections
 1. User profile document (`COLLECTION_USER_DATA`)
 2. All reactions where `reactorId == userId` (`COLLECTION_REACTION_BINOMES`)
 3. User bookmarks (`userExtraData/{userId}`)
 4. User follows (`userExtraData/{userId}/follows/*`)
-5. User playlists (`COLLECTION_PLAYLISTS` where `reactorId == userId`)
-6. User queues (`COLLECTION_QUEUES` where `reactorId == userId`)
+5. User playlists (`COLLECTION_PLAYLISTS` where `reactorId == userId` or `userId == userId`)
+6. User queues (`COLLECTION_QUEUES` where `reactorId == userId` or `ownerId == userId`)
+7. YouTube channel claims where `userId` matches (`COLLECTION_YOUTUBE_CHANNEL_CLAIMS`)
+8. A channel verification (`COLLECTION_YOUTUBE_CHANNEL_VERIFICATIONS`) only when no claims remain for that channel
+9. Moments the user created (`creatorId == userId`): deleted when no other published moment reaction remains; otherwise `creatorId` becomes `deleted`, `creatorDisplayName` is cleared, and `reactionCount` is the number of remaining published moment reactions from other people. The same recount runs for any other moment that had a published moment reaction from this user.
 
 ### Firebase Authentication
 - User authentication record deleted via `deleteUser(userId)`
 - All refresh tokens revoked via `revokeRefreshTokens(userId)`
 
 ### Algolia Search Index
-- Reaction deletion from Firestore triggers automatic removal from Algolia during next indexing cycle
-- May take up to 5 business days to fully propagate
-- Users are informed of this delay in the UI
+- Reaction records are removed from Algolia in the same account-deletion request when the admin search key is configured
 
 ## Configuration
 

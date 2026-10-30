@@ -18,6 +18,7 @@ import { initializeFirebaseAdmin } from '$lib/server/firebaseAdmin';
 
 const EXPORT_RATE_LIMIT_SECONDS = 60 * 60 * 24;
 const ALGOLIA_BATCH_LIMIT = 1000;
+const USER_EXTRA_DATA_COLLECTION = 'userExtraData';
 
 function buildAuthProfile(userRecord) {
 	if (!userRecord) return null;
@@ -58,6 +59,16 @@ async function fetchCollectionByField(adminDbInstance, collectionName, field, va
 	}
 	const snapshot = await adminDbInstance.collection(collectionName).where(field, '==', value).get();
 	return snapshot.docs.map(serializeFirestoreDoc).sort(sortById);
+}
+
+async function fetchUserExtraData(adminDbInstance, userId) {
+	const ref = adminDbInstance.collection(USER_EXTRA_DATA_COLLECTION).doc(userId);
+	const snapshot = await ref.get();
+	const followsSnapshot = await ref.collection('follows').get();
+	return {
+		record: snapshot.exists ? serializeFirestoreDoc(snapshot) : null,
+		follows: (followsSnapshot.docs || []).map(serializeFirestoreDoc).sort(sortById)
+	};
 }
 
 async function fetchUserDataDoc(adminDbInstance, userId) {
@@ -178,6 +189,7 @@ export const POST = async ({ request }) => {
 		const userId = decodedToken.uid;
 
 		const userDataDoc = await fetchUserDataDoc(adminDb, userId);
+		const userExtraData = await fetchUserExtraData(adminDb, userId);
 		const lastExportAtMs = userDataDoc?.data?.lastExportAt
 			? new Date(userDataDoc.data.lastExportAt).getTime()
 			: null;
@@ -250,6 +262,8 @@ export const POST = async ({ request }) => {
 					auth: authProfile ? 1 : 0,
 					firestore: {
 						userData: userDataDoc ? 1 : 0,
+						userExtraData: userExtraData.record ? 1 : 0,
+						follows: userExtraData.follows.length,
 						reactions: reactions.length,
 						playlists: playlists.length,
 						queues: queues.length,
@@ -272,6 +286,8 @@ export const POST = async ({ request }) => {
 				auth: authProfile,
 				firestore: {
 					userData: userDataDoc,
+					userExtraData: userExtraData.record,
+					follows: userExtraData.follows,
 					reactions,
 					playlists,
 					queues,

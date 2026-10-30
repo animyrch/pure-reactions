@@ -54,6 +54,8 @@ async function signUp(page, email) {
 	}).toPass({ timeout: 15000 });
 	await page.getByPlaceholder('Email').fill(email);
 	await page.getByPlaceholder('Password').fill(PASSWORD);
+	await page.getByRole('checkbox', { name: 'I am 15 or older.' }).check();
+	await page.getByRole('checkbox', { name: /I have read the Terms/ }).check();
 	await page.getByRole('button', { name: 'Sign Up' }).click();
 	await expect(page).toHaveURL(/\/account\/verify/, { timeout: 20000 });
 }
@@ -83,6 +85,18 @@ async function signInRest(email) {
 	});
 	expect(result.ok, JSON.stringify(result.payload)).toBe(true);
 	return result.payload;
+}
+
+async function seedAgeConfirmation(userId) {
+	process.env.FIRESTORE_EMULATOR_HOST ||= FIRESTORE_EMULATOR_HOST;
+	const { initializeApp, getApps } = await import('firebase-admin/app');
+	const { getFirestore, Timestamp } = await import('firebase-admin/firestore');
+	if (!getApps().length) initializeApp({ projectId: AUTH_PROJECT });
+	const userDataCollection = envOrFile('PUBLIC_FIREBASE_COLLECTION_USER_DATA', 'userData_local');
+	await getFirestore().collection(userDataCollection).doc(userId).set(
+		{ ageConfirmedAt: Timestamp.fromDate(new Date('2026-01-01T00:00:00.000Z')) },
+		{ merge: true }
+	);
 }
 
 async function createDoc(idToken, collectionName, documentId, fields) {
@@ -129,6 +143,7 @@ test('my reactions can delete a reaction or a playlist', async ({ page }) => {
 	await expect(page.getByRole('button', { name: 'Delete playlist' })).toHaveCount(0);
 
 	const owner = await signInRest(email);
+	await seedAgeConfirmation(owner.localId);
 	const other = await authRequest('accounts:signUp', {
 		email: otherEmail,
 		password: PASSWORD,

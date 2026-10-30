@@ -7,9 +7,9 @@
 
 <SEO
   title="How It Works - Synchronized Twin-Player Architecture"
-  description="Discover how PureReactions synchronizes any content with original videos. Record separately, track your viewing, sync perfectly. Reactions, translations, voiceovers—all without copyright claims."
+  description="Discover how PureReactions synchronizes any content with original videos. Record separately, track your viewing, sync perfectly. Leave the original out of the file you upload. Sync does not remove it."
   canonical="/how-it-works"
-  keywords="synchronized video player, twin player architecture, how sync works, copyright free video sync, reaction platform"
+  keywords="synchronized video player, twin player architecture, how sync works, official embeds, reaction platform"
 />
 
 <ValuePropositionBanner />
@@ -211,8 +211,8 @@
             No Content ID Claims
           </h3>
           <p class="text-text-secondary">
-            Your content file contains zero seconds of the original video.
-            Content ID has nothing to detect or claim. Your monetization stays
+            Leave the original out of the file you upload. Sync does not remove
+            it. Content ID then has nothing from it to match. Your monetization stays
             yours.
           </p>
         </div>
@@ -282,15 +282,14 @@
       Want the Technical Details?
     </h3>
     <p class="mb-6 text-text-secondary">
-      Learn exactly why synchronized twin-player content is structurally
-      unclaimable, including the legal framework and technical architecture that
-      makes this possible.
+      Leave the original out of the file you upload. Sync does not remove original
+      audio or video. Content ID scans that file. The original plays from its host.
     </p>
     <a
       href="/insights/why-synced-content-cant-be-claimed"
       class="inline-flex items-center gap-2 text-accent-primary hover:text-accent-primary/80 transition-colors"
     >
-      Read: Why Synced Content Can't Be Claimed
+      Read: What Content ID sees
       <span aria-hidden="true">→</span>
     </a>
   </section>

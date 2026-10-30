@@ -1,16 +1,16 @@
 # Contributing to Pure Reactions
 
 
-Thank you for your interest in contributing to Pure Reactions! This document provides guidelines for contributing to the open-source parts of the project.
+Thank you for your interest in contributing to Pure Reactions! This document provides guidelines for contributing to the published source.
 
 
 ## Scope of Contributions
 
 
-Pure Reactions is an open-source project with a publicly hosted platform.
+Pure Reactions is a source-available project with a publicly hosted platform.
 
 
-- The open-source repository contains the core application code, shared logic, and public-facing features.
+- The repository contains the core application code, shared logic, and public-facing features.
 - The hosted Pure Reactions service includes platform-specific concerns such as infrastructure, operations, moderation workflows, and business-related logic.
 
 
@@ -157,6 +157,4 @@ Feel free to open an issue for questions or discussions about the project.
 
 ## License
 
-By contributing to Pure Reactions, you agree that your contributions will be licensed under the Apache License 2.0.
-
-This license permits use, modification, and distribution of contributions in both open-source and commercial contexts, including use as part of the hosted Pure Reactions service.
+By contributing to Pure Reactions, you agree that your contributions are licensed under Creative Commons Attribution-NonCommercial 4.0, the same license as the rest of the repository.

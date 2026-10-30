@@ -52,7 +52,7 @@
         </p>
       </div>
       <p class="mb-4">
-        There is a way to start using Pure Reactions that requires <strong class="text-text-primary">zero changes to your existing workflow</strong> and carries <strong class="text-text-primary">zero risk to your channel performance</strong> — while building a structural safety net you'll be glad to have later.
+        There is a way to start using Pure Reactions that leaves your current uploads and posting rhythm unchanged, while keeping a second file ready if a claim hits the main one.
       </p>
     </section>
 
@@ -143,7 +143,7 @@
         Use your unlisted video as the reaction source when creating a Pure Reactions experience. The platform will pair it with the original content from YouTube, generating a synchronized twin-player experience your audience can watch together.
       </p>
       <p class="mb-4">
-        Because the unlisted video contains only your content — no original audio, no original video — it passes Content ID scanning cleanly and can be used by Pure Reactions without any claims.
+        Leave original audio and video out of that unlisted file. Sync does not remove them. Content ID then scans a file that has nothing from the original to match.
       </p>
       <p class="mb-4">
         You will also need to add the original video's playback controls — moments where the original is paused, muted, or resumed — to the reaction experience. This is where the fine-tune editor comes in.
@@ -342,10 +342,10 @@
         class="group rounded-lg border border-border-strong bg-elevated p-6 transition-all duration-subtle hover:border-accent-primary/50"
       >
         <h4 class="mb-2 font-medium text-text-primary transition-colors group-hover:text-accent-primary">
-          Why Synced Content Can't Be Claimed →
+          What Content ID sees →
         </h4>
         <p class="text-sm text-text-secondary">
-          The technical reason your unlisted alternate video stays claim-free.
+          Leave the original out of the unlisted file you upload. Sync does not remove it. Content ID scans that file.
         </p>
       </a>
     </div>

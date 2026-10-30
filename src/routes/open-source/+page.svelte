@@ -3,37 +3,37 @@
 </script>
 
 <SEO 
-  title="Open Source - Pure Reactions"
-  description="Pure Reactions is built as open-source software under the Apache License 2.0, reflecting our commitment to transparency and technical clarity."
+  title="Source-available - Pure Reactions"
+  description="Pure Reactions is source-available under Creative Commons Attribution-NonCommercial 4.0."
   canonical="/open-source"
-  keywords="open source, apache license, transparent platform"
+  keywords="source-available, CC BY-NC 4.0, transparent platform"
 />
 
 <article class="container mx-auto max-w-3xl px-4 py-12 md:py-20">
   <header class="mb-12">
     <h1 class="mb-6 text-4xl font-bold leading-tight text-text-primary md:text-5xl">
-      Open Source
+      Source-available
     </h1>
   </header>
 
   <div class="prose-custom space-y-8 text-text-secondary">
     <section>
       <p class="text-lg">
-        Pure Reactions is built as open-source software.
+        Pure Reactions is source-available.
       </p>
       <p>
-        The source code for the platform is publicly available and released under the Apache License, Version 2.0. This allows anyone to inspect, use, modify, and distribute the software in accordance with the terms of the license.
+        The source code is public under Creative Commons Attribution-NonCommercial 4.0. Anyone can inspect, share, and adapt it for non-commercial use, with attribution.
       </p>
       <p>
-        Open sourcing Pure Reactions reflects a commitment to transparency, technical clarity, and long-term trust—especially in areas involving content presentation, synchronization, and platform behavior.
+        Publishing the source is a commitment to transparency, technical clarity, and long-term trust, especially for playback, synchronization, and platform behavior.
       </p>
     </section>
 
     <section>
-      <h2 class="mb-4 text-2xl font-semibold text-text-primary">What Is Open Source</h2>
+      <h2 class="mb-4 text-2xl font-semibold text-text-primary">What is published</h2>
       
       <div class="mb-6">
-        <h3 class="mb-3 text-lg font-medium text-text-primary">The open-source repository includes:</h3>
+        <h3 class="mb-3 text-lg font-medium text-text-primary">The repository includes:</h3>
         <ul class="ml-6 list-disc space-y-2">
           <li>The core application code</li>
           <li>Synchronization logic and player coordination</li>
@@ -54,16 +54,15 @@
     <section>
       <h2 class="mb-4 text-2xl font-semibold text-text-primary">License</h2>
       <p class="mb-4">
-        Pure Reactions is released under the Apache License 2.0.
+        Pure Reactions is released under Creative Commons Attribution-NonCommercial 4.0 (CC BY-NC 4.0).
       </p>
       <p class="mb-4">This license:</p>
       <ul class="ml-6 list-disc space-y-2">
-        <li>Permits commercial and non-commercial use</li>
-        <li>Allows modification and redistribution</li>
-        <li>Includes an explicit patent grant</li>
-        <li>Requires preservation of copyright and license notices</li>
+        <li>Allows sharing and adaptation for non-commercial use</li>
+        <li>Requires attribution to Pure Reactions and a note of changes</li>
+        <li>Does not allow selling access, subscriptions, or running the project as a paid service</li>
       </ul>
-      <p>Full license text is available in the repository.</p>
+      <p>The full license text is in the repository <a href="https://github.com/animyrch/pure-reactions/blob/prod/LICENSE" class="text-accent-primary hover:text-accent-primary/80 transition-colors">LICENSE</a> file.</p>
     </section>
 
     <section>
