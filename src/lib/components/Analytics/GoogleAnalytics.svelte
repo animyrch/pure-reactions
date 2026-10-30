@@ -74,7 +74,7 @@
         window.gtag = gtag;
 
         gtag("js", new Date());
-        gtag("config", GA_MEASUREMENT_ID);
+        gtag("config", GA_MEASUREMENT_ID, { send_page_view: false });
 
         console.log("[GA] gtag initialized");
     }
