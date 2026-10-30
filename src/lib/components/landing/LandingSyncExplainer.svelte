@@ -32,7 +32,7 @@
       </p>
       <h2
         class="text-3xl font-bold leading-tight text-text-primary sm:text-4xl md:text-5xl"
-        style="font-family: var(--font-display, 'Manrope', 'Inter', sans-serif);"
+        style="font-family: var(--font-display, 'Inter', 'Helvetica Neue', Arial, sans-serif);"
       >
         Two streams. One timeline.
       </h2>

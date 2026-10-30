@@ -15,7 +15,7 @@ const config = {
     extend: {
       fontFamily: {
         sans: ['"Inter"', '"Helvetica Neue"', 'Arial', 'sans-serif'],
-        display: ['"Manrope"', '"Inter"', '"Helvetica Neue"', 'Arial', 'sans-serif'],
+        display: ['"Inter"', '"Helvetica Neue"', 'Arial', 'sans-serif'],
       },
       colors: {
         background: designColors.background,

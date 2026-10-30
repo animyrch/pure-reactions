@@ -9,7 +9,7 @@ Penalty figures below are the statutory maximums named in the review request. Th
 - The bar is the stricter of a French establishment and US-user rules. Terms already choose French law. The live site is `https://purereactions.com`.
 - Signup blocks anyone under 15. That covers COPPA's under-13 line and France's digital-consent age of 15. Store a confirmation timestamp only. Do not collect a birth date.
 - Do not build a marketing-email program or a subscription program. Make the email and billing behavior that already exists conform.
-- Self-host Manrope and Inter. Remove the service worker's Google Fonts cache rules.
+- Self-host Inter. Remove the service worker's Google Fonts cache rules.
 - The public contact stays the existing addresses: `purereactions.app+privacy@gmail.com` and `purereactions.app+copyright@gmail.com`. Do not publish a personal name, postal address, or phone number.
 - The app does not upload or host video. Originals and reactions play through the official YouTube and TikTok embeds. The copyright minimum is to say that on the copyright page, keep the copyright email, and remove absolute risk claims. Registering a DMCA agent is optional and later.
 
@@ -24,7 +24,7 @@ The email pull request still needs one check in the Firebase console: the verifi
 | # | Topic | Current situation | Minimal requirement | Proposed PR |
 | --- | --- | --- | --- | --- |
 | 1 | Age | Signup collects email and password only | Block under 15 before the account exists. Confirm existing users once. Keep export and deletion available. | `compliance-age-gate` |
-| 2 | Fonts | Named faces are not loaded. The live service worker still caches Google Fonts hosts. | Self-host Manrope and Inter. Delete those cache rules. | `compliance-self-host-fonts` |
+| 2 | Fonts | Named faces are not loaded. The live service worker still caches Google Fonts hosts. | Self-host Inter. Delete those cache rules. | `compliance-self-host-fonts` |
 | 3 | Session replay | No replay tool is installed | Leave it that way. Do not add one. | None. Covered by the analytics consent PR for what GA actually does. |
 | 4 | Email | One transactional verification email. No list, no campaign. | Keep that email transactional. Do not add a campaign. | `compliance-transactional-email` (console check plus a short policy sentence) |
 | 5 | Subscriptions | No checkout. A public article says native tipping and subscriptions are coming soon. The repo license forbids commercial use. | Do not add billing. Remove the coming-soon claim. Fix the license page so it matches `LICENSE`. | `compliance-license-and-claims` |
@@ -86,11 +86,11 @@ The Munich court case about Google Fonts concerned the browser contacting Google
 
 ### Minimal requirement
 
-- Self-host Manrope and Inter as `.woff2` files under `static/fonts/`.
-- Declare them with `@font-face` from the site origin. Set `font-display: swap`.
-- Point `--font-display` and the body font family at those faces, then the existing Helvetica/Arial fallbacks.
+- Self-host Inter as a `.woff2` file under `static/fonts/`. Landing titles use the same face. Do not ship a second family.
+- Declare it with `@font-face` from the site origin. Set `font-display: swap`.
+- Point `--font-body` and `--font-display` at Inter, then the existing Helvetica/Arial fallbacks.
 - Remove both Google Fonts `runtimeCaching` entries from `vite.config.js`.
-- Keep the SIL Open Font License text beside the font files. Manrope and Inter allow self-hosting under that license.
+- Keep the SIL Open Font License text beside the font file. Inter allows self-hosting under that license.
 - After deploy, the homepage, a reaction page, and `sw.js` should contain no `fonts.googleapis.com` or `fonts.gstatic.com` URL.
 
 ### Out of scope
@@ -284,7 +284,7 @@ Do not add a registered agent, a counter-notice flow, or a moderation product in
 
 ## Verification for each later PR
 
-- Fonts: load the homepage and a reaction page, confirm Manrope or Inter comes from the site origin, and confirm `sw.js` has no Google Fonts host.
+- Fonts: load the homepage and a reaction page, confirm Inter comes from the site origin, confirm Manrope is not requested, and confirm `sw.js` has no Google Fonts host.
 - Age gate: signup with the checkbox off does not create a Firebase user. Signup with the checkbox on writes `ageConfirmedAt` and no birth date. An existing user without the flag can still export and delete.
 - Analytics: with Reject, no request to `googletagmanager.com`. With Accept, page views still arrive. Login still works in both states.
 - Erasure: the regression test above, plus an Algolia get that misses the deleted reaction ids.

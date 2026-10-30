@@ -59,7 +59,7 @@
     <!-- Headline -->
     <h1
       class="mb-6 text-4xl font-bold leading-[1.1] tracking-tight text-text-primary sm:text-5xl md:text-6xl lg:text-7xl"
-      style="font-family: var(--font-display, 'Manrope', 'Inter', sans-serif);"
+      style="font-family: var(--font-display, 'Inter', 'Helvetica Neue', Arial, sans-serif);"
     >
       Sync your transformative videos.<br class="hidden sm:block" />
       <span class="text-accent-primary">Nothing reuploaded.</span>
