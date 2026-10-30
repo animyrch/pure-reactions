@@ -87,6 +87,18 @@ async function signInRest(email) {
 	return result.payload;
 }
 
+async function seedAgeConfirmation(userId) {
+	process.env.FIRESTORE_EMULATOR_HOST ||= FIRESTORE_EMULATOR_HOST;
+	const { initializeApp, getApps } = await import('firebase-admin/app');
+	const { getFirestore, Timestamp } = await import('firebase-admin/firestore');
+	if (!getApps().length) initializeApp({ projectId: AUTH_PROJECT });
+	const userDataCollection = envOrFile('PUBLIC_FIREBASE_COLLECTION_USER_DATA', 'userData_local');
+	await getFirestore().collection(userDataCollection).doc(userId).set(
+		{ ageConfirmedAt: Timestamp.fromDate(new Date('2026-01-01T00:00:00.000Z')) },
+		{ merge: true }
+	);
+}
+
 async function createDoc(idToken, collectionName, documentId, fields) {
 	const response = await fetch(
 		`http://${FIRESTORE_EMULATOR_HOST}/v1/projects/${AUTH_PROJECT}/databases/(default)/documents/${collectionName}?documentId=${encodeURIComponent(documentId)}`,
@@ -131,6 +143,7 @@ test('my reactions can delete a reaction or a playlist', async ({ page }) => {
 	await expect(page.getByRole('button', { name: 'Delete playlist' })).toHaveCount(0);
 
 	const owner = await signInRest(email);
+	await seedAgeConfirmation(owner.localId);
 	const other = await authRequest('accounts:signUp', {
 		email: otherEmail,
 		password: PASSWORD,

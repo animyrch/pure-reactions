@@ -181,6 +181,17 @@ test('owner cannot publish a local reaction without the local age confirmation',
   );
 });
 
+test('owner can publish a local reaction from the CI age-confirmation collection', async () => {
+  await seedAgeConfirmation('userdata-local');
+  await assertSucceeds(
+    setDoc(doc(ownerDb(), 'reactions-local', 'ci-confirmed-reaction'), {
+      reactorId: ownerId,
+      isPublished: true,
+      title: 'CI collection'
+    })
+  );
+});
+
 test('owner can publish a local reaction from the local age confirmation', async () => {
   await seedAgeConfirmation('userData_local');
   await assertSucceeds(
