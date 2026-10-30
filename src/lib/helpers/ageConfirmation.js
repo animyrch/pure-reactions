@@ -14,7 +14,9 @@ export async function hasAgeConfirmation(userId) {
 
 export async function recordAgeConfirmation(userId) {
 	const user = auth?.currentUser;
-	if (!userId || !user || user.uid !== userId) return;
+	if (!userId || !user || user.uid !== userId) {
+		throw new Error('Could not record age confirmation');
+	}
 	const idToken = await user.getIdToken();
 	const response = await fetch('/api/account/age-confirmation', {
 		method: 'POST',
