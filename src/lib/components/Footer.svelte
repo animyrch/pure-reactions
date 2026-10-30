@@ -140,7 +140,7 @@
             </a>
             <span class="text-border-strong" aria-hidden="true">·</span>
             <a href="/open-source" class="text-text-muted transition-colors hover:text-text-secondary">
-              Open Source
+              Source-available
             </a>
             <span class="text-border-strong" aria-hidden="true">·</span>
             <a href="/copyright" class="text-text-muted transition-colors hover:text-text-secondary">

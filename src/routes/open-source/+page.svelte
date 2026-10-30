@@ -3,37 +3,37 @@
 </script>
 
 <SEO 
-  title="Open Source - Pure Reactions"
-  description="Pure Reactions is released under Creative Commons Attribution-NonCommercial 4.0."
+  title="Source-available - Pure Reactions"
+  description="Pure Reactions is source-available under Creative Commons Attribution-NonCommercial 4.0."
   canonical="/open-source"
-  keywords="open source, CC BY-NC 4.0, transparent platform"
+  keywords="source-available, CC BY-NC 4.0, transparent platform"
 />
 
 <article class="container mx-auto max-w-3xl px-4 py-12 md:py-20">
   <header class="mb-12">
     <h1 class="mb-6 text-4xl font-bold leading-tight text-text-primary md:text-5xl">
-      Open Source
+      Source-available
     </h1>
   </header>
 
   <div class="prose-custom space-y-8 text-text-secondary">
     <section>
       <p class="text-lg">
-        Pure Reactions is built as open-source software.
+        Pure Reactions is source-available.
       </p>
       <p>
-        The source code for the platform is publicly available and released under Creative Commons Attribution-NonCommercial 4.0. Anyone can inspect, share, and adapt it for non-commercial use, with attribution.
+        The source code is public under Creative Commons Attribution-NonCommercial 4.0. Anyone can inspect, share, and adapt it for non-commercial use, with attribution.
       </p>
       <p>
-        Open sourcing Pure Reactions reflects a commitment to transparency, technical clarity, and long-term trust—especially in areas involving content presentation, synchronization, and platform behavior.
+        Publishing the source is a commitment to transparency, technical clarity, and long-term trust, especially for playback, synchronization, and platform behavior.
       </p>
     </section>
 
     <section>
-      <h2 class="mb-4 text-2xl font-semibold text-text-primary">What Is Open Source</h2>
+      <h2 class="mb-4 text-2xl font-semibold text-text-primary">What is published</h2>
       
       <div class="mb-6">
-        <h3 class="mb-3 text-lg font-medium text-text-primary">The open-source repository includes:</h3>
+        <h3 class="mb-3 text-lg font-medium text-text-primary">The repository includes:</h3>
         <ul class="ml-6 list-disc space-y-2">
           <li>The core application code</li>
           <li>Synchronization logic and player coordination</li>
