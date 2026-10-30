@@ -88,14 +88,13 @@ export async function deleteAccountData({ adminDb, userId, collections }) {
 	const createdMoments = await matchingDocs(adminDb, momentsCollection, [['creatorId', userId]]);
 	const createdMomentIds = new Set(createdMoments.map((moment) => moment.id));
 
-	const deleted = await commitDeletes(adminDb, [...refsByPath.values()]);
-
 	for (const momentId of new Set([...impactedMomentIds, ...createdMomentIds])) {
-		const remaining = await matchingDocs(adminDb, reactionsCollection, [
+		const publishedOnMoment = await matchingDocs(adminDb, reactionsCollection, [
 			['momentId', momentId],
 			['isMomentReaction', true],
 			['isPublished', true]
 		]);
+		const remaining = publishedOnMoment.filter((reaction) => reaction.data()?.reactorId !== userId);
 		const momentRef = adminDb.collection(momentsCollection).doc(momentId);
 		if (createdMomentIds.has(momentId) && remaining.length === 0) {
 			await momentRef.delete();
@@ -110,17 +109,21 @@ export async function deleteAccountData({ adminDb, userId, collections }) {
 			await momentRef.update(patch);
 		} catch (error) {
 			console.error('Failed to update moment during account deletion:', error, { momentId });
+			throw error;
 		}
 	}
 
 	for (const channelId of channelIds) {
-		const remainingClaims = await matchingDocs(adminDb, claimsCollection, [
+		const claimsForChannel = await matchingDocs(adminDb, claimsCollection, [
 			['youtubeChannelId', channelId]
 		]);
+		const remainingClaims = claimsForChannel.filter((claim) => claim.data()?.userId !== userId);
 		if (remainingClaims.length === 0) {
 			await adminDb.collection(verificationsCollection).doc(channelId).delete();
 		}
 	}
+
+	const deleted = await commitDeletes(adminDb, [...refsByPath.values()]);
 
 	return { deleted, reactionIds };
 }

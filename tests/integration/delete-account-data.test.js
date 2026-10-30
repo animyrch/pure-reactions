@@ -11,7 +11,7 @@ const collections = {
 	verifications: 'verifications'
 };
 
-function createMemoryDb() {
+function createMemoryDb({ failUpdates = new Set() } = {}) {
 	const docs = new Map();
 
 	const refFor = (path) => ({
@@ -22,6 +22,7 @@ function createMemoryDb() {
 			return { exists: true, id: path.split('/').pop(), data: () => structuredClone(docs.get(path)) };
 		},
 		async update(patch) {
+			if (failUpdates.has(path)) throw new Error('moment update failed');
 			docs.set(path, { ...(docs.get(path) || {}), ...structuredClone(patch) });
 		},
 		async delete() {
@@ -107,10 +108,16 @@ describe('deleteAccountData', () => {
 			isMomentReaction: true,
 			isPublished: true
 		});
+		db.seed('reactions/owner-reaction', {
+			reactorId: 'owner',
+			momentId: 'shared',
+			isMomentReaction: true,
+			isPublished: true
+		});
 
 		const result = await deleteAccountData({ adminDb: db, userId: 'owner', collections });
 
-		expect(result.reactionIds).toEqual([]);
+		expect(result.reactionIds).toEqual(['owner-reaction']);
 		expect(db.has('playlists/playlist-1')).toBe(false);
 		expect(db.has('queues/queue-1')).toBe(false);
 		expect(db.has('claims/channel-a__owner')).toBe(false);
@@ -119,6 +126,30 @@ describe('deleteAccountData', () => {
 		expect(db.has('moments/solo')).toBe(false);
 		expect(db.read('moments/shared').creatorId).toBe('deleted');
 		expect(db.read('moments/shared').creatorDisplayName).toBe('');
+		expect(db.read('moments/shared').reactionCount).toBe(1);
+		expect(db.has('reactions/owner-reaction')).toBe(false);
 		expect(db.has('reactions/other-reaction')).toBe(true);
+	});
+
+	it('keeps reactions when a moment update fails before deletion', async () => {
+		const db = createMemoryDb({ failUpdates: new Set(['moments/shared']) });
+		db.seed('moments/shared', { creatorId: 'owner', creatorDisplayName: 'Owner', title: 'Shared' });
+		db.seed('reactions/owner-reaction', {
+			reactorId: 'owner',
+			momentId: 'shared',
+			isMomentReaction: true,
+			isPublished: true
+		});
+		db.seed('reactions/other-reaction', {
+			reactorId: 'other',
+			momentId: 'shared',
+			isMomentReaction: true,
+			isPublished: true
+		});
+
+		await expect(deleteAccountData({ adminDb: db, userId: 'owner', collections })).rejects.toThrow(
+			'moment update failed'
+		);
+		expect(db.has('reactions/owner-reaction')).toBe(true);
 	});
 });
