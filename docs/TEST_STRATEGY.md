@@ -39,6 +39,7 @@ Playwright specs live in `tests/e2e/<route>/`, one directory per application rou
 | :--- | :--- | :--- |
 | `account` | `tests/e2e/account` | `/login`, `/account`, `/api/account` |
 | `my-reactions` | `tests/e2e/my-reactions` | `/my-reactions`, plus login and account because those specs pass through them |
+| `bookmark` | `tests/e2e/bookmark` | `/bookmark`, plus login and account because those specs pass through them |
 | `reaction` | `tests/e2e/reaction` | `/reaction`, `/edit-reaction` (remix editor cases in `remix-mode.spec.js`) |
 | `edit-reaction` | `tests/e2e/edit-reaction` | `/edit-reaction` |
 | `playlist` | `tests/e2e/playlist` | `/playlist` |

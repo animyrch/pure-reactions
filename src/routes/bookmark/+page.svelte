@@ -1,5 +1,6 @@
 <script>
     import { onDestroy } from "svelte";
+    import PageBackLink from "$lib/components/PageBackLink.svelte";
     import PersonalPage from "$lib/components/PersonalPage.svelte";
     import PersonalListSection from "$lib/components/PersonalListSection.svelte";
     import { userExtraDataStore } from "$lib/stores/userExtraData";
@@ -122,6 +123,8 @@
         loadQueues();
     }
 </script>
+
+<PageBackLink path="/bookmark" />
 
 <PersonalPage>
     <PersonalListSection

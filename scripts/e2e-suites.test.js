@@ -104,9 +104,10 @@ test('spec imports resolve and the env file path still points at the repo root',
 
 test('changed paths select the corresponding suites', () => {
   const cases = [
-    ['src/routes/account/+page.svelte', 'subset', ['account', 'my-reactions']],
-    ['src/routes/login/+page.svelte', 'subset', ['account', 'my-reactions', 'backend']],
+    ['src/routes/account/+page.svelte', 'subset', ['account', 'my-reactions', 'bookmark']],
+    ['src/routes/login/+page.svelte', 'subset', ['account', 'my-reactions', 'bookmark', 'backend']],
     ['src/routes/my-reactions/+page.svelte', 'subset', ['my-reactions']],
+    ['src/routes/bookmark/+page.svelte', 'subset', ['bookmark']],
     ['src/routes/reaction/[slug]/+page.svelte', 'subset', ['reaction']],
     ['src/routes/edit-reaction/[slug]/+page.svelte', 'subset', ['reaction', 'edit-reaction']],
     ['src/routes/playlist/[slug]/+page.svelte', 'subset', ['playlist']],
@@ -154,7 +155,7 @@ test('name-status paths keep exact names and both sides of a rename', () => {
   );
   assert.deepEqual(
     selectSuites(renamedRoute, manifest).suites,
-    ['account', 'my-reactions']
+    ['account', 'my-reactions', 'bookmark']
   );
 
   const weirdName = 'src/routes/playlist/weird\nname .svelte';
@@ -174,12 +175,20 @@ test('name-status paths keep exact names and both sides of a rename', () => {
     git(['init', '-q']);
     git(['config', 'user.email', 't@example.com']);
     git(['config', 'user.name', 't']);
+    git(['config', 'commit.gpgsign', 'false']);
     writeFileSync(join(directory, 'shared.js'), 'a\n');
     git(['add', 'shared.js']);
     git(['commit', '-q', '-m', 'base']);
     git(['mv', 'shared.js', 'renamed.js']);
     git(['commit', '-q', '-m', 'rename']);
-    const diff = git(['diff', '-z', '--name-status', '--diff-filter=ACDMRTUXB', 'HEAD^...HEAD']);
+    const diff = git([
+      'diff',
+      '-z',
+      '--name-status',
+      '--find-renames',
+      '--diff-filter=ACDMRTUXB',
+      'HEAD^...HEAD'
+    ]);
     assert.deepEqual(pathsFromNameStatus(diff.stdout), ['shared.js', 'renamed.js']);
   } finally {
     rmSync(directory, { recursive: true, force: true });

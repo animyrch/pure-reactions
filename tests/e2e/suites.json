@@ -24,6 +24,17 @@
       ]
     },
     {
+      "name": "bookmark",
+      "description": "Bookmarks page and the link back to the page that opened it.",
+      "dir": "tests/e2e/bookmark",
+      "paths": [
+        "src/routes/bookmark/**",
+        "src/routes/account/**",
+        "src/routes/login/**",
+        "tests/e2e/bookmark/**"
+      ]
+    },
+    {
       "name": "reaction",
       "description": "Reaction playback, layout, and remix mode. remix-mode.spec.js also edits on /edit-reaction.",
       "dir": "tests/e2e/reaction",
@@ -106,7 +117,6 @@
   "unmappedRoutes": [
     "about",
     "batch-edit",
-    "bookmark",
     "copyright",
     "creator",
     "dev-finetune-half",
