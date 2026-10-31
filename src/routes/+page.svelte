@@ -151,7 +151,7 @@
 {#if pillMounted && !creatorProofVisible}
 	<button
 		transition:fade={{ duration: 300 }}
-		class="fixed bottom-6 left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 rounded-full bg-surface/90 px-5 py-2.5 text-sm font-medium text-text-secondary shadow-elevated ring-1 ring-border-subtle backdrop-blur-sm transition-colors duration-subtle ease-cinematic hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+		class="fixed bottom-6 left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 rounded-full bg-surface/90 px-5 py-2.5 text-sm font-medium text-text-secondary shadow-elevated ring-1 ring-border-subtle backdrop-blur-xs transition-colors duration-subtle ease-cinematic hover:text-text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
 		on:click={() => document.getElementById('creator-proof')?.scrollIntoView({ behavior: 'smooth' })}
 		aria-label="Scroll down to see what creators are making"
 	>

@@ -15,11 +15,11 @@
   <div class="mx-auto max-w-6xl">
     <!-- Divider line -->
     <div class="mb-8 flex items-center gap-4">
-      <div class="h-px flex-1 bg-gradient-to-r from-transparent to-border-subtle" aria-hidden="true" />
+      <div class="h-px flex-1 bg-linear-to-r from-transparent to-border-subtle" aria-hidden="true" />
       <p class="shrink-0 text-sm font-medium uppercase tracking-widest text-accent-primary">
         Live on the platform
       </p>
-      <div class="h-px flex-1 bg-gradient-to-l from-transparent to-border-subtle" aria-hidden="true" />
+      <div class="h-px flex-1 bg-linear-to-l from-transparent to-border-subtle" aria-hidden="true" />
     </div>
 
     <!-- Section header -->
@@ -54,7 +54,7 @@
     <div class="mt-12 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
       <button
         type="button"
-        class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border-strong bg-surface/60 px-8 py-3.5 text-base font-medium text-text-primary shadow-surface backdrop-blur-sm transition duration-subtle ease-cinematic hover:bg-elevated hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:w-auto"
+        class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border-strong bg-surface/60 px-8 py-3.5 text-base font-medium text-text-primary shadow-surface backdrop-blur-xs transition duration-subtle ease-cinematic hover:bg-elevated hover:border-border-strong focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:w-auto"
         on:click={() => goToRoute("/search")}
       >
         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -64,7 +64,7 @@
       </button>
       <button
         type="button"
-        class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-accent-primary px-8 py-3.5 text-base font-semibold text-background shadow-elevated transition duration-subtle ease-cinematic hover:bg-primary-600 hover:shadow-overlay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] sm:w-auto"
+        class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-accent-primary px-8 py-3.5 text-base font-semibold text-background shadow-elevated transition duration-subtle ease-cinematic hover:bg-primary-600 hover:shadow-overlay focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] sm:w-auto"
         on:click={() => goToRoute("/react")}
       >
         Start creating

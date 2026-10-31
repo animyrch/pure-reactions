@@ -1,7 +1,134 @@
-/* Write your global styles here, in PostCSS syntax */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Global styles. Theme values were copied from src/lib/constants/designTokens.js. */
+@import "tailwindcss";
+@plugin "flowbite/plugin";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@source "../node_modules/flowbite-svelte/dist";
+@source "../node_modules/flowbite-svelte-icons/dist";
+
+@theme {
+  --font-sans: "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Inter", "Helvetica Neue", Arial, sans-serif;
+
+  --color-background: #0f1115;
+  --color-surface: #15181f;
+  --color-elevated: #1c2029;
+  --color-overlay: rgba(10, 12, 16, 0.74);
+  --color-scrim: rgba(7, 9, 12, 0.82);
+
+  --color-text-primary: #f5f7fa;
+  --color-text-secondary: #c7cbd7;
+  --color-text-muted: #8d93a3;
+
+  --color-border-subtle: #242833;
+  --color-border-strong: #323845;
+
+  --color-accent: #5cb2ff;
+  --color-accent-primary: #5cb2ff;
+  --color-accent-secondary: #ff8b6c;
+  --color-accent-tertiary: #ffd27a;
+
+  --color-success: #4ecf9f;
+  --color-warning: #f6b65b;
+  --color-danger: #ff6f7a;
+  --color-focus: #5cb2ff;
+
+  --color-primary-50: #0b1a26;
+  --color-primary-100: #123048;
+  --color-primary-200: #18466a;
+  --color-primary-300: #1f5b8d;
+  --color-primary-400: #2563a8;
+  --color-primary-500: #5cb2ff;
+  --color-primary-600: #3f94e0;
+  --color-primary-700: #3276ba;
+  --color-primary-800: #255794;
+  --color-primary-900: #173a61;
+  --color-primary: #5cb2ff;
+
+  --spacing-none: 0;
+  --spacing-xs: 0.5rem;
+  --spacing-sm: 0.75rem;
+  --spacing-md: 1.25rem;
+  --spacing-lg: 1.75rem;
+  --spacing-xl: 2.5rem;
+  --spacing-xxl: 3.5rem;
+  --spacing-xxxl: 4.5rem;
+  --spacing-ratio-16-9: 56.25%;
+  --spacing-ratio-9-16: 177.78%;
+
+  --aspect-cinematic: 16 / 9;
+  --aspect-portrait: 9 / 16;
+
+  --height-1\/2-screen: 50vh;
+  --height-2\/3-screen: 66vh;
+  --height-1\/3-screen: 33vh;
+  --height-1\/4-screen: 25vh;
+  --height-1\/5-screen: 20vh;
+  --height-1\/6-screen: 16.5vh;
+  --height-1\/25-screen: 40vh;
+
+  --shadow-focus: 0 0 0 2px rgba(12, 18, 27, 0.9), 0 0 0 4px rgba(92, 178, 255, 0.45);
+  --shadow-surface: 0 6px 12px rgba(5, 8, 12, 0.35);
+  --shadow-elevated: 0 10px 30px rgba(5, 8, 12, 0.4);
+  --shadow-overlay: 0 20px 48px rgba(5, 8, 12, 0.45);
+
+  --ring-color-focus: #5cb2ff;
+  --ring-width-focus: 3px;
+
+  --transition-duration-immediate: 75ms;
+  --transition-duration-subtle: 180ms;
+  --transition-duration-slow: 320ms;
+  --transition-duration-deliberate: 500ms;
+
+  --default-transition-timing-function: cubic-bezier(0.33, 1, 0.68, 1);
+  --ease-cinematic: cubic-bezier(0.33, 1, 0.68, 1);
+  --ease-entrance: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 0.2, 1);
+
+  --animate-fade-soft: fade-soft 320ms cubic-bezier(0.33, 1, 0.68, 1) forwards;
+  --animate-cross-dissolve: cross-dissolve 500ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+
+  @keyframes fade-soft {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+  @keyframes cross-dissolve {
+    0% {
+      opacity: 0;
+      filter: blur(4px);
+    }
+    40% {
+      opacity: 1;
+      filter: blur(0px);
+    }
+    100% {
+      opacity: 1;
+      filter: blur(0px);
+    }
+  }
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
 
 /* Self-hosted face. The file lives in static/fonts and is served from this origin. */
 @font-face {
@@ -18,26 +145,21 @@
   --font-display: "Inter", "Helvetica Neue", Arial, sans-serif;
 }
 
-/* iOS Safe Area Utilities */
-@layer utilities {
-  .safe-padding-x {
-    padding-left: max(1rem, var(--safe-area-inset-left));
-    padding-right: max(1rem, var(--safe-area-inset-right));
-  }
-  
-  .safe-padding-top {
-    padding-top: calc(5rem + var(--safe-area-inset-top));
-  }
-  
-  .safe-padding-bottom {
-    padding-bottom: calc(3rem + var(--safe-area-inset-bottom));
-  }
-  
+@utility safe-padding-x {
+  padding-left: max(1rem, var(--safe-area-inset-left));
+  padding-right: max(1rem, var(--safe-area-inset-right));
+}
+
+@utility safe-padding-top {
+  padding-top: calc(5rem + var(--safe-area-inset-top));
+
   @media (min-width: 640px) {
-    .safe-padding-top {
-      padding-top: calc(5.5rem + var(--safe-area-inset-top));
-    }
+    padding-top: calc(5.5rem + var(--safe-area-inset-top));
   }
+}
+
+@utility safe-padding-bottom {
+  padding-bottom: calc(3rem + var(--safe-area-inset-bottom));
 }
 
 [data-svelte-transition] {

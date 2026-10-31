@@ -49,7 +49,7 @@
 <div class="relative">
     <button
         type="button"
-        class="inline-flex h-9 w-9 items-center justify-center rounded-full text-text-primary/90 transition duration-subtle ease-cinematic hover:bg-elevated/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        class="inline-flex h-9 w-9 items-center justify-center rounded-full text-text-primary/90 transition duration-subtle ease-cinematic hover:bg-elevated/40 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-label="Layout"
@@ -67,12 +67,12 @@
     {#if open}
         <button
             type="button"
-            class="fixed inset-0 z-[60] cursor-default bg-transparent"
+            class="fixed inset-0 z-60 cursor-default bg-transparent"
             aria-label="Close layout"
             on:click={() => (open = false)}
         ></button>
         <div
-            class="absolute bottom-full right-0 z-[70] mb-3 w-72 rounded-2xl border border-border-subtle bg-surface/95 p-3 text-left shadow-elevated backdrop-blur"
+            class="absolute bottom-full right-0 z-70 mb-3 w-72 rounded-2xl border border-border-subtle bg-surface/95 p-3 text-left shadow-elevated backdrop-blur-sm"
             role="dialog"
             aria-label="Player layout"
             data-testid="session-layout-panel"
@@ -84,7 +84,7 @@
             <div class="mt-2 grid grid-cols-2 gap-2" role="group" aria-label="Primary video">
                 <button
                     type="button"
-                    class={`rounded-lg border px-2 py-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${fullscreenPrimaryVideo === "original" ? "border-accent-primary bg-accent-primary/10 text-text-primary" : "border-border-subtle bg-background/40 text-text-muted hover:text-text-primary"}`}
+                    class={`rounded-lg border px-2 py-2 text-left transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus ${fullscreenPrimaryVideo === "original" ? "border-accent-primary bg-accent-primary/10 text-text-primary" : "border-border-subtle bg-background/40 text-text-muted hover:text-text-primary"}`}
                     aria-pressed={fullscreenPrimaryVideo === "original"}
                     on:click={() => onPrimaryChange("original")}
                 >
@@ -93,7 +93,7 @@
                 </button>
                 <button
                     type="button"
-                    class={`rounded-lg border px-2 py-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${fullscreenPrimaryVideo === "reaction" ? "border-accent-primary bg-accent-primary/10 text-text-primary" : "border-border-subtle bg-background/40 text-text-muted hover:text-text-primary"}`}
+                    class={`rounded-lg border px-2 py-2 text-left transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus ${fullscreenPrimaryVideo === "reaction" ? "border-accent-primary bg-accent-primary/10 text-text-primary" : "border-border-subtle bg-background/40 text-text-muted hover:text-text-primary"}`}
                     aria-pressed={fullscreenPrimaryVideo === "reaction"}
                     on:click={() => onPrimaryChange("reaction")}
                 >
@@ -126,7 +126,7 @@
                     {#if position}
                         <button
                             type="button"
-                            class={`flex flex-col items-center gap-1 rounded-lg border px-1 py-1.5 text-[11px] font-medium leading-tight transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${fullscreenOverlayCorner === position.value ? "border-accent-primary bg-accent-primary text-background" : "border-border-subtle bg-background/40 text-text-muted hover:text-text-primary"}`}
+                            class={`flex flex-col items-center gap-1 rounded-lg border px-1 py-1.5 text-[11px] font-medium leading-tight transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus ${fullscreenOverlayCorner === position.value ? "border-accent-primary bg-accent-primary text-background" : "border-border-subtle bg-background/40 text-text-muted hover:text-text-primary"}`}
                             aria-pressed={fullscreenOverlayCorner === position.value}
                             aria-label={`Place the overlay at the ${position.label.toLowerCase()}`}
                             on:click={() => onCornerChange(position.value)}

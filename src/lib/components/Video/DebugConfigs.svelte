@@ -52,7 +52,7 @@
 <div class="flex flex-col gap-6">
   <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
     <div
-      class="rounded-xl border border-border-subtle bg-background/70 p-4 shadow-sm"
+      class="rounded-xl border border-border-subtle bg-background/70 p-4 shadow-xs"
     >
       <p class="text-xs font-medium uppercase tracking-wide text-text-muted">
         Total events
@@ -62,7 +62,7 @@
       </p>
     </div>
     <div
-      class="rounded-xl border border-border-subtle bg-background/70 p-4 shadow-sm"
+      class="rounded-xl border border-border-subtle bg-background/70 p-4 shadow-xs"
     >
       <p class="text-xs font-medium uppercase tracking-wide text-text-muted">
         Volume Events
@@ -72,7 +72,7 @@
       </p>
     </div>
     <div
-      class="rounded-xl border border-border-subtle bg-background/70 p-4 shadow-sm"
+      class="rounded-xl border border-border-subtle bg-background/70 p-4 shadow-xs"
     >
       <p class="text-xs font-medium uppercase tracking-wide text-text-muted">
         Playback Events
@@ -82,7 +82,7 @@
       </p>
     </div>
     <div
-      class="rounded-xl border border-border-subtle bg-background/70 p-4 shadow-sm"
+      class="rounded-xl border border-border-subtle bg-background/70 p-4 shadow-xs"
     >
       <p class="text-xs font-medium uppercase tracking-wide text-text-muted">
         Speed Events
@@ -92,7 +92,7 @@
       </p>
     </div>
     <div
-      class="rounded-xl border border-border-subtle bg-background/70 p-4 shadow-sm"
+      class="rounded-xl border border-border-subtle bg-background/70 p-4 shadow-xs"
     >
       <p class="text-xs font-medium uppercase tracking-wide text-text-muted">
         Timeline span
@@ -145,7 +145,7 @@
 
             <button
               type="button"
-              class="inline-flex items-center justify-center self-start rounded-md px-2 py-1 text-xs font-medium text-text-muted transition hover:bg-surface/70 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 sm:self-auto"
+              class="inline-flex items-center justify-center self-start rounded-md px-2 py-1 text-xs font-medium text-text-muted transition hover:bg-surface/70 hover:text-text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent-primary/40 sm:self-auto"
               aria-label={`Delete event at ${formatSeconds(entry.timeInReaction)}`}
               on:click={() => handleDeleteEntry(entry)}
             >

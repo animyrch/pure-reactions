@@ -260,7 +260,7 @@
       }
     };
 
-    const fieldClass = 'w-full rounded-xl border border-border-strong/40 bg-background px-4 py-3 text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/30 disabled:opacity-60';
+    const fieldClass = 'w-full rounded-xl border border-border-strong/40 bg-background px-4 py-3 text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-hidden focus:ring-2 focus:ring-accent-primary/30 disabled:opacity-60';
 </script>
 
 <div class="mx-auto w-full max-w-3xl px-4 py-8 sm:py-12">

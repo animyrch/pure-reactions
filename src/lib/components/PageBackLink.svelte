@@ -26,7 +26,7 @@
   <div class="mb-3">
     <a
       href={backHref}
-      class="inline-flex items-center gap-2 text-sm text-text-secondary transition hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      class="inline-flex items-center gap-2 text-sm text-text-secondary transition hover:text-text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
       <ArrowLeftOutline class="h-4 w-4" aria-hidden="true" />
       Back

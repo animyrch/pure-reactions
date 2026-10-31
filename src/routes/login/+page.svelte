@@ -162,14 +162,14 @@
     <h2 class="text-2xl font-semibold text-center mb-4">Login</h2>
     <form on:submit|preventDefault={handleLogin} aria-busy={isSubmitting}>
       <div class="mb-4">
-        <input type="email" placeholder="Email" class="w-full p-3 border border-gray-300 rounded disabled:opacity-70" bind:value={email} autocomplete="email" disabled={isSubmitting} />
+        <input type="email" placeholder="Email" class="w-full p-3 border border-gray-300 rounded-sm disabled:opacity-70" bind:value={email} autocomplete="email" disabled={isSubmitting} />
       </div>
       <div class="mb-4">
-        <input type="password" placeholder="Password" class="w-full p-3 border border-gray-300 rounded disabled:opacity-70" bind:value={password} autocomplete="current-password" disabled={isSubmitting} />
+        <input type="password" placeholder="Password" class="w-full p-3 border border-gray-300 rounded-sm disabled:opacity-70" bind:value={password} autocomplete="current-password" disabled={isSubmitting} />
       </div>
       <button
         type="submit"
-        class="inline-flex w-full items-center justify-center gap-2 bg-gray-900 text-white p-3 rounded disabled:cursor-wait disabled:opacity-80"
+        class="inline-flex w-full items-center justify-center gap-2 bg-gray-900 text-white p-3 rounded-sm disabled:cursor-wait disabled:opacity-80"
         disabled={isSubmitting}
       >
         {#if isSubmitting}
@@ -187,13 +187,13 @@
     <h2 class="text-2xl font-semibold text-center mb-4">Sign Up</h2>
     <form on:submit|preventDefault={handleSignUp} aria-busy={isSubmitting}>
       <div class="mb-4">
-        <input type="email" placeholder="Email" class="w-full p-3 border border-gray-300 rounded disabled:opacity-70" bind:value={email} autocomplete="email" disabled={isSubmitting} />
+        <input type="email" placeholder="Email" class="w-full p-3 border border-gray-300 rounded-sm disabled:opacity-70" bind:value={email} autocomplete="email" disabled={isSubmitting} />
       </div>
       <div class="mb-4">
         <input
           type="password"
           placeholder="Password"
-          class="w-full p-3 border border-gray-300 rounded disabled:opacity-70"
+          class="w-full p-3 border border-gray-300 rounded-sm disabled:opacity-70"
           bind:value={password}
           autocomplete="new-password"
           disabled={isSubmitting}
@@ -213,7 +213,7 @@
             {/each}
           </ul>
           {#if backendMissingRequirements.length}
-            <div class="mt-3 rounded border border-amber-300 bg-amber-50 p-3 text-amber-800 text-sm" role="alert">
+            <div class="mt-3 rounded-sm border border-amber-300 bg-amber-50 p-3 text-amber-800 text-sm" role="alert">
               <p class="font-medium">Backend validation failed. Please also check:</p>
               <ul class="mt-2 space-y-1">
                 {#each backendMissingRequirements as requirement}
@@ -225,7 +225,7 @@
               </ul>
             </div>
           {:else if backendFallbackMessage}
-            <div class="mt-3 rounded border border-amber-300 bg-amber-50 p-3 text-amber-800 text-sm" role="alert">
+            <div class="mt-3 rounded-sm border border-amber-300 bg-amber-50 p-3 text-amber-800 text-sm" role="alert">
               {backendFallbackMessage}
             </div>
           {/if}
@@ -244,7 +244,7 @@
       </div>
       <button
         type="submit"
-        class={`inline-flex w-full items-center justify-center gap-2 bg-pink-700 text-white p-3 rounded disabled:opacity-70 ${isSubmitting ? 'disabled:cursor-wait' : 'disabled:cursor-not-allowed'}`}
+        class={`inline-flex w-full items-center justify-center gap-2 bg-pink-700 text-white p-3 rounded-sm disabled:opacity-70 ${isSubmitting ? 'disabled:cursor-wait' : 'disabled:cursor-not-allowed'}`}
         disabled={!canSubmitSignUp || isSubmitting}
       >
         {#if isSubmitting}
@@ -255,7 +255,7 @@
         {/if}
       </button>
       {#if isUsingFirebaseEmulators}
-        <div class="mt-4 rounded border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900" role="note">
+        <div class="mt-4 rounded-sm border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900" role="note">
           <p class="font-medium">Local development note</p>
           <p class="mt-1">
             The Firebase Auth emulator lets you create accounts locally, but new accounts still need email verification before they can create reactions or use protected actions.

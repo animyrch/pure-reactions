@@ -229,7 +229,7 @@
 
 <div class="context-wrapper" bind:this={menuEl}>
 	<Button
-		color="white"
+		color="light"
 		outline="true"
 		id={buttonId}
 		aria-label="Thumbnail actions"
@@ -251,14 +251,14 @@
 				<li>
 					<ReactionAction
 						buttonText="Open Youtube Page"
-						className="w-full justify-start rounded-sm px-sm py-1 text-left text-text-primary hover:text-accent-primary focus-visible:ring-0 focus-visible:outline-none focus-visible:text-accent-primary"
+						className="w-full justify-start rounded-xs px-sm py-1 text-left text-text-primary hover:text-accent-primary focus-visible:ring-0 focus-visible:outline-hidden focus-visible:text-accent-primary"
 						on:change={handleOpenYoutubePage}
 					/>
 				</li>
 				<li>
 					<ReactionAction
 						buttonText="Open Reactor Page"
-						className="w-full justify-start rounded-sm px-sm py-1 text-left text-text-primary hover:text-accent-primary focus-visible:ring-0 focus-visible:outline-none focus-visible:text-accent-primary"
+						className="w-full justify-start rounded-xs px-sm py-1 text-left text-text-primary hover:text-accent-primary focus-visible:ring-0 focus-visible:outline-hidden focus-visible:text-accent-primary"
 						on:change={handleOpenReactorPage}
 					/>
 				</li>
@@ -269,7 +269,7 @@
 			<li class="mt-1 border-t border-white/10 pt-2">
 				<button
 					type="button"
-					class="flex w-full items-center justify-between rounded-sm px-2 py-1 text-left text-sm font-semibold uppercase tracking-[0.2em] text-text-muted hover:text-text-primary"
+					class="flex w-full items-center justify-between rounded-xs px-2 py-1 text-left text-sm font-semibold uppercase tracking-[0.2em] text-text-muted hover:text-text-primary"
 					on:click={() => (isQueuesSectionOpen = !isQueuesSectionOpen)}
 					aria-expanded={isQueuesSectionOpen}
 					aria-controls={`sets-panel-${buttonId}`}
@@ -309,12 +309,12 @@
 										{#each queuesWithReaction as queue}
 											<button
 												type="button"
-												class="flex w-full items-center justify-between rounded-sm px-2 py-1.5 text-left text-sm text-text-primary transition-colors hover:bg-white/5"
+												class="flex w-full items-center justify-between rounded-xs px-2 py-1.5 text-left text-sm text-text-primary transition-colors hover:bg-white/5"
 												on:click={() => handleToggleQueueMembership(queue.id, queue.hasReaction)}
 												disabled={isSavingQueue}
 											>
 												<span class="truncate">{queue?.data?.title || queue.id}</span>
-												<span class="ml-2 flex-shrink-0">
+												<span class="ml-2 shrink-0">
 													{#if queue.hasReaction}
 														<span class="text-accent-primary">✓</span>
 													{:else}
@@ -331,13 +331,13 @@
 								<label class="mt-3 block text-xs text-text-muted" for={inputId}>Create new queue</label>
 								<input
 									id={inputId}
-									class="w-full rounded-sm border border-white/10 bg-white/5 p-2 text-sm text-text-primary"
+									class="w-full rounded-xs border border-white/10 bg-white/5 p-2 text-sm text-text-primary"
 									placeholder="New queue name"
 									bind:value={newQueueName}
 								/>
 
 								<button
-									class="mt-2 w-full rounded-sm bg-accent-primary px-3 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+									class="mt-2 w-full rounded-xs bg-accent-primary px-3 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
 									type="button"
 									on:click={handleAddToQueue}
 									disabled={isSavingQueue || !newQueueName?.trim()}
@@ -345,7 +345,7 @@
 									{isSavingQueue ? 'Saving…' : 'Create & add to queue'}
 								</button>
 							{:else}
-								<button class="mt-2 w-full rounded-sm bg-accent-primary px-3 py-2 text-sm font-semibold text-white" type="button" on:click={() => handlePrivateRoute()}>
+								<button class="mt-2 w-full rounded-xs bg-accent-primary px-3 py-2 text-sm font-semibold text-white" type="button" on:click={() => handlePrivateRoute()}>
 									Sign in to save to a queue
 								</button>
 							{/if}
@@ -358,7 +358,7 @@
 				<li class={isQueueItem ? '' : 'mt-1 border-t border-white/10 pt-2'}>
 					<ReactionAction
 						buttonText={deleteLabel}
-						className="w-full justify-start rounded-sm px-sm py-1 text-left text-red-400 hover:text-red-300 focus-visible:ring-0 focus-visible:outline-none focus-visible:text-red-300"
+						className="w-full justify-start rounded-xs px-sm py-1 text-left text-red-400 hover:text-red-300 focus-visible:ring-0 focus-visible:outline-hidden focus-visible:text-red-300"
 						on:change={handleDelete}
 					/>
 				</li>

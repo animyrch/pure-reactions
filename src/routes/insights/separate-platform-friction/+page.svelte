@@ -284,27 +284,27 @@
       <h2 class="mb-4 text-2xl font-semibold text-text-primary">The Full Playbook at a Glance</h2>
       <div class="space-y-3">
         <div class="flex items-start gap-4 rounded-lg bg-surface p-4">
-          <span class="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-accent-primary/20 text-xs font-semibold text-accent-primary">1</span>
+          <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent-primary/20 text-xs font-semibold text-accent-primary">1</span>
           <p><strong class="text-text-primary">Create content as usual.</strong> Upload your standard reaction video to YouTube, no changes to your workflow.</p>
         </div>
         <div class="flex items-start gap-4 rounded-lg bg-surface p-4">
-          <span class="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-accent-primary/20 text-xs font-semibold text-accent-primary">2</span>
+          <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent-primary/20 text-xs font-semibold text-accent-primary">2</span>
           <p><strong class="text-text-primary">Export an alternate version.</strong> Same edit, but with the original content's audio and video tracks removed — a quick operation since the full edit is already done. Upload it to YouTube as Unlisted.</p>
         </div>
         <div class="flex items-start gap-4 rounded-lg bg-surface p-4">
-          <span class="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-accent-primary/20 text-xs font-semibold text-accent-primary">3</span>
+          <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent-primary/20 text-xs font-semibold text-accent-primary">3</span>
           <p><strong class="text-text-primary">Create a Pure Reactions experience based on the original video(s).</strong> Use your unlisted video as the reaction source. Add the original video's control points (pauses, silences, resumes) using the fine-tune editor — the timing is already visible in your edit, so this takes only a few clicks. Copy your Pure Reactions watch page URL and add it as a brief note at the start, a description link and/or a YouTube card pointing viewers to the Pure Reactions experience.</p>
         </div>
         <div class="flex items-start gap-4 rounded-lg bg-surface p-4">
-          <span class="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-accent-primary/20 text-xs font-semibold text-accent-primary">4</span>
+          <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent-primary/20 text-xs font-semibold text-accent-primary">4</span>
           <p><strong class="text-text-primary">Link in your description.</strong> Add the Pure Reactions experience URL to your main video description with a short note about supporting the original creator.</p>
         </div>
         <div class="flex items-start gap-4 rounded-lg bg-surface p-4">
-          <span class="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-accent-primary/20 text-xs font-semibold text-accent-primary">5</span>
+          <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent-primary/20 text-xs font-semibold text-accent-primary">5</span>
           <p><strong class="text-text-primary">Invite, don't push.</strong> Mention it once in your video. Let curious viewers discover it. Gather feedback. Build familiarity gradually.</p>
         </div>
         <div class="flex items-start gap-4 rounded-lg bg-surface p-4">
-          <span class="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-accent-primary/20 text-xs font-semibold text-accent-primary">6</span>
+          <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent-primary/20 text-xs font-semibold text-accent-primary">6</span>
           <p><strong class="text-text-primary">If a claim hits:</strong> Make the unlisted video public. Start monetizing immediately with a fresh upload that the algorithm sees as new content.</p>
         </div>
       </div>
