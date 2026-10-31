@@ -60,7 +60,7 @@
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-svelte": "^2.39.0",
     "firebase-admin": "^13.0.2",
-    "firebase-tools": "^15.16.0",
+    "firebase-tools": "^15.34.2",
     "flowbite-svelte-icons": "^1.0.2",
     "postcss": "^8.5.32",
     "postcss-load-config": "^5.0.2",
