@@ -1,7 +1,6 @@
 <script>
-    import { afterNavigate } from "$app/navigation";
     import { onDestroy } from "svelte";
-    import { ArrowLeftOutline } from "flowbite-svelte-icons";
+    import PageBackLink from "$lib/components/PageBackLink.svelte";
     import PersonalPage from "$lib/components/PersonalPage.svelte";
     import PersonalListSection from "$lib/components/PersonalListSection.svelte";
     import { userExtraDataStore } from "$lib/stores/userExtraData";
@@ -20,8 +19,6 @@
     let lastQueuesUserId = "";
     let hasLoadedQueues = false;
     let destroyed = false;
-    const fallbackHref = "/account";
-    let backHref = fallbackHref;
     let deleteDialog;
     let pendingDelete = null;
     let isDeleting = false;
@@ -30,18 +27,6 @@
 
     onDestroy(() => {
         destroyed = true;
-    });
-
-    afterNavigate(({ from, to, type }) => {
-        if (destroyed || type === "popstate") return;
-
-        const toPath = to?.url?.pathname || "";
-        if (toPath !== "/bookmark") return;
-
-        const fromPath = from?.url?.pathname || "";
-        if (!fromPath || fromPath === toPath) return;
-
-        backHref = `${from.url.pathname}${from.url.search}${from.url.hash}`;
     });
 
     $: authedUserId = $page?.data?.userId || $currentUser?.uid;
@@ -139,17 +124,9 @@
     }
 </script>
 
-<PersonalPage>
-    <div class="mb-3">
-        <a
-            href={backHref}
-            class="inline-flex items-center gap-2 text-sm text-text-secondary transition hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-        >
-            <ArrowLeftOutline class="h-4 w-4" aria-hidden="true" />
-            Back
-        </a>
-    </div>
+<PageBackLink path="/bookmark" />
 
+<PersonalPage>
     <PersonalListSection
         eyebrow="Queues"
         loading={isLoadingQueues}

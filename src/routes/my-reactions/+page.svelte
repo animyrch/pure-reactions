@@ -1,9 +1,8 @@
 <script>
-	import { afterNavigate } from '$app/navigation';
 	import { onDestroy } from 'svelte';
-	import { ArrowLeftOutline } from 'flowbite-svelte-icons';
 	import { getUserReactions, getUserPlaylists } from '$lib/helpers/firebase';
 	import { deleteOwnedContent } from '$lib/helpers/deleteOwnedContent';
+    import PageBackLink from '$lib/components/PageBackLink.svelte';
     import ReactionsList from '$lib/components/ReactionsList.svelte';
 	import ReactionFilters from '$lib/components/Navigation/ReactionFilters.svelte';
 	import { handlePrivateRoute } from '$lib/helpers/routing';
@@ -15,9 +14,6 @@
 
 	export let data;
 
-	const fallbackHref = '/account';
-	let backHref = fallbackHref;
-
 	let destroyed = false;
 	let loadTimeout;
 
@@ -26,18 +22,6 @@
 		clearTimeout(loadTimeout);
 	});
 
-	afterNavigate(({ from, to, type }) => {
-		if (destroyed || type === 'popstate') return;
-
-		const toPath = to?.url?.pathname || '';
-		if (toPath !== '/my-reactions') return;
-
-		const fromPath = from?.url?.pathname || '';
-		if (!fromPath || fromPath === toPath) return;
-
-		backHref = `${from.url.pathname}${from.url.search}${from.url.hash}`;
-	});
-    
 	let combinedItems = [];
 	let isLoading = false;
 	let deleteDialog;
@@ -161,17 +145,10 @@
     $: loadReactions(), publishedFilter, typeFilter;
 </script>
 
+<PageBackLink path="/my-reactions" />
+
 {#if $isLoggedIn}
 	<div>
-		<div class="mb-3">
-			<a
-				href={backHref}
-				class="inline-flex items-center gap-2 text-sm text-text-secondary transition hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-			>
-				<ArrowLeftOutline class="h-4 w-4" aria-hidden="true" />
-				Back
-			</a>
-		</div>
 		<ReactionFilters />
 		{#if isLoading}
 			<ReactionsList reactions={[]} loading={true} />
