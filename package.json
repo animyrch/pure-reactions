@@ -64,7 +64,7 @@
     "flowbite-svelte-icons": "^1.0.2",
     "postcss": "^8.5.32",
     "postcss-load-config": "^5.0.2",
-    "svelte": "^5.0.0",
+    "svelte": "^5.57.3",
     "tailwindcss": "^3.3.6",
     "vite": "^6.0.0",
     "vitest": "^4.1.8",
