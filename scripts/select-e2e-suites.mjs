@@ -8,7 +8,7 @@
 
 import { spawnSync } from 'node:child_process';
 import { appendFileSync } from 'node:fs';
-import { loadSuitesManifest, selectSuites, suitesOutput } from './e2e-suites.mjs';
+import { loadSuitesManifest, pathsFromNameStatus, selectSuites, suitesOutput } from './e2e-suites.mjs';
 
 function parseArgs(argv) {
   const options = {
@@ -47,15 +47,15 @@ function parseArgs(argv) {
 function changedFiles(base, head) {
   const result = spawnSync(
     'git',
-    ['diff', '--name-only', '--diff-filter=ACDMRTUXB', `${base}...${head}`],
-    { encoding: 'utf8' }
+    ['diff', '-z', '--name-status', '--diff-filter=ACDMRTUXB', `${base}...${head}`],
+    { encoding: 'buffer' }
   );
   if (result.status !== 0) {
-    process.stderr.write(result.stderr || result.stdout || '');
+    process.stderr.write(result.stderr ?? '');
     console.error('git diff failed. Refusing to skip Playwright suites.');
     process.exit(1);
   }
-  return result.stdout.split('\n').map((line) => line.trim()).filter(Boolean);
+  return pathsFromNameStatus(result.stdout ?? Buffer.alloc(0));
 }
 
 function writeGithubOutput(selection) {

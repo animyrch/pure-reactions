@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { loadSuitesManifest, matchesGlob, selectSuites } from './e2e-suites.mjs';
+import { loadSuitesManifest, matchesGlob, pathsFromNameStatus, selectSuites } from './e2e-suites.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const manifest = loadSuitesManifest();
@@ -138,4 +140,48 @@ test('changed paths select the corresponding suites', () => {
   assert.equal(selectSuites(['src/routes/account-extra/+page.svelte'], manifest).mode, 'none');
   assert.equal(matchesGlob('src/routes/account/**', 'src/routes/account/+page.svelte'), true);
   assert.equal(matchesGlob('src/routes/account/**', 'src/routes/account-extra/+page.svelte'), false);
+});
+
+test('name-status paths keep exact names and both sides of a rename', () => {
+  const renamedShared = pathsFromNameStatus(
+    'R100\0playwright.config.cjs\0docs/moved-config.cjs\0'
+  );
+  assert.deepEqual(renamedShared, ['playwright.config.cjs', 'docs/moved-config.cjs']);
+  assert.equal(selectSuites(renamedShared, manifest).mode, 'all');
+
+  const renamedRoute = pathsFromNameStatus(
+    'R090\0src/routes/account/+page.svelte\0src/routes/about/+page.svelte\0'
+  );
+  assert.deepEqual(
+    selectSuites(renamedRoute, manifest).suites,
+    ['account', 'my-reactions']
+  );
+
+  const weirdName = 'src/routes/playlist/weird\nname .svelte';
+  assert.deepEqual(
+    pathsFromNameStatus(`D\0src/lib/removed.js\0M\0${weirdName}\0`),
+    ['src/lib/removed.js', weirdName]
+  );
+  assert.equal(selectSuites(['src/lib/removed.js'], manifest).mode, 'all');
+
+  const directory = mkdtempSync(join(tmpdir(), 'e2e-suites-'));
+  try {
+    const git = (args) => {
+      const result = spawnSync('git', args, { cwd: directory, encoding: 'buffer' });
+      assert.equal(result.status, 0, result.stderr?.toString('utf8'));
+      return result;
+    };
+    git(['init', '-q']);
+    git(['config', 'user.email', 't@example.com']);
+    git(['config', 'user.name', 't']);
+    writeFileSync(join(directory, 'shared.js'), 'a\n');
+    git(['add', 'shared.js']);
+    git(['commit', '-q', '-m', 'base']);
+    git(['mv', 'shared.js', 'renamed.js']);
+    git(['commit', '-q', '-m', 'rename']);
+    const diff = git(['diff', '-z', '--name-status', '--diff-filter=ACDMRTUXB', 'HEAD^...HEAD']);
+    assert.deepEqual(pathsFromNameStatus(diff.stdout), ['shared.js', 'renamed.js']);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });

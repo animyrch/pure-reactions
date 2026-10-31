@@ -66,3 +66,38 @@ export function suitesOutput(selection) {
   if (selection.mode === 'none') return 'none';
   return selection.suites.join(',');
 }
+
+/**
+ * Parse `git diff -z --name-status` output.
+ * Rename and copy records contribute both the old and new paths.
+ * Paths are kept exactly, including spaces and newlines.
+ */
+export function pathsFromNameStatus(output) {
+  const text = Buffer.isBuffer(output) ? output.toString('utf8') : String(output);
+  const records = text.split('\0');
+  if (records.length > 0 && records[records.length - 1] === '') records.pop();
+
+  const paths = [];
+  for (let i = 0; i < records.length; i += 1) {
+    const status = records[i];
+    if (!status) continue;
+    const code = status[0];
+    if (code === 'R' || code === 'C') {
+      const from = records[i + 1];
+      const to = records[i + 2];
+      if (from === undefined || to === undefined) {
+        throw new Error(`Incomplete git rename record: ${status}`);
+      }
+      paths.push(from, to);
+      i += 2;
+      continue;
+    }
+    const path = records[i + 1];
+    if (path === undefined) {
+      throw new Error(`Incomplete git status record: ${status}`);
+    }
+    paths.push(path);
+    i += 1;
+  }
+  return paths;
+}
