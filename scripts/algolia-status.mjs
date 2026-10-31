@@ -11,7 +11,7 @@
  *   ALGOLIA_ADMIN_KEY=xxx node scripts/algolia-status.mjs
  */
 
-import algoliasearch from 'algoliasearch';
+import { algoliasearch } from 'algoliasearch';
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
@@ -92,8 +92,7 @@ async function checkAlgoliaStatus() {
     if (indexName) {
       console.log('\n--- Target Index Settings ---');
       try {
-        const index = client.initIndex(indexName);
-        const settings = await index.getSettings();
+        const settings = await client.getSettings({ indexName });
         
         console.log('Searchable Attributes:', settings.searchableAttributes || ['(default: all)']);
         console.log('Attributes to Retrieve:', settings.attributesToRetrieve || ['(default: all)']);
@@ -103,7 +102,10 @@ async function checkAlgoliaStatus() {
         
         // Get a sample record
         console.log('\n--- Sample Record ---');
-        const { hits } = await index.search('', { hitsPerPage: 1 });
+        const { hits } = await client.searchSingleIndex({
+          indexName,
+          searchParams: { query: '', hitsPerPage: 1 }
+        });
         if (hits.length > 0) {
           const sample = hits[0];
           console.log('Object ID:', sample.objectID);

@@ -77,7 +77,7 @@
     "@popperjs/core": "^2.11.8",
     "@svelteuidev/composables": "^0.15.7",
     "@svelteuidev/core": "^0.15.4",
-    "algoliasearch": "^4.22.1",
+    "algoliasearch": "^5.61.0",
     "firebase": "^12.19.0",
     "flowbite": "^2.2.1",
     "flowbite-svelte": "^0.48.4",

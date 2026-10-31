@@ -8,7 +8,7 @@
  *   node scripts/algolia-index-moments.mjs --apply
  */
 
-import algoliasearch from 'algoliasearch';
+import { algoliasearch } from 'algoliasearch';
 import admin from 'firebase-admin';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -130,8 +130,7 @@ async function main() {
   }
 
   const client = algoliasearch(appId, adminKey);
-  const index = client.initIndex(indexName);
-  await index.saveObjects(records);
+  await client.saveObjects({ indexName, objects: records });
   console.log(`Indexed ${records.length} moments.`);
 }
 
