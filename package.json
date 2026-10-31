@@ -76,7 +76,7 @@
     "@svelteuidev/composables": "^0.15.7",
     "@svelteuidev/core": "^0.15.4",
     "algoliasearch": "^4.22.1",
-    "firebase": "^10.4.0",
+    "firebase": "^10.14.1",
     "flowbite": "^2.2.1",
     "flowbite-svelte": "^0.48.4",
     "instantsearch.js": "^4.64.2",
