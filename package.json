@@ -79,7 +79,7 @@
     "firebase": "^10.14.1",
     "flowbite": "^2.2.1",
     "flowbite-svelte": "^0.48.4",
-    "instantsearch.js": "^4.64.2",
+    "instantsearch.js": "^4.121.0",
     "netlify-identity-widget": "^1.9.2",
     "sharp": "^0.34.5",
     "tailwind-merge": "^2.2.0"
