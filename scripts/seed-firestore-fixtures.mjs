@@ -11,7 +11,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
-import admin from 'firebase-admin';
+import { cert, getApp, getApps, initializeApp } from 'firebase-admin/app';
+import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 
 const DEFAULT_FIXTURE = 'tests/fixtures/reactions/fallback.json';
 
@@ -174,25 +175,25 @@ function validateDocs(docs, fixturePath) {
 }
 
 function ensureAdminApp({ projectId, target }) {
-  if (admin.apps.length) {
-    return admin.app();
+  if (getApps().length) {
+    return getApp();
   }
 
   if (target === 'emulator') {
-    return admin.initializeApp({ projectId });
+    return initializeApp({ projectId });
   }
 
   // target === 'prod'
   const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT?.trim();
   if (serviceAccount?.startsWith('{')) {
     const parsed = JSON.parse(serviceAccount);
-    return admin.initializeApp({
-      credential: admin.credential.cert(parsed),
+    return initializeApp({
+      credential: cert(parsed),
       projectId: projectId || parsed.project_id
     });
   }
 
-  return admin.initializeApp({ projectId });
+  return initializeApp({ projectId });
 }
 
 async function seed() {
@@ -249,7 +250,7 @@ async function seed() {
   const fixture = readFixture(fixturePath);
 
   ensureAdminApp({ projectId, target });
-  const db = admin.firestore();
+  const db = getFirestore();
 
   const overwrite = args.overwrite || String(process.env.FIREBASE_SEED_OVERWRITE || '').toLowerCase() === 'true';
 
@@ -281,8 +282,8 @@ async function seed() {
 
       const payload = {
         ...entry.data,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp()
       };
 
       await ref.set(payload, { merge: false });

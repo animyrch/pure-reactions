@@ -27,7 +27,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
-import admin from 'firebase-admin';
+import { cert, getApp, getApps, initializeApp } from 'firebase-admin/app';
+import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 
 const YOUTUBE_WATCH_BASE_URL = 'https://www.youtube.com/watch?v=';
 const YOUTUBE_THUMBNAIL_BASE_URL = 'https://i.ytimg.com/vi';
@@ -247,24 +248,24 @@ function loadDotEnvIfPresent(envPath = '.env') {
 }
 
 function ensureAdminApp({ projectId, target }) {
-  if (admin.apps.length) {
-    return admin.app();
+  if (getApps().length) {
+    return getApp();
   }
 
   if (target === 'emulator') {
-    return admin.initializeApp({ projectId });
+    return initializeApp({ projectId });
   }
 
   const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT?.trim();
   if (serviceAccount?.startsWith('{')) {
     const parsed = JSON.parse(serviceAccount);
-    return admin.initializeApp({
-      credential: admin.credential.cert(parsed),
+    return initializeApp({
+      credential: cert(parsed),
       projectId: projectId || parsed.project_id
     });
   }
 
-  return admin.initializeApp({ projectId });
+  return initializeApp({ projectId });
 }
 
 function trimString(value) {
@@ -586,8 +587,8 @@ function buildNewReactionData({
         ? templateReactionData.globalGain
         : 1,
     muteReactionWhileOriginalPlays: Boolean(templateReactionData?.muteReactionWhileOriginalPlays),
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp()
   };
 
   const description = trimString(originalMetadata.description);
@@ -659,7 +660,7 @@ async function main() {
   }
 
   ensureAdminApp({ projectId, target });
-  const db = admin.firestore();
+  const db = getFirestore();
   const playlistResolution = await resolveCollectionForDocument({
     db,
     requestedName: requestedPlaylistCollection,
@@ -762,7 +763,7 @@ async function main() {
     sequenceItems: nextSequenceItems,
     reactionBinomeIds: nextReactionBinomeIds,
     originalVideoIds: nextOriginalVideoIds,
-    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    updatedAt: FieldValue.serverTimestamp()
   };
 
   const dryRun = !args.apply;

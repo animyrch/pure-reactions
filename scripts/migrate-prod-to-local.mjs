@@ -24,7 +24,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
-import admin from 'firebase-admin';
+import { cert, getApp, getApps, initializeApp } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 
 // ─── Helpers (shared pattern with other scripts) ────────────────────────────
 
@@ -57,7 +58,7 @@ function loadDotEnvIfPresent(envPath = '.env') {
 }
 
 function ensureAdminApp({ projectId }) {
-  if (admin.apps.length) return admin.app();
+  if (getApps().length) return getApp();
 
   const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT?.trim();
   if (!serviceAccount) throw new Error('Missing FIREBASE_SERVICE_ACCOUNT');
@@ -68,8 +69,8 @@ function ensureAdminApp({ projectId }) {
     // Assume it's a file path
     credentials = JSON.parse(fs.readFileSync(serviceAccount, 'utf8'));
   }
-  return admin.initializeApp({
-    credential: admin.credential.cert(credentials),
+  return initializeApp({
+    credential: cert(credentials),
     projectId: projectId || credentials.project_id
   });
 }
@@ -311,7 +312,7 @@ async function main() {
   }
 
   ensureAdminApp({ projectId });
-  const db = admin.firestore();
+  const db = getFirestore();
 
   const pairs = buildCollectionPairs();
   const mode = exportJsonPath ? 'EXPORT JSON' : dry ? 'DRY RUN' : 'LIVE';
