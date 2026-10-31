@@ -267,7 +267,7 @@
 </script>
 
 {#if $isLoggedIn}
-<div class="min-h-screen bg-slate-950 text-slate-100">
+<div class="min-h-screen bg-slate-950 text-slate-100" data-testid="react-page">
     <div class="mx-auto flex min-h-screen max-w-2xl flex-col px-4 py-14 sm:py-20">
         <div class="flex items-center justify-between gap-6">
             <button
