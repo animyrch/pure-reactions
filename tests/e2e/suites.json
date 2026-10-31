@@ -84,7 +84,6 @@
     "src/routes/+page.svelte",
     "static/**",
     "playwright.config.cjs",
-    "playwright.config.svelte5.cjs",
     "package.json",
     "package-lock.json",
     "vite.config.js",
