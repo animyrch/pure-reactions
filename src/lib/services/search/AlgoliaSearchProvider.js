@@ -1,4 +1,4 @@
-import algoliasearch from 'algoliasearch/lite';
+import { liteClient } from 'algoliasearch/lite';
 import { SearchProvider } from './SearchProvider.js';
 
 /**
@@ -21,7 +21,7 @@ export class AlgoliaSearchProvider extends SearchProvider {
 			throw new Error('AlgoliaSearchProvider requires appId and searchKey');
 		}
 
-		this.client = algoliasearch(config.appId, config.searchKey);
+		this.client = liteClient(config.appId, config.searchKey);
 		this.defaultIndex = config.defaultIndex;
 		this._ready = true;
 	}
@@ -42,9 +42,8 @@ export class AlgoliaSearchProvider extends SearchProvider {
 			throw new Error('No index specified and no default index set');
 		}
 
-		const index = this.client.initIndex(indexName);
-
-		const searchParams = {
+		const request = {
+			indexName,
 			query: query.trim(),
 			...(options.hitsPerPage && { hitsPerPage: options.hitsPerPage }),
 			...(options.page !== undefined && { page: options.page }),
@@ -52,7 +51,8 @@ export class AlgoliaSearchProvider extends SearchProvider {
 		};
 
 		try {
-			const result = await index.search(searchParams.query, searchParams);
+			const { results } = await this.client.search({ requests: [request] });
+			const result = results?.[0] || {};
 			
 			// Normalize response to provider-agnostic format
 			return {
@@ -88,19 +88,16 @@ export class AlgoliaSearchProvider extends SearchProvider {
 			return [];
 		}
 
-		// Convert to Algolia multi-search format
-		const algoliaQueries = queries.map((q) => ({
+		const requests = queries.map((q) => ({
 			indexName: q.index || this.defaultIndex,
 			query: q.query?.trim() || '',
-			params: {
-				...(q.options?.hitsPerPage && { hitsPerPage: q.options.hitsPerPage }),
-				...(q.options?.page !== undefined && { page: q.options.page }),
-				...(q.options?.filters && { filters: q.options.filters })
-			}
+			...(q.options?.hitsPerPage && { hitsPerPage: q.options.hitsPerPage }),
+			...(q.options?.page !== undefined && { page: q.options.page }),
+			...(q.options?.filters && { filters: q.options.filters })
 		}));
 
 		try {
-			const { results } = await this.client.search(algoliaQueries);
+			const { results } = await this.client.search({ requests });
 			
 			// Normalize results
 			return (results || []).map((result, idx) => ({
@@ -115,7 +112,7 @@ export class AlgoliaSearchProvider extends SearchProvider {
 				index: result.index || queries[idx]?.index,
 				_meta: {
 					provider: 'algolia',
-					index: result.index
+					index: result.index || queries[idx]?.index
 				}
 			}));
 		} catch (error) {

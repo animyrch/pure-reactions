@@ -128,16 +128,17 @@ async function fetchAlgoliaRecords(reactionIds) {
 	}
 
 	try {
-		const { default: algoliasearch } = await import('algoliasearch');
+		const { algoliasearch } = await import('algoliasearch');
 		const client = algoliasearch(appId, searchKey);
-		const index = client.initIndex(indexName);
 
 		const records = [];
 		const missingObjectIDs = [];
 		const chunks = chunkArray(reactionIds, ALGOLIA_BATCH_LIMIT);
 
 		for (const chunk of chunks) {
-			const response = await index.getObjects(chunk);
+			const response = await client.getObjects({
+				requests: chunk.map((objectID) => ({ indexName, objectID }))
+			});
 			response.results.forEach((result, indexOffset) => {
 				if (result) {
 					records.push(result);
