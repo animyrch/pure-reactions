@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-import admin from 'firebase-admin';
+import { cert, getApps, initializeApp } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
@@ -449,14 +450,14 @@ async function generate() {
   const baseUrl = CANONICAL_BASE_URL;
   const serviceAccount = resolveServiceAccount();
 
-  if (!admin.apps.length) {
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
+  if (!getApps().length) {
+    initializeApp({
+      credential: cert(serviceAccount),
       projectId: process.env.FIREBASE_PROJECT_ID || process.env.PUBLIC_FIREBASE_PROJECT_ID || serviceAccount.project_id
     });
   }
 
-  const db = admin.firestore();
+  const db = getFirestore();
   const collection = process.env.PUBLIC_FIREBASE_COLLECTION_REACTION_BINOMES || 'reactions';
   const reactions = await fetchPublishedReactions(db, collection);
   const entries = [

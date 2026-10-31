@@ -1,4 +1,5 @@
-import admin from 'firebase-admin';
+import { getApps, initializeApp } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 import { YT_PLAYER_STATE, clickPlayerSurface } from './twin-player-helpers.js';
 
 export const REMIX_OWNER_EMAIL = 'remix-owner@example.com';
@@ -19,10 +20,10 @@ const REMIX_DOCUMENT_IDS = [
 ];
 
 function remixFirestore() {
-  if (!admin.apps.length) {
-    admin.initializeApp({ projectId: process.env.GCLOUD_PROJECT || 'demo-pure-reactions' });
+  if (!getApps().length) {
+    initializeApp({ projectId: process.env.GCLOUD_PROJECT || 'demo-pure-reactions' });
   }
-  return admin.firestore();
+  return getFirestore();
 }
 
 async function remixOwnerId() {

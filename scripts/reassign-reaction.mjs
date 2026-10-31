@@ -17,7 +17,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
-import admin from 'firebase-admin';
+import { cert, getApp, getApps, initializeApp } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
+import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 
 // ─── Arg parsing ────────────────────────────────────────────────────────────
 
@@ -79,10 +81,10 @@ function loadDotEnvIfPresent(envPath = '.env') {
 // ─── Firebase init ───────────────────────────────────────────────────────────
 
 function ensureAdminApp({ projectId, target }) {
-  if (admin.apps.length) return admin.app();
+  if (getApps().length) return getApp();
 
   if (target === 'emulator') {
-    return admin.initializeApp({ projectId });
+    return initializeApp({ projectId });
   }
 
   const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT?.trim();
@@ -91,13 +93,13 @@ function ensureAdminApp({ projectId, target }) {
       ? JSON.parse(serviceAccount)
       : JSON.parse(fs.readFileSync(path.resolve(process.cwd(), serviceAccount), 'utf8'));
 
-    return admin.initializeApp({
-      credential: admin.credential.cert(parsed),
+    return initializeApp({
+      credential: cert(parsed),
       projectId: projectId || parsed.project_id
     });
   }
 
-  return admin.initializeApp({ projectId });
+  return initializeApp({ projectId });
 }
 
 // ─── Main ────────────────────────────────────────────────────────────────────
@@ -169,8 +171,8 @@ async function reassignReaction() {
   }
 
   ensureAdminApp({ projectId, target });
-  const db = admin.firestore();
-  const auth = admin.auth();
+  const db = getFirestore();
+  const auth = getAuth();
 
   // ── Fetch current reaction ────────────────────────────────────────────────
 
@@ -223,7 +225,7 @@ async function reassignReaction() {
 
   const update = {
     reactorId: args.newUserId,
-    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    updatedAt: FieldValue.serverTimestamp()
   };
   if (newDisplayName !== null) {
     update.reactorDisplayName = newDisplayName;
