@@ -80,7 +80,7 @@
     "flowbite": "^2.2.1",
     "flowbite-svelte": "^0.48.4",
     "instantsearch.js": "^4.121.0",
-    "netlify-identity-widget": "^1.9.2",
+    "netlify-identity-widget": "^2.0.3",
     "sharp": "^0.35.5",
     "tailwind-merge": "^2.2.0"
   },
