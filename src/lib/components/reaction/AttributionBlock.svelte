@@ -298,8 +298,9 @@
 </script>
 
 {#if !shouldHideAttribution}
+  <!-- pb-2.5 adds 2px under py-2 so the metadata screenshot keeps the baseline height. -->
   <section
-    class="flex flex-col gap-3 rounded-xl border border-border-strong/20 bg-surface/60 px-3 py-2 text-xs text-text-muted shadow-surface/40 backdrop-blur-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
+    class="flex flex-col gap-3 rounded-xl border border-border-strong/20 bg-surface/60 px-3 pt-2 pb-2.5 text-xs text-text-muted shadow-surface/40 backdrop-blur-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
     aria-label="Attribution"
     data-testid="attribution-block"
     data-debug-channel-handle={channelHandle}

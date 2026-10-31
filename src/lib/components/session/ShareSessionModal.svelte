@@ -21,12 +21,13 @@
         'flex items-center justify-center rounded-xl bg-accent-primary px-4 py-2 text-sm font-semibold text-background transition hover:bg-primary-600 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-wait disabled:opacity-60';
 </script>
 
+<!-- Flowbite's modal body includes md:p-5. The important padding keeps this panel at 24px, and 32px from the sm breakpoint. -->
 <Modal
     bind:open
     autoclose={false}
     outsideclose={false}
     class="bg-surface! text-text-primary! border border-white/20 shadow-[0_25px_80px_rgba(0,0,0,0.65)] ring-1 ring-white/10"
-    bodyClass="relative bg-transparent p-6 sm:p-8"
+    bodyClass="relative bg-transparent p-6! sm:p-8!"
 >
     <div class="space-y-5 pe-8 text-text-primary" data-testid="share-session-modal">
         <div>

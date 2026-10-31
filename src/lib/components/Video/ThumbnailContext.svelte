@@ -233,7 +233,7 @@
 		outline="true"
 		id={buttonId}
 		aria-label="Thumbnail actions"
-		on:click={toggleMenu}
+		onclick={toggleMenu}
 		aria-expanded={isOpen}
 		aria-controls={`menu-${buttonId}`}
 	>

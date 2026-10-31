@@ -121,11 +121,11 @@
     {/if}
 
     <div class="flex flex-wrap justify-end gap-3">
-      <Button color="alternative" on:click={handleCancel} disabled={isSubmittingClaim}>
+      <Button color="alternative" onclick={handleCancel} disabled={isSubmittingClaim}>
         Cancel
       </Button>
       <Button
-        on:click={onSubmit}
+        onclick={onSubmit}
         disabled={isSubmitDisabled}
         class="bg-accent-primary text-text-primary hover:bg-accent-primary/90"
       >
