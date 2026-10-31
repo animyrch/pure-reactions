@@ -55,7 +55,7 @@
     "@sveltejs/vite-plugin-svelte": "^5.0.0",
     "@vite-pwa/sveltekit": "^1.1.0",
     "autoprefixer": "^10.6.2",
-    "cross-env": "^7.0.3",
+    "cross-env": "^10.1.0",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-svelte": "^2.39.0",
