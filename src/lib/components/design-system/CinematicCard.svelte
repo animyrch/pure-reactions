@@ -22,7 +22,7 @@
   target={target}
   rel={isLink ? computedRel : undefined}
   aria-label={ariaLabelValue}
-  class="group relative flex flex-col overflow-hidden rounded-md bg-surface text-text-primary shadow-surface transition duration-deliberate ease-cinematic hover:shadow-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+  class="group relative flex flex-col overflow-hidden rounded-md bg-surface text-text-primary shadow-surface transition duration-deliberate ease-cinematic hover:shadow-elevated focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
   class:cursor-pointer={isLink || interactive}
   tabindex={!isLink && interactive ? '0' : undefined}
   role={!isLink && interactive ? 'button' : undefined}

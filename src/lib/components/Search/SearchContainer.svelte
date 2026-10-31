@@ -274,7 +274,7 @@
 <div class="relative inline-flex">
     <button
         type="button"
-        class={`search-trigger inline-flex items-center gap-2 rounded-full border border-border-strong/60 bg-surface/70 px-4 py-2 text-sm font-medium text-text-primary shadow-surface transition-all duration-300 ease-cinematic hover:bg-surface/90 hover:shadow-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background ${overlayOpen ? "scale-95 opacity-0 pointer-events-none" : "scale-100 opacity-100"}`}
+        class={`search-trigger inline-flex items-center gap-2 rounded-full border border-border-strong/60 bg-surface/70 px-4 py-2 text-sm font-medium text-text-primary shadow-surface transition-all duration-300 ease-cinematic hover:bg-surface/90 hover:shadow-elevated focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background ${overlayOpen ? "scale-95 opacity-0 pointer-events-none" : "scale-100 opacity-100"}`}
         aria-label="Open search"
         aria-expanded={overlayOpen}
         aria-haspopup="dialog"
@@ -287,7 +287,7 @@
     {#if overlayOpen}
         <div class="fixed inset-0 z-50">
             <button
-                class="absolute inset-0 h-full w-full bg-scrim/70 backdrop-blur-sm"
+                class="absolute inset-0 h-full w-full bg-scrim/70 backdrop-blur-xs"
                 type="button"
                 aria-hidden="true"
                 tabindex="-1"
@@ -310,7 +310,7 @@
                             aria-hidden="true"
                         />
                         <input
-                            class="flex-1 bg-transparent text-base font-medium text-text-primary placeholder:text-text-muted focus:outline-none"
+                            class="flex-1 bg-transparent text-base font-medium text-text-primary placeholder:text-text-muted focus:outline-hidden"
                             type="search"
                             bind:this={searchInput}
                             bind:value={query}
@@ -324,7 +324,7 @@
                         {#if query}
                             <button
                                 type="button"
-                                class="text-sm uppercase tracking-wide text-text-secondary transition duration-subtle ease-cinematic hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                                class="text-sm uppercase tracking-wide text-text-secondary transition duration-subtle ease-cinematic hover:text-text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                                 on:click={() => {
                                     query = "";
                                     loading = false;
@@ -340,7 +340,7 @@
                         {/if}
                         <button
                             type="button"
-                            class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border-strong/50 text-text-primary transition duration-subtle ease-cinematic hover:bg-surface/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                            class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border-strong/50 text-text-primary transition duration-subtle ease-cinematic hover:bg-surface/80 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                             aria-label="Close search"
                             on:click={closeOverlay}
                         >

@@ -10,13 +10,12 @@
 	<meta name="apple-mobile-web-app-capable" content="yes" />
 	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 	<style>
-		/* Reset some default styles */
-		* {
-			margin: 0;
-			padding: 0;
-			box-sizing: border-box;
-		}
-
+		/*
+		  No universal margin/padding reset here. Tailwind's preflight already
+		  sets margin, padding, and box-sizing inside @layer base. An unlayered
+		  * rule beats every Tailwind 4 utility, so px-* and mt-* would compute
+		  to 0.
+		*/
 		body {
 			background-color: #050505;
 			color: #f5f5f5;

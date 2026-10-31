@@ -291,7 +291,7 @@
         <div class="grid gap-3 md:grid-cols-2">
           <Button
             color="alternative"
-            on:click={() => data.handleUserAction('logout')}
+            onclick={() => data.handleUserAction('logout')}
             class="w-full h-12 rounded-lg justify-start text-left border border-gray-600 bg-transparent font-medium text-sm text-text-muted tracking-wide hover:bg-surface-dark hover:border-gray-400"
           >
             <span>Logout</span>
@@ -333,7 +333,7 @@
           <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
             <Button
               color="alternative"
-              on:click={requestExport}
+              onclick={requestExport}
               disabled={exportStatus === 'loading'}
               class="h-12 rounded-lg border border-gray-500 bg-surface text-text font-semibold text-sm tracking-wide hover:bg-surface-dark hover:border-gray-300"
             >
@@ -392,7 +392,7 @@
             </p>
             <Button
               color="red"
-              on:click={openDeleteModal}
+              onclick={openDeleteModal}
               class="w-full h-12 rounded-lg bg-red-600 hover:bg-red-700"
             >
               <span class="inline-flex items-center gap-2">
@@ -407,7 +407,7 @@
   </div>
 
   <!-- Delete Confirmation Modal -->
-  <Modal bind:open={showDeleteModal} size="md" autoclose={false}>
+  <Modal bind:open={showDeleteModal} size="md" autoclose={false} outsideclose={false}>
     {#if deleteStep === 'confirm'}
       <div class="text-center">
         <svg class="mx-auto mb-4 text-red-500 w-12 h-12" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
@@ -429,10 +429,10 @@
           </p>
         </div>
         <div class="flex justify-center gap-4">
-          <Button color="alternative" on:click={closeDeleteModal}>
+          <Button color="alternative" onclick={closeDeleteModal}>
             Cancel
           </Button>
-          <Button color="red" on:click={goToReauthStep}>
+          <Button color="red" onclick={goToReauthStep}>
             Continue
           </Button>
         </div>
@@ -456,7 +456,7 @@
             <input
               id="delete-password"
               type="password"
-              class="w-full p-3 border border-gray-300 rounded bg-surface text-text"
+              class="w-full p-3 border border-gray-300 rounded-sm bg-surface text-text"
               placeholder="Enter your password"
               bind:value={deletePassword}
             />
@@ -478,12 +478,12 @@
           <p class="text-sm text-red-400 mb-4">{deleteError}</p>
         {/if}
         <div class="flex justify-center gap-4">
-          <Button color="alternative" on:click={goToConfirmStep} disabled={isDeleting}>
+          <Button color="alternative" onclick={goToConfirmStep} disabled={isDeleting}>
             Back
           </Button>
           <Button
             color="red"
-            on:click={deleteAccount}
+            onclick={deleteAccount}
             disabled={isDeleting || (isPasswordProvider && !deletePassword) || (!isPasswordProvider && !isGoogleProvider)}
           >
             {#if isDeleting}

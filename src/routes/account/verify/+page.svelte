@@ -133,7 +133,7 @@
 
 <div class="min-h-screen bg-slate-950 px-4 py-16 text-slate-100 sm:px-6 lg:px-8">
   <div class="mx-auto max-w-3xl">
-    <div class="overflow-hidden rounded-[2rem] border border-slate-800/70 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.18),_transparent_45%),linear-gradient(180deg,rgba(15,23,42,0.98),rgba(2,6,23,0.98))] shadow-[0_35px_120px_-60px_rgba(15,23,42,1)]">
+    <div class="overflow-hidden rounded-4xl border border-slate-800/70 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.18),transparent_45%),linear-gradient(180deg,rgba(15,23,42,0.98),rgba(2,6,23,0.98))] shadow-[0_35px_120px_-60px_rgba(15,23,42,1)]">
       <div class="border-b border-slate-800/80 px-6 py-5 sm:px-10 sm:py-8">
         <p class="text-xs font-semibold uppercase tracking-[0.35em] text-blue-300/80">Verification Required</p>
         <h1 class="mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">Verify your account before creating reactions</h1>
@@ -190,7 +190,7 @@
           <div class="flex flex-col gap-3 sm:flex-row">
             <button
               type="button"
-              class="inline-flex min-h-[3rem] items-center justify-center rounded-full bg-blue-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/70 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-300"
+              class="inline-flex min-h-12 items-center justify-center rounded-full bg-blue-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-400 focus:outline-hidden focus:ring-2 focus:ring-blue-400/70 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-300"
               on:click={refreshVerificationStatus}
               disabled={isCheckingVerification}
             >
@@ -198,7 +198,7 @@
             </button>
             <button
               type="button"
-              class="inline-flex min-h-[3rem] items-center justify-center rounded-full border border-slate-700 bg-slate-900/50 px-5 py-3 text-sm font-semibold text-slate-100 transition hover:border-slate-500 hover:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-400/50 disabled:cursor-not-allowed disabled:border-slate-800 disabled:text-slate-500"
+              class="inline-flex min-h-12 items-center justify-center rounded-full border border-slate-700 bg-slate-900/50 px-5 py-3 text-sm font-semibold text-slate-100 transition hover:border-slate-500 hover:bg-slate-900 focus:outline-hidden focus:ring-2 focus:ring-blue-400/50 disabled:cursor-not-allowed disabled:border-slate-800 disabled:text-slate-500"
               on:click={resendVerificationLink}
               disabled={isResendingVerification}
             >
@@ -206,7 +206,7 @@
             </button>
             <button
               type="button"
-              class="inline-flex min-h-[3rem] items-center justify-center rounded-full border border-transparent px-5 py-3 text-sm font-semibold text-slate-400 transition hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-400/40"
+              class="inline-flex min-h-12 items-center justify-center rounded-full border border-transparent px-5 py-3 text-sm font-semibold text-slate-400 transition hover:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-400/40"
               on:click={() => data.handleUserAction('logout')}
             >
               Logout

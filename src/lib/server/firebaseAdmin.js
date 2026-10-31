@@ -101,16 +101,28 @@ export async function initializeFirebaseAdmin() {
 
         adminApp = initializeApp({
           credential: cert(serviceAccount),
-          projectId
+          // The public config can still say demo-pure-reactions when this module
+          // was evaluated. The service account is the project we can actually read.
+          projectId: serviceAccount.project_id || serviceAccount.projectId || projectId
         });
       }
     }
 
-    const { getAuth } = await import('firebase-admin/auth');
-    const { getFirestore, FieldValue } = await import('firebase-admin/firestore');
+    // Auth is not required for public reads. A failure to load it must not
+    // discard the Firestore client the homepage uses.
+    try {
+      const { getAuth } = await import('firebase-admin/auth');
+      adminAuth = getAuth(adminApp);
+    } catch (error) {
+      console.error('Failed to initialize Firebase Auth:', error);
+    }
 
-    adminAuth = getAuth(adminApp);
-    adminDb = getFirestore(adminApp);
+    const { getFirestore, initializeFirestore, FieldValue } = await import('firebase-admin/firestore');
+    // Hosted reads use REST so the function does not depend on the gRPC transport.
+    // The emulator does not implement that fallback.
+    adminDb = isUsingEmulators()
+      ? getFirestore(adminApp)
+      : initializeFirestore(adminApp, { preferRest: true });
     adminFieldValue = FieldValue;
     adminInitialized = true;
   } catch (error) {

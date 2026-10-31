@@ -4,7 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
-import admin from 'firebase-admin';
+import { cert, getApp, getApps, initializeApp } from 'firebase-admin/app';
+import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 
 const YOUTUBE_PLATFORM = 'youtube';
 const TIKTOK_PLATFORM = 'tiktok';
@@ -160,32 +161,32 @@ function loadDotEnvIfPresent(envPath = '.env') {
 }
 
 function ensureAdminApp({ projectId, target }) {
-  if (admin.apps.length) {
-    return admin.app();
+  if (getApps().length) {
+    return getApp();
   }
 
   if (target === 'emulator') {
-    return admin.initializeApp({ projectId });
+    return initializeApp({ projectId });
   }
 
   const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT?.trim();
   if (serviceAccount?.startsWith('{')) {
     const parsed = JSON.parse(serviceAccount);
-    return admin.initializeApp({
-      credential: admin.credential.cert(parsed),
+    return initializeApp({
+      credential: cert(parsed),
       projectId: projectId || parsed.project_id,
     });
   }
 
   if (serviceAccount) {
     const parsed = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), serviceAccount), 'utf8'));
-    return admin.initializeApp({
-      credential: admin.credential.cert(parsed),
+    return initializeApp({
+      credential: cert(parsed),
       projectId: projectId || parsed.project_id,
     });
   }
 
-  return admin.initializeApp({ projectId });
+  return initializeApp({ projectId });
 }
 
 function resolveTarget(args) {
@@ -412,7 +413,7 @@ async function repairPlaylistDocument({
         await playlistRef.set(
           {
             sequenceItems: sequenceItemsToInspect,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
           },
           { merge: true },
         );
@@ -470,7 +471,7 @@ async function repairPlaylistDocument({
     await playlistRef.set(
       {
         sequenceItems: nextSequenceItems,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
       },
       { merge: true },
     );
@@ -519,7 +520,7 @@ async function main() {
   }
 
   ensureAdminApp({ projectId, target });
-  const db = admin.firestore();
+  const db = getFirestore();
 
   console.log(`[repair-playlist-queue-titles] mode=${apply ? 'apply' : 'dry-run'} target=${target} projectId=${projectId}`);
   console.log(`[repair-playlist-queue-titles] playlistCollection=${playlistCollection} reactionCollection=${reactionCollection}`);

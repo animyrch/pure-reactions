@@ -173,9 +173,9 @@ test('share session modal text meets AA contrast', async ({ page }, testInfo) =>
 
     const inset = await page.evaluate(() => {
         const content = document.querySelector('[data-testid="share-session-modal"]');
-        const dialog = content?.closest('[role="dialog"]');
-        const panel = dialog?.querySelector('.relative.flex.flex-col');
-        const closeButton = dialog?.querySelector('button[aria-label="Close modal"]');
+        const dialog = content?.closest('dialog');
+        const panel = dialog;
+        const closeButton = dialog?.querySelector('button[aria-label="Close"]');
         if (!content || !panel) return null;
         const contentBox = content.getBoundingClientRect();
         const panelBox = panel.getBoundingClientRect();

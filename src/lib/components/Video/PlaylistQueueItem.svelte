@@ -66,12 +66,12 @@
         ) ??
         '';
 
-    const baseButtonClasses = 'group relative flex w-full items-center gap-sm rounded-md px-sm py-xs text-left transition duration-subtle ease-cinematic focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background';
+    const baseButtonClasses = 'group relative flex w-full items-center gap-sm rounded-md px-sm py-xs text-left transition duration-subtle ease-cinematic focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background';
     const activeButtonClasses = 'ml-xs bg-elevated pl-md text-text-primary shadow-surface';
     const inactiveButtonClasses = 'bg-transparent pl-sm text-text-secondary hover:bg-surface/60 hover:text-text-primary';
 
     $: buttonClasses = `${baseButtonClasses} ${isActive ? activeButtonClasses : inactiveButtonClasses}`;
-    $: thumbnailWrapperClasses = `relative flex h-16 w-28 shrink-0 overflow-hidden rounded-sm bg-surface ${isActive ? 'shadow-surface' : ''}`;
+    $: thumbnailWrapperClasses = `relative flex h-16 w-28 shrink-0 overflow-hidden rounded-xs bg-surface ${isActive ? 'shadow-surface' : ''}`;
     const baseSeparatorClasses = 'h-px bg-border-subtle/60';
     $: separatorClasses = `${baseSeparatorClasses} ${isActive ? 'ml-xs w-[calc(100%-0.5rem)]' : 'w-full'}`;
 </script>

@@ -8,8 +8,9 @@
  *   node scripts/algolia-index-moments.mjs --apply
  */
 
-import algoliasearch from 'algoliasearch';
-import admin from 'firebase-admin';
+import { algoliasearch } from 'algoliasearch';
+import { cert, getApps, initializeApp } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
@@ -98,9 +99,9 @@ async function main() {
   // Allow --collection to override env/default
   const collection = args.collection || process.env.PUBLIC_FIREBASE_COLLECTION_MOMENTS || 'moments_local';
 
-  if (!admin.apps.length) {
+  if (!getApps().length) {
     if (args.target === 'emulator') {
-      admin.initializeApp({ projectId });
+      initializeApp({ projectId });
     } else {
       const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT?.trim();
       if (!serviceAccount) {
@@ -109,11 +110,11 @@ async function main() {
       const parsed = serviceAccount.startsWith('{')
         ? JSON.parse(serviceAccount)
         : JSON.parse(fs.readFileSync(path.resolve(process.cwd(), serviceAccount), 'utf8'));
-      admin.initializeApp({ credential: admin.credential.cert(parsed), projectId });
+      initializeApp({ credential: cert(parsed), projectId });
     }
   }
 
-  const db = admin.firestore();
+  const db = getFirestore();
 
   const snapshot = await db.collection(collection).get();
 
@@ -130,8 +131,7 @@ async function main() {
   }
 
   const client = algoliasearch(appId, adminKey);
-  const index = client.initIndex(indexName);
-  await index.saveObjects(records);
+  await client.saveObjects({ indexName, objects: records });
   console.log(`Indexed ${records.length} moments.`);
 }
 

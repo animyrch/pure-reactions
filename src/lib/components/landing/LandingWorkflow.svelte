@@ -62,7 +62,7 @@
   aria-label="How the workflow works"
 >
   <!-- Subtle background gradient -->
-  <div class="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-surface/40 to-transparent" aria-hidden="true" />
+  <div class="pointer-events-none absolute inset-0 bg-linear-to-b from-transparent via-surface/40 to-transparent" aria-hidden="true" />
 
   <div class="relative mx-auto max-w-5xl">
     <!-- Header -->
@@ -114,7 +114,7 @@
 
           <!-- Connector line (between cards on desktop) -->
           {#if i < steps.length - 1}
-            <div class="absolute right-0 top-12 hidden h-px w-[calc(50%-2.5rem)] bg-gradient-to-r from-border-subtle to-transparent md:block" aria-hidden="true" style="left: calc(50% + 3rem);" />
+            <div class="absolute right-0 top-12 hidden h-px w-[calc(50%-2.5rem)] bg-linear-to-r from-border-subtle to-transparent md:block" aria-hidden="true" style="left: calc(50% + 3rem);" />
           {/if}
 
           <h3 class="mb-2 text-lg font-semibold text-text-primary md:text-xl">

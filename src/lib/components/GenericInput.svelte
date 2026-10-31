@@ -22,5 +22,5 @@
 <div class="flex flex-col md:flex-row gap-2">
     <Label for={inputId} class="flex-none block mb-2 self-center">{inputLabel}</Label>
     <Input class="shrink" bind:value={value} on:input={handleChange} id={inputId} />
-    <Button class="submit-button flex-none" on:click={validateAction}>{validateCallToAction}</Button>
+    <Button class="submit-button flex-none" onclick={validateAction}>{validateCallToAction}</Button>
 </div>

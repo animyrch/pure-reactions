@@ -54,7 +54,7 @@ test('my reactions can return to the page that opened it', async ({ page }) => {
     await expect(page).toHaveURL(/\/$/, { timeout: 20000 });
 
     await page.goto('/account');
-    await page.getByRole('button', { name: 'See Your Pure Reactions' }).click();
+    await page.getByRole('link', { name: 'See Your Pure Reactions' }).click();
     await expect(page).toHaveURL(/\/my-reactions$/, { timeout: 15000 });
     await page.locator('#published-filter').selectOption('published');
     await expect(page).toHaveURL(/\/my-reactions\?published=published$/, { timeout: 15000 });
@@ -66,7 +66,7 @@ test('my reactions can return to the page that opened it', async ({ page }) => {
     await expect(page).toHaveURL(/\/account$/, { timeout: 15000 });
     await expect(page.getByRole('heading', { name: 'Account Settings' })).toHaveCount(1, { timeout: 15000 });
     await expect(page.getByRole('link', { name: 'Back' })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'See Your Pure Reactions' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'See Your Pure Reactions' })).toBeVisible();
 
     await page.getByRole('link', { name: 'Pure Reactions home' }).click();
     await expect(page).toHaveURL(/\/$/, { timeout: 15000 });

@@ -1969,7 +1969,7 @@
     {/if}
   </div>
   <div
-    class={`relative rounded-xl border border-border-subtle/50 bg-surface/60 px-3 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 ${hoverInDisabledSection ? "cursor-not-allowed" : ""}`}
+    class={`relative rounded-xl border border-border-subtle/50 bg-surface/60 px-3 py-4 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong/60 ${hoverInDisabledSection ? "cursor-not-allowed" : ""}`}
     on:mousemove={updateHover}
     on:mouseleave={clearHover}
     on:click={handleTimelineClick}
@@ -1988,7 +1988,7 @@
         aria-hidden="true"
       >
         <span
-          class="rounded-md border border-border-strong/60 bg-background/95 px-2 py-0.5 shadow-sm"
+          class="rounded-md border border-border-strong/60 bg-background/95 px-2 py-0.5 shadow-xs"
         >
           {hoverTimeLabel}
         </span>
@@ -1997,7 +1997,7 @@
 
     <div class="relative flex flex-col gap-4 pt-6">
       <div
-        class="pointer-events-auto absolute left-[calc(7rem+0.75rem)] right-0 top-0 h-6 cursor-ew-resize"
+        class="pointer-events-auto absolute left-31 right-0 top-0 h-6 cursor-ew-resize"
         aria-label="Playhead scrubber"
         role="slider"
         aria-valuenow={safeCurrentTime}
@@ -2010,14 +2010,14 @@
       >
         <button
           type="button"
-          class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 cursor-ew-resize focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/60"
+          class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 cursor-ew-resize focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent-primary/60"
           style={`left: ${indicatorPosition}`}
           aria-label="Drag to scrub playback"
           tabindex="-1"
         >
           <!-- Playhead icon: upward triangle (pointing down at timeline) -->
           <svg
-            class="h-5 w-5 text-accent-primary drop-shadow rotate-180"
+            class="h-5 w-5 text-accent-primary drop-shadow-sm rotate-180"
             viewBox="0 0 20 20"
             fill="currentColor"
             aria-hidden="true"
@@ -2063,7 +2063,7 @@
                 {#if marker.editable}
                   <button
                     type="button"
-                    class={`pointer-events-auto relative inline-flex items-center justify-center rounded-full transition backdrop-blur-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 hover:z-30 focus-visible:z-30 ${marker.icon ? "h-4 w-4 hover:h-8 hover:w-8 hover:z-30" : "min-w-[2.25rem] px-2 py-1 text-[10px] font-semibold leading-none"} ${MARKER_STYLES[marker.tone] ?? "bg-background/80 text-text-muted"} ${isMarkerActive(marker) ? "ring-2 ring-text-primary/80" : ""}`}
+                    class={`pointer-events-auto relative inline-flex items-center justify-center rounded-full transition backdrop-blur-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong/60 hover:z-30 focus-visible:z-30 ${marker.icon ? "h-4 w-4 hover:h-8 hover:w-8 hover:z-30" : "min-w-9 px-2 py-1 text-[10px] font-semibold leading-none"} ${MARKER_STYLES[marker.tone] ?? "bg-background/80 text-text-muted"} ${isMarkerActive(marker) ? "ring-2 ring-text-primary/80" : ""}`}
                     title={`${marker.label} at ${marker.timeLabel}`}
                     aria-label={`${marker.label} at ${marker.timeLabel}`}
                     data-marker-interaction="true"
@@ -2097,7 +2097,7 @@
                   </button>
                 {:else}
                   <div
-                    class={`pointer-events-auto relative inline-flex min-w-[2.25rem] items-center justify-center rounded-full px-2 py-1 text-[10px] font-semibold leading-none transition hover:z-30 ${MARKER_STYLES[marker.tone] ?? "bg-background/80 text-text-muted"}`}
+                    class={`pointer-events-auto relative inline-flex min-w-9 items-center justify-center rounded-full px-2 py-1 text-[10px] font-semibold leading-none transition hover:z-30 ${MARKER_STYLES[marker.tone] ?? "bg-background/80 text-text-muted"}`}
                     title={`${marker.label} at ${marker.timeLabel}`}
                     aria-label={`${marker.label} at ${marker.timeLabel}`}
                     data-marker-interaction="true"
@@ -2112,7 +2112,7 @@
       {/each}
       {#if disabledViewportSpans.length}
         <div
-          class="pointer-events-none absolute bottom-0 left-[calc(7rem+0.75rem)] right-0 top-6 z-[1]"
+          class="pointer-events-none absolute bottom-0 left-31 right-0 top-6 z-1"
           aria-hidden="true"
         >
           {#each disabledViewportSpans as span (span.key)}
@@ -2126,7 +2126,7 @@
             >
               {#if span.showLabel}
                 <span
-                  class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-background/90 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-warning"
+                  class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-sm bg-background/90 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-warning"
                 >
                   {span.label}
                 </span>
@@ -2167,7 +2167,7 @@
                 min="0"
                 step="1"
                 inputmode="numeric"
-                class="w-16 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                class="w-16 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong/60"
                 value={pendingReactionMinutesInput}
                 on:input={(event) => {
                   pendingReactionMinutesInput = event.currentTarget.value;
@@ -2188,7 +2188,7 @@
                 max="59.99"
                 step="0.5"
                 inputmode="decimal"
-                class="w-20 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                class="w-20 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong/60"
                 value={pendingReactionSecondsInput}
                 on:input={(event) => {
                   pendingReactionSecondsInput = event.currentTarget.value;
@@ -2214,7 +2214,7 @@
                   min="0"
                   step="1"
                   inputmode="numeric"
-                  class="w-16 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                  class="w-16 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong/60"
                   value={pendingTargetMinutesInput}
                   on:input={(event) => {
                     pendingTargetMinutesInput = event.currentTarget.value;
@@ -2235,7 +2235,7 @@
                   max="59.99"
                   step="0.5"
                   inputmode="decimal"
-                  class="w-20 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                  class="w-20 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong/60"
                   value={pendingTargetSecondsInput}
                   on:input={(event) => {
                     pendingTargetSecondsInput = event.currentTarget.value;
@@ -2257,7 +2257,7 @@
           <div class="flex flex-wrap gap-2">
             <button
               type="button"
-              class={`flex-1 rounded-md border border-border-strong/70 bg-surface/90 px-2 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 ${COMMIT_DISABLED_CLASS}`}
+              class={`flex-1 rounded-md border border-border-strong/70 bg-surface/90 px-2 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong/60 ${COMMIT_DISABLED_CLASS}`}
               disabled={formTimeBlocked}
               on:click|stopPropagation={() => confirmConfigCreation(1)}
             >
@@ -2265,7 +2265,7 @@
             </button>
             <button
               type="button"
-              class={`flex-1 rounded-md border border-border-strong/70 bg-surface/90 px-2 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 ${COMMIT_DISABLED_CLASS}`}
+              class={`flex-1 rounded-md border border-border-strong/70 bg-surface/90 px-2 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong/60 ${COMMIT_DISABLED_CLASS}`}
               disabled={formTimeBlocked}
               on:click|stopPropagation={() => confirmConfigCreation(2)}
             >
@@ -2283,7 +2283,7 @@
             <div class="flex gap-2">
               <select
                 id="pending-playback-rate"
-                class="flex-1 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                class="flex-1 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong/60"
                 bind:value={pendingPlaybackRateInput}
               >
                 {#each PLAYBACK_RATE_OPTIONS as option}
@@ -2294,7 +2294,7 @@
               </select>
               <button
                 type="button"
-                class={`rounded-md border border-border-strong/70 bg-surface/90 px-3 py-1 font-semibold text-text-primary transition hover:border-accent-secondary/60 hover:text-accent-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 ${COMMIT_DISABLED_CLASS}`}
+                class={`rounded-md border border-border-strong/70 bg-surface/90 px-3 py-1 font-semibold text-text-primary transition hover:border-accent-secondary/60 hover:text-accent-secondary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong/60 ${COMMIT_DISABLED_CLASS}`}
                 disabled={formTimeBlocked}
                 on:click|stopPropagation={confirmPlaybackRateCreation}
               >
@@ -2322,13 +2322,13 @@
                 max="100"
                 step="1"
                 inputmode="numeric"
-                class="flex-1 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                class="flex-1 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong/60"
                 bind:value={pendingVolumeInput}
               />
               <span class="self-center text-xs text-text-muted">%</span>
               <button
                 type="button"
-                class={`rounded-md border border-border-strong/70 bg-surface/90 px-3 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 ${COMMIT_DISABLED_CLASS}`}
+                class={`rounded-md border border-border-strong/70 bg-surface/90 px-3 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong/60 ${COMMIT_DISABLED_CLASS}`}
                 disabled={formTimeBlocked}
                 on:click|stopPropagation={() =>
                   pendingConfig?.trackId === "reactionVolume"
@@ -2357,7 +2357,7 @@
                 <input
                   id="pending-overlay-visible"
                   type="checkbox"
-                  class="h-4 w-4 rounded border-border-strong/50 bg-surface/90 text-accent-primary focus:ring-2 focus:ring-accent-primary/40"
+                  class="h-4 w-4 rounded-sm border-border-strong/50 bg-surface/90 text-accent-primary focus:ring-2 focus:ring-accent-primary/40"
                   bind:checked={pendingOverlayVisibleInput}
                 />
                 <span class="text-sm text-text-primary">Show overlay</span>
@@ -2365,7 +2365,7 @@
               <div class="flex gap-2">
                 <button
                   type="button"
-                  class={`flex-1 rounded-md border bg-surface/90 px-2 py-1 font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 ${pendingOverlayPrimaryInput === "original" ? "border-accent-primary/60 text-accent-primary" : "border-border-strong/70 text-text-primary hover:border-accent-primary/50 hover:text-accent-primary"}`}
+                  class={`flex-1 rounded-md border bg-surface/90 px-2 py-1 font-semibold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong/60 ${pendingOverlayPrimaryInput === "original" ? "border-accent-primary/60 text-accent-primary" : "border-border-strong/70 text-text-primary hover:border-accent-primary/50 hover:text-accent-primary"}`}
                   on:click|stopPropagation={() => {
                     pendingOverlayPrimaryInput = "original";
                   }}
@@ -2374,7 +2374,7 @@
                 </button>
                 <button
                   type="button"
-                  class={`flex-1 rounded-md border bg-surface/90 px-2 py-1 font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 ${pendingOverlayPrimaryInput === "reaction" ? "border-accent-primary/60 text-accent-primary" : "border-border-strong/70 text-text-primary hover:border-accent-primary/50 hover:text-accent-primary"}`}
+                  class={`flex-1 rounded-md border bg-surface/90 px-2 py-1 font-semibold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong/60 ${pendingOverlayPrimaryInput === "reaction" ? "border-accent-primary/60 text-accent-primary" : "border-border-strong/70 text-text-primary hover:border-accent-primary/50 hover:text-accent-primary"}`}
                   on:click|stopPropagation={() => {
                     pendingOverlayPrimaryInput = "reaction";
                   }}
@@ -2384,7 +2384,7 @@
               </div>
               <button
                 type="button"
-                class={`rounded-md border border-border-strong/70 bg-surface/90 px-3 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 ${COMMIT_DISABLED_CLASS}`}
+                class={`rounded-md border border-border-strong/70 bg-surface/90 px-3 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong/60 ${COMMIT_DISABLED_CLASS}`}
                 disabled={formTimeBlocked}
                 on:click|stopPropagation={confirmOverlayVisibilityCreation}
               >
@@ -2400,7 +2400,7 @@
         {/if}
         <button
           type="button"
-          class="self-end rounded-md bg-transparent px-2 py-1 text-[11px] font-medium text-text-muted transition hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-subtle"
+          class="self-end rounded-md bg-transparent px-2 py-1 text-[11px] font-medium text-text-muted transition hover:text-text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-subtle"
           on:click|stopPropagation={closeConfigPopup}
         >
           Cancel
@@ -2442,7 +2442,7 @@
                 min="0"
                 step="1"
                 inputmode="numeric"
-                class="w-16 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                class="w-16 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong/60"
                 value={activeReactionMinutesInput}
                 on:input={(event) => {
                   activeReactionMinutesInput = event.currentTarget.value;
@@ -2464,7 +2464,7 @@
                 max="59.99"
                 step="0.5"
                 inputmode="decimal"
-                class="w-20 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                class="w-20 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong/60"
                 value={activeReactionSecondsInput}
                 on:input={(event) => {
                   activeReactionSecondsInput = event.currentTarget.value;
@@ -2491,7 +2491,7 @@
                   min="0"
                   step="1"
                   inputmode="numeric"
-                  class={`w-16 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 ${shouldLockActivePauseTarget ? "cursor-not-allowed opacity-60" : ""}`}
+                  class={`w-16 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong/60 ${shouldLockActivePauseTarget ? "cursor-not-allowed opacity-60" : ""}`}
                   readonly={shouldLockActivePauseTarget}
                   disabled={shouldLockActivePauseTarget}
                   value={activeTargetMinutesInput}
@@ -2515,7 +2515,7 @@
                   max="59.99"
                   step="0.5"
                   inputmode="decimal"
-                  class={`w-20 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 ${shouldLockActivePauseTarget ? "cursor-not-allowed opacity-60" : ""}`}
+                  class={`w-20 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong/60 ${shouldLockActivePauseTarget ? "cursor-not-allowed opacity-60" : ""}`}
                   readonly={shouldLockActivePauseTarget}
                   disabled={shouldLockActivePauseTarget}
                   value={activeTargetSecondsInput}
@@ -2540,7 +2540,7 @@
           <div class="flex flex-wrap gap-2">
             <button
               type="button"
-              class={`flex-1 rounded-md border bg-surface/90 px-2 py-1 font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 hover:border-accent-primary/50 hover:text-accent-primary ${COMMIT_DISABLED_CLASS} ${activeMarker.state === 1 ? "border-accent-primary/60 text-accent-primary" : "border-border-strong/70 text-text-primary"}`}
+              class={`flex-1 rounded-md border bg-surface/90 px-2 py-1 font-semibold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong/60 hover:border-accent-primary/50 hover:text-accent-primary ${COMMIT_DISABLED_CLASS} ${activeMarker.state === 1 ? "border-accent-primary/60 text-accent-primary" : "border-border-strong/70 text-text-primary"}`}
               aria-pressed={activeMarker.state === 1}
               disabled={formTimeBlocked}
               on:click|stopPropagation={() => confirmMarkerUpdate(1)}
@@ -2549,7 +2549,7 @@
             </button>
             <button
               type="button"
-              class={`flex-1 rounded-md border bg-surface/90 px-2 py-1 font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 hover:border-accent-primary/50 hover:text-accent-primary ${COMMIT_DISABLED_CLASS} ${activeMarker.state === 2 ? "border-accent-primary/60 text-accent-primary" : "border-border-strong/70 text-text-primary"}`}
+              class={`flex-1 rounded-md border bg-surface/90 px-2 py-1 font-semibold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong/60 hover:border-accent-primary/50 hover:text-accent-primary ${COMMIT_DISABLED_CLASS} ${activeMarker.state === 2 ? "border-accent-primary/60 text-accent-primary" : "border-border-strong/70 text-text-primary"}`}
               aria-pressed={activeMarker.state === 2}
               disabled={formTimeBlocked}
               on:click|stopPropagation={() => confirmMarkerUpdate(2)}
@@ -2568,7 +2568,7 @@
             <div class="flex gap-2">
               <select
                 id="active-playback-rate"
-                class="flex-1 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                class="flex-1 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong/60"
                 bind:value={activePlaybackRateInput}
                 on:change={() => {
                   activeMarkerIsDirty = true;
@@ -2582,7 +2582,7 @@
               </select>
               <button
                 type="button"
-                class={`rounded-md border border-border-strong/70 bg-surface/90 px-3 py-1 font-semibold text-text-primary transition hover:border-accent-secondary/60 hover:text-accent-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 ${COMMIT_DISABLED_CLASS}`}
+                class={`rounded-md border border-border-strong/70 bg-surface/90 px-3 py-1 font-semibold text-text-primary transition hover:border-accent-secondary/60 hover:text-accent-secondary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong/60 ${COMMIT_DISABLED_CLASS}`}
                 disabled={formTimeBlocked}
                 on:click|stopPropagation={confirmPlaybackRateUpdate}
               >
@@ -2610,7 +2610,7 @@
                 max="100"
                 step="1"
                 inputmode="numeric"
-                class="flex-1 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                class="flex-1 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong/60"
                 bind:value={activeVolumeInput}
                 on:input={() => {
                   activeMarkerIsDirty = true;
@@ -2619,7 +2619,7 @@
               <span class="self-center text-xs text-text-muted">%</span>
               <button
                 type="button"
-                class={`rounded-md border border-border-strong/70 bg-surface/90 px-3 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 ${COMMIT_DISABLED_CLASS}`}
+                class={`rounded-md border border-border-strong/70 bg-surface/90 px-3 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong/60 ${COMMIT_DISABLED_CLASS}`}
                 disabled={formTimeBlocked}
                 on:click|stopPropagation={() =>
                   activeMarker?.trackId === "reactionVolume"
@@ -2648,7 +2648,7 @@
                 <input
                   id="active-overlay-visible"
                   type="checkbox"
-                  class="h-4 w-4 rounded border-border-strong/50 bg-surface/90 text-accent-primary focus:ring-2 focus:ring-accent-primary/40"
+                  class="h-4 w-4 rounded-sm border-border-strong/50 bg-surface/90 text-accent-primary focus:ring-2 focus:ring-accent-primary/40"
                   bind:checked={activeOverlayVisibleInput}
                   on:change={() => {
                     activeMarkerIsDirty = true;
@@ -2659,7 +2659,7 @@
               <div class="flex gap-2">
                 <button
                   type="button"
-                  class={`flex-1 rounded-md border bg-surface/90 px-2 py-1 font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 ${activeOverlayPrimaryInput === "original" ? "border-accent-primary/60 text-accent-primary" : "border-border-strong/70 text-text-primary hover:border-accent-primary/50 hover:text-accent-primary"}`}
+                  class={`flex-1 rounded-md border bg-surface/90 px-2 py-1 font-semibold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong/60 ${activeOverlayPrimaryInput === "original" ? "border-accent-primary/60 text-accent-primary" : "border-border-strong/70 text-text-primary hover:border-accent-primary/50 hover:text-accent-primary"}`}
                   on:click|stopPropagation={() => {
                     activeOverlayPrimaryInput = "original";
                     activeMarkerIsDirty = true;
@@ -2669,7 +2669,7 @@
                 </button>
                 <button
                   type="button"
-                  class={`flex-1 rounded-md border bg-surface/90 px-2 py-1 font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 ${activeOverlayPrimaryInput === "reaction" ? "border-accent-primary/60 text-accent-primary" : "border-border-strong/70 text-text-primary hover:border-accent-primary/50 hover:text-accent-primary"}`}
+                  class={`flex-1 rounded-md border bg-surface/90 px-2 py-1 font-semibold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong/60 ${activeOverlayPrimaryInput === "reaction" ? "border-accent-primary/60 text-accent-primary" : "border-border-strong/70 text-text-primary hover:border-accent-primary/50 hover:text-accent-primary"}`}
                   on:click|stopPropagation={() => {
                     activeOverlayPrimaryInput = "reaction";
                     activeMarkerIsDirty = true;
@@ -2680,7 +2680,7 @@
               </div>
               <button
                 type="button"
-                class={`rounded-md border border-border-strong/70 bg-surface/90 px-3 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60 ${COMMIT_DISABLED_CLASS}`}
+                class={`rounded-md border border-border-strong/70 bg-surface/90 px-3 py-1 font-semibold text-text-primary transition hover:border-accent-primary/50 hover:text-accent-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong/60 ${COMMIT_DISABLED_CLASS}`}
                 disabled={formTimeBlocked}
                 on:click|stopPropagation={confirmOverlayVisibilityUpdate}
               >
@@ -2699,7 +2699,7 @@
             {#if activeMarker.trackId === "volume" || activeMarker.trackId === "reactionVolume"}
               <button
                 type="button"
-                class="inline-flex items-center gap-1 rounded-md border border-border-subtle/60 bg-surface/70 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-text-muted transition hover:border-accent-primary/40 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+                class="inline-flex items-center gap-1 rounded-md border border-border-subtle/60 bg-surface/70 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-text-muted transition hover:border-accent-primary/40 hover:text-text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong/60"
                 aria-expanded={showAdvancedActive}
                 aria-controls="active-advanced-options"
                 on:mouseenter={() => (showAdvancedActive = true)}
@@ -2712,7 +2712,7 @@
             {/if}
             <button
               type="button"
-              class="rounded-md border border-danger/40 bg-danger/10 px-2 py-1 font-semibold text-danger transition hover:border-danger/60 hover:bg-danger/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/40"
+              class="rounded-md border border-danger/40 bg-danger/10 px-2 py-1 font-semibold text-danger transition hover:border-danger/60 hover:bg-danger/20 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-danger/40"
               on:click|stopPropagation={handleActiveMarkerDelete}
             >
               Delete cue
@@ -2720,7 +2720,7 @@
           </div>
           <button
             type="button"
-            class="rounded-md bg-transparent px-2 py-1 text-[11px] font-medium text-text-muted transition hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-subtle"
+            class="rounded-md bg-transparent px-2 py-1 text-[11px] font-medium text-text-muted transition hover:text-text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-subtle"
             on:click|stopPropagation={closeMarkerEditor}
           >
             Close
@@ -2755,7 +2755,7 @@
           aria-hidden="true"
         ></div>
         <div
-          class="pointer-events-none absolute top-1/2 h-3.5 -translate-y-1/2 rounded-full border border-accent-primary/70 bg-accent-primary shadow-sm"
+          class="pointer-events-none absolute top-1/2 h-3.5 -translate-y-1/2 rounded-full border border-accent-primary/70 bg-accent-primary shadow-xs"
           style={`left: ${(timelineScrollMetrics.left * 100).toFixed(3)}%; width: ${(timelineScrollMetrics.width * 100).toFixed(3)}%;`}
           data-timeline-scroll-thumb="true"
           aria-hidden="true"
@@ -2770,7 +2770,7 @@
       </div>
       <button
         type="button"
-        class="inline-flex shrink-0 items-center rounded-md border border-border-subtle/60 bg-surface/80 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-text-muted transition hover:border-accent-primary/60 hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+        class="inline-flex shrink-0 items-center rounded-md border border-border-subtle/60 bg-surface/80 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-text-muted transition hover:border-accent-primary/60 hover:text-accent-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong/60"
         on:click={resetZoom}
       >
         Reset zoom

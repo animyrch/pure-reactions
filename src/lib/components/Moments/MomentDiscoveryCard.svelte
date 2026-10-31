@@ -40,7 +40,7 @@
 <article class="group flex h-full flex-col overflow-hidden rounded-2xl border border-border-strong/40 bg-surface/80 shadow-surface transition duration-300 ease-cinematic hover:border-border-strong/70 hover:shadow-elevated">
   <a
     {href}
-    class="relative block aspect-video overflow-hidden bg-background/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+    class="relative block aspect-video overflow-hidden bg-background/60 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     aria-label={`Open moment: ${title}`}
   >
     {#if thumbnail}
@@ -54,7 +54,7 @@
     {:else}
       <div class="flex h-full items-center justify-center text-sm text-text-muted">No preview</div>
     {/if}
-    <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-4 py-3">
+    <div class="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 to-transparent px-4 py-3">
       <p class="text-xs uppercase tracking-wide text-white/70">Original</p>
       <p class="line-clamp-1 text-sm font-medium text-white">{originalTitle}</p>
       {#if anchorTime}
@@ -66,7 +66,7 @@
   </a>
 
   <div class="flex flex-1 flex-col gap-3 p-4">
-    <a {href} class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus rounded-sm">
+    <a {href} class="focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus rounded-xs">
       <h2 class="line-clamp-2 text-lg font-semibold text-text-primary group-hover:text-white">
         {title}
       </h2>

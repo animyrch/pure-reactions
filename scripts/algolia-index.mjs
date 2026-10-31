@@ -21,8 +21,9 @@
  *   --batchSize     Records per batch (default: 1000)
  */
 
-import algoliasearch from 'algoliasearch';
-import admin from 'firebase-admin';
+import { algoliasearch } from 'algoliasearch';
+import { cert, getApp, getApps, initializeApp } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
@@ -105,12 +106,12 @@ function loadDotEnvIfPresent(envPath = '.env') {
 }
 
 function ensureAdminApp({ projectId, target }) {
-  if (admin.apps.length) {
-    return admin.app();
+  if (getApps().length) {
+    return getApp();
   }
 
   if (target === 'emulator') {
-    return admin.initializeApp({ projectId });
+    return initializeApp({ projectId });
   }
 
   // target === 'prod'
@@ -120,13 +121,13 @@ function ensureAdminApp({ projectId, target }) {
       ? JSON.parse(serviceAccount)
       : JSON.parse(fs.readFileSync(path.resolve(process.cwd(), serviceAccount), 'utf8'));
 
-    return admin.initializeApp({
-      credential: admin.credential.cert(parsed),
+    return initializeApp({
+      credential: cert(parsed),
       projectId: projectId || parsed.project_id
     });
   }
 
-  return admin.initializeApp({ projectId });
+  return initializeApp({ projectId });
 }
 
 /**
@@ -218,10 +219,9 @@ async function indexReactions() {
 
   // Initialize services
   const algoliaClient = algoliasearch(appId, adminKey);
-  const algoliaIndex = algoliaClient.initIndex(indexName);
 
   ensureAdminApp({ projectId, target });
-  const db = admin.firestore();
+  const db = getFirestore();
 
   // Fetch published reactions from Firestore (only index published content)
   console.log('Fetching published reactions from Firestore...');
@@ -268,64 +268,66 @@ async function indexReactions() {
   // Clear index if requested
   if (args.clear) {
     console.log('Clearing existing index...');
-    await algoliaIndex.clearObjects();
+    await algoliaClient.clearObjects({ indexName });
     console.log('✓ Index cleared\n');
   }
 
   // Configure index settings for optimal search
   console.log('Configuring index settings...');
-  await algoliaIndex.setSettings({
-    // Searchable attributes in order of importance
-    searchableAttributes: [
-      'customReactionTitle',
-      'reactionVideoTitle',
-      'originalVideoTitle',
-      'reactionVideoAuthor',
-      'tags'
-    ],
-    // Attributes to retrieve in search results
-    attributesToRetrieve: [
-      'reactionVideoId',
-      'customReactionTitle',
-      'reactionVideoTitle',
-      'originalVideoId',
-      'originalVideoTitle',
-      'playlistId',
-      'isMomentReaction',
-      'momentId',
-      'remixMode',
-      'watchDurationSeconds',
-      'reactionVideoAuthor',
-      'tags',
-      'slug',
-      'createdAt',
-      'updatedAt'
-    ],
-    // Attributes for faceting/filtering
-    attributesForFaceting: [
-      'searchable(reactionVideoAuthor)',
-      'searchable(tags)',
-      
-    ],
-    // Custom ranking
-    customRanking: [
-      'desc(createdAt)'
-    ],
-    // Typo tolerance (Note: Algolia API uses these exact names, not camelCase)
-    minWordSizefor1Typo: 4,
-    minWordSizefor2Typos: 8,
-    // Highlighting
-    attributesToHighlight: [
-      'customReactionTitle',
-      'reactionVideoTitle',
-      'originalVideoTitle',
-      'reactionVideoAuthor'
-    ],
-    // Snippet
-    attributesToSnippet: [
-      'reactionVideoTitle:20',
-      'originalVideoTitle:20'
-    ]
+  await algoliaClient.setSettings({
+    indexName,
+    indexSettings: {
+      // Searchable attributes in order of importance
+      searchableAttributes: [
+        'customReactionTitle',
+        'reactionVideoTitle',
+        'originalVideoTitle',
+        'reactionVideoAuthor',
+        'tags'
+      ],
+      // Attributes to retrieve in search results
+      attributesToRetrieve: [
+        'reactionVideoId',
+        'customReactionTitle',
+        'reactionVideoTitle',
+        'originalVideoId',
+        'originalVideoTitle',
+        'playlistId',
+        'isMomentReaction',
+        'momentId',
+        'remixMode',
+        'watchDurationSeconds',
+        'reactionVideoAuthor',
+        'tags',
+        'slug',
+        'createdAt',
+        'updatedAt'
+      ],
+      // Attributes for faceting/filtering
+      attributesForFaceting: [
+        'searchable(reactionVideoAuthor)',
+        'searchable(tags)',
+      ],
+      // Custom ranking
+      customRanking: [
+        'desc(createdAt)'
+      ],
+      // Typo tolerance (Note: Algolia API uses these exact names, not camelCase)
+      minWordSizefor1Typo: 4,
+      minWordSizefor2Typos: 8,
+      // Highlighting
+      attributesToHighlight: [
+        'customReactionTitle',
+        'reactionVideoTitle',
+        'originalVideoTitle',
+        'reactionVideoAuthor'
+      ],
+      // Snippet
+      attributesToSnippet: [
+        'reactionVideoTitle:20',
+        'originalVideoTitle:20'
+      ]
+    }
   });
   console.log('✓ Index settings configured\n');
 
@@ -335,7 +337,7 @@ async function indexReactions() {
   
   for (let i = 0; i < records.length; i += args.batchSize) {
     const batch = records.slice(i, i + args.batchSize);
-    await algoliaIndex.saveObjects(batch);
+    await algoliaClient.saveObjects({ indexName, objects: batch });
     indexed += batch.length;
     console.log(`  Indexed ${indexed}/${records.length} records`);
   }

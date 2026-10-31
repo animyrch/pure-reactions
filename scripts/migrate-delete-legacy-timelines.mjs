@@ -4,7 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
-import admin from 'firebase-admin';
+import { cert, getApp, getApps, initializeApp } from 'firebase-admin/app';
+import { FieldPath, FieldValue, getFirestore } from 'firebase-admin/firestore';
 
 function parseArgs(argv) {
   const args = {
@@ -117,24 +118,24 @@ function loadDotEnvIfPresent(envPath = '.env') {
 }
 
 function ensureAdminApp({ projectId, target }) {
-  if (admin.apps.length) {
-    return admin.app();
+  if (getApps().length) {
+    return getApp();
   }
 
   if (target === 'emulator') {
-    return admin.initializeApp({ projectId });
+    return initializeApp({ projectId });
   }
 
   const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT?.trim();
   if (serviceAccount?.startsWith('{')) {
     const parsed = JSON.parse(serviceAccount);
-    return admin.initializeApp({
-      credential: admin.credential.cert(parsed),
+    return initializeApp({
+      credential: cert(parsed),
       projectId: projectId || parsed.project_id
     });
   }
 
-  return admin.initializeApp({ projectId });
+  return initializeApp({ projectId });
 }
 
 function hasNonEmptyTimeline(value) {
@@ -198,9 +199,9 @@ async function migrate() {
   }
 
   ensureAdminApp({ projectId, target });
-  const db = admin.firestore();
+  const db = getFirestore();
 
-  const deleteSentinel = admin.firestore.FieldValue.delete();
+  const deleteSentinel = FieldValue.delete();
 
   let scanned = 0;
   let eligible = 0;
@@ -226,7 +227,7 @@ async function migrate() {
       break;
     }
 
-    let query = db.collection(collection).orderBy(admin.firestore.FieldPath.documentId()).limit(pageSize);
+    let query = db.collection(collection).orderBy(FieldPath.documentId()).limit(pageSize);
     if (lastDoc) {
       query = query.startAfter(lastDoc);
     }
