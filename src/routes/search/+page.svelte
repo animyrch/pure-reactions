@@ -155,7 +155,7 @@
                     bind:value={query}
                     on:input={handleInput}
                     type="search"
-                    class="block w-full rounded-2xl border border-border-strong/50 bg-surface/80 py-4 pl-12 pr-16 text-base text-text-primary placeholder:text-text-muted focus:border-focus focus:outline-none focus:ring-2 focus:ring-focus focus:ring-offset-2 focus:ring-offset-background"
+                    class="block w-full rounded-2xl border border-border-strong/50 bg-surface/80 py-4 pl-12 pr-16 text-base text-text-primary placeholder:text-text-muted focus:border-focus focus:outline-hidden focus:ring-2 focus:ring-focus focus:ring-offset-2 focus:ring-offset-background"
                     placeholder="Search reactions by title, reactor, or tags..."
                     autocomplete="off"
                     autocapitalize="off"

@@ -44,7 +44,7 @@
             min="0"
             max="100"
             step="1"
-            class="flex-1 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+            class="flex-1 rounded-md border border-border-strong/50 bg-surface/90 px-2 py-1 text-right text-text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong/60"
             bind:value={volumeInput}
             on:keydown|stopPropagation
             on:click|stopPropagation
@@ -52,7 +52,7 @@
         <span class="self-center text-xs text-text-muted">%</span>
         <button
             type="button"
-            class="rounded-md border border-accent-secondary/40 bg-accent-secondary/10 px-3 py-1 font-semibold text-accent-secondary transition hover:bg-accent-secondary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong/60"
+            class="rounded-md border border-accent-secondary/40 bg-accent-secondary/10 px-3 py-1 font-semibold text-accent-secondary transition hover:bg-accent-secondary/20 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong/60"
             on:click|stopPropagation={handleMirror}
         >
             Mirror

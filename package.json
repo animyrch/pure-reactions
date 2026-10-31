@@ -54,6 +54,7 @@
     "@sveltejs/enhanced-img": "^0.11.0",
     "@sveltejs/kit": "^2.70.3",
     "@sveltejs/vite-plugin-svelte": "^6.2.4",
+    "@tailwindcss/postcss": "^4.3.3",
     "@vite-pwa/sveltekit": "^1.1.0",
     "autoprefixer": "^10.6.2",
     "cross-env": "^10.1.0",
@@ -62,12 +63,12 @@
     "eslint-plugin-svelte": "^3.23.1",
     "firebase-admin": "^14.5.0",
     "firebase-tools": "^15.34.2",
-    "flowbite-svelte-icons": "^1.0.2",
+    "flowbite-svelte-icons": "^3.1.0",
     "globals": "^16.5.0",
     "postcss": "^8.5.32",
     "postcss-load-config": "^6.0.1",
     "svelte": "^5.57.3",
-    "tailwindcss": "^3.3.6",
+    "tailwindcss": "^4.3.3",
     "vite": "^7.3.7",
     "vitest": "^4.1.12",
     "workbox-window": "^7.4.0"
@@ -79,12 +80,12 @@
     "@svelteuidev/core": "^0.15.4",
     "algoliasearch": "^5.61.0",
     "firebase": "^12.19.0",
-    "flowbite": "^2.2.1",
-    "flowbite-svelte": "^0.48.4",
+    "flowbite": "^3.1.2",
+    "flowbite-svelte": "^1.33.1",
     "instantsearch.js": "^4.121.0",
     "netlify-identity-widget": "^2.0.3",
     "sharp": "^0.35.5",
-    "tailwind-merge": "^2.2.0"
+    "tailwind-merge": "^3.7.0"
   },
   "overrides": {
     "glob-parent": "6.0.2",

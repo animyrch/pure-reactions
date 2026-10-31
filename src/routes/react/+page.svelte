@@ -272,7 +272,7 @@
         <div class="flex items-center justify-between gap-6">
             <button
                 type="button"
-                class="group inline-flex items-center gap-2 text-sm font-medium text-slate-400 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+                class="group inline-flex items-center gap-2 text-sm font-medium text-slate-400 transition hover:text-white focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
                 on:click={handleBackNavigation}
             >
                 <ArrowLeftOutline class="h-4 w-4 transition group-hover:text-white" />
@@ -331,7 +331,7 @@
                                 bind:value={createReactForm.originalVideoId}
                                 on:input={clearOriginalVideoError}
                                 placeholder="https://youtube.com/watch?v=… or https://www.tiktok.com/@user/video/…"
-                                class={`w-full rounded-2xl border bg-slate-950/60 px-5 py-4 text-base text-slate-100 shadow-[0_20px_60px_-45px_rgba(15,23,42,1)] focus:border-blue-400 focus:outline-none focus:ring-4 focus:ring-blue-500/20 ${
+                                class={`w-full rounded-2xl border bg-slate-950/60 px-5 py-4 text-base text-slate-100 shadow-[0_20px_60px_-45px_rgba(15,23,42,1)] focus:border-blue-400 focus:outline-hidden focus:ring-4 focus:ring-blue-500/20 ${
                                     createReactForm.errors.originalVideoId ? 'border-rose-500/80' : 'border-slate-800/80'
                                 }`}
                                 autocomplete="off"
@@ -359,7 +359,7 @@
                                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                     <button
                                         type="button"
-                                        class="inline-flex items-center justify-center rounded-2xl border border-slate-700 px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-blue-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                                        class="inline-flex items-center justify-center rounded-2xl border border-slate-700 px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-blue-400 hover:text-white focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
                                         on:click={addSourceItem}
                                     >
                                         Add current link to sequence
@@ -414,7 +414,7 @@
                         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <button
                                 type="button"
-                                class="inline-flex items-center gap-2 text-sm font-medium text-slate-400 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                                class="inline-flex items-center gap-2 text-sm font-medium text-slate-400 transition hover:text-white focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
                                 on:click={handleBackNavigation}
                             >
                                 <ArrowLeftOutline class="h-4 w-4" />
@@ -424,7 +424,7 @@
                             <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
                                 <button
                                     type="button"
-                                    class="inline-flex items-center justify-center rounded-full px-3 py-1.5 text-sm font-medium text-slate-400 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                                    class="inline-flex items-center justify-center rounded-full px-3 py-1.5 text-sm font-medium text-slate-400 transition hover:text-white focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
                                     on:click={() => {
                                         isSequenceModeVisible = !isSequenceModeVisible;
                                     }}

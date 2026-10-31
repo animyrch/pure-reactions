@@ -199,14 +199,14 @@
           bind:value={query}
           on:input={handleInput}
           type="search"
-          class="block w-full rounded-2xl border border-border-strong/50 bg-surface/80 py-4 pl-12 pr-4 text-base text-text-primary placeholder:text-text-muted focus:border-focus focus:outline-none focus:ring-2 focus:ring-focus focus:ring-offset-2 focus:ring-offset-background"
+          class="block w-full rounded-2xl border border-border-strong/50 bg-surface/80 py-4 pl-12 pr-4 text-base text-text-primary placeholder:text-text-muted focus:border-focus focus:outline-hidden focus:ring-2 focus:ring-focus focus:ring-offset-2 focus:ring-offset-background"
           placeholder="Search by moment title, original video, tags, or creator…"
           autocomplete="off"
           aria-label="Search moments"
         />
       </div>
       <select
-        class="h-[3.625rem] w-full rounded-2xl border border-border-strong/50 bg-surface/80 px-4 text-base text-text-primary focus:border-focus focus:outline-none focus:ring-2 focus:ring-focus focus:ring-offset-2 focus:ring-offset-background sm:w-auto sm:shrink-0"
+        class="h-14.5 w-full rounded-2xl border border-border-strong/50 bg-surface/80 px-4 text-base text-text-primary focus:border-focus focus:outline-hidden focus:ring-2 focus:ring-focus focus:ring-offset-2 focus:ring-offset-background sm:w-auto sm:shrink-0"
         value={sortBy}
         on:change={handleSortChange}
         aria-label="Sort moments"

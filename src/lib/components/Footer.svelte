@@ -55,7 +55,7 @@
             <li>
               <button
                 type="button"
-                class="text-text-secondary transition-colors hover:text-accent-primary focus:outline-none"
+                class="text-text-secondary transition-colors hover:text-accent-primary focus:outline-hidden"
                 aria-label="Discover — open search"
                 on:click={discoverClick}
               >

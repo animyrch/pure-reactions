@@ -27,7 +27,7 @@
         <ReactionAction
             buttonText={actionLabel}
             on:change={isBookmarked ? onUnbookmarkReactionBinome : onBookmarkReactionBinome}
-            className="w-full justify-start rounded-sm px-sm py-1 text-left text-text-primary hover:text-accent-primary focus-visible:ring-0 focus-visible:outline-none focus-visible:text-accent-primary"
+            className="w-full justify-start rounded-xs px-sm py-1 text-left text-text-primary hover:text-accent-primary focus-visible:ring-0 focus-visible:outline-hidden focus-visible:text-accent-primary"
         >
             {#if isBookmarked}
                 Remove Bookmark

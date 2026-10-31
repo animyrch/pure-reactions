@@ -407,7 +407,7 @@
   </div>
 
   <!-- Delete Confirmation Modal -->
-  <Modal bind:open={showDeleteModal} size="md" autoclose={false}>
+  <Modal bind:open={showDeleteModal} size="md" autoclose={false} outsideclose={false}>
     {#if deleteStep === 'confirm'}
       <div class="text-center">
         <svg class="mx-auto mb-4 text-red-500 w-12 h-12" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
@@ -456,7 +456,7 @@
             <input
               id="delete-password"
               type="password"
-              class="w-full p-3 border border-gray-300 rounded bg-surface text-text"
+              class="w-full p-3 border border-gray-300 rounded-sm bg-surface text-text"
               placeholder="Enter your password"
               bind:value={deletePassword}
             />

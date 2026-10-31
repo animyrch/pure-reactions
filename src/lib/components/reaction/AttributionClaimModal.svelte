@@ -27,7 +27,8 @@
   bind:open={open}
   size="lg"
   autoclose={false}
-  class="!bg-[#0b0f17] border border-white/20 shadow-[0_25px_80px_rgba(0,0,0,0.65)] ring-1 ring-white/10"
+  outsideclose={false}
+  class="bg-[#0b0f17]! border border-white/20 shadow-[0_25px_80px_rgba(0,0,0,0.65)] ring-1 ring-white/10"
   bodyClass="bg-transparent"
 >
   <div class="space-y-4">
@@ -79,7 +80,7 @@
         </div>
         <button
           type="button"
-          class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-semibold text-text-primary transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-semibold text-text-primary transition hover:bg-white/20 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           on:click={onCopyToken}
         >
           Copy token
@@ -99,7 +100,7 @@
       <input
         id="verification-video-url"
         type="url"
-        class="w-full rounded-lg border border-white/10 bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+        class="w-full rounded-lg border border-white/10 bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus"
         placeholder="https://www.youtube.com/watch?v=..."
         bind:value={verificationVideoUrl}
         required
@@ -108,7 +109,7 @@
       <label class="flex items-start gap-2 text-sm text-text-muted">
         <input
           type="checkbox"
-          class="mt-1 h-4 w-4 rounded border-white/20 bg-white/10 text-accent-primary focus:ring-focus"
+          class="mt-1 h-4 w-4 rounded-sm border-white/20 bg-white/10 text-accent-primary focus:ring-focus"
           bind:checked={hasConfirmedControl}
         />
         <span>I confirm that I control this YouTube channel</span>

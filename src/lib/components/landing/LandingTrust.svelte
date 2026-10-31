@@ -61,7 +61,7 @@
 
         <!-- Decorative strikethrough -->
         <div class="pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden="true">
-          <div class="h-px w-4/5 rotate-[-8deg] bg-gradient-to-r from-transparent via-danger/20 to-transparent" />
+          <div class="h-px w-4/5 rotate-[-8deg] bg-linear-to-r from-transparent via-danger/20 to-transparent" />
         </div>
       </div>
 

@@ -64,7 +64,7 @@
       <span class="text-xs text-text-secondary">{sourceLabel}</span>
       {#if isPlaceholder}
         <span
-          class="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wider text-amber-500"
+          class="rounded-sm border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wider text-amber-500"
           title="No YOUTUBE_API_KEY configured — showing sample data"
         >Sample data</span>
       {/if}
@@ -75,7 +75,7 @@
         href={sectionActionUrl}
         target="_blank"
         rel="noopener noreferrer"
-        class="inline-flex items-center gap-1.5 text-xs font-medium text-accent-primary transition hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        class="inline-flex items-center gap-1.5 text-xs font-medium text-accent-primary transition hover:text-text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         aria-label="Comment on YouTube for {sourceLabel}"
       >
         Comment on YouTube
@@ -177,7 +177,7 @@
                 href={comment.viewThreadUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                class="font-medium text-accent-primary hover:text-text-primary transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                class="font-medium text-accent-primary hover:text-text-primary transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus"
                 aria-label="View thread on YouTube for comment by {comment.authorDisplayName}"
               >
                 View thread on YouTube
