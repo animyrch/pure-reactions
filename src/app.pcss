@@ -45,12 +45,12 @@
   --color-primary-900: #173a61;
   --color-primary: #5cb2ff;
 
-  --spacing-none: 0;
-  --spacing-xs: 0.5rem;
-  --spacing-sm: 0.75rem;
-  --spacing-md: 1.25rem;
-  --spacing-lg: 1.75rem;
-  --spacing-xl: 2.5rem;
+  /*
+    xs/sm/md/lg/xl/none are not registered on --spacing-*.
+    Those names are also Tailwind's max-width and line-height utilities.
+    A spacing key with the same name replaces them (max-w-none becomes 0,
+    leading-none becomes line-height 0). The design steps are utilities below.
+  */
   --spacing-xxl: 3.5rem;
   --spacing-xxxl: 4.5rem;
   --spacing-ratio-16-9: 56.25%;
@@ -129,6 +129,22 @@
     border-color: var(--color-gray-200, currentcolor);
   }
 }
+
+/* Design spacing. Kept off --spacing-* so they do not replace max-w-* or leading-none. */
+@utility gap-xs { gap: 0.5rem; }
+@utility gap-sm { gap: 0.75rem; }
+@utility gap-md { gap: 1.25rem; }
+@utility ml-xs { margin-left: 0.5rem; }
+@utility mt-sm { margin-top: 0.75rem; }
+@utility p-md { padding: 1.25rem; }
+@utility pl-sm { padding-left: 0.75rem; }
+@utility pl-md { padding-left: 1.25rem; }
+@utility px-xs { padding-inline: 0.5rem; }
+@utility px-sm { padding-inline: 0.75rem; }
+@utility px-md { padding-inline: 1.25rem; }
+@utility px-lg { padding-inline: 1.75rem; }
+@utility py-xs { padding-block: 0.5rem; }
+@utility py-sm { padding-block: 0.75rem; }
 
 /* Self-hosted face. The file lives in static/fonts and is served from this origin. */
 @font-face {
