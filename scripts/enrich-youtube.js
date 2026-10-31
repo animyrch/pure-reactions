@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-import admin from 'firebase-admin';
+import { cert, getApps, initializeApp } from 'firebase-admin/app';
+import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
@@ -248,7 +249,7 @@ async function enrichDoc(doc) {
     const newMeta = buildMetaFromResponse(reactionResponse, youtubeId);
     if (Object.keys(newMeta).length > 0) {
       updates.youtube = { meta: newMeta };
-      updates.lastEnrichedAt = admin.firestore.FieldValue.serverTimestamp();
+      updates.lastEnrichedAt = FieldValue.serverTimestamp();
     }
   }
 
@@ -257,7 +258,7 @@ async function enrichDoc(doc) {
     if (Object.keys(newMeta).length > 0) {
       updates.originalYoutube = {
         meta: newMeta,
-        lastEnrichedAt: admin.firestore.FieldValue.serverTimestamp()
+        lastEnrichedAt: FieldValue.serverTimestamp()
       };
     }
   }
@@ -278,14 +279,14 @@ async function run() {
   const limit = Number(process.env.ENRICHMENT_LIMIT || DEFAULT_LIMIT);
   const serviceAccount = resolveServiceAccount();
 
-  if (!admin.apps.length) {
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
+  if (!getApps().length) {
+    initializeApp({
+      credential: cert(serviceAccount),
       projectId: process.env.FIREBASE_PROJECT_ID || process.env.PUBLIC_FIREBASE_PROJECT_ID || serviceAccount.project_id
     });
   }
 
-  const db = admin.firestore();
+  const db = getFirestore();
 
   let snapshot = await db.collection(collection).where('isPublished', '==', true).limit(limit).get();
   if (snapshot.empty) {

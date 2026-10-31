@@ -22,7 +22,8 @@
  */
 
 import algoliasearch from 'algoliasearch';
-import admin from 'firebase-admin';
+import { cert, getApp, getApps, initializeApp } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
@@ -105,12 +106,12 @@ function loadDotEnvIfPresent(envPath = '.env') {
 }
 
 function ensureAdminApp({ projectId, target }) {
-  if (admin.apps.length) {
-    return admin.app();
+  if (getApps().length) {
+    return getApp();
   }
 
   if (target === 'emulator') {
-    return admin.initializeApp({ projectId });
+    return initializeApp({ projectId });
   }
 
   // target === 'prod'
@@ -120,13 +121,13 @@ function ensureAdminApp({ projectId, target }) {
       ? JSON.parse(serviceAccount)
       : JSON.parse(fs.readFileSync(path.resolve(process.cwd(), serviceAccount), 'utf8'));
 
-    return admin.initializeApp({
-      credential: admin.credential.cert(parsed),
+    return initializeApp({
+      credential: cert(parsed),
       projectId: projectId || parsed.project_id
     });
   }
 
-  return admin.initializeApp({ projectId });
+  return initializeApp({ projectId });
 }
 
 /**
@@ -221,7 +222,7 @@ async function indexReactions() {
   const algoliaIndex = algoliaClient.initIndex(indexName);
 
   ensureAdminApp({ projectId, target });
-  const db = admin.firestore();
+  const db = getFirestore();
 
   // Fetch published reactions from Firestore (only index published content)
   console.log('Fetching published reactions from Firestore...');

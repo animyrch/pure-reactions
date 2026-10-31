@@ -16,7 +16,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
-import admin from 'firebase-admin';
+import { cert, getApp, getApps, initializeApp } from 'firebase-admin/app';
+import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 
 function parseArgs(argv) {
   const args = {
@@ -139,24 +140,24 @@ function loadDotEnvIfPresent(envPath = '.env') {
 }
 
 function ensureAdminApp({ projectId, target }) {
-  if (admin.apps.length) {
-    return admin.app();
+  if (getApps().length) {
+    return getApp();
   }
 
   if (target === 'emulator') {
-    return admin.initializeApp({ projectId });
+    return initializeApp({ projectId });
   }
 
   const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT?.trim();
   if (serviceAccount?.startsWith('{')) {
     const parsed = JSON.parse(serviceAccount);
-    return admin.initializeApp({
-      credential: admin.credential.cert(parsed),
+    return initializeApp({
+      credential: cert(parsed),
       projectId: projectId || parsed.project_id
     });
   }
 
-  return admin.initializeApp({ projectId });
+  return initializeApp({ projectId });
 }
 
 function extractChannelId(claimId) {
@@ -223,7 +224,7 @@ async function approveClaim() {
   }
 
   ensureAdminApp({ projectId, target });
-  const db = admin.firestore();
+  const db = getFirestore();
 
   const claimRef = db.collection(claimsCollection).doc(claimId);
   const claimSnap = await claimRef.get();
@@ -247,7 +248,7 @@ async function approveClaim() {
         status: 'approved',
         claimId,
         userId: claimUserId,
-        approvedAt: admin.firestore.FieldValue.serverTimestamp()
+        approvedAt: FieldValue.serverTimestamp()
       },
       { merge: true }
     );
