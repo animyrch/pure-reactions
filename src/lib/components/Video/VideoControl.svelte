@@ -79,13 +79,13 @@
     }
 
     const primaryButtonBase =
-        "inline-flex h-11 w-11 items-center justify-center rounded-full transition duration-subtle ease-cinematic focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] sm:h-12 sm:w-12";
+        "inline-flex h-11 w-11 items-center justify-center rounded-full transition duration-subtle ease-cinematic focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] sm:h-12 sm:w-12";
     const iconButtonBase =
-        "inline-flex h-9 w-9 items-center justify-center rounded-full text-text-primary/90 transition duration-subtle ease-cinematic hover:bg-elevated/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98]";
+        "inline-flex h-9 w-9 items-center justify-center rounded-full text-text-primary/90 transition duration-subtle ease-cinematic hover:bg-elevated/40 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98]";
     const skipButtonClass =
-        "inline-flex h-8 w-8 items-center justify-center rounded-full text-text-primary/90 transition duration-subtle ease-cinematic hover:bg-elevated/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40 sm:h-9 sm:w-9";
+        "inline-flex h-8 w-8 items-center justify-center rounded-full text-text-primary/90 transition duration-subtle ease-cinematic hover:bg-elevated/40 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40 sm:h-9 sm:w-9";
     const nextButtonClass =
-        "inline-flex h-9 shrink-0 items-center gap-1 rounded-full bg-accent-primary/15 px-2.5 text-xs font-semibold text-accent-primary transition duration-subtle ease-cinematic hover:bg-accent-primary/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 sm:gap-1.5 sm:px-3";
+        "inline-flex h-9 shrink-0 items-center gap-1 rounded-full bg-accent-primary/15 px-2.5 text-xs font-semibold text-accent-primary transition duration-subtle ease-cinematic hover:bg-accent-primary/25 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 sm:gap-1.5 sm:px-3";
 
     const handleNext = () => {
         if (nextDisabled || typeof onNext !== "function") return;
@@ -430,7 +430,7 @@
 >
     {#if !bothVideosStarted}
         <div
-            class="click-gate-prompt w-full max-w-xl rounded-2xl border border-border-subtle/80 bg-elevated/95 px-5 py-3.5 text-center shadow-surface backdrop-blur-sm sm:px-8 sm:py-4"
+            class="click-gate-prompt w-full max-w-xl rounded-2xl border border-border-subtle/80 bg-elevated/95 px-5 py-3.5 text-center shadow-surface backdrop-blur-xs sm:px-8 sm:py-4"
             style={dockAccentStyle}
             role="status"
             data-testid="click-gate-prompt"
@@ -469,7 +469,7 @@
         </div>
     {:else}
         <div
-            class={`controls-surface flex w-full flex-wrap items-center gap-x-3 gap-y-2 rounded-3xl border border-border-subtle/70 bg-surface/70 px-3 py-2 backdrop-blur-sm transition-opacity duration-subtle ease-cinematic sm:flex-nowrap sm:rounded-full sm:px-4 ${hostControlled ? "justify-end" : "justify-between"} ${controlsClasses}`}
+            class={`controls-surface flex w-full flex-wrap items-center gap-x-3 gap-y-2 rounded-3xl border border-border-subtle/70 bg-surface/70 px-3 py-2 backdrop-blur-xs transition-opacity duration-subtle ease-cinematic sm:flex-nowrap sm:rounded-full sm:px-4 ${hostControlled ? "justify-end" : "justify-between"} ${controlsClasses}`}
             style={dockAccentStyle}
             role="toolbar"
             aria-label={hostControlled ? "Watch layout controls" : "Reaction playback controls"}
@@ -480,7 +480,7 @@
         >
             {#if !hostControlled}
             <!-- Skip back, play/pause, skip forward -->
-            <div class="order-2 flex shrink-0 items-center gap-0.5 sm:order-none sm:gap-1">
+            <div class="order-2 flex shrink-0 items-center gap-0.5 sm:order-0 sm:gap-1">
                 <button
                     type="button"
                     class={skipButtonClass}
@@ -528,7 +528,7 @@
             </div>
 
             <!-- Scrubber -->
-            <div class="scrubber-wrap order-1 flex w-full min-w-0 basis-full items-center gap-3 px-0 sm:order-none sm:basis-auto sm:flex-1 sm:px-2">
+            <div class="scrubber-wrap order-1 flex w-full min-w-0 basis-full items-center gap-3 px-0 sm:order-0 sm:basis-auto sm:flex-1 sm:px-2">
                 <span
                     class="min-w-[32px] text-right text-xs font-medium tabular-nums text-text-muted"
                     >{formatTime(displayTime)}</span
@@ -553,7 +553,7 @@
             {/if}
 
             <!-- Other Buttons -->
-            <div class="flex items-center gap-2 shrink-0 order-3 sm:order-none">
+            <div class="flex items-center gap-2 shrink-0 order-3 sm:order-0">
                 {#if !hostControlled}
                 <div class="group relative">
                     <button
@@ -659,6 +659,8 @@
 </div>
 
 <style lang="postcss">
+    @reference "../../../app.pcss";
+
     .sr-only {
         position: absolute;
         width: 1px;

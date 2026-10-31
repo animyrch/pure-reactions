@@ -362,7 +362,7 @@
   {#if !showDebugConfigs && ignoredTimelineEntries.length}
     <button
       type="button"
-      class="inline-flex items-center justify-center self-start rounded-md px-3 py-2 text-xs font-medium text-text-muted transition hover:bg-surface/70 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
+      class="inline-flex items-center justify-center self-start rounded-md px-3 py-2 text-xs font-medium text-text-muted transition hover:bg-surface/70 hover:text-text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent-primary/40"
       aria-expanded={showIgnoredConfigs}
       on:click={() => {
         showIgnoredConfigs = !showIgnoredConfigs;

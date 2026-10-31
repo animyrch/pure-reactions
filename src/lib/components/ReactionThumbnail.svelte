@@ -269,7 +269,7 @@
         </div>
     {:else}
         <a
-            class="thumbnail-link block focus-visible:outline-none"
+            class="thumbnail-link block focus-visible:outline-hidden"
             href={reactionRedirectionPath}
             aria-label={linkLabel}
         >
@@ -403,7 +403,7 @@
     <div class="thumbnail-content flex items-start gap-md">
         {#if linkless}
             <div
-                class="min-w-0 flex-1 rounded-sm"
+                class="min-w-0 flex-1 rounded-xs"
                 title={displayTitle}
             >
                 <p class="truncate text-sm font-semibold text-text-primary">
@@ -421,7 +421,7 @@
             </div>
         {:else}
             <a
-                class="min-w-0 flex-1 rounded-sm focus-visible:outline-none focus-visible:underline"
+                class="min-w-0 flex-1 rounded-xs focus-visible:outline-hidden focus-visible:underline"
                 href={reactionRedirectionPath}
                 title={displayTitle}
             >

@@ -59,7 +59,7 @@
   >
     <button
       type="button"
-      class={`group flex items-center overflow-hidden rounded-full bg-surface/40 ${isExitButtonExpanded ? "pl-3 pr-4" : "px-3"} py-2 text-sm font-semibold text-text-primary shadow-elevated backdrop-blur transition-all duration-200 ease-cinematic hover:-translate-y-0.5 hover:bg-surface/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent`}
+      class={`group flex items-center overflow-hidden rounded-full bg-surface/40 ${isExitButtonExpanded ? "pl-3 pr-4" : "px-3"} py-2 text-sm font-semibold text-text-primary shadow-elevated backdrop-blur-sm transition-all duration-200 ease-cinematic hover:-translate-y-0.5 hover:bg-surface/90 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent`}
       on:click={onExitClick}
       on:mouseenter={onExitEnter}
       on:mouseleave={onExitLeave}
@@ -117,11 +117,11 @@
   </div>
   {#if showCinematicBars}
     <div
-      class="pointer-events-none absolute inset-x-0 top-0 h-[12%] bg-gradient-to-b from-black via-black/80 to-transparent"
+      class="pointer-events-none absolute inset-x-0 top-0 h-[12%] bg-linear-to-b from-black via-black/80 to-transparent"
       aria-hidden="true"
     ></div>
     <div
-      class="pointer-events-none absolute inset-x-0 bottom-0 h-[12%] bg-gradient-to-t from-black via-black/80 to-transparent"
+      class="pointer-events-none absolute inset-x-0 bottom-0 h-[12%] bg-linear-to-t from-black via-black/80 to-transparent"
       aria-hidden="true"
     ></div>
   {/if}
@@ -142,11 +142,11 @@
         <div id="player-reaction" class="absolute inset-0 h-full w-full"></div>
         {#if showCinematicBars}
           <div
-            class="pointer-events-none absolute inset-x-0 top-0 h-[12%] bg-gradient-to-b from-black via-black/80 to-transparent"
+            class="pointer-events-none absolute inset-x-0 top-0 h-[12%] bg-linear-to-b from-black via-black/80 to-transparent"
             aria-hidden="true"
           ></div>
           <div
-            class="pointer-events-none absolute inset-x-0 bottom-0 h-[12%] bg-gradient-to-t from-black via-black/80 to-transparent"
+            class="pointer-events-none absolute inset-x-0 bottom-0 h-[12%] bg-linear-to-t from-black via-black/80 to-transparent"
             aria-hidden="true"
           ></div>
         {/if}

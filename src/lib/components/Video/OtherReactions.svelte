@@ -132,7 +132,7 @@
             <div class="min-w-0">
                 <div class="flex items-center gap-3">
                     <span
-                        class="inline-flex h-5 w-7 shrink-0 items-center justify-center rounded bg-[#ff2f51] text-background"
+                        class="inline-flex h-5 w-7 shrink-0 items-center justify-center rounded-sm bg-[#ff2f51] text-background"
                         aria-hidden="true"
                     >
                         <UserSolid class="h-4 w-4" />
@@ -146,7 +146,7 @@
                 </p>
             </div>
             <button
-                class="inline-flex shrink-0 items-center gap-1 self-center whitespace-nowrap text-sm font-medium text-[#02c4f9] transition hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                class="inline-flex shrink-0 items-center gap-1 self-center whitespace-nowrap text-sm font-medium text-[#02c4f9] transition hover:text-text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 type="button"
                 aria-label="View all {similarReactionCount} reactions"
                 on:click={viewAllReactions}

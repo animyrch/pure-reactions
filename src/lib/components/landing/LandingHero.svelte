@@ -38,14 +38,14 @@
     aria-hidden="true"
   >
     <div
-      class="h-[500px] w-[700px] rounded-full bg-accent-primary/[0.06] blur-[120px] md:h-[600px] md:w-[900px]"
+      class="h-[500px] w-[700px] rounded-full bg-accent-primary/6 blur-[120px] md:h-[600px] md:w-[900px]"
     />
   </div>
 
   <div class="relative z-10 mx-auto max-w-4xl">
     <!-- Eyebrow -->
     <p
-      class="mb-6 inline-flex items-center gap-2 rounded-full bg-surface/80 px-4 py-2 text-sm font-medium text-accent-primary ring-1 ring-border-subtle backdrop-blur-sm"
+      class="mb-6 inline-flex items-center gap-2 rounded-full bg-surface/80 px-4 py-2 text-sm font-medium text-accent-primary ring-1 ring-border-subtle backdrop-blur-xs"
     >
       <span class="inline-block h-2 w-2 shrink-0 rounded-full bg-accent-primary" aria-hidden="true" />
       <span class="shrink-0">Built for</span>
@@ -77,7 +77,7 @@
     <!-- CTA -->
     <div class="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
       <button
-        class="inline-flex items-center gap-2 rounded-lg bg-accent-primary px-8 py-3.5 text-base font-semibold text-background shadow-elevated transition duration-subtle ease-cinematic hover:bg-primary-600 hover:shadow-overlay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98]"
+        class="inline-flex items-center gap-2 rounded-lg bg-accent-primary px-8 py-3.5 text-base font-semibold text-background shadow-elevated transition duration-subtle ease-cinematic hover:bg-primary-600 hover:shadow-overlay focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98]"
         on:click={() => goToRoute("/react")}
       >
         Start Recording
@@ -86,13 +86,13 @@
         </svg>
       </button>
       <button
-        class="inline-flex items-center gap-2 rounded-lg border border-border-strong bg-surface/60 px-8 py-3.5 text-base font-medium text-text-primary shadow-surface backdrop-blur-sm transition duration-subtle ease-cinematic hover:bg-elevated hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        class="inline-flex items-center gap-2 rounded-lg border border-border-strong bg-surface/60 px-8 py-3.5 text-base font-medium text-text-primary shadow-surface backdrop-blur-xs transition duration-subtle ease-cinematic hover:bg-elevated hover:border-border-strong focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         on:click={() => goToRoute("/how-it-works")}
       >
         See how it works
       </button>
       <button
-        class="inline-flex items-center gap-2 rounded-lg border border-accent-primary bg-accent-primary/10 px-8 py-3.5 text-base font-medium text-accent-primary shadow-surface backdrop-blur-sm transition duration-subtle ease-cinematic hover:bg-accent-primary/15 hover:border-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        class="inline-flex items-center gap-2 rounded-lg border border-accent-primary bg-accent-primary/10 px-8 py-3.5 text-base font-medium text-accent-primary shadow-surface backdrop-blur-xs transition duration-subtle ease-cinematic hover:bg-accent-primary/15 hover:border-accent-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         on:click={() => document.getElementById('creator-proof')?.scrollIntoView({ behavior: 'smooth' })}
         aria-label="Browse reactions"
       >

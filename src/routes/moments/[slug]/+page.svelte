@@ -147,11 +147,11 @@
           {/if}
         </div>
         <div class="flex items-center gap-3 text-sm text-text-muted">
-          <span class="inline-flex items-center gap-2 rounded-full border border-sky-300/20 bg-sky-500/10 px-3 py-1.5 backdrop-blur">
+          <span class="inline-flex items-center gap-2 rounded-full border border-sky-300/20 bg-sky-500/10 px-3 py-1.5 backdrop-blur-sm">
             {reactionCount} reaction{reactionCount === 1 ? '' : 's'}
           </span>
           {#if anchorTime}
-            <span class="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-500/10 px-3 py-1.5 backdrop-blur">
+            <span class="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-500/10 px-3 py-1.5 backdrop-blur-sm">
               Anchor {anchorTime}
             </span>
           {/if}

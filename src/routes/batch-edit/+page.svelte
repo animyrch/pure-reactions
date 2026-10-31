@@ -310,7 +310,7 @@
         {:else}
             <!-- Batch Controls -->
             <section
-                class="rounded-3xl border border-slate-800 bg-slate-900/40 p-6 shadow-2xl backdrop-blur-sm"
+                class="rounded-3xl border border-slate-800 bg-slate-900/40 p-6 shadow-2xl backdrop-blur-xs"
             >
                 <label
                     for="batch-input"
@@ -324,7 +324,7 @@
                         type="text"
                         bind:value={batchReactionInput}
                         placeholder="Paste YouTube Link or ID (e.g. dQw4w9WgXcQ)"
-                        class="flex-1 rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 placeholder-slate-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        class="flex-1 rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 placeholder-slate-600 focus:border-blue-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                     />
                     <button
                         on:click={applyBatchReaction}
@@ -388,7 +388,7 @@
                                             reactions.length &&
                                             reactions.length > 0}
                                         on:change={toggleAll}
-                                        class="h-4 w-4 rounded border-slate-700 bg-slate-900 text-blue-600 focus:ring-offset-slate-950"
+                                        class="h-4 w-4 rounded-sm border-slate-700 bg-slate-900 text-blue-600 focus:ring-offset-slate-950"
                                     />
                                 </th>
                                 <th class="px-6 py-4 tracking-wider"
@@ -418,7 +418,7 @@
                                             )}
                                             on:change={() =>
                                                 toggleSelection(reaction.id)}
-                                            class="h-4 w-4 rounded border-slate-700 bg-slate-900 text-blue-600 focus:ring-offset-slate-950"
+                                            class="h-4 w-4 rounded-sm border-slate-700 bg-slate-900 text-blue-600 focus:ring-offset-slate-950"
                                         />
                                     </td>
                                     <td class="px-6 py-4">

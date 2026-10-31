@@ -298,10 +298,10 @@
         isFullscreen
             ? "theater-wrapper--fullscreen fixed inset-0 z-50 m-0 h-screen w-screen overflow-hidden rounded-none bg-black px-0 py-0 text-text-primary shadow-none"
             : fullWidth
-            ? "relative w-full max-w-none bg-black text-text-primary shadow-none md:rounded-2xl md:bg-surface/80 md:px-4 md:pt-4 md:pb-3 md:shadow-elevated md:backdrop-blur xl:rounded-3xl"
+            ? "relative w-full max-w-none bg-black text-text-primary shadow-none md:rounded-2xl md:bg-surface/80 md:px-4 md:pt-4 md:pb-3 md:shadow-elevated md:backdrop-blur-sm xl:rounded-3xl"
             : isDesktopOverlay
-            ? "relative w-full max-w-none bg-black text-text-primary shadow-none md:mx-auto md:mt-6 md:mb-0 md:max-w-[80%] md:rounded-2xl md:bg-surface/80 md:px-4 md:pt-4 md:pb-3 md:shadow-elevated md:backdrop-blur sm:px-6 lg:px-10 xl:rounded-3xl"
-            : "relative w-full max-w-none bg-black text-text-primary shadow-none md:shadow-elevated md:mx-auto md:mt-6 md:mb-0 md:rounded-2xl md:bg-surface/80 md:px-4 md:pt-4 md:pb-3 md:backdrop-blur sm:px-6 lg:px-10 xl:rounded-3xl"
+            ? "relative w-full max-w-none bg-black text-text-primary shadow-none md:mx-auto md:mt-6 md:mb-0 md:max-w-[80%] md:rounded-2xl md:bg-surface/80 md:px-4 md:pt-4 md:pb-3 md:shadow-elevated md:backdrop-blur-sm sm:px-6 lg:px-10 xl:rounded-3xl"
+            : "relative w-full max-w-none bg-black text-text-primary shadow-none md:shadow-elevated md:mx-auto md:mt-6 md:mb-0 md:rounded-2xl md:bg-surface/80 md:px-4 md:pt-4 md:pb-3 md:backdrop-blur-sm sm:px-6 lg:px-10 xl:rounded-3xl"
     }`}
     style={`--control-dock-space: calc(80px + env(safe-area-inset-bottom)); --overlay-width: ${normalizedOverlayWidth}%;`}
     data-overlay-corner={normalizedOverlayCorner}
@@ -367,7 +367,7 @@
                         : "relative h-full w-full"
                     : halfScreen
                     ? "half-frame"
-                    : "relative w-full h-[56.25vw] md:h-auto md:aspect-[16/9]"}
+                    : "relative w-full h-[56.25vw] md:h-auto md:aspect-16/9"}
             >
                 <div
                     data-stage="original-frame-inner"
@@ -396,11 +396,11 @@
             </div>
             {#if showCinematicBars}
                 <div
-                    class={`pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-black via-black/80 to-transparent ${isFullscreen ? "h-[12%]" : "h-[8%] from-black/80"}`}
+                    class={`pointer-events-none absolute inset-x-0 top-0 bg-linear-to-b from-black via-black/80 to-transparent ${isFullscreen ? "h-[12%]" : "h-[8%] from-black/80"}`}
                     aria-hidden="true"
                 ></div>
                 <div
-                    class="pointer-events-none absolute inset-x-0 bottom-0 h-[12%] bg-gradient-to-t from-black via-black/80 to-transparent"
+                    class="pointer-events-none absolute inset-x-0 bottom-0 h-[12%] bg-linear-to-t from-black via-black/80 to-transparent"
                     aria-hidden="true"
                 ></div>
             {/if}
@@ -421,7 +421,7 @@
                         : "absolute inset-0"
                     : halfScreen
                     ? "relative min-h-0 min-w-0 overflow-hidden bg-black/80 shadow-surface"
-                    : "relative overflow-hidden bg-black/80 shadow-surface w-full h-[56.25vw] mx-auto mt-0 rounded-none md:w-auto md:h-auto md:mt-0 md:mx-0 md:rounded-xl md:aspect-[16/9]"}
+                    : "relative overflow-hidden bg-black/80 shadow-surface w-full h-[56.25vw] mx-auto mt-0 rounded-none md:w-auto md:h-auto md:mt-0 md:mx-0 md:rounded-xl md:aspect-16/9"}
                 style={isReactionOverlay ? "width: var(--overlay-width);" : ""}
             >
                 <div
@@ -446,11 +446,11 @@
                     {/if}
                     {#if showCinematicBars}
                         <div
-                            class="pointer-events-none absolute inset-x-0 top-0 h-[12%] bg-gradient-to-b from-black via-black/80 to-transparent"
+                            class="pointer-events-none absolute inset-x-0 top-0 h-[12%] bg-linear-to-b from-black via-black/80 to-transparent"
                             aria-hidden="true"
                         ></div>
                         <div
-                            class="pointer-events-none absolute inset-x-0 bottom-0 h-[12%] bg-gradient-to-t from-black via-black/80 to-transparent"
+                            class="pointer-events-none absolute inset-x-0 bottom-0 h-[12%] bg-linear-to-t from-black via-black/80 to-transparent"
                             aria-hidden="true"
                         ></div>
                     {/if}

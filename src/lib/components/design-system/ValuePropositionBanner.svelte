@@ -4,7 +4,7 @@
 
 <div class="value-banner mx-auto max-w-5xl px-4 py-8 md:py-12">
     <div
-        class="rounded-lg border border-accent-primary/30 bg-gradient-to-r from-accent-primary/5 to-accent-secondary/5 p-6 md:p-8"
+        class="rounded-lg border border-accent-primary/30 bg-linear-to-r from-accent-primary/5 to-accent-secondary/5 p-6 md:p-8"
     >
         <h2 class="mb-3 text-2xl font-bold text-text-primary md:text-3xl">
             Watch and Record Synchronized Content. <span class="text-accent-primary"

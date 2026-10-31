@@ -279,7 +279,7 @@
                     {/if}
                 </div>
                 <div class="flex items-center gap-3 text-sm text-text-muted">
-                    <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 backdrop-blur">
+                    <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 backdrop-blur-sm">
                         {queueEntries.length} reaction{queueEntries.length === 1 ? '' : 's'} in queue
                     </span>
                     {#if isOwner}
@@ -289,14 +289,14 @@
                             aria-checked={isPublished}
                             on:click={handleTogglePublish}
                             disabled={updatingPublishState}
-                            class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 backdrop-blur transition-colors hover:bg-white/10 disabled:opacity-50"
+                            class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 backdrop-blur-sm transition-colors hover:bg-white/10 disabled:opacity-50"
                         >
                             <span class={`h-2 w-2 rounded-full ${isPublished ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-white/20'}`}></span>
                             <span>{isPublished ? 'Public' : 'Private'}</span>
                         </button>
                     {/if}
                     {#if ownerId}
-                        <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 backdrop-blur">
+                        <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 backdrop-blur-sm">
                             {#if isOwner}
                                 Your queue
                             {:else}

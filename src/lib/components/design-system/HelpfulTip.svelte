@@ -176,7 +176,7 @@
     <button
       type="button"
       bind:this={triggerEl}
-      class="inline-flex h-4 w-4 items-center justify-center rounded-full border border-border-subtle text-[0.65rem] leading-none text-text-muted transition duration-subtle ease-cinematic hover:border-border-strong hover:text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      class="inline-flex h-4 w-4 items-center justify-center rounded-full border border-border-subtle text-[0.65rem] leading-none text-text-muted transition duration-subtle ease-cinematic hover:border-border-strong hover:text-text-secondary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       aria-label={label}
       aria-describedby={tooltipOpen ? tipId : undefined}
       on:mouseenter={showTooltip}
@@ -193,7 +193,7 @@
       use:portalToBody
       bind:this={tipEl}
       role="tooltip"
-      class="pointer-events-none fixed z-[110] w-[min(16rem,calc(100vw-1rem))] whitespace-normal break-words rounded-md border border-border-subtle bg-elevated px-sm py-xs text-xs text-text-primary shadow-md"
+      class="pointer-events-none fixed z-110 w-[min(16rem,calc(100vw-1rem))] whitespace-normal wrap-break-word rounded-md border border-border-subtle bg-elevated px-sm py-xs text-xs text-text-primary shadow-md"
       style:top="{tooltipTop}px"
       style:left="{tooltipLeft}px"
       style:visibility={tooltipPlaced ? 'visible' : 'hidden'}
@@ -204,7 +204,7 @@
 {:else if showCollapsed}
   <button
     type="button"
-    class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-accent-tertiary/40 text-[0.65rem] font-medium text-accent-tertiary transition duration-subtle ease-cinematic hover:border-accent-tertiary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+    class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-accent-tertiary/40 text-[0.65rem] font-medium text-accent-tertiary transition duration-subtle ease-cinematic hover:border-accent-tertiary hover:text-text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     aria-label={expandLabel}
     aria-expanded="false"
     aria-controls={tipId}
@@ -238,7 +238,7 @@
         <div class="mt-sm">
           <button
             type="button"
-            class="inline-flex items-center justify-center rounded-md px-sm py-xs text-sm font-medium text-accent-primary transition duration-subtle ease-cinematic hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            class="inline-flex items-center justify-center rounded-md px-sm py-xs text-sm font-medium text-accent-primary transition duration-subtle ease-cinematic hover:text-text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             on:click={handleCollapse}
           >
             {dismissLabel}
@@ -248,7 +248,7 @@
         <div class="mt-sm">
           <button
             type="button"
-            class="inline-flex items-center justify-center rounded-md px-sm py-xs text-sm font-medium text-accent-primary transition duration-subtle ease-cinematic hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            class="inline-flex items-center justify-center rounded-md px-sm py-xs text-sm font-medium text-accent-primary transition duration-subtle ease-cinematic hover:text-text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             on:click={handleDismiss}
           >
             {dismissLabel}

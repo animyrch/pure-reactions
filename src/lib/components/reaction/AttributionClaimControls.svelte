@@ -14,7 +14,7 @@
   {#if showLoginCta}
     <button
       type="button"
-      class="text-xs font-medium text-text-muted underline decoration-white/20 underline-offset-4 transition hover:text-text-primary hover:decoration-white/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      class="text-xs font-medium text-text-muted underline decoration-white/20 underline-offset-4 transition hover:text-text-primary hover:decoration-white/50 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       on:click|stopPropagation={onLogin}
     >
       Log in to claim
@@ -28,7 +28,7 @@
   {:else if showClaimCta}
     <button
       type="button"
-      class="text-xs font-medium text-text-muted underline decoration-white/20 underline-offset-4 transition hover:text-text-primary hover:decoration-white/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      class="text-xs font-medium text-text-muted underline decoration-white/20 underline-offset-4 transition hover:text-text-primary hover:decoration-white/50 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       on:click|stopPropagation={onClaim}
     >
       Claim this channel
