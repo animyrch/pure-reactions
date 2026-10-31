@@ -8,9 +8,8 @@ if (process.env.PUBLIC_DISABLE_YOUTUBE_METADATA_SYNC === undefined) {
 }
 
 module.exports = defineConfig({
-    testDir: './tests',
-    // Ignore unit tests for Firestore rules and integration tests from E2E runs
-    testIgnore: ['**/firestore.rules.spec.mjs', '**/integration/**'],
+    // Suites live in tests/e2e/<route> so CI can run one route directory at a time.
+    testDir: './tests/e2e',
     testMatch: '**/*.spec.js',
     timeout: 30000,
     // Use HTML reporter on CI for easier debugging and artifact inspection

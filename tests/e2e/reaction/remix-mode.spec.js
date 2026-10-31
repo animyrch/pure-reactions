@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import {
   installMockYouTubeApi,
   YT_PLAYER_STATE,
-} from './utils/twin-player-helpers.js';
+} from '../../utils/twin-player-helpers.js';
 import {
   cueSecondsAt,
   ensureRemixOwner,
@@ -11,7 +11,7 @@ import {
   readPlayback,
   startOriginalOnly,
   waitForOriginalPlayer,
-} from './utils/remix-e2e.js';
+} from '../../utils/remix-e2e.js';
 
 const DURATIONS = {
   origRemixPlay01: 180,

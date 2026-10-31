@@ -93,8 +93,8 @@ Please follow the project's code organization guidelines outlined in the README:
 # Run end-to-end tests
 npm run e2e
 
-# Run specific test suite
-npm run test:e2e
+# Run one route suite (see tests/e2e/suites.json)
+E2E_SUITES=reaction npm run test:e2e:ci
 ```
 
 ### Linting

@@ -105,6 +105,7 @@ This means you can clone, install, seed, and run the app without signing up for 
 - `npm run lint` - Run ESLint
 - `npm run start-emulators` - Start the Firebase Emulator Suite for Firestore, Auth, and Realtime Database
 - `npm run e2e` - Run end-to-end tests with Playwright
+- `E2E_SUITES=reaction npm run test:e2e:ci` - Run one route suite. Suites live in `tests/e2e/<route>` and are listed in `tests/e2e/suites.json`
 
 ### Database Scripts
 
@@ -191,6 +192,8 @@ Run Playwright tests:
 ```bash
 npm run e2e
 ```
+
+Specs are grouped by route under `tests/e2e/<route>`. Pull requests run the suites whose route directories changed, and run every suite when shared application code changes. See [docs/TEST_STRATEGY.md](docs/TEST_STRATEGY.md).
 
 See [TEST_FEATURES.md](TEST_FEATURES.md) for supported query params and test/debug toggles.
 

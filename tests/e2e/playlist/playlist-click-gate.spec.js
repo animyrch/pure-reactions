@@ -3,7 +3,7 @@ import {
     installMockYouTubeApi,
     readTwinPlayersSnapshot,
     waitForPlayersReady,
-} from './utils/twin-player-helpers.js';
+} from '../../utils/twin-player-helpers.js';
 
 const PLAYLIST_PAGE = '/playlist/playlistGateTestPL001';
 

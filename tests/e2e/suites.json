@@ -1,0 +1,139 @@
+{
+  "suites": [
+    {
+      "name": "account",
+      "description": "Login, account settings, email change, logout, and account deletion.",
+      "dir": "tests/e2e/account",
+      "paths": [
+        "src/routes/account/**",
+        "src/routes/login/**",
+        "src/routes/api/account/**",
+        "tests/e2e/account/**"
+      ]
+    },
+    {
+      "name": "my-reactions",
+      "description": "My reactions list, back navigation, and deleting owned reactions or playlists.",
+      "dir": "tests/e2e/my-reactions",
+      "paths": [
+        "src/routes/my-reactions/**",
+        "src/routes/account/**",
+        "src/routes/login/**",
+        "src/routes/api/content/**",
+        "tests/e2e/my-reactions/**"
+      ]
+    },
+    {
+      "name": "bookmark",
+      "description": "Bookmarks page and the link back to the page that opened it.",
+      "dir": "tests/e2e/bookmark",
+      "paths": [
+        "src/routes/bookmark/**",
+        "src/routes/account/**",
+        "src/routes/login/**",
+        "tests/e2e/bookmark/**"
+      ]
+    },
+    {
+      "name": "reaction",
+      "description": "Reaction playback, layout, and remix mode. remix-mode.spec.js also edits on /edit-reaction.",
+      "dir": "tests/e2e/reaction",
+      "paths": [
+        "src/routes/reaction/**",
+        "src/routes/edit-reaction/**",
+        "src/routes/api/original-video/**",
+        "src/routes/api/reactions/**",
+        "src/routes/api/youtube/**",
+        "tests/e2e/reaction/**"
+      ]
+    },
+    {
+      "name": "edit-reaction",
+      "description": "Remix fine-tune editing on /edit-reaction.",
+      "dir": "tests/e2e/edit-reaction",
+      "paths": [
+        "src/routes/edit-reaction/**",
+        "tests/e2e/edit-reaction/**"
+      ]
+    },
+    {
+      "name": "playlist",
+      "description": "Playlist playback and the click-gate handoff.",
+      "dir": "tests/e2e/playlist",
+      "paths": [
+        "src/routes/playlist/**",
+        "tests/e2e/playlist/**"
+      ]
+    },
+    {
+      "name": "backend",
+      "description": "Recording page and the share-session modal.",
+      "dir": "tests/e2e/backend",
+      "paths": [
+        "src/routes/backend/**",
+        "src/routes/login/**",
+        "tests/e2e/backend/**"
+      ]
+    },
+    {
+      "name": "test-layout",
+      "description": "Remix mobile stage on /test-layout.",
+      "dir": "tests/e2e/test-layout",
+      "paths": [
+        "src/routes/test-layout/**",
+        "tests/e2e/test-layout/**"
+      ]
+    }
+  ],
+  "shared": [
+    "src/app.html",
+    "src/app.pcss",
+    "src/lib/**",
+    "src/routes/+layout.js",
+    "src/routes/+layout.svelte",
+    "src/routes/+page.server.js",
+    "src/routes/+page.svelte",
+    "static/**",
+    "playwright.config.cjs",
+    "package.json",
+    "package-lock.json",
+    "vite.config.js",
+    "svelte.config.js",
+    "tailwind.config.cjs",
+    "postcss.config.cjs",
+    "firebase.json",
+    "firestore.rules",
+    "database.rules.json",
+    "tests/global-setup.cjs",
+    "tests/fixtures/**",
+    "tests/utils/**",
+    "tests/e2e/suites.json",
+    "scripts/e2e-suites.mjs",
+    "scripts/select-e2e-suites.mjs",
+    "scripts/run-e2e.mjs",
+    "scripts/seed-twin-player-fixtures.mjs",
+    ".github/workflows/test.yml"
+  ],
+  "unmappedRoutes": [
+    "about",
+    "batch-edit",
+    "copyright",
+    "creator",
+    "dev-finetune-half",
+    "following",
+    "how-it-works",
+    "insights",
+    "ios-test-secret",
+    "moments",
+    "open-source",
+    "privacy",
+    "queue",
+    "react",
+    "reactions",
+    "reactor",
+    "search",
+    "shared",
+    "terms",
+    "user"
+  ]
+}

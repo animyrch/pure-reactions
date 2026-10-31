@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { installMockYouTubeApi } from './utils/twin-player-helpers.js';
+import { installMockYouTubeApi } from '../../utils/twin-player-helpers.js';
 
 const AUTH_EMULATOR_HOST = process.env.FIREBASE_AUTH_EMULATOR_HOST || '127.0.0.1:9099';
 const AUTH_PROJECT = process.env.GCLOUD_PROJECT || 'demo-pure-reactions';
