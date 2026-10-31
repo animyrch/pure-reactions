@@ -27,11 +27,9 @@ async function removeDeletedReactionsFromSearch(reactionIds) {
 	if (!appId || !adminKey || !indexName) return;
 
 	try {
-		const { default: algoliasearch } = await import('algoliasearch');
-		const index = algoliasearch(appId, adminKey).initIndex(indexName);
-		for (let indexStart = 0; indexStart < ids.length; indexStart += 1000) {
-			await index.deleteObjects(ids.slice(indexStart, indexStart + 1000));
-		}
+		const { algoliasearch } = await import('algoliasearch');
+		const client = algoliasearch(appId, adminKey);
+		await client.deleteObjects({ indexName, objectIDs: ids });
 	} catch (error) {
 		console.error('Failed to remove deleted reactions from search index:', error);
 	}
