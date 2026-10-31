@@ -12,7 +12,7 @@
 </script>
 
 <header
-  class="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-3 bg-gradient-to-b from-black/70 to-transparent px-4 pb-10 pt-4 sm:px-6"
+  class="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-3 bg-linear-to-b from-black/70 to-transparent px-4 pb-10 pt-4 sm:px-6"
 >
   <div class="pointer-events-auto min-w-0 flex-1">
     <a
@@ -28,7 +28,7 @@
     <CinematicButton
       type="button"
       variant="secondary"
-      class="!px-3 !py-2 text-xs sm:text-sm"
+      class="px-3! py-2! text-xs sm:text-sm"
       disabled={addReactionLoading || !momentId}
       on:click={onAddReaction}
     >
@@ -40,7 +40,7 @@
     <CinematicButton
       type="button"
       variant="ghost"
-      class="!px-3 !py-2 text-xs text-white/90 sm:text-sm"
+      class="px-3! py-2! text-xs text-white/90 sm:text-sm"
       on:click={goCreateMoment}
     >
       <span class="inline-flex items-center gap-2">

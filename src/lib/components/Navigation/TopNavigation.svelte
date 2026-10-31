@@ -40,12 +40,12 @@
 </script>
 
 <header
-  class={`nav-shell fixed inset-x-0 top-0 z-[90] transition-transform duration-500 ease-cinematic ${isHidden ? "-translate-y-full" : "translate-y-0"}`}
+  class={`nav-shell fixed inset-x-0 top-0 z-90 transition-transform duration-500 ease-cinematic ${isHidden ? "-translate-y-full" : "translate-y-0"}`}
 >
   <nav class="relative mx-auto flex w-full items-center px-5 py-3 md:px-8">
     <a
       href="/"
-      class="relative z-10 flex shrink-0 items-center text-text-primary transition-opacity duration-subtle ease-cinematic hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      class="relative z-10 flex shrink-0 items-center text-text-primary transition-opacity duration-subtle ease-cinematic hover:opacity-90 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       aria-label="Pure Reactions home"
     >
       <div class="logo-wrapper">
@@ -65,7 +65,7 @@
     <div class="relative z-10 ml-auto hidden items-center gap-5 md:flex">
       <button
         type="button"
-        class="inline-flex items-center gap-2 text-sm font-medium text-white transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        class="inline-flex items-center gap-2 text-sm font-medium text-white transition-opacity hover:opacity-80 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         on:click={handleSearchClick}
         aria-label="Search"
       >
@@ -74,7 +74,7 @@
       </button>
       <button
         type="button"
-        class="react-cta rounded-full bg-[#e10600] px-5 py-2 text-sm font-semibold text-white transition duration-subtle ease-cinematic hover:bg-[#c10500] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        class="react-cta rounded-full bg-[#e10600] px-5 py-2 text-sm font-semibold text-white transition duration-subtle ease-cinematic hover:bg-[#c10500] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         on:click={goReact}
       >
         React
@@ -125,7 +125,7 @@
       </button>
       <button
         type="button"
-        class="react-cta rounded-full border border-border-strong px-md py-xs text-sm font-medium text-text-primary transition duration-subtle ease-cinematic hover:bg-border-strong/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        class="react-cta rounded-full border border-border-strong px-md py-xs text-sm font-medium text-text-primary transition duration-subtle ease-cinematic hover:bg-border-strong/40 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         on:click={goReact}
       >
         React

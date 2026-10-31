@@ -7,7 +7,7 @@
   export let loading = false;
   export let ariaLabel;
 
-  const baseClasses = 'inline-flex items-center justify-center gap-xs rounded-md font-medium transition-colors transition-transform duration-subtle ease-cinematic focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-60';
+  const baseClasses = 'inline-flex items-center justify-center gap-xs rounded-md font-medium transition-colors transition-transform duration-subtle ease-cinematic focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-60';
 
   const variantClasses = {
     primary: 'bg-accent-primary text-background hover:bg-primary-600 active:bg-primary-700 shadow-surface hover:shadow-elevated',

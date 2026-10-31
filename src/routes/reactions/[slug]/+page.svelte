@@ -134,7 +134,7 @@
   <header class="mx-auto max-w-6xl px-4 pb-8 pt-6 sm:px-6 lg:px-10">
     <div class="flex flex-col gap-6 lg:flex-row lg:items-stretch lg:gap-8">
       {#if originalVideo.thumbnailUrl}
-        <div class="relative w-full shrink-0 overflow-hidden rounded-xl lg:w-[28rem]">
+        <div class="relative w-full shrink-0 overflow-hidden rounded-xl lg:w-112">
           <img
             src={originalVideo.thumbnailUrl}
             alt={originalVideo.title || 'Original video thumbnail'}
@@ -198,7 +198,7 @@
             <button
               type="button"
               on:click={handlePlayAll}
-              class="inline-flex items-center justify-center gap-3 rounded-full bg-accent-primary px-6 py-3 text-base font-semibold text-background transition hover:bg-accent-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              class="inline-flex items-center justify-center gap-3 rounded-full bg-accent-primary px-6 py-3 text-base font-semibold text-background transition hover:bg-accent-primary/90 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               aria-label={watchAllLabel}
             >
               <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">

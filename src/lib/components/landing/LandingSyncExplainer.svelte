@@ -69,7 +69,7 @@
               </div>
             </div>
             <!-- Label badge -->
-            <div class="absolute left-3 top-3 rounded-md bg-accent-primary/20 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-accent-primary backdrop-blur-sm">
+            <div class="absolute left-3 top-3 rounded-md bg-accent-primary/20 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-accent-primary backdrop-blur-xs">
               Original
             </div>
           </div>
@@ -87,7 +87,7 @@
               </div>
             </div>
             <!-- Label badge -->
-            <div class="absolute left-3 top-3 rounded-md bg-accent-secondary/20 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-accent-secondary backdrop-blur-sm">
+            <div class="absolute left-3 top-3 rounded-md bg-accent-secondary/20 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-accent-secondary backdrop-blur-xs">
               Reaction
             </div>
           </div>

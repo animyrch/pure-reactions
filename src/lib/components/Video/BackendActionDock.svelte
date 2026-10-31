@@ -65,7 +65,7 @@
             </p>
             <button
                 type="button"
-                class={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70 ${
+                class={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold transition focus:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-400/70 ${
                     docked
                         ? "border-blue-500/70 bg-blue-500/15 text-blue-100 hover:border-blue-400 hover:text-white"
                         : "border-slate-700/80 bg-slate-900/80 text-slate-200 hover:border-slate-500 hover:text-white"
@@ -124,7 +124,7 @@
                         </div>
                     {/if}
                 <button
-                    class={`group flex w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
+                    class={`group flex w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition focus:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
                         action.id === "start-reaction" ? "pr-8" : ""
                     } ${
                         action.active

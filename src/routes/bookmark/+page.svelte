@@ -162,7 +162,7 @@
         <div class="mt-6 flex justify-end gap-3">
             <button
                 type="button"
-                class="rounded-full px-4 py-2 text-sm font-semibold text-text-secondary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                class="rounded-full px-4 py-2 text-sm font-semibold text-text-secondary hover:text-text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus"
                 on:click={closeDeleteDialog}
                 disabled={isDeleting}
             >
@@ -170,7 +170,7 @@
             </button>
             <button
                 type="button"
-                class="rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-60"
+                class="rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-60"
                 on:click={confirmDelete}
                 disabled={isDeleting}
             >

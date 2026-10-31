@@ -462,7 +462,7 @@
                     <p class="mt-3 text-sm text-rose-200/80">{errorMessage}</p>
                     <button
                         type="button"
-                        class="mt-6 inline-flex items-center gap-2 rounded-full border border-rose-400/40 bg-rose-500/10 px-5 py-2 text-sm font-medium text-rose-100 transition hover:bg-rose-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+                        class="mt-6 inline-flex items-center gap-2 rounded-full border border-rose-400/40 bg-rose-500/10 px-5 py-2 text-sm font-medium text-rose-100 transition hover:bg-rose-500/20 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-rose-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
                         on:click={() => goToRoute('/')}
                     >
                         <ArrowLeftOutline class="h-4 w-4" />
@@ -474,7 +474,7 @@
             <header class={`flex flex-col gap-4 px-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-10 ${isFullscreen ? "hidden" : ""}`}>
                 <button
                     type="button"
-                    class="inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900/70 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-700 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:cursor-wait disabled:border-slate-800 disabled:text-slate-500"
+                    class="inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900/70 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-700 hover:text-white focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:cursor-wait disabled:border-slate-800 disabled:text-slate-500"
                     on:click={leaveSession}
                     disabled={isLeaving}
                 >

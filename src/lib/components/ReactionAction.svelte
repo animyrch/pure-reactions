@@ -22,7 +22,7 @@
     $: label = ariaLabel || buttonText;
     $: tooltipCopy = tooltip || buttonText;
     $: showTooltip = iconOnly && tooltipCopy?.length;
-    $: baseClasses = 'group relative inline-flex items-center justify-start rounded-sm transition-transform duration-subtle ease-cinematic focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50';
+    $: baseClasses = 'group relative inline-flex items-center justify-start rounded-xs transition-transform duration-subtle ease-cinematic focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50';
     $: iconClasses = iconOnly
         ? 'h-10 w-10 rounded-full bg-surface text-text-primary hover:bg-elevated focus-visible:bg-elevated active:scale-[1.06]'
         : 'px-sm py-xs text-left text-background hover:text-accent-primary focus-visible:text-accent-primary dark:text-text-primary dark:hover:text-accent-primary';
@@ -49,7 +49,7 @@
             <slot />
         </span>
         {#if showTooltip}
-            <span class="pointer-events-none absolute -bottom-9 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-sm bg-overlay px-xs py-[2px] text-[0.65rem] uppercase tracking-wide text-text-primary opacity-0 transition duration-subtle ease-cinematic group-hover:opacity-100 group-focus-visible:opacity-100">
+            <span class="pointer-events-none absolute -bottom-9 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-xs bg-overlay px-xs py-[2px] text-[0.65rem] uppercase tracking-wide text-text-primary opacity-0 transition duration-subtle ease-cinematic group-hover:opacity-100 group-focus-visible:opacity-100">
                 {tooltipCopy}
             </span>
         {/if}

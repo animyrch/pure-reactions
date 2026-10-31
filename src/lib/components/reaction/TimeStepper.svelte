@@ -41,7 +41,7 @@
   >
     <input
       {id}
-      class="spinless w-full min-w-0 bg-transparent px-2 text-sm text-text-primary outline-none"
+      class="spinless w-full min-w-0 bg-transparent px-2 text-sm text-text-primary outline-hidden"
       type="number"
       inputmode="decimal"
       step="any"
@@ -54,7 +54,7 @@
     <div class="flex w-6 shrink-0 flex-col border-l border-border-subtle">
       <button
         type="button"
-        class="flex flex-1 items-center justify-center text-text-muted hover:bg-surface hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+        class="flex flex-1 items-center justify-center text-text-muted hover:bg-surface hover:text-text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus"
         aria-label={`Increase ${label || "value"}`}
         on:click={() => bump(1)}
       >
@@ -64,7 +64,7 @@
       </button>
       <button
         type="button"
-        class="flex flex-1 items-center justify-center border-t border-border-subtle text-text-muted hover:bg-surface hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+        class="flex flex-1 items-center justify-center border-t border-border-subtle text-text-muted hover:bg-surface hover:text-text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus"
         aria-label={`Decrease ${label || "value"}`}
         on:click={() => bump(-1)}
       >

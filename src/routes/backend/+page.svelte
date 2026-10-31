@@ -2225,7 +2225,7 @@
                         <span>{viewerCount} {viewerLabel}</span>
                     </div>
                     <button
-                        class="flex items-center gap-2 rounded-full border border-blue-500/50 bg-blue-500/10 px-4 py-2 text-sm font-semibold text-blue-200 transition hover:bg-blue-500/20 focus:outline-none focus:ring-2 focus:ring-blue-400/70 disabled:border-slate-700 disabled:bg-slate-800/60 disabled:text-slate-500 disabled:focus:ring-0"
+                        class="flex items-center gap-2 rounded-full border border-blue-500/50 bg-blue-500/10 px-4 py-2 text-sm font-semibold text-blue-200 transition hover:bg-blue-500/20 focus:outline-hidden focus:ring-2 focus:ring-blue-400/70 disabled:border-slate-700 disabled:bg-slate-800/60 disabled:text-slate-500 disabled:focus:ring-0"
                         on:click={onClickShareSession}
                         disabled={!sharedSessionId}
                     >
@@ -2292,7 +2292,7 @@
                             >
                                 {#if isBuffering}
                                     <div
-                                        class="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-400/70 via-blue-200/40 to-blue-400/70 animate-pulse"
+                                        class="pointer-events-none absolute inset-x-0 top-0 h-1 bg-linear-to-r from-blue-400/70 via-blue-200/40 to-blue-400/70 animate-pulse"
                                     ></div>
                                 {/if}
                                 <div
@@ -2300,7 +2300,7 @@
                                     class="h-full w-full"
                                 ></div>
                                 <div
-                                    class="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/70 via-slate-950/10 to-transparent"
+                                    class="pointer-events-none absolute inset-0 bg-linear-to-t from-slate-950/70 via-slate-950/10 to-transparent"
                                 ></div>
                             </div>
                         {/if}
@@ -2355,7 +2355,7 @@
                                     </div>
                                 {/if}
                                 <button
-                                    class={`group flex h-full w-full items-start gap-3 rounded-3xl border px-4 py-4 text-left transition focus:outline-none focus-visible:outline-none focus:ring-2 focus:ring-blue-500/60 ${
+                                    class={`group flex h-full w-full items-start gap-3 rounded-3xl border px-4 py-4 text-left transition focus:outline-hidden focus-visible:outline-hidden focus:ring-2 focus:ring-blue-500/60 ${
                                         action.id === "start-reaction" ? "pr-10" : ""
                                     } ${
                                         action.active

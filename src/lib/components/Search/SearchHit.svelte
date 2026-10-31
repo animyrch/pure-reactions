@@ -60,7 +60,7 @@
 
 <div
     bind:this={wrapper}
-    class={`group block h-full rounded-2xl transition duration-subtle ease-cinematic focus-visible:outline-none ${active ? 'ring-2 ring-focus ring-offset-2 ring-offset-background' : 'ring-0 ring-transparent'}`}
+    class={`group block h-full rounded-2xl transition duration-subtle ease-cinematic focus-visible:outline-hidden ${active ? 'ring-2 ring-focus ring-offset-2 ring-offset-background' : 'ring-0 ring-transparent'}`}
     tabindex={tabIndex}
     role="link"
     aria-label={ariaTitle}

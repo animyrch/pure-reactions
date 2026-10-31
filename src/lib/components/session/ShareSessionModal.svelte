@@ -14,18 +14,18 @@
     export let onCopy = () => {};
 
     const fieldClass =
-        'w-full rounded-xl border border-border-strong/40 bg-background px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/30';
+        'w-full rounded-xl border border-border-strong/40 bg-background px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-hidden focus:ring-2 focus:ring-accent-primary/30';
     const secondaryButtonClass =
-        'shrink-0 whitespace-nowrap rounded-xl border border-border-strong bg-surface px-4 py-2 text-sm font-semibold text-text-primary transition hover:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-wait disabled:opacity-60';
+        'shrink-0 whitespace-nowrap rounded-xl border border-border-strong bg-surface px-4 py-2 text-sm font-semibold text-text-primary transition hover:bg-elevated focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-wait disabled:opacity-60';
     const primaryButtonClass =
-        'flex items-center justify-center rounded-xl bg-accent-primary px-4 py-2 text-sm font-semibold text-background transition hover:bg-primary-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-wait disabled:opacity-60';
+        'flex items-center justify-center rounded-xl bg-accent-primary px-4 py-2 text-sm font-semibold text-background transition hover:bg-primary-600 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-wait disabled:opacity-60';
 </script>
 
 <Modal
     bind:open
     autoclose={false}
-    color="none"
-    class="!bg-surface !text-text-primary border border-white/20 shadow-[0_25px_80px_rgba(0,0,0,0.65)] ring-1 ring-white/10"
+    outsideclose={false}
+    class="bg-surface! text-text-primary! border border-white/20 shadow-[0_25px_80px_rgba(0,0,0,0.65)] ring-1 ring-white/10"
     bodyClass="relative bg-transparent p-6 sm:p-8"
 >
     <div class="space-y-5 pe-8 text-text-primary" data-testid="share-session-modal">

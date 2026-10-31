@@ -74,7 +74,7 @@
 
   // Off tracks use a lifted gray and a light thumb. The on state stays the accent fill with a dark thumb.
   const switchTrackBase =
-    "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border transition duration-subtle ease-cinematic focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:brightness-100";
+    "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border transition duration-subtle ease-cinematic focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:brightness-100";
   const switchTrackOff =
     "border-text-muted/70 bg-border-strong hover:brightness-125";
   const switchTrackOn = "border-accent-primary bg-accent-primary";
@@ -614,7 +614,7 @@
       <h2>
         <button
           type="button"
-          class="flex w-full items-center gap-2 px-3 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
+          class="flex w-full items-center gap-2 px-3 py-3 text-left focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
           aria-expanded={openGeneralSection === "source"}
           aria-controls="general-section-source"
           on:click={() => toggleGeneralSection("source")}
@@ -640,7 +640,7 @@
           <div class="relative min-w-0 flex-1">
             <input
               id="reaction-video-id"
-              class="h-9 w-full rounded-lg border border-border-subtle bg-background/80 px-2.5 pr-8 text-sm text-text-primary placeholder:text-text-muted focus-visible:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:text-text-muted"
+              class="h-9 w-full rounded-lg border border-border-subtle bg-background/80 px-2.5 pr-8 text-sm text-text-primary placeholder:text-text-muted focus-visible:border-border-strong focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:text-text-muted"
               type="text"
               placeholder="https://www.youtube.com/watch?v=..."
               aria-label="Reaction video URL or ID"
@@ -651,7 +651,7 @@
             {#if reactionVideoIdValue && !remixMode}
               <button
                 type="button"
-                class="absolute right-1.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded text-text-muted hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                class="absolute right-1.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-sm text-text-muted hover:text-text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus"
                 aria-label="Clear video link"
                 on:click={clearReactionVideoInput}
               >
@@ -681,7 +681,7 @@
         {@const loadedDuration = formatDurationLabel(reactionDuration)}
         <div class="mt-2 flex items-center gap-2 rounded-lg border border-border-subtle bg-background/50 px-2 py-1.5">
           <img
-            class="h-10 w-14 shrink-0 rounded object-cover"
+            class="h-10 w-14 shrink-0 rounded-sm object-cover"
             src={`https://i.ytimg.com/vi/${currentReactionVideoId}/mqdefault.jpg`}
             alt=""
           />
@@ -706,7 +706,7 @@
         <label for="custom-reaction-title" class="text-xs font-medium text-text-secondary">Reaction title</label>
         <input
           id="custom-reaction-title"
-          class="mt-1.5 h-9 w-full rounded-lg border border-border-subtle bg-background/80 px-2.5 text-sm text-text-primary placeholder:text-text-muted focus-visible:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:text-text-muted"
+          class="mt-1.5 h-9 w-full rounded-lg border border-border-subtle bg-background/80 px-2.5 text-sm text-text-primary placeholder:text-text-muted focus-visible:border-border-strong focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:text-text-muted"
           type="text"
           maxlength="200"
           placeholder="Optional title for this reaction"
@@ -764,7 +764,7 @@
         <h2>
           <button
             type="button"
-            class="flex w-full items-center gap-2 px-3 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
+            class="flex w-full items-center gap-2 px-3 py-3 text-left focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
             aria-expanded={openGeneralSection === "timing"}
             aria-controls="general-section-timing"
             on:click={() => toggleGeneralSection("timing")}
@@ -871,7 +871,7 @@
         <h2>
           <button
             type="button"
-            class="flex w-full items-center gap-2 px-3 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
+            class="flex w-full items-center gap-2 px-3 py-3 text-left focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
             aria-expanded={openGeneralSection === "audio"}
             aria-controls="general-section-audio"
             on:click={() => toggleGeneralSection("audio")}
@@ -908,7 +908,7 @@
                   type="button"
                   role="radio"
                   aria-checked={soundLevelValue === 0}
-                  class={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${soundLevelValue === 0 ? "border-accent-primary bg-accent-primary/10 text-accent-primary" : "border-border-subtle bg-background/50 text-text-secondary"}`}
+                  class={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus ${soundLevelValue === 0 ? "border-accent-primary bg-accent-primary/10 text-accent-primary" : "border-border-subtle bg-background/50 text-text-secondary"}`}
                   on:click={() => (soundLevelValue = 0)}
                 >
                   Mute
@@ -917,7 +917,7 @@
                   type="button"
                   role="radio"
                   aria-checked={soundLevelValue === 100}
-                  class={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${soundLevelValue === 100 ? "border-accent-primary bg-accent-primary/10 text-accent-primary" : "border-border-subtle bg-background/50 text-text-secondary"}`}
+                  class={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus ${soundLevelValue === 100 ? "border-accent-primary bg-accent-primary/10 text-accent-primary" : "border-border-subtle bg-background/50 text-text-secondary"}`}
                   on:click={() => (soundLevelValue = 100)}
                 >
                   Full volume
@@ -969,7 +969,7 @@
         <h2>
           <button
             type="button"
-            class="flex w-full items-center gap-2 px-3 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
+            class="flex w-full items-center gap-2 px-3 py-3 text-left focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
             aria-expanded={openGeneralSection === "layout"}
             aria-controls="general-section-layout"
             on:click={() => toggleGeneralSection("layout")}
@@ -995,7 +995,7 @@
         <div class="mt-2 grid grid-cols-2 gap-2" role="group" aria-label="Primary video">
           <button
             type="button"
-            class={`rounded-lg border px-2 py-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${primaryDraft === "original" ? "border-accent-primary bg-accent-primary/10 text-text-primary" : "border-border-subtle bg-background/40 text-text-muted hover:text-text-primary"}`}
+            class={`rounded-lg border px-2 py-2 text-left transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus ${primaryDraft === "original" ? "border-accent-primary bg-accent-primary/10 text-text-primary" : "border-border-subtle bg-background/40 text-text-muted hover:text-text-primary"}`}
             aria-pressed={primaryDraft === "original"}
             on:click={() => (primaryDraft = "original")}
           >
@@ -1010,7 +1010,7 @@
           </button>
           <button
             type="button"
-            class={`rounded-lg border px-2 py-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${primaryDraft === "reaction" ? "border-accent-primary bg-accent-primary/10 text-text-primary" : "border-border-subtle bg-background/40 text-text-muted hover:text-text-primary"}`}
+            class={`rounded-lg border px-2 py-2 text-left transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus ${primaryDraft === "reaction" ? "border-accent-primary bg-accent-primary/10 text-text-primary" : "border-border-subtle bg-background/40 text-text-muted hover:text-text-primary"}`}
             aria-pressed={primaryDraft === "reaction"}
             on:click={() => (primaryDraft = "reaction")}
           >
@@ -1055,7 +1055,7 @@
               {#if position}
                 <button
                   type="button"
-                  class={`flex flex-col items-center gap-1 rounded-lg border px-1 py-1.5 text-[11px] font-medium leading-tight transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${cornerDraft === position.value ? "border-accent-primary bg-accent-primary text-background" : "border-border-subtle bg-background/40 text-text-muted hover:text-text-primary"}`}
+                  class={`flex flex-col items-center gap-1 rounded-lg border px-1 py-1.5 text-[11px] font-medium leading-tight transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus ${cornerDraft === position.value ? "border-accent-primary bg-accent-primary text-background" : "border-border-subtle bg-background/40 text-text-muted hover:text-text-primary"}`}
                   aria-pressed={cornerDraft === position.value}
                   aria-label={`Place the overlay at the ${position.label.toLowerCase()}`}
                   on:click={() => (cornerDraft = position.value)}
@@ -1180,6 +1180,8 @@
 </div>
 
 <style>
+  @reference "../../../app.pcss";
+
   .editor-config {
     container-type: inline-size;
   }
