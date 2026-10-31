@@ -20,7 +20,7 @@ Pure Reactions follows a strict testing pyramid with clear boundaries between E2
 
 ---
 
-## E2E Tests (`tests/*.spec.js`)
+## E2E Tests (`tests/e2e/<route>/*.spec.js`)
 
 ### Purpose
 Validate **critical cross-system integration** that cannot be tested at lower levels. E2E tests are expensive, flaky-prone, and should be **minimal**.
@@ -31,14 +31,23 @@ Validate **critical cross-system integration** that cannot be tested at lower le
 3. **No external API dependencies** (Algolia, YouTube quota)
 4. **No nondeterministic ordering** without stable tie-breakers
 
-### Current E2E Tests
+### Route suites
 
-| Test File | Purpose | What it validates |
+Playwright specs live in `tests/e2e/<route>/`, one directory per application route they cover. `tests/e2e/suites.json` maps each suite to the route, API, and spec paths that should select it. Desktop and mobile projects still run for every selected suite.
+
+| Suite | Directory | Routes |
 | :--- | :--- | :--- |
-| `twin-player-basic-sync.spec.js` | Twin player boot smoke | Both YouTube IFrames load and reach `PLAYING` state |
-| `reaction-layout-visual.spec.js` | Layout visual regression | Reactor attribution, layout stability (visual snapshots) |
-| `account-deletion.spec.js` | Account deletion journey | Firebase Auth + Firestore cascade deletion |
-| `firestore.rules.spec.mjs` | Firestore security rules | Rule enforcement via Firebase emulator |
+| `account` | `tests/e2e/account` | `/login`, `/account`, `/api/account` |
+| `my-reactions` | `tests/e2e/my-reactions` | `/my-reactions`, plus login and account because those specs pass through them |
+| `reaction` | `tests/e2e/reaction` | `/reaction`, `/edit-reaction` (remix editor cases in `remix-mode.spec.js`) |
+| `edit-reaction` | `tests/e2e/edit-reaction` | `/edit-reaction` |
+| `playlist` | `tests/e2e/playlist` | `/playlist` |
+| `backend` | `tests/e2e/backend` | `/backend`, `/login` |
+| `test-layout` | `tests/e2e/test-layout` | `/test-layout` |
+
+A change under `src/lib/`, the root layout, app shell, fixtures, Playwright config, or dependency files runs every suite. Routes with no Playwright specs are listed in `unmappedRoutes` and do not start a browser run. Add a suite directory and a `suites.json` entry when a route gains an end-to-end spec.
+
+Firestore security rules stay in `tests/firestore.rules.spec.mjs` and are not part of the Playwright run.
 
 ### What was removed (moved to integration)
 - **Drift measurement** → Integration tests for `computeTwinPlayersSyncTick`
@@ -83,15 +92,26 @@ npm run test:integration:watch
 
 ### E2E Tests
 ```bash
-# Local (Firestore emulator required)
+# Every suite (Firestore emulator required)
 npm run test:e2e:ci
 
-# Specific test
-PW_ARGS="twin-player-basic-sync" npm run test:e2e:ci:only
+# One route suite, on desktop and mobile
+E2E_SUITES=reaction npm run test:e2e:ci
+
+# Several suites
+E2E_SUITES=account,my-reactions npm run test:e2e:ci
+
+# See which suites a pull request would run
+npm run test:e2e:select -- --base origin/prod
+
+# Check the suite map without browsers
+npm run test:e2e:suites
 
 # Headed mode (for debugging)
-npx playwright test --headed
+npx playwright test tests/e2e/reaction --headed
 ```
+
+Pull requests run `scripts/select-e2e-suites.mjs` against the base branch. The Playwright job installs browsers only when at least one suite matches. A manual workflow run executes every suite.
 
 ### Firestore Rules Tests
 ```bash
@@ -106,6 +126,7 @@ npm run test:rules
 - The behavior requires **cross-system integration** (Auth → Firestore → Svelte store → UI)
 - It's a **critical user journey** (login, playback boot, account deletion)
 - It **cannot** be validated via integration/unit tests
+- The spec belongs in `tests/e2e/<route>/`. When the route is new, add its paths to `tests/e2e/suites.json` and remove it from `unmappedRoutes`.
 
 ### Add an integration test IF:
 - The behavior is **pure logic** (timeline lookups, state transitions, formatting)

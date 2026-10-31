@@ -7,7 +7,7 @@ import {
     readTwinPlayersSnapshot,
     waitForPlayersReady,
     startPlaybackInteraction
-} from './utils/twin-player-helpers.js';
+} from '../../utils/twin-player-helpers.js';
 
 const REACTION_PAGE_URLS = {
     basicSync: '/reaction/1PaTrdCMKn6ay7nShHES',

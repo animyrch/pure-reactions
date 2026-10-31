@@ -4,7 +4,7 @@ import {
   readTwinPlayersSnapshot,
   startPlaybackInteraction,
   waitForPlayersReady,
-} from './utils/twin-player-helpers.js';
+} from '../../utils/twin-player-helpers.js';
 
 test('mobile landscape: primary stage keeps full height with dock overlay', async ({ page }, testInfo) => {
   if (testInfo.project.name !== 'mobile') testInfo.skip(true, 'mobile-only');

@@ -4,7 +4,7 @@ import { test, expect } from '@playwright/test';
 const envOrFile = (name, fallback) => {
 	if (process.env[name]) return process.env[name];
 	try {
-		const line = readFileSync(new URL('../.env', import.meta.url), 'utf8')
+		const line = readFileSync(new URL('../../../.env', import.meta.url), 'utf8')
 			.split('\n')
 			.find((entry) => entry.startsWith(`${name}=`));
 		const value = line?.slice(name.length + 1).trim();

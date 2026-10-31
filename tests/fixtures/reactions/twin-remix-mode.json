@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "Remix mode fixtures. The editor document starts with remix off so the test can toggle it. Playback documents are already in remix mode. reactorId matches the Auth emulator user created by tests/remix-mode.spec.js.",
+  "description": "Remix mode fixtures. The editor document starts with remix off so the test can toggle it. Playback documents are already in remix mode. reactorId matches the Auth emulator user created by tests/e2e/reaction/remix-mode.spec.js.",
   "docs": [
     {
       "id": "remixPlaythrough0001",

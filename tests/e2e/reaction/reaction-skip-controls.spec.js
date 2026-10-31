@@ -4,7 +4,7 @@ import {
   readTwinPlayersSnapshot,
   startPlaybackInteraction,
   waitForPlayersReady,
-} from './utils/twin-player-helpers.js';
+} from '../../utils/twin-player-helpers.js';
 
 const readReactionTime = async (page) => {
   const snapshot = await readTwinPlayersSnapshot(page);

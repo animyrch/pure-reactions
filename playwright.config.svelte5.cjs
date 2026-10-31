@@ -8,8 +8,7 @@ if (process.env.PUBLIC_DISABLE_YOUTUBE_METADATA_SYNC === undefined) {
 }
 
 module.exports = defineConfig({
-    testDir: './tests',
-    testIgnore: ['**/firestore.rules.spec.mjs', '**/integration/**'],
+    testDir: './tests/e2e',
     testMatch: '**/*.spec.js',
     timeout: 30000,
     reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',

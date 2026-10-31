@@ -126,7 +126,7 @@ The agent should behave like a calm, experienced art director who also understan
 5. **Components present, helpers derive** — components should focus on obtaining data and rendering; move formatting, parsing, label building, and state derivation into helpers. Split independent layout compartments into their own components even if single-use.
 
 ## 13 — Browser testing reference (Playwright fixtures)
-* When you run or describe browser tests, use the same reaction slugs and video IDs that the Playwright twin-player suite targets so the experience matches what CI exercises. Those IDs are defined in `tests/fixtures/reactions/*.json` and referenced by `tests/twin-player-basic-sync.spec.js`.
+* When you run or describe browser tests, use the same reaction slugs and video IDs that the Playwright twin-player suite targets so the experience matches what CI exercises. Those IDs are defined in `tests/fixtures/reactions/*.json` and referenced by `tests/e2e/reaction/twin-player-basic-sync.spec.js`.
 * Keep the following mapping handy for quick reference and share it when explaining a test scenario to collaborators or the agent:
   - Basic Sync → Reaction page `/reaction/1PaTrdCMKn6ay7nShHES`, video ID `8-3PahRtgF4`, fixture `tests/fixtures/reactions/twin-basic-sync.json`.
   - Play Trigger → `/reaction/8O1sPJr6atB0K2CvyItV`, video ID `qg6b4b0FAB4`, fixture `tests/fixtures/reactions/twin-play-trigger.json`.
