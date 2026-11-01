@@ -113,6 +113,7 @@ test('changed paths select the corresponding suites', () => {
     ['src/routes/playlist/[slug]/+page.svelte', 'subset', ['playlist']],
     ['src/routes/backend/+page.svelte', 'subset', ['backend']],
     ['src/routes/test-layout/+page.svelte', 'subset', ['test-layout']],
+    ['src/routes/react/+page.svelte', 'subset', ['react']],
     ['src/routes/api/account/delete/+server.js', 'subset', ['account']],
     ['src/routes/api/content/delete/+server.js', 'subset', ['my-reactions']],
     ['src/routes/api/youtube/playlist/[id]/+server.js', 'subset', ['reaction']],

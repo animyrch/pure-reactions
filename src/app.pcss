@@ -128,6 +128,18 @@
   ::file-selector-button {
     border-color: var(--color-gray-200, currentcolor);
   }
+
+  /*
+    The page text is light. White cards need dark text, and fields inside them
+    inherit it. Keep this in @layer base so a text-* utility can still win.
+    An unlayered color on input or .bg-white beats every utility, which left
+    typed text at #050505 on dark fields (the /react URL input) while the
+    placeholder stayed visible.
+  */
+  .bg-white {
+    color: #050505;
+    color-scheme: light;
+  }
 }
 
 /* Design spacing. Kept off --spacing-* so they do not replace max-w-* or leading-none. */

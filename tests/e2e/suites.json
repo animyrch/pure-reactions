@@ -83,6 +83,15 @@
         "src/routes/test-layout/**",
         "tests/e2e/test-layout/**"
       ]
+    },
+    {
+      "name": "react",
+      "description": "Create-reaction form. The visual spec checks typed text in the original-video field.",
+      "dir": "tests/e2e/react",
+      "paths": [
+        "src/routes/react/**",
+        "tests/e2e/react/**"
+      ]
     }
   ],
   "shared": [
@@ -128,7 +137,6 @@
     "open-source",
     "privacy",
     "queue",
-    "react",
     "reactions",
     "reactor",
     "search",
