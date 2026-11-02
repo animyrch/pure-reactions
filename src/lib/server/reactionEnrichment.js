@@ -144,10 +144,11 @@ function compactMeta(meta) {
   return cleaned;
 }
 
-async function storeWatchDuration(adminDb, collectionName, reactionId) {
+async function storeWatchDuration(adminDb, collectionName, reactionId, ownerId) {
   try {
     await persistReactionWatchDurationAdmin(adminDb, reactionId, {
       reactionCollection: collectionName,
+      ownerId,
     });
   } catch (error) {
     console.error('Failed to store watch duration after enrichment', {
@@ -173,7 +174,14 @@ function buildMetaFromResponse(response, youtubeId) {
   });
 }
 
-export async function enrichReactionDocument({ adminDb, adminFieldValue, collectionName, reactionId, force = false }) {
+export async function enrichReactionDocument({
+  adminDb,
+  adminFieldValue,
+  collectionName,
+  reactionId,
+  ownerId,
+  force = false
+}) {
   const docRef = adminDb.collection(collectionName).doc(reactionId);
   const snapshot = await docRef.get();
   if (!snapshot.exists) {
@@ -181,6 +189,10 @@ export async function enrichReactionDocument({ adminDb, adminFieldValue, collect
   }
 
   const data = snapshot.data();
+  if (typeof ownerId !== 'string' || !ownerId || data?.reactorId !== ownerId) {
+    return { found: true, updated: false, reason: 'forbidden' };
+  }
+
   const reactionYoutubeId = getYoutubeId(data);
   const originalPlatform = normalizeOriginalVideoPlatform(data?.originalVideoPlatform);
   const originalYoutubeId = originalPlatform === 'youtube' ? getOriginalYoutubeId(data) : null;
@@ -205,7 +217,7 @@ export async function enrichReactionDocument({ adminDb, adminFieldValue, collect
 
   if (!reactionNeedsUpdate && !originalNeedsUpdate) {
     if (!hasStoredWatchDuration(data)) {
-      await storeWatchDuration(adminDb, collectionName, reactionId);
+      await storeWatchDuration(adminDb, collectionName, reactionId, ownerId);
     }
     return { found: true, updated: false, reason: 'meta-fresh' };
   }
@@ -265,7 +277,7 @@ export async function enrichReactionDocument({ adminDb, adminFieldValue, collect
   }
 
   await docRef.set(updates, { merge: true });
-  await storeWatchDuration(adminDb, collectionName, reactionId);
+  await storeWatchDuration(adminDb, collectionName, reactionId, ownerId);
 
   return {
     found: true,

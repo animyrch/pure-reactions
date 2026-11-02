@@ -1,5 +1,5 @@
 import { env } from '$env/dynamic/public';
-import { updateFirebaseDocument } from '$lib/helpers/firebase';
+import { auth, requestReactionEnrichment, updateFirebaseDocument } from '$lib/helpers/firebase';
 import {
   fetchOriginalVideoMetadata,
   originalVideoMetadataToFirestoreFields,
@@ -65,6 +65,7 @@ export type VerifyAndSyncTwinPlayersMetadataParams = {
   currentOriginalDescription?: string | null;
   currentReactionTitle?: string | null;
   currentReactionAuthor?: string | null;
+  reactorId?: string | null;
 };
 
 export type TwinPlayersMetadataStatePatch = Partial<Record<TwinPlayersMetadataField, string>>;
@@ -194,7 +195,8 @@ export async function verifyAndSyncTwinPlayersMetadata({
   currentOriginalAuthorUrl,
   currentOriginalDescription,
   currentReactionTitle,
-  currentReactionAuthor
+  currentReactionAuthor,
+  reactorId
 }: VerifyAndSyncTwinPlayersMetadataParams): Promise<VerifyAndSyncTwinPlayersMetadataResult> {
   const resolvedDocumentId = documentId ?? fallbackDocumentId;
   if (DISABLE_YOUTUBE_METADATA_SYNC || !resolvedDocumentId) {
@@ -244,22 +246,17 @@ export async function verifyAndSyncTwinPlayersMetadata({
 
   if (hasKeys(metadataUpdates)) {
     try {
-      // In production-like environments clients should not write directly to
-      // the production collection. Request server-side enrichment which
-      // performs admin-updates safely with the Admin SDK.
-      if (typeof window !== 'undefined') {
-        try {
-          await fetch('/api/reactions/enrich', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ reactionId: resolvedDocumentId, force: false })
-          });
-        } catch (err) {
-          // Do not attempt client-side writes — keep Firestore rules strict.
-          console.error('Enrichment endpoint call failed; metadata update skipped', err);
-        }
-      } else {
-        // Server-side (non-browser) context: attempt direct update
+      // Viewers keep the fresh titles in local state. Only the owner may ask
+      // the server to merge host metadata through the Admin SDK.
+      const viewerId = auth?.currentUser?.uid;
+      if (
+        typeof window !== 'undefined' &&
+        viewerId &&
+        typeof reactorId === 'string' &&
+        viewerId === reactorId
+      ) {
+        await requestReactionEnrichment(resolvedDocumentId, { force: false });
+      } else if (typeof window === 'undefined') {
         await updateFirebaseDocument(metadataUpdates, resolvedDocumentId);
       }
     } catch (error) {

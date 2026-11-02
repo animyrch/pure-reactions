@@ -161,14 +161,25 @@ export const requestReactionEnrichment = async (reactionId, { force = false } = 
         return false;
     }
 
+    const user = auth?.currentUser;
+    if (!user) {
+        return false;
+    }
+
     try {
+        const idToken = await user.getIdToken();
         const response = await fetch('/api/reactions/enrich', {
             method: 'POST',
             headers: {
-                'content-type': 'application/json'
+                'content-type': 'application/json',
+                Authorization: `Bearer ${idToken}`
             },
             body: JSON.stringify({ reactionId, force })
         });
+
+        if (response.status === 401 || response.status === 403) {
+            return false;
+        }
 
         if (!response.ok) {
             const details = await response.text().catch(() => '');
