@@ -50,7 +50,7 @@ import {
     createPlaylistDocumentPayload,
     getPlaylistSequenceItems,
 } from '$lib/helpers/reactionSequence';
-import { generateOriginalVideoSlug } from '$lib/helpers/originalVideo';
+import { generateOriginalVideoSlug, safeCreatorProfileHref } from '$lib/helpers/originalVideo';
 import { normalizeTwitchChannel } from '$lib/helpers/twitchChannel';
 import { assertMomentReady } from '$lib/helpers/moments';
 import { affectsWatchDuration } from '$lib/helpers/watchDuration';
@@ -242,8 +242,9 @@ export const createReactionDocument = async ({
         if (typeof originalVideoAuthorHandle === 'string' && originalVideoAuthorHandle.trim()) {
             dataToAdd.originalVideoAuthorHandle = originalVideoAuthorHandle.trim();
         }
-        if (typeof originalVideoAuthorUrl === 'string' && originalVideoAuthorUrl.trim()) {
-            dataToAdd.originalVideoAuthorUrl = originalVideoAuthorUrl.trim();
+        const safeAuthorUrl = safeCreatorProfileHref(originalVideoAuthorUrl);
+        if (safeAuthorUrl) {
+            dataToAdd.originalVideoAuthorUrl = safeAuthorUrl;
         }
         if (typeof originalVideoDescription === 'string' && originalVideoDescription.trim()) {
             dataToAdd.originalVideoDescription = originalVideoDescription.trim();
@@ -337,8 +338,9 @@ export const createMomentDocument = async ({
         if (typeof originalVideoAuthorHandle === 'string' && originalVideoAuthorHandle.trim()) {
             dataToAdd.originalVideoAuthorHandle = originalVideoAuthorHandle.trim();
         }
-        if (typeof originalVideoAuthorUrl === 'string' && originalVideoAuthorUrl.trim()) {
-            dataToAdd.originalVideoAuthorUrl = originalVideoAuthorUrl.trim();
+        const safeAuthorUrl = safeCreatorProfileHref(originalVideoAuthorUrl);
+        if (safeAuthorUrl) {
+            dataToAdd.originalVideoAuthorUrl = safeAuthorUrl;
         }
         if (typeof originalVideoDescription === 'string' && originalVideoDescription.trim()) {
             dataToAdd.originalVideoDescription = originalVideoDescription.trim();
@@ -417,8 +419,9 @@ export const createMomentReactionDocument = async ({
         if (typeof originalVideoAuthorHandle === 'string' && originalVideoAuthorHandle.trim()) {
             dataToAdd.originalVideoAuthorHandle = originalVideoAuthorHandle.trim();
         }
-        if (typeof originalVideoAuthorUrl === 'string' && originalVideoAuthorUrl.trim()) {
-            dataToAdd.originalVideoAuthorUrl = originalVideoAuthorUrl.trim();
+        const safeAuthorUrl = safeCreatorProfileHref(originalVideoAuthorUrl);
+        if (safeAuthorUrl) {
+            dataToAdd.originalVideoAuthorUrl = safeAuthorUrl;
         }
         if (typeof originalVideoDescription === 'string' && originalVideoDescription.trim()) {
             dataToAdd.originalVideoDescription = originalVideoDescription.trim();

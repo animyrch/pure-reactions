@@ -4,6 +4,7 @@
     import FollowManagement from '$lib/components/FollowManagement.svelte';
     import RateVideo from '$lib/components/Video/RateVideo.svelte';
     import { linkifyText } from '$lib/helpers/system';
+    import { safeCreatorProfileHref } from '$lib/helpers/originalVideo';
     import { reactionThumbnailSourceTitle } from '$lib/helpers/reactionListItem';
 
     export let originalVideoTitle;
@@ -30,9 +31,9 @@
 
     const youtubeChannelUrl = (author) => (author ? `https://www.youtube.com/${author}` : undefined);
     $: originalAuthorHref =
-        originalVideoAuthorUrl ||
+        safeCreatorProfileHref(originalVideoAuthorUrl) ||
         (originalVideoPlatform === 'youtube' ? youtubeChannelUrl(originalVideoAuthor) : undefined);
-    $: originalAuthorPlatformLabel = originalVideoPlatform === 'tiktok' ? 'TikTok' : 'YouTube';
+    $: originalAuthorPlatformLabel = originalAuthorHref?.includes('tiktok.com') ? 'TikTok' : 'YouTube';
 
         let viewerData;
         $: viewerData = $userExtraDataStore?.userExtraData;
@@ -111,7 +112,7 @@
                 />
             {/if}
             <div class="identity-text m-auto">
-                {#if originalVideoAuthor}
+                {#if originalVideoAuthor && originalAuthorHref}
                     <a
                         class="author"
                         href={originalAuthorHref}
@@ -121,6 +122,8 @@
                     >
                         {originalVideoAuthor}
                     </a>
+                {:else if originalVideoAuthor}
+                    <span class="author">{originalVideoAuthor}</span>
                 {:else}
                     <p class="author muted">Unknown creator</p>
                 {/if}
