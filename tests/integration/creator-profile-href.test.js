@@ -46,6 +46,9 @@ describe('safeCreatorProfileHref', () => {
     expect(safeCreatorProfileHref('https://www.tiktok.com/@user/video/123')).toBeUndefined();
     expect(safeCreatorProfileHref('https://www.youtube.com/@foo%2fbar')).toBeUndefined();
     expect(safeCreatorProfileHref('https://www.youtube.com\\@example.com')).toBeUndefined();
+    expect(safeCreatorProfileHref('https://www.youtube.com/@fo\u0000o')).toBeUndefined();
+    expect(safeCreatorProfileHref('https://www.youtube.com/@fo\u0001o')).toBeUndefined();
+    expect(safeCreatorProfileHref('https://www.youtube.com/@fo\u007fo')).toBeUndefined();
     expect(safeCreatorProfileHref('')).toBeUndefined();
     expect(safeCreatorProfileHref(null)).toBeUndefined();
   });
@@ -100,5 +103,28 @@ describe('CreatorDetails author link', () => {
 
     expect(body).toContain('href="https://www.youtube.com/@remix-owner"');
     expect(body).not.toContain('example.com');
+  });
+
+  it('keeps an ordinary YouTube name and drops a reserved path', () => {
+    const named = render(CreatorDetails, {
+      props: {
+        ...details,
+        originalVideoPlatform: 'youtube',
+        originalVideoAuthor: 'Some Name',
+        originalVideoAuthorUrl: '',
+      },
+    });
+    expect(named.body).toContain('href="https://www.youtube.com/Some%20Name"');
+
+    const reserved = render(CreatorDetails, {
+      props: {
+        ...details,
+        originalVideoPlatform: 'youtube',
+        originalVideoAuthor: 'watch',
+        originalVideoAuthorUrl: '',
+      },
+    });
+    expect(reserved.body).toContain('>watch</span>');
+    expect(reserved.body).not.toContain('youtube.com/watch');
   });
 });

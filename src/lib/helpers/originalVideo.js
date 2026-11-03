@@ -284,6 +284,16 @@ const isYouTubeProfilePath = (parts) => {
 
 const isTikTokProfilePath = (parts) => parts.length === 1 && PROFILE_HANDLE.test(parts[0]);
 
+// Reject C0 controls, DEL, and backslash before URL parsing. The URL parser
+// treats "\" as "/" on YouTube and TikTok hosts, which would hide the character.
+const hasDisallowedProfileCharacter = (value) => {
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code <= 0x1f || code === 0x7f || code === 0x5c) return true;
+  }
+  return false;
+};
+
 /**
  * Owner-controlled author URLs are rendered as the public creator link.
  * Only https YouTube and TikTok profile addresses are returned.
@@ -291,7 +301,7 @@ const isTikTokProfilePath = (parts) => parts.length === 1 && PROFILE_HANDLE.test
 export const safeCreatorProfileHref = (value) => {
   if (typeof value !== 'string') return undefined;
   const candidate = value.trim();
-  if (!candidate || /[\u0000-\u001F\u007F\\]/.test(candidate)) return undefined;
+  if (!candidate || hasDisallowedProfileCharacter(candidate)) return undefined;
 
   let url;
   try {

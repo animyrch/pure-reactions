@@ -32,7 +32,9 @@
     const youtubeChannelUrl = (author) => (author ? `https://www.youtube.com/${author}` : undefined);
     $: originalAuthorHref =
         safeCreatorProfileHref(originalVideoAuthorUrl) ||
-        (originalVideoPlatform === 'youtube' ? youtubeChannelUrl(originalVideoAuthor) : undefined);
+        (originalVideoPlatform === 'youtube'
+            ? safeCreatorProfileHref(youtubeChannelUrl(originalVideoAuthor))
+            : undefined);
     $: originalAuthorPlatformLabel = originalAuthorHref?.includes('tiktok.com') ? 'TikTok' : 'YouTube';
 
         let viewerData;
