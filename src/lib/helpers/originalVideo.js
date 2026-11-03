@@ -232,6 +232,108 @@ export const buildTikTokAuthorUrl = (authorHandle) => {
     : undefined;
 };
 
+const YOUTUBE_PROFILE_HOSTS = new Set(['youtube.com', 'www.youtube.com', 'm.youtube.com']);
+const TIKTOK_PROFILE_HOSTS = new Set(['tiktok.com', 'www.tiktok.com', 'm.tiktok.com']);
+const RESERVED_PROFILE_SEGMENTS = new Set([
+  'about',
+  'account',
+  'attribution_link',
+  'channel',
+  'clip',
+  'create',
+  'embed',
+  'feed',
+  'gaming',
+  'hashtag',
+  'iframe_api',
+  'live',
+  'login',
+  'logout',
+  'playlist',
+  'post',
+  'premium',
+  'redirect',
+  'results',
+  'shorts',
+  'signin',
+  'signup',
+  'upload',
+  'user',
+  'watch',
+]);
+const PROFILE_HANDLE = /^@[\p{L}\p{N}._-]{1,64}$/u;
+const PROFILE_CUSTOM_SEGMENT = /^[\p{L}\p{N}][\p{L}\p{N}._ &'+-]{0,79}$/u;
+const YOUTUBE_CHANNEL_ID = /^UC[A-Za-z0-9_-]{22}$/;
+
+const isCustomProfileSegment = (segment) =>
+  PROFILE_CUSTOM_SEGMENT.test(segment) && !RESERVED_PROFILE_SEGMENTS.has(segment.toLowerCase());
+
+const isYouTubeProfilePath = (parts) => {
+  if (parts.length === 1 && PROFILE_HANDLE.test(parts[0])) return true;
+  if (parts.length === 1 && isCustomProfileSegment(parts[0])) return true;
+  if (parts.length === 2 && parts[0] === 'channel' && YOUTUBE_CHANNEL_ID.test(parts[1])) return true;
+  if (
+    parts.length === 2 &&
+    (parts[0] === 'c' || parts[0] === 'user') &&
+    isCustomProfileSegment(parts[1])
+  ) {
+    return true;
+  }
+  return false;
+};
+
+const isTikTokProfilePath = (parts) => parts.length === 1 && PROFILE_HANDLE.test(parts[0]);
+
+// Reject C0 controls, DEL, and backslash before URL parsing. The URL parser
+// treats "\" as "/" on YouTube and TikTok hosts, which would hide the character.
+const hasDisallowedProfileCharacter = (value) => {
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code <= 0x1f || code === 0x7f || code === 0x5c) return true;
+  }
+  return false;
+};
+
+/**
+ * Owner-controlled author URLs are rendered as the public creator link.
+ * Only https YouTube and TikTok profile addresses are returned.
+ */
+export const safeCreatorProfileHref = (value) => {
+  if (typeof value !== 'string') return undefined;
+  const candidate = value.trim();
+  if (!candidate || hasDisallowedProfileCharacter(candidate)) return undefined;
+
+  let url;
+  try {
+    url = new URL(candidate);
+  } catch {
+    return undefined;
+  }
+
+  if (url.protocol !== 'https:' || url.username || url.password || url.port) return undefined;
+
+  const host = url.hostname.toLowerCase();
+  const youtube = YOUTUBE_PROFILE_HOSTS.has(host);
+  const tiktok = TIKTOK_PROFILE_HOSTS.has(host);
+  if (!youtube && !tiktok) return undefined;
+
+  let decodedPath;
+  try {
+    decodedPath = decodeURIComponent(url.pathname).replace(/\/+$/, '');
+  } catch {
+    return undefined;
+  }
+
+  const parts = decodedPath.split('/').filter(Boolean);
+  if (parts.length === 0 || parts.some((part) => part.includes('%'))) return undefined;
+
+  const allowed = youtube ? isYouTubeProfilePath(parts) : isTikTokProfilePath(parts);
+  if (!allowed) return undefined;
+
+  const pathname = url.pathname.replace(/\/+$/, '') || '/';
+  return `${url.origin}${pathname}`;
+};
+
 export const buildTikTokVideoUrl = ({ videoId, authorHandle, authorUrl } = {}) => {
   const normalizedVideoId = trimString(videoId);
   if (!normalizedVideoId) {
@@ -264,15 +366,13 @@ export const normalizeOriginalVideoMetadata = (reactionData = {}) => {
       authorHandle ? `@${authorHandle.replace(/^@/, '')}` : undefined,
     ),
   );
-  const authorUrl = trimString(
-    firstDefined(
-      reactionData?.originalVideoAuthorUrl,
-      sourceMeta?.authorUrl,
-      platform === ORIGINAL_VIDEO_PLATFORMS.TIKTOK
-        ? buildTikTokAuthorUrl(authorHandle)
-        : buildYouTubeAuthorUrl(author),
-    ),
-  );
+  const authorUrl = [
+    reactionData?.originalVideoAuthorUrl,
+    sourceMeta?.authorUrl,
+    platform === ORIGINAL_VIDEO_PLATFORMS.TIKTOK
+      ? buildTikTokAuthorUrl(authorHandle)
+      : buildYouTubeAuthorUrl(author),
+  ].reduce((found, candidate) => found || safeCreatorProfileHref(candidate), undefined);
   const title = trimString(
     firstDefined(
       reactionData?.originalVideoTitle,
@@ -353,7 +453,7 @@ export const originalVideoMetadataToFirestoreFields = (metadata = {}) =>
     originalVideoTitle: trimString(metadata.title),
     originalVideoAuthor: trimString(metadata.author),
     originalVideoAuthorHandle: trimString(metadata.authorHandle),
-    originalVideoAuthorUrl: trimString(metadata.authorUrl),
+    originalVideoAuthorUrl: safeCreatorProfileHref(metadata.authorUrl),
     originalVideoDescription: trimString(metadata.description),
     originalVideoThumbnailUrl: trimString(metadata.thumbnailUrl),
     originalVideoThumbnailWidth: toFiniteNumber(metadata.thumbnailWidth),
