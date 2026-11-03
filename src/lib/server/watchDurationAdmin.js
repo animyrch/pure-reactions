@@ -1,4 +1,5 @@
 import { COLLECTION_PLAYLISTS, COLLECTION_REACTION_BINOMES } from '$lib/constants/firebase';
+import { buildWatchDurationPatch } from '$lib/helpers/watchDuration';
 import {
     ensureReactionWatchDuration,
     syncReactionWatchDuration,
@@ -74,13 +75,47 @@ export const createAdminWatchDurationIo = (
     };
 };
 
+const scopeWatchDurationWrites = (io, ownerId) => ({
+    peekReaction: (id) => io.peekReaction(id),
+    getReaction: (id) => io.getReaction(id),
+    getReactions: (ids) => io.getReactions(ids),
+    getPlaylist: (id) => io.getPlaylist(id),
+    async updateReaction(id, patch, current) {
+        if (current?.reactorId !== ownerId) return;
+        await io.updateReaction(id, patch, current);
+    },
+    async updatePlaylist(id, patch, current) {
+        if (current?.userId !== ownerId) return;
+        await io.updatePlaylist(id, patch, current);
+    },
+});
+
 export const persistReactionWatchDurationAdmin = async (
     adminDb,
     reactionId,
-    { reactionCollection = COLLECTION_REACTION_BINOMES } = {}
+    { reactionCollection = COLLECTION_REACTION_BINOMES, ownerId } = {}
 ) => {
     const io = createAdminWatchDurationIo(adminDb, { reactionCollection });
-    await syncReactionWatchDuration({ reactionId, io });
+    if (typeof ownerId !== 'string' || !ownerId) {
+        await syncReactionWatchDuration({ reactionId, io });
+        return;
+    }
+
+    const ownedIo = scopeWatchDurationWrites(io, ownerId);
+    const reaction = await ownedIo.getReaction(reactionId);
+    if (!reaction?.data || reaction.data.reactorId !== ownerId) return;
+
+    const playlistId = typeof reaction.data.playlistId === 'string' ? reaction.data.playlistId.trim() : '';
+    if (playlistId) {
+        const playlist = await ownedIo.getPlaylist(playlistId);
+        if (playlist?.data?.userId === ownerId) {
+            await syncReactionWatchDuration({ reactionId, io: ownedIo });
+            return;
+        }
+    }
+
+    const patch = buildWatchDurationPatch({ ...reaction.data, playlistId: '' });
+    await ownedIo.updateReaction(reactionId, patch, reaction.data);
 };
 
 export const ensureReactionWatchDurationAdmin = async (adminDb, reactionId, data, io) => {
