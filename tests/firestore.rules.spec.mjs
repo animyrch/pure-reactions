@@ -507,6 +507,23 @@ test('logged out users cannot read userData_local', async () => {
   await assertFails(getDoc(doc(anonDb(), 'userData_local', ownerId)));
 });
 
+test('clients cannot read or write the youtube playlist cache', async () => {
+  const playlistId = 'PL1234567890ab';
+  await assertFails(getDoc(doc(anonDb(), 'youtubePlaylistCache_local', playlistId)));
+  await assertFails(setDoc(doc(anonDb(), 'youtubePlaylistCache_local', playlistId), { playlistId }));
+  await assertFails(getDoc(doc(ownerDb(), 'youtubePlaylistCache', playlistId)));
+  await assertFails(setDoc(doc(adminDb(), 'youtubePlaylistCache_local', playlistId), { playlistId }));
+  await assertFails(
+    getDoc(doc(anonDb(), 'youtubePlaylistCache_local', playlistId, 'pages', 'page-first')),
+  );
+  await assertFails(
+    setDoc(doc(ownerDb(), 'youtubePlaylistCache-prod', playlistId, 'pages', 'page-first'), {
+      status: 'ready',
+      items: [],
+    }),
+  );
+});
+
 test('owner cannot write ageConfirmedAt on user data', async () => {
   const ref = doc(ownerDb(), 'userData_local', ownerId);
   await assertFails(setDoc(ref, {
