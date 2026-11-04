@@ -458,6 +458,33 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    // YouTube playlist catalog. Written by the Admin SDK only.
+    // A stored page is the response for every visitor until a reactor refresh replaces it.
+    match /youtubePlaylistCache/{playlistId} {
+      allow read, write: if false;
+      match /pages/{pageId} {
+        allow read, write: if false;
+      }
+    }
+    match /youtubePlaylistCache_local/{playlistId} {
+      allow read, write: if false;
+      match /pages/{pageId} {
+        allow read, write: if false;
+      }
+    }
+    match /youtubePlaylistCache-local/{playlistId} {
+      allow read, write: if false;
+      match /pages/{pageId} {
+        allow read, write: if false;
+      }
+    }
+    match /youtubePlaylistCache-prod/{playlistId} {
+      allow read, write: if false;
+      match /pages/{pageId} {
+        allow read, write: if false;
+      }
+    }
+
     // Default deny
     match /{document=**} {
       allow read, write: if false;
