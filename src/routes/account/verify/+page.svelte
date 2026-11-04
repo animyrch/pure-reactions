@@ -58,6 +58,7 @@
       await auth.currentUser.reload();
       const user = await syncCurrentUser();
       if (user?.emailVerified) {
+        await user.getIdToken(true);
         showToast('Account verified. You can continue.', TOASTS.SUCCESS);
         await goToRoute(redirectTarget);
         return;
