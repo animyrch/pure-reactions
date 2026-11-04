@@ -63,6 +63,7 @@ export const GET = async ({ params, url }) => {
     pageToken: url.searchParams.get('pageToken') || '',
     includePlaylistTitle: url.searchParams.get('includePlaylistTitle') === '1',
     maxResults: url.searchParams.get('maxResults'),
+    offset: url.searchParams.get('offset'),
     apiKey: env.YOUTUBE_API_KEY || '',
     placeholderItems: PLACEHOLDER_PLAYLIST_ITEMS,
     resolve: resolveStoredYouTubePlaylist,

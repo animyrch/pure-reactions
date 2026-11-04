@@ -7,9 +7,18 @@ import {
   prepareYouTubePlaylistResponse,
   readYouTubePlaylistItemsPayload,
   resolveCachedYouTubePlaylist,
+  YOUTUBE_PLAYLIST_CACHE_LOCK_TTL_MS,
   YouTubePlaylistRequestError,
 } from '$lib/helpers/youtubePlaylistCache';
-import { createFirestoreYouTubePlaylistCacheStore } from '$lib/server/youtubePlaylistCache';
+import {
+  createFirestoreYouTubePlaylistCacheStore,
+  fetchYouTubePlaylistPage,
+  YOUTUBE_PLAYLIST_FETCH_TIMEOUT_MS,
+} from '$lib/server/youtubePlaylistCache';
+
+vi.mock('$env/dynamic/private', () => ({
+  env: {},
+}));
 
 const PLAYLIST_ID = 'PL1234567890ab';
 const UPSTREAM_BODY = 'dailyLimitExceeded super-secret-upstream-body';
@@ -54,8 +63,16 @@ function createMemoryStore() {
       });
       return { state: 'claimed', lockId };
     },
-    async writePage(playlistId, pageToken, page) {
-      pages.set(keyFor(playlistId, pageToken), { ...page });
+    async writePage(playlistId, pageToken, page, lockId) {
+      const key = keyFor(playlistId, pageToken);
+      if (lockId !== undefined) {
+        const existing = pages.get(key);
+        if (!(existing?.status === 'pending' && existing.lockId === lockId)) {
+          return false;
+        }
+      }
+      pages.set(key, { ...page });
+      return true;
     },
     async releaseClaim(playlistId, pageToken, lockId) {
       const existing = pages.get(keyFor(playlistId, pageToken));
@@ -240,7 +257,9 @@ describe('stored YouTube playlist pages', () => {
     expect(fetchPlaylistPage).toHaveBeenCalledTimes(1);
     expect(first.headers['x-youtube-playlist-cache']).toBe('miss');
     expect(first.headers['x-next-page-token']).toBeUndefined();
+    expect(first.headers['x-next-offset']).toBe('1');
     expect(first.payload).toHaveLength(1);
+    expect(first.payload[0].snippet.resourceId.videoId).toBe('abcdefghijk');
     expect(second.headers['x-youtube-playlist-cache']).toBe('hit');
     expect(second.headers['x-next-page-token']).toBe('next-page');
     expect(second.payload).toHaveLength(2);
@@ -388,6 +407,94 @@ describe('stored YouTube playlist pages', () => {
       expect(error.message).not.toContain(UPSTREAM_BODY);
       expect(error.status).toBe(403);
     }
+  });
+
+  it('resumes a short page at the requested offset', async () => {
+    const store = createMemoryStore();
+    await store.writePage(PLAYLIST_ID, '', {
+      status: 'ready',
+      pageToken: '',
+      nextPageToken: 'next-page',
+      fetchedAt: 10,
+      items: [
+        { videoId: 'abcdefghijk', title: 'First', channelTitle: 'Channel', thumbnailUrl: '', itemId: 'a' },
+        { videoId: 'bcdefghijkl', title: 'Second', channelTitle: 'Channel', thumbnailUrl: '', itemId: 'b' },
+      ],
+    });
+
+    const response = await resolveCachedYouTubePlaylist({
+      playlistId: PLAYLIST_ID,
+      maxResults: 1,
+      offset: 1,
+      store,
+      fetchPlaylistPage: vi.fn(),
+      fetchPlaylistTitle: vi.fn(),
+      inflight: new Map(),
+    });
+
+    expect(response.payload).toHaveLength(1);
+    expect(response.payload[0].snippet.resourceId.videoId).toBe('bcdefghijkl');
+    expect(response.headers['x-next-offset']).toBeUndefined();
+    expect(response.headers['x-next-page-token']).toBe('next-page');
+  });
+
+  it('returns the fetched page without updating the manifest after losing the claim', async () => {
+    const store = createMemoryStore();
+    const updateManifest = vi.fn();
+    store.waitForPage = async () => null;
+    store.claimPage = vi
+      .fn()
+      .mockResolvedValueOnce({ state: 'pending' })
+      .mockResolvedValueOnce({ state: 'claimed', lockId: 'reclaimed' });
+    store.writePage = vi.fn(async () => false);
+    store.updateManifest = updateManifest;
+
+    const response = await resolveCachedYouTubePlaylist({
+      playlistId: PLAYLIST_ID,
+      store,
+      fetchPlaylistPage: vi.fn(async () => ({
+        items: [youtubeItem('abcdefghijk', 'Fetched')],
+        nextPageToken: '',
+      })),
+      fetchPlaylistTitle: vi.fn(),
+      inflight: new Map(),
+    });
+
+    expect(store.claimPage).toHaveBeenCalledTimes(2);
+    expect(store.writePage).toHaveBeenCalledWith(
+      PLAYLIST_ID,
+      '',
+      expect.objectContaining({ status: 'ready' }),
+      'reclaimed',
+    );
+    expect(updateManifest).not.toHaveBeenCalled();
+    expect(response.payload[0].snippet.title).toBe('Fetched');
+  });
+
+  it('stops a hung YouTube playlist fetch before the claim lock expires', async () => {
+    expect(YOUTUBE_PLAYLIST_FETCH_TIMEOUT_MS).toBeLessThan(YOUTUBE_PLAYLIST_CACHE_LOCK_TTL_MS);
+    const fetchImpl = vi.fn(
+      (_url, { signal } = {}) =>
+        new Promise((_resolve, reject) => {
+          signal.addEventListener('abort', () => {
+            const error = new Error('The operation was aborted');
+            error.name = 'AbortError';
+            reject(error);
+          });
+        }),
+    );
+
+    await expect(
+      fetchYouTubePlaylistPage({
+        apiKey: 'key',
+        playlistId: PLAYLIST_ID,
+        fetchImpl,
+        timeoutMs: 20,
+      }),
+    ).rejects.toMatchObject({
+      status: 502,
+      message: 'Failed to fetch data from YouTube',
+    });
   });
 
   it('returns 400 from the playlist route for a bad id', async () => {

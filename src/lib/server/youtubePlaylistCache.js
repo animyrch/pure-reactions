@@ -15,6 +15,7 @@ import { initializeFirebaseAdmin } from '$lib/server/firebaseAdmin';
 
 const inflight = new Map();
 const WAIT_SLICE_MS = 200;
+export const YOUTUBE_PLAYLIST_FETCH_TIMEOUT_MS = 8000;
 let loggedCacheBypass = false;
 
 function withoutNulls(value) {
@@ -38,7 +39,9 @@ function createNullYouTubePlaylistCacheStore({ warn = false } = {}) {
     async claimPage(_playlistId, _pageToken, now) {
       return { state: 'claimed', lockId: `bypass-${now}` };
     },
-    async writePage() {},
+    async writePage() {
+      return true;
+    },
     async releaseClaim() {},
     async waitForPage() {
       return null;
@@ -105,18 +108,28 @@ export function createFirestoreYouTubePlaylistCacheStore(
         return { state: 'claimed', lockId };
       });
     },
-    async writePage(playlistId, pageToken, page) {
-      await pageRef(playlistId, pageToken).set(
-        withoutNulls({
-          status: 'ready',
-          pageToken: page.pageToken || '',
-          nextPageToken: page.nextPageToken || '',
-          items: page.items || [],
-          fetchedAt: page.fetchedAt,
-          lockId: '',
-          lockedAt: 0,
-        }),
-      );
+    async writePage(playlistId, pageToken, page, lockId) {
+      const ref = pageRef(playlistId, pageToken);
+      return adminDb.runTransaction(async (transaction) => {
+        const snap = await transaction.get(ref);
+        const data = snap.exists ? snap.data() : null;
+        if (data?.status !== 'pending' || data.lockId !== lockId) {
+          return false;
+        }
+        transaction.set(
+          ref,
+          withoutNulls({
+            status: 'ready',
+            pageToken: page.pageToken || '',
+            nextPageToken: page.nextPageToken || '',
+            items: page.items || [],
+            fetchedAt: page.fetchedAt,
+            lockId: '',
+            lockedAt: 0,
+          }),
+        );
+        return true;
+      });
     },
     async releaseClaim(playlistId, pageToken, lockId) {
       const ref = pageRef(playlistId, pageToken);
@@ -161,10 +174,16 @@ function logYouTubeFailure(label, playlistId, error) {
   });
 }
 
-async function fetchText(fetchImpl, url) {
-  const response = await fetchImpl(url);
-  const bodyText = await response.text();
-  return { ok: response.ok, status: response.status, bodyText };
+async function fetchText(fetchImpl, url, timeoutMs = YOUTUBE_PLAYLIST_FETCH_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetchImpl(url, { signal: controller.signal });
+    const bodyText = await response.text();
+    return { ok: response.ok, status: response.status, bodyText };
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export async function fetchYouTubePlaylistPage({
@@ -172,10 +191,11 @@ export async function fetchYouTubePlaylistPage({
   playlistId,
   pageToken = '',
   fetchImpl = fetch,
+  timeoutMs = YOUTUBE_PLAYLIST_FETCH_TIMEOUT_MS,
 }) {
   const url = buildYouTubePlaylistItemsUrl({ apiKey, playlistId, pageToken });
   try {
-    const { ok, status, bodyText } = await fetchText(fetchImpl, url);
+    const { ok, status, bodyText } = await fetchText(fetchImpl, url, timeoutMs);
     if (!ok) {
       console.error('YouTube playlistItems request failed', {
         status,
@@ -191,10 +211,15 @@ export async function fetchYouTubePlaylistPage({
   }
 }
 
-export async function fetchYouTubePlaylistTitle({ apiKey, playlistId, fetchImpl = fetch }) {
+export async function fetchYouTubePlaylistTitle({
+  apiKey,
+  playlistId,
+  fetchImpl = fetch,
+  timeoutMs = YOUTUBE_PLAYLIST_FETCH_TIMEOUT_MS,
+}) {
   const url = buildYouTubePlaylistTitleUrl({ apiKey, playlistId });
   try {
-    const { ok, status, bodyText } = await fetchText(fetchImpl, url);
+    const { ok, status, bodyText } = await fetchText(fetchImpl, url, timeoutMs);
     if (!ok) {
       console.error('YouTube playlists request failed', {
         status,

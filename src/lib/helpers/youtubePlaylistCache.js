@@ -29,6 +29,12 @@ export function clampYouTubePlaylistMaxResults(value) {
   return Math.min(Math.max(Math.trunc(parsed), 1), YOUTUBE_PLAYLIST_PAGE_SIZE);
 }
 
+export function clampYouTubePlaylistOffset(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return 0;
+  return Math.trunc(parsed);
+}
+
 export function youtubePlaylistPageDocId(pageToken = '') {
   const token = typeof pageToken === 'string' ? pageToken : '';
   if (!token) return 'page-first';
@@ -168,10 +174,13 @@ export function isReadyPlaylistPage(page) {
   return Boolean(page && page.status === 'ready' && Array.isArray(page.items));
 }
 
-function sliceStoredItems(items, maxResults) {
+function sliceStoredItems(items, maxResults, offset) {
   const limit = clampYouTubePlaylistMaxResults(maxResults);
-  if (limit >= items.length) return items;
-  return items.slice(0, limit);
+  const start = Math.min(clampYouTubePlaylistOffset(offset), items.length);
+  return {
+    items: items.slice(start, start + limit),
+    nextOffset: start + limit < items.length ? start + limit : null,
+  };
 }
 
 export function buildPlaylistApiResponse({
@@ -180,16 +189,21 @@ export function buildPlaylistApiResponse({
   playlistTitle = '',
   includePlaylistTitle = false,
   maxResults = YOUTUBE_PLAYLIST_PAGE_SIZE,
+  offset = 0,
   cache = 'miss',
 }) {
   const storedItems = Array.isArray(items) ? items : [];
-  const visibleItems = sliceStoredItems(storedItems, maxResults).map(toYouTubePlaylistApiItem);
-  const limit = clampYouTubePlaylistMaxResults(maxResults);
+  // A short maxResults stays inside this stored page. x-next-offset resumes there.
+  // The YouTube page token is sent only after this page is exhausted.
+  const sliced = sliceStoredItems(storedItems, maxResults, offset);
+  const visibleItems = sliced.items.map(toYouTubePlaylistApiItem);
   const headers = {
     'Cache-Control': 'no-store',
     'x-youtube-playlist-cache': cache === 'hit' ? 'hit' : 'miss',
   };
-  if (nextPageToken && limit >= storedItems.length) {
+  if (sliced.nextOffset != null) {
+    headers['x-next-offset'] = String(sliced.nextOffset);
+  } else if (nextPageToken) {
     headers['x-next-page-token'] = nextPageToken;
   }
 
@@ -200,7 +214,7 @@ export function buildPlaylistApiResponse({
   return { payload, headers };
 }
 
-async function rememberPage({ store, playlistId, pageToken, fetchPlaylistPage, now }) {
+async function rememberPage({ store, playlistId, pageToken, fetchPlaylistPage, now, lockId }) {
   const fetched = await fetchPlaylistPage({ playlistId, pageToken });
   const page = {
     status: 'ready',
@@ -209,13 +223,15 @@ async function rememberPage({ store, playlistId, pageToken, fetchPlaylistPage, n
     items: (fetched.items || []).map(trimYouTubePlaylistItem).filter(Boolean),
     fetchedAt: now(),
   };
-  await store.writePage(playlistId, pageToken, page);
-  await store.updateManifest(playlistId, {
-    playlistId,
-    fetchedAt: page.fetchedAt,
-    updatedAt: page.fetchedAt,
-    complete: !page.nextPageToken,
-  });
+  const wrote = await store.writePage(playlistId, pageToken, page, lockId);
+  if (wrote) {
+    await store.updateManifest(playlistId, {
+      playlistId,
+      fetchedAt: page.fetchedAt,
+      updatedAt: page.fetchedAt,
+      complete: !page.nextPageToken,
+    });
+  }
   return page;
 }
 
@@ -231,7 +247,7 @@ async function loadStoredOrFreshPage({
     return { page: existing, cache: 'hit' };
   }
 
-  const claim = await store.claimPage(playlistId, pageToken, now());
+  let claim = await store.claimPage(playlistId, pageToken, now());
   try {
     if (claim.state === 'ready' && isReadyPlaylistPage(claim.page)) {
       return { page: claim.page, cache: 'hit' };
@@ -241,9 +257,20 @@ async function loadStoredOrFreshPage({
       if (isReadyPlaylistPage(waited)) {
         return { page: waited, cache: 'hit' };
       }
+      claim = await store.claimPage(playlistId, pageToken, now());
+      if (claim.state === 'ready' && isReadyPlaylistPage(claim.page)) {
+        return { page: claim.page, cache: 'hit' };
+      }
     }
 
-    const page = await rememberPage({ store, playlistId, pageToken, fetchPlaylistPage, now });
+    const page = await rememberPage({
+      store,
+      playlistId,
+      pageToken,
+      fetchPlaylistPage,
+      now,
+      lockId: claim.lockId,
+    });
     return { page, cache: 'miss' };
   } catch (error) {
     if (claim?.lockId) {
@@ -293,6 +320,7 @@ export async function resolveCachedYouTubePlaylist({
   pageToken = '',
   includePlaylistTitle = false,
   maxResults = YOUTUBE_PLAYLIST_PAGE_SIZE,
+  offset = 0,
   store,
   fetchPlaylistPage,
   fetchPlaylistTitle,
@@ -327,6 +355,7 @@ export async function resolveCachedYouTubePlaylist({
       playlistTitle,
       includePlaylistTitle,
       maxResults,
+      offset,
       cache: loaded.cache,
     });
   })().finally(() => {
@@ -342,6 +371,7 @@ export async function prepareYouTubePlaylistResponse({
   pageToken = '',
   includePlaylistTitle = false,
   maxResults,
+  offset = 0,
   apiKey,
   placeholderItems,
   placeholderTitle = '[Sample Playlist]',
@@ -372,6 +402,7 @@ export async function prepareYouTubePlaylistResponse({
       pageToken,
       includePlaylistTitle,
       maxResults: clampYouTubePlaylistMaxResults(maxResults),
+      offset: clampYouTubePlaylistOffset(offset),
       apiKey,
     });
     return {
