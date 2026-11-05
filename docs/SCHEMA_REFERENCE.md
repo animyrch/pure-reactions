@@ -203,6 +203,44 @@ User-created playlists of reactions.
 
 ---
 
+### `youtubePlaylistCache` (COLLECTION_YOUTUBE_PLAYLIST_CACHE)
+
+Server-only catalog of a YouTube playlist, keyed by YouTube playlist id. `GET /api/youtube/playlist/[id]` reads it before calling the YouTube Data API. Client Firestore rules deny every read and write. The Admin SDK is the only writer.
+
+A stored page is reused at any age. Nothing refreshes it on a timer. A future reactor-controlled refresh replaces these documents.
+
+The manifest document id is the YouTube playlist id. Pages live in the `pages` subcollection. The first page is `page-first`. Any later page id is `page-` plus the first 32 hex characters of the SHA-256 of YouTube's `pageToken`.
+
+#### Manifest fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `playlistId` | string | Yes | YouTube playlist id. Matches the document id |
+| `playlistTitle` | string | No | Playlist title from `playlists.list`. Empty when YouTube has no title |
+| `titleFetchedAt` | number | No | Epoch milliseconds of the title lookup. Absent until that lookup succeeds |
+| `fetchedAt` | number | No | Epoch milliseconds of the latest stored page |
+| `updatedAt` | number | No | Epoch milliseconds of the latest manifest write |
+| `complete` | boolean | No | True once a stored page has no further `nextPageToken`. Stays true after that |
+
+#### `pages` fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `status` | string | Yes | `pending` while a fetch holds the lock, then `ready` |
+| `pageToken` | string | Yes | YouTube page token. Empty for the first page |
+| `nextPageToken` | string | No | Token for the following page. Empty on the last page |
+| `items` | array[object] | Yes | Trimmed playlist entries for this page, at most 50 |
+| `items[].videoId` | string | Yes | YouTube video id |
+| `items[].title` | string | No | Video title snapshot |
+| `items[].channelTitle` | string | No | Channel name snapshot |
+| `items[].thumbnailUrl` | string | No | One thumbnail URL. The route copies it onto the snippet thumbnail sizes the UI already reads |
+| `items[].itemId` | string | No | YouTube playlist item id when YouTube sent one |
+| `fetchedAt` | number | No | Epoch milliseconds when this page was stored |
+| `lockedAt` | number | No | Epoch milliseconds of an in-flight fetch lock. `0` after the page is ready |
+| `lockId` | string | No | Lock owner. Empty after the page is ready |
+
+---
+
 ### `queues` (COLLECTION_QUEUES)
 
 Temporary playback queues for sequential viewing.
@@ -353,21 +391,27 @@ Real-time co-watching sessions.
   playbackRate: number,     // Playback speed (0.25-2.0)
   createdAt: timestamp,     // Server timestamp
   lastUpdated: timestamp,   // Server timestamp
-  viewers: {                // Map of viewer IDs
-    [authUid]: {
+  viewers: {                // Anonymous presence slots. Keys are random 32-char hex ids.
+    [slotId]: {
       joinedAt: timestamp,
-      name: string,
+      name: string,          // Always "Anonymous Viewer"
       isActive: boolean
     }
   }
 }
 ```
 
+### Session viewer owners (`sessionViewerOwners/{sessionId}/{slotId}`)
+
+Unreadable claim that ties one public presence slot to the signed-in account that created it. The value is that account's Firebase Auth uid. Clients cannot read this path. The public `viewers` map does not contain the account id.
+
 #### Access Pattern
 
 - Reads are public for anyone with the share URL.
 - Session writes require `auth.uid === reactorId`.
-- Viewer presence writes require Firebase Auth and must use the viewer's own `auth.uid` as the `viewers/{authUid}` key.
+- A viewer claims `sessionViewerOwners/{sessionId}/{slotId}` with their own `auth.uid` only while `sharedSessions/{sessionId}` exists, then writes `sharedSessions/{sessionId}/viewers/{slotId}`.
+- The slot id must match `^[0-9a-f]{32}$`.
+- Only that same account can remove the public slot and the owner claim. Deleting the claim stays allowed after the session node is gone.
 
 ---
 
@@ -515,7 +559,10 @@ const docRef = await addDoc(collection(db, 'reactions'), {
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 1.14 | 2026-11-05 | TikTok `originalVideoUrl` and `originalVideoAuthorUrl` are canonical `https://www.tiktok.com/...` addresses built from the handle and video id. A stored string is not opened unless it parses as that shape |
+| 1.17 | 2026-11-05 | TikTok `originalVideoUrl` and `originalVideoAuthorUrl` are canonical `https://www.tiktok.com/...` addresses built from the handle and video id. A stored string is not opened unless it parses as that shape |
+| 1.16 | 2026-11-05 | Owning account can delete `sessionViewerOwners/{sessionId}/{slotId}` after the shared session is removed. Creating a claim still requires the session |
+| 1.15 | 2026-11-05 | Shared-session `viewers` keys are random 32-char hex slot ids. Account ids live only in unreadable `sessionViewerOwners/{sessionId}/{slotId}` |
+| 1.14 | 2026-11-04 | Added server-only `youtubePlaylistCache` catalog. Playlist route reads a stored YouTube page before calling the Data API. Stored pages do not expire |
 | 1.13 | 2026-10-10 | Reactions store `watchDurationSeconds` for thumbnail badges. Playlist docs store the summed reaction-window total. The reactions index retrieves `watchDurationSeconds` |
 | 1.12 | 2026-10-10 | Reactions index retrieves `remixMode` so remix cards can use the teal REMIX badge. Remixes stay on `/reaction/{reactionId}` |
 | 1.11 | 2026-10-10 | Added optional `customReactionTitle` on reactions. Cards, the reaction page heading, and the SEO title use it only when filled in. The YouTube `reactionVideoTitle` is unchanged. The reactions index retrieves and searches the custom title |

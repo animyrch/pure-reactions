@@ -87,6 +87,22 @@ async function signInRest(email) {
 	return result.payload;
 }
 
+async function markEmailVerified(localId) {
+	const response = await fetch(
+		`http://${AUTH_EMULATOR_HOST}/identitytoolkit.googleapis.com/v1/projects/${AUTH_PROJECT}/accounts:update`,
+		{
+			method: 'POST',
+			headers: {
+				Authorization: 'Bearer owner',
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({ localId, emailVerified: true })
+		}
+	);
+	const payload = await response.json().catch(() => ({}));
+	expect(response.ok, JSON.stringify(payload)).toBe(true);
+}
+
 async function seedAgeConfirmation(userId) {
 	process.env.FIRESTORE_EMULATOR_HOST ||= FIRESTORE_EMULATOR_HOST;
 	const { initializeApp, getApps } = await import('firebase-admin/app');
@@ -150,6 +166,8 @@ test('my reactions can delete a reaction or a playlist', async ({ page }) => {
 		returnSecureToken: true
 	});
 	expect(other.ok, JSON.stringify(other.payload)).toBe(true);
+	await markEmailVerified(other.payload.localId);
+	const otherSession = await signInRest(otherEmail);
 
 	const soloId = `solo-${stamp}`;
 	const playlistId = `playlist-${stamp}`;
@@ -202,8 +220,8 @@ test('my reactions can delete a reaction or a playlist', async ({ page }) => {
 		keptReactionId,
 		reactionFields(keptTitle, { published: true, moment: momentId })
 	);
-	await createDoc(other.payload.idToken, REACTION_COLLECTION, otherReactionId, {
-		reactorId: field.str(other.payload.localId),
+	await createDoc(otherSession.idToken, REACTION_COLLECTION, otherReactionId, {
+		reactorId: field.str(otherSession.localId),
 		playlistId: field.str(''),
 		isPublished: field.bool(false),
 		reactionVideoTitle: field.str(`Other reaction ${stamp}`),

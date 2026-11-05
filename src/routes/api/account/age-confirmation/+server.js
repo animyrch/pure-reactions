@@ -15,13 +15,19 @@ export const POST = async ({ request }) => {
 		return json({ error: 'Server configuration error' }, { status: 500 });
 	}
 
-	let userId;
+	let decodedToken;
 	try {
-		userId = (await adminAuth.verifyIdToken(authHeader.slice('Bearer '.length))).uid;
+		decodedToken = await adminAuth.verifyIdToken(authHeader.slice('Bearer '.length));
 	} catch (error) {
 		console.error('Token verification failed:', error);
 		return json({ error: 'Invalid token' }, { status: 401 });
 	}
+
+	if (decodedToken.email_verified !== true) {
+		return json({ error: 'Verify your email before confirming your age.' }, { status: 403 });
+	}
+
+	const userId = decodedToken.uid;
 
 	const ref = adminDb.collection(COLLECTION_USER_DATA).doc(userId);
 	await adminDb.runTransaction(async (transaction) => {
