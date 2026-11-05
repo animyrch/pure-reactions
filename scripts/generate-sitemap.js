@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
+import { resolveTikTokWatchUrl } from '../src/lib/helpers/platform.js';
 
 const OUTPUT_PATH = path.resolve(process.cwd(), 'static/sitemap.xml');
 const DEFAULT_THUMBNAIL_PATH = '/icon-512.png';
@@ -255,9 +256,15 @@ function buildOriginalVideoEntry({ originalVideoId, originalVideoSlug, reactions
   }
 
   const loc = new URL(`/reactions/${encodeURIComponent(slug)}`, baseUrl).toString();
-  const playerLoc =
-    ensureAbsoluteUrl(data.originalVideoUrl, baseUrl) ||
-    buildYoutubePlayerUrl(data.originalVideoId || originalVideoId);
+  const playerLoc = data.originalVideoPlatform === 'tiktok'
+    ? resolveTikTokWatchUrl({
+        videoId: data.originalVideoId || originalVideoId,
+        authorHandle: data.originalVideoAuthorHandle,
+        authorUrl: data.originalVideoAuthorUrl,
+        originalVideoUrl: data.originalVideoUrl,
+      }) || null
+    : ensureAbsoluteUrl(data.originalVideoUrl, baseUrl) ||
+      buildYoutubePlayerUrl(data.originalVideoId || originalVideoId);
 
   const title = pickText(
     data.originalVideoTitle,

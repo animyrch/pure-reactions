@@ -6,10 +6,12 @@
     import { linkifyText } from '$lib/helpers/system';
     import { safeCreatorProfileHref } from '$lib/helpers/originalVideo';
     import { reactionThumbnailSourceTitle } from '$lib/helpers/reactionListItem';
+    import { resolveTikTokAuthorUrl } from '$lib/helpers/platform';
 
     export let originalVideoTitle;
     export let originalVideoAuthor;
     export let originalVideoAuthorUrl;
+    export let originalVideoAuthorHandle = '';
     export let originalVideoPlatform = 'youtube';
     export let reactionVideoTitle;
     export let customReactionTitle = '';
@@ -30,12 +32,16 @@
     $: reactionAvatarSrc = createAvatarPlaceholder(reactionVideoAuthor);
 
     const youtubeChannelUrl = (author) => (author ? `https://www.youtube.com/${author}` : undefined);
-    $: originalAuthorHref =
-        safeCreatorProfileHref(originalVideoAuthorUrl) ||
-        (originalVideoPlatform === 'youtube'
-            ? safeCreatorProfileHref(youtubeChannelUrl(originalVideoAuthor))
-            : undefined);
-    $: originalAuthorPlatformLabel = originalAuthorHref?.includes('tiktok.com') ? 'TikTok' : 'YouTube';
+    $: originalAuthorHref = originalVideoPlatform === 'tiktok'
+        ? resolveTikTokAuthorUrl({
+            authorHandle: originalVideoAuthorHandle,
+            authorUrl: originalVideoAuthorUrl,
+        }) || undefined
+        : (
+            safeCreatorProfileHref(originalVideoAuthorUrl) ||
+            safeCreatorProfileHref(youtubeChannelUrl(originalVideoAuthor))
+        );
+    $: originalAuthorPlatformLabel = originalVideoPlatform === 'tiktok' ? 'TikTok' : 'YouTube';
 
         let viewerData;
         $: viewerData = $userExtraDataStore?.userExtraData;
@@ -68,7 +74,13 @@
         {#if showOriginalActions}
             <div class="header-actions">
                 {#if originalVideoId}
-                    <RateVideo videoId={originalVideoId} platform={originalVideoPlatform} originalVideoUrl={originalVideoUrl} />
+                    <RateVideo
+                        videoId={originalVideoId}
+                        platform={originalVideoPlatform}
+                        originalVideoUrl={originalVideoUrl}
+                        authorHandle={originalVideoAuthorHandle}
+                        authorUrl={originalVideoAuthorUrl}
+                    />
                 {/if}
                 {#if showRemixViewerActions}
                     <BookmarkManagement slug={pageSlug} />

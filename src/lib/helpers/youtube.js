@@ -42,6 +42,39 @@ const YOUTUBE_HOSTNAMES = new Set([
   'youtu.be',
 ]);
 
+const hasDisallowedAuthorUrlCharacter = (value) => {
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    // C0 controls, DEL, and backslash. The URL parser strips or rewrites these.
+    if (code <= 0x1f || code === 0x7f || code === 0x5c) return true;
+  }
+  return false;
+};
+
+/**
+ * An https creator link on youtube.com, www.youtube.com, m.youtube.com, or youtu.be.
+ * Returns '' for any other value, including javascript: and off-site links.
+ *
+ * @param {unknown} value
+ * @returns {string}
+ */
+export const safeYouTubeAuthorUrl = (value) => {
+  if (typeof value !== 'string') return '';
+  const trimmed = value.trim();
+  if (!trimmed || hasDisallowedAuthorUrlCharacter(trimmed)) return '';
+
+  let url;
+  try {
+    url = new URL(trimmed);
+  } catch {
+    return '';
+  }
+
+  if (url.protocol !== 'https:' || url.username || url.password || url.port) return '';
+  if (!YOUTUBE_HOSTNAMES.has(url.hostname)) return '';
+  return url.href;
+};
+
 const HAS_HTTP_SCHEME = /^https?:\/\//i;
 const PROTOCOL_LESS_YOUTUBE_HOST =
   /^(?:www\.|m\.)?(?:youtube\.com|youtu\.be)(?:[/?:#]|$)/i;

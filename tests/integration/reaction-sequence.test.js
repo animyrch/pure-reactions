@@ -33,7 +33,25 @@ describe('reaction sequence helpers', () => {
             type: REACTION_SOURCE_TYPES.TIKTOK_VIDEO,
             originalVideoId: '7056208472144235823',
             originalVideoPlatform: 'tiktok',
+            originalVideoUrl: 'https://www.tiktok.com/@creator/video/7056208472144235823',
+            originalVideoAuthorHandle: 'creator',
         });
+    });
+
+    it('stores a canonical TikTok URL and rejects a TikTok path hidden in another address', () => {
+        expect(
+            parseReactionSourceInput('https://www.tiktok.com/@creator/video/7056208472144235823?_r=1').sourceItem,
+        ).toMatchObject({
+            originalVideoUrl: 'https://www.tiktok.com/@creator/video/7056208472144235823',
+            originalVideoAuthorHandle: 'creator',
+        });
+
+        expect(parseReactionSourceInput(
+            'https://example.com/tiktok.com/@creator/video/7056208472144235823',
+        ).ok).toBe(false);
+        expect(parseReactionSourceInput(
+            'https://nottiktok.com/@creator/video/7056208472144235823',
+        ).ok).toBe(false);
     });
 
     it('parses protocol-less YouTube watch URLs with extra query params', () => {

@@ -1,5 +1,4 @@
 import {
-    buildTikTokVideoUrl,
     buildYouTubeThumbnailUrl,
     buildYouTubeVideoUrl,
 } from '$lib/helpers/originalVideo';
@@ -7,6 +6,8 @@ import {
     ORIGINAL_VIDEO_PLATFORMS,
     extractTikTokVideoId,
     normalizeOriginalVideoPlatform,
+    parseTikTokVideoUrl,
+    resolveTikTokWatchUrl,
 } from '$lib/helpers/platform';
 import { parseYouTubeUrl, isYouTubeInput, extractYoutubePlaylistId } from '$lib/helpers/youtube';
 
@@ -112,17 +113,33 @@ export const parseReactionSourceInput = (rawValue) => {
         return { ok: false, error: youtubeError };
     }
 
-    const tiktokVideoId = extractTikTokVideoId(value);
-    if (tiktokVideoId) {
+    const tiktokVideo = parseTikTokVideoUrl(value);
+    if (tiktokVideo) {
+        return {
+            ok: true,
+            sourceItem: {
+                type: REACTION_SOURCE_TYPES.TIKTOK_VIDEO,
+                label: 'TikTok video',
+                rawValue: tiktokVideo.canonicalUrl,
+                originalVideoId: tiktokVideo.videoId,
+                originalVideoPlatform: ORIGINAL_VIDEO_PLATFORMS.TIKTOK,
+                originalVideoUrl: tiktokVideo.canonicalUrl,
+                originalVideoAuthorHandle: tiktokVideo.authorHandle,
+            },
+        };
+    }
+
+    const bareTikTokVideoId = extractTikTokVideoId(value);
+    if (bareTikTokVideoId) {
         return {
             ok: true,
             sourceItem: {
                 type: REACTION_SOURCE_TYPES.TIKTOK_VIDEO,
                 label: 'TikTok video',
                 rawValue: value,
-                originalVideoId: tiktokVideoId,
+                originalVideoId: bareTikTokVideoId,
                 originalVideoPlatform: ORIGINAL_VIDEO_PLATFORMS.TIKTOK,
-                originalVideoUrl: value,
+                originalVideoUrl: '',
             },
         };
     }
@@ -140,6 +157,7 @@ export const createSequenceItem = ({
     originalVideoId,
     originalVideoPlatform,
     originalVideoUrl,
+    originalVideoAuthorHandle,
     youtubePlaylistId,
     title,
     channelTitle,
@@ -148,11 +166,13 @@ export const createSequenceItem = ({
     const platform = normalizeOriginalVideoPlatform(originalVideoPlatform);
     const normalizedVideoId = trimString(originalVideoId);
     const normalizedUrl =
-        trimString(originalVideoUrl) ||
-        (platform === ORIGINAL_VIDEO_PLATFORMS.TIKTOK
-            ? buildTikTokVideoUrl({ videoId: normalizedVideoId })
-            : buildYouTubeVideoUrl(normalizedVideoId)) ||
-        '';
+        platform === ORIGINAL_VIDEO_PLATFORMS.TIKTOK
+            ? resolveTikTokWatchUrl({
+                videoId: normalizedVideoId,
+                authorHandle: originalVideoAuthorHandle,
+                originalVideoUrl,
+            }) || ''
+            : trimString(originalVideoUrl) || buildYouTubeVideoUrl(normalizedVideoId) || '';
 
     return {
         id: buildSequenceItemId({
@@ -185,6 +205,7 @@ export const normalizeSequenceItem = (item = {}, fallbackIndex = 0) =>
         originalVideoId: item.originalVideoId,
         originalVideoPlatform: item.originalVideoPlatform,
         originalVideoUrl: item.originalVideoUrl,
+        originalVideoAuthorHandle: item.originalVideoAuthorHandle,
         youtubePlaylistId: item.youtubePlaylistId,
         title: item.title,
         channelTitle: item.channelTitle,
@@ -435,6 +456,7 @@ export const buildSequenceItemsFromSources = async (
                     originalVideoId: sourceItem.originalVideoId,
                     originalVideoPlatform: sourceItem.originalVideoPlatform,
                     originalVideoUrl: sourceItem.originalVideoUrl || sourceItem.rawValue,
+                    originalVideoAuthorHandle: sourceItem.originalVideoAuthorHandle,
                     title: sourceItem.title,
                     channelTitle: sourceItem.channelTitle,
                     thumbnailUrl: sourceItem.thumbnailUrl,

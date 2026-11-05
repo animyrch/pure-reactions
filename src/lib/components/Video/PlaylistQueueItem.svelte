@@ -1,6 +1,7 @@
 <script>
     import { goto } from '$app/navigation'
     import { buildYouTubeThumbnailUrl } from '$lib/helpers/originalVideo';
+    import { resolveTikTokWatchUrl } from '$lib/helpers/platform';
     import { getCompensatedReactionTime } from '$lib/helpers/reaction';
 
     export let index = 0;
@@ -24,7 +25,14 @@
             const reactionVideoTime = getCompensatedReactionTime(startTime, playlistBufferTime || 0);
             const originalVideoId = playlistItem?.originalVideoId || playlistItem?.snippet?.resourceId?.videoId;
             const originalVideoPlatform = playlistItem?.originalVideoPlatform || 'youtube';
-            const originalVideoUrl = playlistItem?.originalVideoUrl || '';
+            const rawOriginalVideoUrl = playlistItem?.originalVideoUrl || '';
+            const originalVideoUrl = originalVideoPlatform === 'tiktok'
+                ? resolveTikTokWatchUrl({
+                    videoId: originalVideoId,
+                    authorHandle: playlistItem?.originalVideoAuthorHandle,
+                    originalVideoUrl: rawOriginalVideoUrl,
+                }) || ''
+                : rawOriginalVideoUrl;
             const params = new URLSearchParams();
             params.set('id', originalVideoId);
             params.set('playlistDocumentId', playlistDocumentId);

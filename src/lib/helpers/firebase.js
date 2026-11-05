@@ -51,6 +51,7 @@ import {
     getPlaylistSequenceItems,
 } from '$lib/helpers/reactionSequence';
 import { generateOriginalVideoSlug, safeCreatorProfileHref } from '$lib/helpers/originalVideo';
+import { canonicalTikTokStorageFields, normalizeOriginalVideoPlatform } from '$lib/helpers/platform';
 import { normalizeTwitchChannel } from '$lib/helpers/twitchChannel';
 import { assertMomentReady } from '$lib/helpers/moments';
 import { affectsWatchDuration } from '$lib/helpers/watchDuration';
@@ -62,6 +63,41 @@ import {
 
 const createCollection = (db, params, caller) => {
     return collection(db, params);
+};
+
+const applyTikTokLinkSafety = (dataToAdd, {
+    platform,
+    videoId,
+    authorHandle,
+    authorUrl,
+    originalVideoUrl,
+}) => {
+    if (normalizeOriginalVideoPlatform(platform) !== 'tiktok') {
+        return;
+    }
+
+    const safe = canonicalTikTokStorageFields({
+        videoId,
+        authorHandle,
+        authorUrl,
+        originalVideoUrl,
+    });
+
+    if (safe.originalVideoAuthorHandle) {
+        dataToAdd.originalVideoAuthorHandle = safe.originalVideoAuthorHandle;
+    } else {
+        delete dataToAdd.originalVideoAuthorHandle;
+    }
+    if (safe.originalVideoAuthorUrl) {
+        dataToAdd.originalVideoAuthorUrl = safe.originalVideoAuthorUrl;
+    } else {
+        delete dataToAdd.originalVideoAuthorUrl;
+    }
+    if (safe.originalVideoUrl) {
+        dataToAdd.originalVideoUrl = safe.originalVideoUrl;
+    } else {
+        delete dataToAdd.originalVideoUrl;
+    }
 };
 
 const shouldRequestReactionEnrichment = (data) => {
@@ -278,6 +314,13 @@ export const createReactionDocument = async ({
         if (typeof originalVideoUrl === 'string' && originalVideoUrl.trim()) {
             dataToAdd.originalVideoUrl = originalVideoUrl.trim();
         }
+        applyTikTokLinkSafety(dataToAdd, {
+            platform: originalVideoPlatform,
+            videoId: originalVideoId,
+            authorHandle: originalVideoAuthorHandle,
+            authorUrl: originalVideoAuthorUrl,
+            originalVideoUrl,
+        });
 
         const documentRef = await addDoc(reactionsCollection, dataToAdd);
         window.currentReactionDocumentId = documentRef.id;
@@ -313,7 +356,19 @@ export const createMomentDocument = async ({
     creatorDisplayName = ''
 }) => {
     try {
-        const ready = assertMomentReady({ title, originalVideoUrl, momentTimeSeconds });
+        const tiktokLinks = normalizeOriginalVideoPlatform(originalVideoPlatform) === 'tiktok'
+            ? canonicalTikTokStorageFields({
+                videoId: originalVideoId,
+                authorHandle: originalVideoAuthorHandle,
+                authorUrl: originalVideoAuthorUrl,
+                originalVideoUrl,
+            })
+            : null;
+        const ready = assertMomentReady({
+            title,
+            originalVideoUrl: tiktokLinks ? tiktokLinks.originalVideoUrl : originalVideoUrl,
+            momentTimeSeconds,
+        });
         if (!ready.ok) {
             throw new Error(ready.error);
         }
@@ -329,7 +384,7 @@ export const createMomentDocument = async ({
             originalVideoTitle: originalVideoTitle?.trim?.() || '',
             originalVideoPlatform: originalVideoPlatform || 'youtube',
             originalVideoSlug,
-            originalVideoUrl: ready.value.originalVideoUrl,
+            originalVideoUrl: tiktokLinks?.originalVideoUrl || ready.value.originalVideoUrl,
             momentTimeSeconds: ready.value.momentTimeSeconds,
             tags: Array.isArray(tags) ? tags : [],
             reactionCount: 0,
@@ -371,6 +426,13 @@ export const createMomentDocument = async ({
         if (typeof originalVideoProviderUrl === 'string' && originalVideoProviderUrl.trim()) {
             dataToAdd.originalVideoProviderUrl = originalVideoProviderUrl.trim();
         }
+        applyTikTokLinkSafety(dataToAdd, {
+            platform: originalVideoPlatform,
+            videoId: originalVideoId,
+            authorHandle: originalVideoAuthorHandle,
+            authorUrl: originalVideoAuthorUrl,
+            originalVideoUrl,
+        });
 
         const documentRef = await addDoc(momentsCollection, dataToAdd);
         return documentRef.id;
@@ -455,6 +517,13 @@ export const createMomentReactionDocument = async ({
         if (typeof originalVideoUrl === 'string' && originalVideoUrl.trim()) {
             dataToAdd.originalVideoUrl = originalVideoUrl.trim();
         }
+        applyTikTokLinkSafety(dataToAdd, {
+            platform: originalVideoPlatform,
+            videoId: originalVideoId,
+            authorHandle: originalVideoAuthorHandle,
+            authorUrl: originalVideoAuthorUrl,
+            originalVideoUrl,
+        });
 
         const documentRef = await addDoc(reactionsCollection, dataToAdd);
         window.currentReactionDocumentId = documentRef.id;

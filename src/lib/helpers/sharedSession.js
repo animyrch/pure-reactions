@@ -1,5 +1,6 @@
 import { ref, set, update, onValue, remove, serverTimestamp, onDisconnect } from "firebase/database";
 import { auth, database } from "$lib/constants/firebase";
+import { resolveTikTokWatchUrl } from "$lib/helpers/platform";
 
 // Session state constants
 export const SESSION_STATES = {
@@ -19,10 +20,16 @@ export const createSharedSession = async (
 ) => {
     try {
         const sessionRef = ref(database, `sharedSessions/${reactionDocumentId}`);
+        const storedOriginalVideoUrl = originalVideoPlatform === 'tiktok'
+            ? resolveTikTokWatchUrl({
+                videoId: originalVideoId,
+                originalVideoUrl,
+            }) || ''
+            : originalVideoUrl;
         const sessionData = {
             originalVideoId,
             originalVideoPlatform,
-            originalVideoUrl,
+            originalVideoUrl: storedOriginalVideoUrl,
             reactorId,
             activeReactionDocumentId: reactionDocumentId,
             state: SESSION_STATES.WAITING,
@@ -212,8 +219,15 @@ export const leaveSharedSession = async (sessionId, slotId) => {
 export const updateSessionState = async (sessionId, updates) => {
     try {
         const sessionRef = ref(database, `sharedSessions/${sessionId}`);
+        const nextUpdates = { ...updates };
+        if (nextUpdates.originalVideoPlatform === 'tiktok' && typeof nextUpdates.originalVideoUrl === 'string') {
+            nextUpdates.originalVideoUrl = resolveTikTokWatchUrl({
+                videoId: nextUpdates.originalVideoId,
+                originalVideoUrl: nextUpdates.originalVideoUrl,
+            }) || '';
+        }
         const updateData = {
-            ...updates,
+            ...nextUpdates,
             lastUpdated: serverTimestamp()
         };
 

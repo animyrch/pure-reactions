@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { parseYouTubeUrl, extractYouTubeVideoId } from '$lib/helpers/youtube';
+import { render } from 'svelte/server';
+import CreatorDetails from '../../src/lib/components/Video/CreatorDetails.svelte';
+import { parseYouTubeUrl, extractYouTubeVideoId, safeYouTubeAuthorUrl } from '$lib/helpers/youtube';
 
 const VALID_ID = 'LEv2fMoVvXE';
 
@@ -252,5 +254,96 @@ describe('extractYouTubeVideoId (backward-compatible wrapper)', () => {
 
   it('returns null for channel URL', () => {
     expect(extractYouTubeVideoId('https://www.youtube.com/channel/UCxxxxxx')).toBeNull();
+  });
+});
+
+describe('safeYouTubeAuthorUrl', () => {
+  it('keeps https creator links on trusted YouTube hosts', () => {
+    expect(safeYouTubeAuthorUrl('https://www.youtube.com/@Official')).toBe(
+      'https://www.youtube.com/@Official',
+    );
+    expect(safeYouTubeAuthorUrl('https://youtube.com/@Official')).toBe(
+      'https://youtube.com/@Official',
+    );
+    expect(safeYouTubeAuthorUrl('https://m.youtube.com/channel/UCxxxx')).toBe(
+      'https://m.youtube.com/channel/UCxxxx',
+    );
+    expect(safeYouTubeAuthorUrl('https://youtu.be/@Official')).toBe(
+      'https://youtu.be/@Official',
+    );
+    expect(safeYouTubeAuthorUrl(' HTTPS://WWW.YouTube.com/@Official ')).toBe(
+      'https://www.youtube.com/@Official',
+    );
+  });
+
+  it('rejects javascript, other hosts, credentials, and rewritten characters', () => {
+    expect(safeYouTubeAuthorUrl('javascript:alert(1)')).toBe('');
+    expect(safeYouTubeAuthorUrl('JavaScript:alert(1)')).toBe('');
+    expect(safeYouTubeAuthorUrl('https://evil.example/phish')).toBe('');
+    expect(safeYouTubeAuthorUrl('https://youtube.com.evil.com/@Official')).toBe('');
+    expect(safeYouTubeAuthorUrl('https://www.youtube.com.attacker.com/@Official')).toBe('');
+    expect(safeYouTubeAuthorUrl('https://evil.com@www.youtube.com/@Official')).toBe('');
+    expect(safeYouTubeAuthorUrl('http://www.youtube.com/@Official')).toBe('');
+    expect(safeYouTubeAuthorUrl('https://www.youtube.com:444/@Official')).toBe('');
+    expect(safeYouTubeAuthorUrl('https://music.youtube.com/channel/UCxxxx')).toBe('');
+    expect(safeYouTubeAuthorUrl('https://www.youtube.com\\@Official')).toBe('');
+    expect(safeYouTubeAuthorUrl('https://www.youtube.com/@Official\u0001')).toBe('');
+    expect(safeYouTubeAuthorUrl('https://www.youtube.com/@Official\u007f')).toBe('');
+    expect(safeYouTubeAuthorUrl('//www.youtube.com/@Official')).toBe('');
+    expect(safeYouTubeAuthorUrl('')).toBe('');
+    expect(safeYouTubeAuthorUrl(null)).toBe('');
+  });
+});
+
+describe('CreatorDetails original author link', () => {
+  const details = {
+    originalVideoTitle: 'Original',
+    originalVideoAuthor: '@remix-owner',
+    originalVideoId: 'origRemixPlay01',
+    reactionVideoTitle: 'Reaction',
+    reactionVideoAuthor: '@remix-owner',
+    reactionVideoId: 'reactRemixWatch01',
+    pageSlug: 'remixWatchReaction01',
+  };
+
+  it('uses a trusted YouTube author URL', () => {
+    const { body } = render(CreatorDetails, {
+      props: {
+        ...details,
+        remixMode: true,
+        originalVideoAuthorUrl: 'https://www.youtube.com/@Official',
+      },
+    });
+
+    expect(body).toContain('href="https://www.youtube.com/@Official"');
+    expect(body).not.toContain('href="https://www.youtube.com/@remix-owner"');
+  });
+
+  it('falls back to the channel URL when the stored author URL is not a YouTube https link', () => {
+    const { body } = render(CreatorDetails, {
+      props: {
+        ...details,
+        remixMode: true,
+        originalVideoAuthorUrl: 'javascript:alert(1)',
+      },
+    });
+
+    expect(body).toContain('href="https://www.youtube.com/@remix-owner"');
+    expect(body).not.toContain('javascript:');
+  });
+
+  it('keeps TikTok creator links on the resolved TikTok profile', () => {
+    const { body } = render(CreatorDetails, {
+      props: {
+        ...details,
+        remixMode: true,
+        originalVideoPlatform: 'tiktok',
+        originalVideoAuthorHandle: 'canonical',
+        originalVideoAuthorUrl: 'javascript:alert(1)',
+      },
+    });
+
+    expect(body).toContain('href="https://www.tiktok.com/@canonical"');
+    expect(body).not.toContain('javascript:');
   });
 });
