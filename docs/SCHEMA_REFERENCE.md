@@ -22,12 +22,12 @@ The main collection for reaction videos.
 | `originalVideoTitle` | string | Yes | Title of the original video |
 | `originalVideoAuthor` | string | No | Platform-native creator handle for the original video |
 | `originalVideoAuthorHandle` | string | No | Platform-native creator handle/unique ID for the original video |
-| `originalVideoAuthorUrl` | string | No | Canonical profile URL for the original creator |
+| `originalVideoAuthorUrl` | string | No | Canonical profile URL for the original creator. TikTok values are `https://www.tiktok.com/@handle` |
 | `originalVideoDescription` | string | No | Normalized description or caption for the original video |
 | `originalVideoThumbnailUrl` | string | No | Canonical thumbnail/poster URL for the original video |
 | `originalVideoThumbnailWidth` | number | No | Thumbnail width when known |
 | `originalVideoThumbnailHeight` | number | No | Thumbnail height when known |
-| `originalVideoUrl` | string | No | Canonical public URL of the original video |
+| `originalVideoUrl` | string | No | Canonical public URL of the original video. TikTok values are `https://www.tiktok.com/@handle/video/{id}` built from the handle and video id |
 | `originalVideoSlug` | string | No | SEO-friendly canonical slug for the original video (format: `{title-slugified}-{author-slugified}`) |
 | `originalVideoProviderName` | string | No | Source platform display name (for example `YouTube`, `TikTok`) |
 | `originalVideoProviderUrl` | string | No | Source platform base URL |
@@ -132,7 +132,7 @@ Discoverable emotional/event anchors on original content. A moment is not a clip
 | `originalVideoTitle` | string | Yes | Snapshot title for discovery UI |
 | `originalVideoAuthor` | string | No | Creator/channel label snapshot |
 | `originalVideoSlug` | string | No | SEO-friendly canonical slug for the original video (format: `{title-slugified}-{author-slugified}`) |
-| `originalVideoUrl` | string | No | Canonical original URL |
+| `originalVideoUrl` | string | No | Canonical original URL. TikTok values use `https://www.tiktok.com/@handle/video/{id}` |
 | `momentTimeSeconds` | number | Yes | Anchor time in original content (seconds) |
 | `tags` | array[string] | No | Discovery tags/categories |
 | `reactionCount` | number | No | Denormalized count of published moment reactions (maintained on publish/unpublish) |
@@ -185,7 +185,7 @@ User-created playlists of reactions.
 | `sequenceItems[].playlistItemIndex` | number/null | No | Index inside the expanded YouTube playlist source when applicable |
 | `sequenceItems[].originalVideoId` | string | No | Platform-native original video ID for the sequence slot |
 | `sequenceItems[].originalVideoPlatform` | string | No | `youtube` or `tiktok` |
-| `sequenceItems[].originalVideoUrl` | string | No | Canonical original URL used by recorder/playback |
+| `sequenceItems[].originalVideoUrl` | string | No | Canonical original URL used by recorder/playback. TikTok values use `https://www.tiktok.com/@handle/video/{id}` |
 | `sequenceItems[].youtubePlaylistId` | string | No | Source YouTube playlist ID when the item came from an expanded playlist |
 | `sequenceItems[].title` | string | No | Optional snapshot title for playlist UI |
 | `sequenceItems[].channelTitle` | string | No | Optional snapshot creator/channel label for playlist UI |
@@ -515,6 +515,7 @@ const docRef = await addDoc(collection(db, 'reactions'), {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.14 | 2026-11-05 | TikTok `originalVideoUrl` and `originalVideoAuthorUrl` are canonical `https://www.tiktok.com/...` addresses built from the handle and video id. A stored string is not opened unless it parses as that shape |
 | 1.13 | 2026-10-10 | Reactions store `watchDurationSeconds` for thumbnail badges. Playlist docs store the summed reaction-window total. The reactions index retrieves `watchDurationSeconds` |
 | 1.12 | 2026-10-10 | Reactions index retrieves `remixMode` so remix cards can use the teal REMIX badge. Remixes stay on `/reaction/{reactionId}` |
 | 1.11 | 2026-10-10 | Added optional `customReactionTitle` on reactions. Cards, the reaction page heading, and the SEO title use it only when filled in. The YouTube `reactionVideoTitle` is unchanged. The reactions index retrieves and searches the custom title |

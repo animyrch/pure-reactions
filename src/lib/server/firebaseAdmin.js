@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { FIREBASE_CONFIG } from '$lib/constants/firebase';
 import { pickOriginalVideoThumbnailFromReactions } from '$lib/helpers/originalVideo';
+import { canonicalTikTokStorageFields, normalizeOriginalVideoPlatform } from '$lib/helpers/platform';
 import { hasStoredWatchDuration } from '$lib/helpers/watchDuration';
 import {
   createAdminWatchDurationIo,
@@ -377,18 +378,31 @@ export async function getReactionsByOriginalSlug(slug) {
       if (durationSeconds) break;
     }
     const thumbnail = pickOriginalVideoThumbnailFromReactions(reactionRecords);
+    const platform = normalizeOriginalVideoPlatform(firstReactionData.originalVideoPlatform);
+    const tiktokLinks = platform === 'tiktok'
+      ? canonicalTikTokStorageFields({
+          videoId: firstReactionData.originalVideoId,
+          authorHandle: firstReactionData.originalVideoAuthorHandle,
+          authorUrl: firstReactionData.originalVideoAuthorUrl,
+          originalVideoUrl: firstReactionData.originalVideoUrl,
+        })
+      : null;
     const originalVideo = {
       title: firstReactionData.originalVideoTitle ?? null,
       author: firstReactionData.originalVideoAuthor ?? null,
-      authorHandle: firstReactionData.originalVideoAuthorHandle ?? null,
-      authorUrl: firstReactionData.originalVideoAuthorUrl ?? null,
+      authorHandle: tiktokLinks?.originalVideoAuthorHandle || firstReactionData.originalVideoAuthorHandle || null,
+      authorUrl: tiktokLinks
+        ? tiktokLinks.originalVideoAuthorUrl || null
+        : firstReactionData.originalVideoAuthorUrl ?? null,
       description: firstReactionData.originalVideoDescription ?? null,
       thumbnailUrl: thumbnail.thumbnailUrl,
       thumbnailWidth: thumbnail.thumbnailWidth,
       thumbnailHeight: thumbnail.thumbnailHeight,
       videoId: firstReactionData.originalVideoId ?? null,
       platform: firstReactionData.originalVideoPlatform ?? 'youtube',
-      url: firstReactionData.originalVideoUrl ?? null,
+      url: tiktokLinks
+        ? tiktokLinks.originalVideoUrl || null
+        : firstReactionData.originalVideoUrl ?? null,
       providerName: firstReactionData.originalVideoProviderName ?? null,
       providerUrl: firstReactionData.originalVideoProviderUrl ?? null,
       durationSeconds,

@@ -4,6 +4,7 @@ import {
     isTikTokPlatform,
     snapVolumeForTikTok,
     extractTikTokVideoId,
+    resolveTikTokWatchUrl,
     getTikTokEmbedUrl,
     ORIGINAL_VIDEO_PLATFORMS
 } from '../../src/lib/helpers/platform.js';
@@ -91,6 +92,58 @@ describe('Platform helpers', () => {
         it('returns null for null/undefined', () => {
             expect(extractTikTokVideoId(null)).toBeNull();
             expect(extractTikTokVideoId(undefined)).toBeNull();
+        });
+
+        it('returns null when a TikTok path is only part of another address', () => {
+            expect(extractTikTokVideoId(
+                'https://example.com/tiktok.com/@name/video/7056208472144235823'
+            )).toBeNull();
+            expect(extractTikTokVideoId(
+                'https://example.com/?q=https://www.tiktok.com/@name/video/7056208472144235823'
+            )).toBeNull();
+            expect(extractTikTokVideoId(
+                'https://nottiktok.com/@name/video/7056208472144235823'
+            )).toBeNull();
+        });
+
+        it('rebuilds an http TikTok URL as the https canonical watch URL', () => {
+            expect(resolveTikTokWatchUrl({
+                originalVideoUrl: 'http://www.tiktok.com/@name/video/7056208472144235823',
+            })).toBe('https://www.tiktok.com/@name/video/7056208472144235823');
+        });
+
+        it('accepts m.tiktok.com and rebuilds the canonical www watch URL', () => {
+            expect(extractTikTokVideoId(
+                'https://m.tiktok.com/@name/video/7056208472144235823?_r=1'
+            )).toBe('7056208472144235823');
+            expect(resolveTikTokWatchUrl({
+                originalVideoUrl: 'https://m.tiktok.com/@name/video/7056208472144235823?_r=1',
+            })).toBe('https://www.tiktok.com/@name/video/7056208472144235823');
+        });
+    });
+
+    describe('resolveTikTokWatchUrl', () => {
+        it('opens a handle and id on www.tiktok.com when the stored string is not a TikTok URL', () => {
+            expect(resolveTikTokWatchUrl({
+                videoId: '7056208472144235823',
+                authorHandle: '@jamiestreck518',
+                originalVideoUrl: 'https://example.com/tiktok.com/@jamiestreck518/video/7056208472144235823',
+            })).toBe('https://www.tiktok.com/@jamiestreck518/video/7056208472144235823');
+        });
+
+        it('returns an empty string when the stored string is unsafe and no handle is known', () => {
+            expect(resolveTikTokWatchUrl({
+                videoId: '7056208472144235823',
+                originalVideoUrl: 'https://example.com/?q=https://www.tiktok.com/@name/video/7056208472144235823',
+            })).toBe('');
+        });
+
+        it('ignores a stored TikTok URL whose video id does not match the reaction', () => {
+            expect(resolveTikTokWatchUrl({
+                videoId: '7056208472144235823',
+                authorHandle: 'jamiestreck518',
+                originalVideoUrl: 'https://www.tiktok.com/@other/video/1111111111111111111',
+            })).toBe('https://www.tiktok.com/@jamiestreck518/video/7056208472144235823');
         });
     });
 

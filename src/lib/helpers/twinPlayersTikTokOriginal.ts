@@ -86,10 +86,15 @@ export function createTikTokOriginalPlayerAdapter({
       return null;
     }
 
+    const embedUrl = getTikTokEmbedUrl(videoId);
+    if (!embedUrl) {
+      return null;
+    }
+
     container.innerHTML = '';
 
     const nextIframe = document.createElement('iframe');
-    nextIframe.src = getTikTokEmbedUrl(videoId);
+    nextIframe.src = embedUrl;
     nextIframe.title = `TikTok video ${videoId}`;
     nextIframe.style.cssText = 'width:100%;height:100%;border:0;';
     nextIframe.allow = 'autoplay; encrypted-media; fullscreen';

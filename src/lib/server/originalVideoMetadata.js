@@ -1,9 +1,11 @@
-import { ORIGINAL_VIDEO_PLATFORMS, normalizeOriginalVideoPlatform } from '$lib/helpers/platform';
 import {
-  buildTikTokAuthorUrl,
-  buildTikTokVideoUrl,
-  normalizeOriginalVideoMetadata,
-} from '$lib/helpers/originalVideo';
+  ORIGINAL_VIDEO_PLATFORMS,
+  normalizeOriginalVideoPlatform,
+  resolveTikTokAuthorUrl,
+  resolveTikTokWatchUrl,
+  sanitizeTikTokHandle,
+} from '$lib/helpers/platform';
+import { normalizeOriginalVideoMetadata } from '$lib/helpers/originalVideo';
 
 const TIKTOK_OEMBED_URL = 'https://www.tiktok.com/oembed';
 const TIKTOK_TIMEOUT_MS = 8000;
@@ -31,16 +33,17 @@ const compactObject = (value) =>
 
 export const buildTikTokMetaFromOEmbed = (payload, { videoId, videoUrl } = {}) => {
   const normalizedVideoId = trimString(videoId);
-  const authorHandle = trimString(payload?.author_unique_id);
-  const authorUrl =
-    trimString(payload?.author_url) || buildTikTokAuthorUrl(authorHandle);
-  const canonicalUrl =
-    trimString(videoUrl) ||
-    buildTikTokVideoUrl({
-      videoId: normalizedVideoId,
-      authorHandle,
-      authorUrl,
-    });
+  const authorHandle = sanitizeTikTokHandle(payload?.author_unique_id) || undefined;
+  const authorUrl = resolveTikTokAuthorUrl({
+    authorHandle,
+    authorUrl: payload?.author_url,
+  }) || undefined;
+  const canonicalUrl = resolveTikTokWatchUrl({
+    videoId: normalizedVideoId,
+    authorHandle,
+    authorUrl,
+    originalVideoUrl: videoUrl,
+  }) || undefined;
 
   return compactObject({
     videoId: normalizedVideoId || trimString(payload?.embed_product_id),
@@ -53,7 +56,7 @@ export const buildTikTokMetaFromOEmbed = (payload, { videoId, videoUrl } = {}) =
     thumbnailWidth: toFiniteNumber(payload?.thumbnail_width),
     thumbnailHeight: toFiniteNumber(payload?.thumbnail_height),
     providerName: trimString(payload?.provider_name) || 'TikTok',
-    providerUrl: trimString(payload?.provider_url) || 'https://www.tiktok.com',
+    providerUrl: 'https://www.tiktok.com',
     embedType: trimString(payload?.embed_type) || trimString(payload?.type),
     embedHtml: trimString(payload?.html),
     embedProductId: trimString(payload?.embed_product_id),
@@ -63,7 +66,10 @@ export const buildTikTokMetaFromOEmbed = (payload, { videoId, videoUrl } = {}) =
 
 export const fetchTikTokOriginalVideoMetadata = async ({ videoId, videoUrl } = {}) => {
   const normalizedVideoId = trimString(videoId);
-  const resolvedUrl = trimString(videoUrl);
+  const resolvedUrl = resolveTikTokWatchUrl({
+    videoId: normalizedVideoId,
+    originalVideoUrl: videoUrl,
+  }) || undefined;
 
   if (!normalizedVideoId || !resolvedUrl) {
     return {
