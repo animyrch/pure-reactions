@@ -23,7 +23,7 @@
 			reset();
 		} catch (error) {
 			console.error('Could not save age confirmation:', error);
-			errorMessage = 'Could not save your confirmation. Try again.';
+			errorMessage = error?.message || 'Could not save your confirmation. Try again.';
 			saving = false;
 		}
 	};

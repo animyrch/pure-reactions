@@ -84,8 +84,16 @@ after(async () => {
 
 let _ownerDb;
 const ownerDb = () => {
-  if (!_ownerDb) _ownerDb = testEnv.authenticatedContext(ownerId).firestore();
+  if (!_ownerDb) _ownerDb = testEnv.authenticatedContext(ownerId, { email_verified: true }).firestore();
   return _ownerDb;
+};
+const unverifiedId = 'user-unverified';
+let _unverifiedDb;
+const unverifiedDb = () => {
+  if (!_unverifiedDb) {
+    _unverifiedDb = testEnv.authenticatedContext(unverifiedId, { email_verified: false }).firestore();
+  }
+  return _unverifiedDb;
 };
 let _otherDb;
 const otherDb = () => {
@@ -146,6 +154,76 @@ test('owner can update reactions', async () => {
   await assertSucceeds(
     updateDoc(doc(ownerDb(), 'reactions', reactionIds.published), {
       title: 'Updated title'
+    })
+  );
+});
+
+test('unverified owner cannot create a draft reaction', async () => {
+  await assertFails(
+    setDoc(doc(unverifiedDb(), 'reactions', 'unverified-draft'), {
+      reactorId: unverifiedId,
+      isPublished: false,
+      title: 'Draft'
+    })
+  );
+});
+
+test('unverified owner cannot publish a reaction after age confirmation', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'userData', unverifiedId), {
+      ageConfirmedAt: Timestamp.fromDate(new Date('2024-01-01T00:00:00Z'))
+    });
+  });
+  await assertFails(
+    setDoc(doc(unverifiedDb(), 'reactions', 'unverified-public'), {
+      reactorId: unverifiedId,
+      isPublished: true,
+      title: 'Public'
+    })
+  );
+});
+
+test('unverified owner can edit an existing reaction without publishing', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'reactions', 'unverified-existing'), {
+      reactorId: unverifiedId,
+      isPublished: false,
+      title: 'Existing'
+    });
+  });
+  await assertSucceeds(
+    updateDoc(doc(unverifiedDb(), 'reactions', 'unverified-existing'), {
+      title: 'Retitled'
+    })
+  );
+});
+
+test('unverified owner cannot create a playlist, moment, queue, or claim', async () => {
+  await assertFails(
+    setDoc(doc(unverifiedDb(), 'playlists', 'unverified-playlist'), {
+      userId: unverifiedId,
+      reactionBinomeIds: []
+    })
+  );
+  await assertFails(
+    setDoc(doc(unverifiedDb(), 'moments', 'unverified-moment'), {
+      creatorId: unverifiedId,
+      title: 'Moment'
+    })
+  );
+  await assertFails(
+    setDoc(doc(unverifiedDb(), 'queues', 'unverified-queue'), {
+      ownerId: unverifiedId,
+      slug: 'unverified-queue',
+      title: 'Queue',
+      items: []
+    })
+  );
+  const unverifiedClaimId = `channel-handle__${unverifiedId}`;
+  await assertFails(
+    setDoc(doc(unverifiedDb(), 'youtubeChannelClaims', unverifiedClaimId), {
+      ...claimData,
+      userId: unverifiedId
     })
   );
 });
@@ -427,6 +505,23 @@ test('another user cannot read or write a twitch channel', async () => {
 
 test('logged out users cannot read userData_local', async () => {
   await assertFails(getDoc(doc(anonDb(), 'userData_local', ownerId)));
+});
+
+test('clients cannot read or write the youtube playlist cache', async () => {
+  const playlistId = 'PL1234567890ab';
+  await assertFails(getDoc(doc(anonDb(), 'youtubePlaylistCache_local', playlistId)));
+  await assertFails(setDoc(doc(anonDb(), 'youtubePlaylistCache_local', playlistId), { playlistId }));
+  await assertFails(getDoc(doc(ownerDb(), 'youtubePlaylistCache', playlistId)));
+  await assertFails(setDoc(doc(adminDb(), 'youtubePlaylistCache_local', playlistId), { playlistId }));
+  await assertFails(
+    getDoc(doc(anonDb(), 'youtubePlaylistCache_local', playlistId, 'pages', 'page-first')),
+  );
+  await assertFails(
+    setDoc(doc(ownerDb(), 'youtubePlaylistCache-prod', playlistId, 'pages', 'page-first'), {
+      status: 'ready',
+      items: [],
+    }),
+  );
 });
 
 test('owner cannot write ageConfirmedAt on user data', async () => {

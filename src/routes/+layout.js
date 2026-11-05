@@ -51,7 +51,7 @@ export async function load({ depends }) {
                 showToast(signupMessage, TOASTS.SUCCESS, 12000);
                 const user = await checkUserSignInStatusWrapper();
                 currentUser.set(user);
-                if (user?.uid) {
+                if (user?.uid && user.emailVerified) {
                     try {
                         await recordAgeConfirmation(user.uid);
                     } catch (error) {

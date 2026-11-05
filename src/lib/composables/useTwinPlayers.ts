@@ -426,7 +426,8 @@ export function useTwinPlayers({
     currentOriginalAuthorUrl,
     currentOriginalDescription,
     currentReactionTitle,
-    currentReactionAuthor
+    currentReactionAuthor,
+    reactorId
   }: VerifyAndSyncTwinPlayersMetadataParams) => {
     const { resolvedDocumentId, statePatch } = await verifyAndSyncTwinPlayersMetadata({
       documentId,
@@ -440,7 +441,8 @@ export function useTwinPlayers({
       currentOriginalAuthorUrl,
       currentOriginalDescription,
       currentReactionTitle,
-      currentReactionAuthor
+      currentReactionAuthor,
+      reactorId
     });
 
     if (!resolvedDocumentId) {
