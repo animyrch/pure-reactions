@@ -391,21 +391,27 @@ Real-time co-watching sessions.
   playbackRate: number,     // Playback speed (0.25-2.0)
   createdAt: timestamp,     // Server timestamp
   lastUpdated: timestamp,   // Server timestamp
-  viewers: {                // Map of viewer IDs
-    [authUid]: {
+  viewers: {                // Anonymous presence slots. Keys are random 32-char hex ids.
+    [slotId]: {
       joinedAt: timestamp,
-      name: string,
+      name: string,          // Always "Anonymous Viewer"
       isActive: boolean
     }
   }
 }
 ```
 
+### Session viewer owners (`sessionViewerOwners/{sessionId}/{slotId}`)
+
+Unreadable claim that ties one public presence slot to the signed-in account that created it. The value is that account's Firebase Auth uid. Clients cannot read this path. The public `viewers` map does not contain the account id.
+
 #### Access Pattern
 
 - Reads are public for anyone with the share URL.
 - Session writes require `auth.uid === reactorId`.
-- Viewer presence writes require Firebase Auth and must use the viewer's own `auth.uid` as the `viewers/{authUid}` key.
+- A viewer claims `sessionViewerOwners/{sessionId}/{slotId}` with their own `auth.uid` only while `sharedSessions/{sessionId}` exists, then writes `sharedSessions/{sessionId}/viewers/{slotId}`.
+- The slot id must match `^[0-9a-f]{32}$`.
+- Only that same account can remove the public slot and the owner claim. Deleting the claim stays allowed after the session node is gone.
 
 ---
 
@@ -553,6 +559,8 @@ const docRef = await addDoc(collection(db, 'reactions'), {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.16 | 2026-11-05 | Owning account can delete `sessionViewerOwners/{sessionId}/{slotId}` after the shared session is removed. Creating a claim still requires the session |
+| 1.15 | 2026-11-05 | Shared-session `viewers` keys are random 32-char hex slot ids. Account ids live only in unreadable `sessionViewerOwners/{sessionId}/{slotId}` |
 | 1.14 | 2026-11-04 | Added server-only `youtubePlaylistCache` catalog. Playlist route reads a stored YouTube page before calling the Data API. Stored pages do not expire |
 | 1.13 | 2026-10-10 | Reactions store `watchDurationSeconds` for thumbnail badges. Playlist docs store the summed reaction-window total. The reactions index retrieves `watchDurationSeconds` |
 | 1.12 | 2026-10-10 | Reactions index retrieves `remixMode` so remix cards can use the teal REMIX badge. Remixes stay on `/reaction/{reactionId}` |
