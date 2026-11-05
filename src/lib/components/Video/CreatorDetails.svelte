@@ -6,6 +6,7 @@
     import { linkifyText } from '$lib/helpers/system';
     import { reactionThumbnailSourceTitle } from '$lib/helpers/reactionListItem';
     import { resolveTikTokAuthorUrl } from '$lib/helpers/platform';
+    import { safeYouTubeAuthorUrl } from '$lib/helpers/youtube';
 
     export let originalVideoTitle;
     export let originalVideoAuthor;
@@ -36,7 +37,7 @@
             authorHandle: originalVideoAuthorHandle,
             authorUrl: originalVideoAuthorUrl,
         }) || undefined
-        : (originalVideoAuthorUrl || youtubeChannelUrl(originalVideoAuthor));
+        : (safeYouTubeAuthorUrl(originalVideoAuthorUrl) || youtubeChannelUrl(originalVideoAuthor));
     $: originalAuthorPlatformLabel = originalVideoPlatform === 'tiktok' ? 'TikTok' : 'YouTube';
 
         let viewerData;

@@ -5,6 +5,7 @@ import {
     snapVolumeForTikTok,
     extractTikTokVideoId,
     resolveTikTokWatchUrl,
+    canonicalTikTokStorageFields,
     getTikTokEmbedUrl,
     ORIGINAL_VIDEO_PLATFORMS
 } from '../../src/lib/helpers/platform.js';
@@ -144,6 +145,52 @@ describe('Platform helpers', () => {
                 authorHandle: 'jamiestreck518',
                 originalVideoUrl: 'https://www.tiktok.com/@other/video/1111111111111111111',
             })).toBe('https://www.tiktok.com/@jamiestreck518/video/7056208472144235823');
+        });
+    });
+
+    describe('canonicalTikTokStorageFields', () => {
+        it('stores the creator named by the canonical watch URL when the supplied handle differs', () => {
+            expect(canonicalTikTokStorageFields({
+                videoId: '7056208472144235823',
+                authorHandle: 'stalehandle',
+                authorUrl: 'https://www.tiktok.com/@profilefallback',
+                originalVideoUrl: 'https://m.tiktok.com/@canonical/video/7056208472144235823?_r=1',
+            })).toEqual({
+                originalVideoUrl: 'https://www.tiktok.com/@canonical/video/7056208472144235823',
+                originalVideoAuthorHandle: 'canonical',
+                originalVideoAuthorUrl: 'https://www.tiktok.com/@canonical',
+            });
+        });
+
+        it('keeps the supplied handle when the stored URL points at a different video', () => {
+            expect(canonicalTikTokStorageFields({
+                videoId: '7056208472144235823',
+                authorHandle: '@jamiestreck518',
+                authorUrl: 'https://www.tiktok.com/@other',
+                originalVideoUrl: 'https://www.tiktok.com/@other/video/1111111111111111111',
+            })).toEqual({
+                originalVideoUrl: 'https://www.tiktok.com/@jamiestreck518/video/7056208472144235823',
+                originalVideoAuthorHandle: 'jamiestreck518',
+                originalVideoAuthorUrl: 'https://www.tiktok.com/@jamiestreck518',
+            });
+        });
+
+        it('falls back to the supplied handle, then a profile URL, when no watch URL can be built', () => {
+            expect(canonicalTikTokStorageFields({
+                authorHandle: '@jamiestreck518',
+                authorUrl: 'https://www.tiktok.com/@other',
+            })).toEqual({
+                originalVideoUrl: '',
+                originalVideoAuthorHandle: 'jamiestreck518',
+                originalVideoAuthorUrl: 'https://www.tiktok.com/@jamiestreck518',
+            });
+            expect(canonicalTikTokStorageFields({
+                authorUrl: 'https://www.tiktok.com/@profilefallback',
+            })).toEqual({
+                originalVideoUrl: '',
+                originalVideoAuthorHandle: 'profilefallback',
+                originalVideoAuthorUrl: 'https://www.tiktok.com/@profilefallback',
+            });
         });
     });
 

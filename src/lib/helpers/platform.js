@@ -191,8 +191,9 @@ export const canonicalTikTokStorageFields = ({
     authorUrl,
     originalVideoUrl,
   });
-  const handle = sanitizeTikTokHandle(authorHandle)
-    || parseTikTokVideoUrl(watchUrl)?.authorHandle
+  // The canonical watch URL names the creator that the stored video link opens.
+  const handle = parseTikTokVideoUrl(watchUrl)?.authorHandle
+    || sanitizeTikTokHandle(authorHandle)
     || parseTikTokAuthorHandle(authorUrl)
     || '';
   return {
