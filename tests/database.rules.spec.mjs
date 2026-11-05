@@ -115,6 +115,7 @@ test('viewer can claim a random slot and remove only that presence', async () =>
   await seedSession();
 
   await assertSucceeds(set(ownerRef(viewerDb()), viewerId));
+  await assertFails(set(ownerRef(viewerDb()), viewerId));
   await assertSucceeds(set(viewerSlotRef(viewerDb()), presence));
 
   await assertFails(set(ownerRef(otherDb()), otherId));
@@ -129,6 +130,23 @@ test('viewer can claim a random slot and remove only that presence', async () =>
   assert.equal('uid' in viewers[slotId], false);
 
   await assertSucceeds(remove(viewerSlotRef(viewerDb())));
+  await assertSucceeds(remove(ownerRef(viewerDb())));
+});
+
+test('a viewer cannot claim a slot before the shared session exists', async () => {
+  await assertFails(set(ownerRef(viewerDb()), viewerId));
+});
+
+test('owning account can delete its viewer claim after the session is removed', async () => {
+  await seedSession();
+  await assertSucceeds(set(ownerRef(viewerDb()), viewerId));
+
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await remove(sessionRef(context.database()));
+  });
+
+  await assertFails(set(ownerRef(viewerDb()), viewerId));
+  await assertFails(remove(ownerRef(otherDb())));
   await assertSucceeds(remove(ownerRef(viewerDb())));
 });
 

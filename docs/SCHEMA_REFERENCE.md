@@ -371,9 +371,9 @@ Unreadable claim that ties one public presence slot to the signed-in account tha
 
 - Reads are public for anyone with the share URL.
 - Session writes require `auth.uid === reactorId`.
-- A viewer claims `sessionViewerOwners/{sessionId}/{slotId}` with their own `auth.uid`, then writes `sharedSessions/{sessionId}/viewers/{slotId}`.
+- A viewer claims `sessionViewerOwners/{sessionId}/{slotId}` with their own `auth.uid` only while `sharedSessions/{sessionId}` exists, then writes `sharedSessions/{sessionId}/viewers/{slotId}`.
 - The slot id must match `^[0-9a-f]{32}$`.
-- Only that same account can remove the public slot and the owner claim.
+- Only that same account can remove the public slot and the owner claim. Deleting the claim stays allowed after the session node is gone.
 
 ---
 
@@ -521,6 +521,7 @@ const docRef = await addDoc(collection(db, 'reactions'), {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.15 | 2026-11-05 | Owning account can delete `sessionViewerOwners/{sessionId}/{slotId}` after the shared session is removed. Creating a claim still requires the session |
 | 1.14 | 2026-11-05 | Shared-session `viewers` keys are random 32-char hex slot ids. Account ids live only in unreadable `sessionViewerOwners/{sessionId}/{slotId}` |
 | 1.13 | 2026-10-10 | Reactions store `watchDurationSeconds` for thumbnail badges. Playlist docs store the summed reaction-window total. The reactions index retrieves `watchDurationSeconds` |
 | 1.12 | 2026-10-10 | Reactions index retrieves `remixMode` so remix cards can use the teal REMIX badge. Remixes stay on `/reaction/{reactionId}` |

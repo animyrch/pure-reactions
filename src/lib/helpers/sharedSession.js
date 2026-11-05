@@ -55,6 +55,117 @@ const createViewerSlotId = () => {
 const viewerSlotRef = (sessionId, slotId) => ref(database, `sharedSessions/${sessionId}/viewers/${slotId}`);
 const viewerOwnerRef = (sessionId, slotId) => ref(database, `sessionViewerOwners/${sessionId}/${slotId}`);
 
+const presenceBySlot = new Map();
+const presenceKey = (sessionId, slotId) => `${sessionId}/${slotId}`;
+
+const presenceRecord = () => ({
+    name: VIEWER_PRESENCE_NAME,
+    joinedAt: serverTimestamp(),
+    isActive: true
+});
+
+const isPermissionDenied = (error) => {
+    const code = String(error?.code || '').toLowerCase().replace(/-/g, '_');
+    return code === 'permission_denied';
+};
+
+// A second claim of the same slot is denied once the row exists. After this
+// tab has claimed it, that denial means the row survived a short disconnect.
+const claimViewerSlot = async (state, ownerRef, viewerUid) => {
+    try {
+        await set(ownerRef, viewerUid);
+        state.claimed = true;
+    } catch (error) {
+        if (!state.claimed || !isPermissionDenied(error)) {
+            throw error;
+        }
+    }
+};
+
+// Queue the public slot first. Its write rule requires the owner claim to
+// still exist, and disconnect work runs in the order it was queued.
+const armPresenceDisconnect = async (viewerRef, ownerRef) => {
+    await onDisconnect(viewerRef).remove();
+    await onDisconnect(ownerRef).remove();
+};
+
+const publishViewerPresence = async (state, ownerRef, viewerRef, viewerUid) => {
+    if (state.left) return;
+    await armPresenceDisconnect(viewerRef, ownerRef);
+    if (state.left) return;
+    await claimViewerSlot(state, ownerRef, viewerUid);
+    if (state.left) return;
+    await set(viewerRef, presenceRecord());
+};
+
+// Drop the public slot before canceling its disconnect handler, then drop
+// the owner claim. Canceling first would leave a ghost if the tab dies mid-leave.
+const disarmPresence = async (viewerRef, ownerRef) => {
+    await remove(viewerRef);
+    await onDisconnect(viewerRef).cancel();
+    await remove(ownerRef);
+    await onDisconnect(ownerRef).cancel();
+};
+
+const detachPresence = async (sessionId, slotId) => {
+    const state = presenceBySlot.get(presenceKey(sessionId, slotId));
+    if (!state) return;
+
+    presenceBySlot.delete(presenceKey(sessionId, slotId));
+    state.left = true;
+    state.unsubscribe?.();
+    state.unsubscribe = null;
+    try {
+        await state.pending;
+    } catch {
+        // A failed restore should not block cleanup.
+    }
+};
+
+const watchViewerPresence = (sessionId, slotId, ownerRef, viewerRef, viewerUid) => {
+    const state = {
+        left: false,
+        claimed: false,
+        settled: false,
+        unsubscribe: null,
+        pending: Promise.resolve()
+    };
+    let resolveReady;
+    let rejectReady;
+    const ready = new Promise((resolve, reject) => {
+        resolveReady = resolve;
+        rejectReady = reject;
+    });
+
+    const connectedRef = ref(database, '.info/connected');
+    state.unsubscribe = onValue(connectedRef, (snapshot) => {
+        if (snapshot.val() !== true || state.left) return;
+
+        state.pending = state.pending
+            .catch(() => {})
+            .then(async () => {
+                if (state.left) return;
+                await publishViewerPresence(state, ownerRef, viewerRef, viewerUid);
+                if (state.left || state.settled) return;
+                state.settled = true;
+                resolveReady(slotId);
+            })
+            .catch((error) => {
+                if (state.settled) {
+                    if (!state.left) {
+                        console.error('Error restoring shared session presence:', error);
+                    }
+                    return;
+                }
+                state.settled = true;
+                rejectReady(error);
+            });
+    });
+
+    presenceBySlot.set(presenceKey(sessionId, slotId), state);
+    return ready;
+};
+
 // Join a shared session as a viewer. Returns the public slot id.
 export const joinSharedSession = async (sessionId) => {
     const viewerUid = auth?.currentUser?.uid;
@@ -67,19 +178,11 @@ export const joinSharedSession = async (sessionId) => {
     const viewerRef = viewerSlotRef(sessionId, slotId);
 
     try {
-        await set(ownerRef, viewerUid);
-        await set(viewerRef, {
-            name: VIEWER_PRESENCE_NAME,
-            joinedAt: serverTimestamp(),
-            isActive: true
-        });
-        await onDisconnect(viewerRef).remove();
-        return slotId;
+        return await watchViewerPresence(sessionId, slotId, ownerRef, viewerRef, viewerUid);
     } catch (error) {
+        await detachPresence(sessionId, slotId);
         try {
-            await onDisconnect(viewerRef).cancel();
-            await remove(viewerRef);
-            await remove(ownerRef);
+            await disarmPresence(viewerRef, ownerRef);
         } catch {
             // The claim may have failed before either record existed.
         }
@@ -92,13 +195,13 @@ export const joinSharedSession = async (sessionId) => {
 export const leaveSharedSession = async (sessionId, slotId) => {
     if (!sessionId || !slotId) return;
 
+    await detachPresence(sessionId, slotId);
+
     const viewerRef = viewerSlotRef(sessionId, slotId);
     const ownerRef = viewerOwnerRef(sessionId, slotId);
 
     try {
-        await onDisconnect(viewerRef).cancel();
-        await remove(viewerRef);
-        await remove(ownerRef);
+        await disarmPresence(viewerRef, ownerRef);
     } catch (error) {
         console.error('Error leaving shared session:', error);
         throw error;
