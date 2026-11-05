@@ -1,5 +1,5 @@
-import { ref, set, update, onValue, remove, serverTimestamp } from "firebase/database";
-import { database } from "$lib/constants/firebase";
+import { ref, set, update, onValue, remove, serverTimestamp, onDisconnect } from "firebase/database";
+import { auth, database } from "$lib/constants/firebase";
 
 // Session state constants
 export const SESSION_STATES = {
@@ -43,29 +43,62 @@ export const createSharedSession = async (
     }
 };
 
-// Join a shared session as a viewer
-export const joinSharedSession = async (sessionId, viewerId, viewerName = 'Anonymous') => {
+const VIEWER_PRESENCE_NAME = 'Anonymous Viewer';
+
+// Public slot keys are 32 hex chars so they cannot be a Firebase account id.
+const createViewerSlotId = () => {
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+};
+
+const viewerSlotRef = (sessionId, slotId) => ref(database, `sharedSessions/${sessionId}/viewers/${slotId}`);
+const viewerOwnerRef = (sessionId, slotId) => ref(database, `sessionViewerOwners/${sessionId}/${slotId}`);
+
+// Join a shared session as a viewer. Returns the public slot id.
+export const joinSharedSession = async (sessionId) => {
+    const viewerUid = auth?.currentUser?.uid;
+    if (!viewerUid) {
+        throw new Error('Sign in before joining a shared session.');
+    }
+
+    const slotId = createViewerSlotId();
+    const ownerRef = viewerOwnerRef(sessionId, slotId);
+    const viewerRef = viewerSlotRef(sessionId, slotId);
+
     try {
-        const viewerRef = ref(database, `sharedSessions/${sessionId}/viewers/${viewerId}`);
-        const viewerData = {
-            name: viewerName,
+        await set(ownerRef, viewerUid);
+        await set(viewerRef, {
+            name: VIEWER_PRESENCE_NAME,
             joinedAt: serverTimestamp(),
             isActive: true
-        };
-        
-        await set(viewerRef, viewerData);
-        return sessionId;
+        });
+        await onDisconnect(viewerRef).remove();
+        return slotId;
     } catch (error) {
+        try {
+            await onDisconnect(viewerRef).cancel();
+            await remove(viewerRef);
+            await remove(ownerRef);
+        } catch {
+            // The claim may have failed before either record existed.
+        }
         console.error('Error joining shared session:', error);
         throw error;
     }
 };
 
 // Leave a shared session
-export const leaveSharedSession = async (sessionId, viewerId) => {
+export const leaveSharedSession = async (sessionId, slotId) => {
+    if (!sessionId || !slotId) return;
+
+    const viewerRef = viewerSlotRef(sessionId, slotId);
+    const ownerRef = viewerOwnerRef(sessionId, slotId);
+
     try {
-        const viewerRef = ref(database, `sharedSessions/${sessionId}/viewers/${viewerId}`);
+        await onDisconnect(viewerRef).cancel();
         await remove(viewerRef);
+        await remove(ownerRef);
     } catch (error) {
         console.error('Error leaving shared session:', error);
         throw error;
