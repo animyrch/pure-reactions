@@ -241,6 +241,44 @@ The manifest document id is the YouTube playlist id. Pages live in the `pages` s
 
 ---
 
+### `youtubeCommentCache` (COLLECTION_YOUTUBE_COMMENT_CACHE)
+
+Server-only preview of YouTube's top comments, keyed by YouTube video id. `GET /api/youtube/comments/[videoId]` reads it before calling the YouTube Data API. Client Firestore rules deny every read and write. The Admin SDK is the only reader and writer. The browser never queries this collection. It calls the comments route.
+
+The route calls `commentThreads.list` only when the video id is already `reactionVideoId` on a reaction, or `originalVideoId` on a reaction whose original platform is YouTube. Any other id returns an empty preview and is not stored. A missing `originalVideoPlatform` counts as YouTube.
+
+A fresh `ok` snapshot lasts one day. `empty` and `commentsDisabled` last seven days. `error` lasts ten minutes. Expiry is `expiresAt`. Nothing refreshes the document on a timer. The next request after `expiresAt` fetches YouTube again when the id is still on a reaction.
+
+The document id is the YouTube video id.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `videoId` | string | Yes | YouTube video id. Matches the document id |
+| `status` | string | Yes | `pending` while a fetch holds the lock, then `ready` |
+| `outcome` | string | Yes on ready | `ok`, `empty`, `commentsDisabled`, or `error` |
+| `comments` | array[object] | Yes on ready | At most 10 plain-text top-level comments. Empty unless `outcome` is `ok` |
+| `comments[].threadId` | string | Yes | YouTube comment thread id |
+| `comments[].commentId` | string | Yes | YouTube comment id |
+| `comments[].authorDisplayName` | string | Yes | Author name shown on the card |
+| `comments[].authorProfileUrl` | string | No | Author channel URL. Omitted when YouTube did not send one |
+| `comments[].authorAvatarUrl` | string | No | Author avatar URL. Omitted when YouTube did not send one |
+| `comments[].textDisplay` | string | Yes | Plain-text comment body |
+| `comments[].publishedAt` | string | No | ISO timestamp |
+| `comments[].updatedAt` | string | No | ISO timestamp |
+| `comments[].likeCount` | number | Yes | Like count from YouTube. `0` when missing |
+| `comments[].replyCount` | number | Yes | Reply count from YouTube. `0` when missing |
+| `canonicalVideoUrl` | string | Yes on ready | `https://www.youtube.com/watch?v={videoId}` |
+| `sectionActionUrl` | string | Yes on ready | The same watch URL with `&lc=comments` |
+| `fetchedAt` | number | Yes on ready | Epoch milliseconds of the YouTube call |
+| `expiresAt` | number | Yes on ready | Epoch milliseconds when this snapshot stops being fresh |
+| `errorKind` | string | No | `quota`, `timeout`, or `upstream` on an error snapshot. Never sent to the browser |
+| `lockedAt` | number | No | Epoch milliseconds of an in-flight fetch lock. `0` after the snapshot is ready |
+| `lockId` | string | No | Lock owner. Empty after the snapshot is ready |
+
+The route rebuilds each comment's outbound thread URL from `videoId` and `commentId`. That URL is not stored.
+
+---
+
 ### `queues` (COLLECTION_QUEUES)
 
 Temporary playback queues for sequential viewing.
@@ -559,6 +597,7 @@ const docRef = await addDoc(collection(db, 'reactions'), {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.18 | 2026-11-06 | Added server-only `youtubeCommentCache`. The public comments route reads one snapshot per video id and calls `commentThreads.list` only for a reaction video whose snapshot is missing or stale |
 | 1.17 | 2026-11-05 | TikTok `originalVideoUrl` and `originalVideoAuthorUrl` are canonical `https://www.tiktok.com/...` addresses built from the handle and video id. A stored string is not opened unless it parses as that shape |
 | 1.16 | 2026-11-05 | Owning account can delete `sessionViewerOwners/{sessionId}/{slotId}` after the shared session is removed. Creating a claim still requires the session |
 | 1.15 | 2026-11-05 | Shared-session `viewers` keys are random 32-char hex slot ids. Account ids live only in unreadable `sessionViewerOwners/{sessionId}/{slotId}` |
