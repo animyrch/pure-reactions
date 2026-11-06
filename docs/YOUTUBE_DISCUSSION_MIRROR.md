@@ -34,7 +34,7 @@ Browser (reaction page)
 `src/routes/api/youtube/comments/[videoId]/+server.js`
 
 - Reads one `youtubeCommentCache` document for the video id.
-- Calls YouTube `commentThreads` with `part=snippet`, `order=relevance`, `maxResults=10`, `textFormat=plainText` only when that id is already on a reaction and the snapshot is missing or stale.
+- Calls YouTube `commentThreads` with `part=snippet`, `order=relevance`, `maxResults=10`, `textFormat=plainText` only when that id is already on a published reaction and the snapshot is missing or stale.
 - Normalizes the response into the UI-ready shape and stores at most ten plain-text comments.
 - Never exposes the YouTube API key, and never returns the YouTube error body.
 - Returns structured `status` field: `ok`, `empty`, `commentsDisabled`, or `error`.
@@ -99,8 +99,8 @@ Quota is spent once per distinct catalog video, not once per visitor.
 1. The CDN may reuse a successful response for one day (`s-maxage=86400`) and refresh it in the background for 30 days.
 2. On a CDN miss, the route reads `youtubeCommentCache/{videoId}`.
 3. A fresh snapshot is returned as-is. `ok` stays fresh for one day. `empty` and `commentsDisabled` stay fresh for seven days. `error` stays fresh for ten minutes and is not cached by the CDN.
-4. A missing or stale snapshot calls YouTube only if a reaction already has that id as `reactionVideoId`, or as `originalVideoId` with a YouTube original. One lock is held so concurrent misses share one YouTube call.
-5. An id that is not on a reaction returns an empty preview, does not call YouTube, and is not written.
+4. A missing or stale snapshot calls YouTube only if a published reaction already has that id as `reactionVideoId`, or as `originalVideoId` with a YouTube original. One lock is held so concurrent misses share one YouTube call.
+5. An id that is not on a published reaction, including a draft, returns an empty preview, does not call YouTube, and is not written.
 
 The collection is denied to every client SDK. The Admin SDK on the server bypasses Firestore security rules, which is why the route can still read and write it. The browser only calls `/api/youtube/comments/{videoId}`.
 

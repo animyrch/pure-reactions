@@ -130,12 +130,18 @@ function createFakeAdminDb() {
         return makeRef(`${prefix}/${id}`);
       },
       where(field, _op, value) {
-        const matched = [];
-        for (const [path, data] of docs.entries()) {
-          if (isDirectChild(path, prefix) && data?.[field] === value) matched.push(data);
-        }
-        return {
+        const filters = [[field, value]];
+        const query = {
+          where(nextField, _nextOp, nextValue) {
+            filters.push([nextField, nextValue]);
+            return query;
+          },
           limit(count) {
+            const matched = [];
+            for (const [path, data] of docs.entries()) {
+              const matches = filters.every(([key, expected]) => data?.[key] === expected);
+              if (isDirectChild(path, prefix) && matches) matched.push(data);
+            }
             const rows = matched.slice(0, count);
             return {
               async get() {
@@ -147,6 +153,7 @@ function createFakeAdminDb() {
             };
           },
         };
+        return query;
       },
     };
   }
@@ -592,18 +599,31 @@ describe('YouTube comment snapshots', () => {
     expect(result).toEqual({ outcome: 'error', errorKind: 'timeout', comments: [] });
   });
 
-  it('grants a lookup for a reaction video or a YouTube original only', () => {
-    expect(reactionGrantsCommentLookup({ reactionVideoId: VIDEO_ID }, VIDEO_ID)).toBe(true);
+  it('grants a lookup for a published reaction video or a published YouTube original only', () => {
+    expect(
+      reactionGrantsCommentLookup({ reactionVideoId: VIDEO_ID, isPublished: true }, VIDEO_ID),
+    ).toBe(true);
     expect(
       reactionGrantsCommentLookup(
-        { originalVideoId: VIDEO_ID, originalVideoPlatform: 'youtube' },
+        { originalVideoId: VIDEO_ID, originalVideoPlatform: 'youtube', isPublished: true },
         VIDEO_ID,
       ),
     ).toBe(true);
-    expect(reactionGrantsCommentLookup({ originalVideoId: VIDEO_ID }, VIDEO_ID)).toBe(true);
+    expect(
+      reactionGrantsCommentLookup({ originalVideoId: VIDEO_ID, isPublished: true }, VIDEO_ID),
+    ).toBe(true);
+    expect(reactionGrantsCommentLookup({ reactionVideoId: VIDEO_ID, isPublished: false }, VIDEO_ID)).toBe(
+      false,
+    );
+    expect(reactionGrantsCommentLookup({ reactionVideoId: VIDEO_ID }, VIDEO_ID)).toBe(false);
     expect(
       reactionGrantsCommentLookup(
-        { originalVideoId: TIKTOK_ID, originalVideoPlatform: 'tiktok', reactionVideoId: OTHER_VIDEO_ID },
+        {
+          originalVideoId: TIKTOK_ID,
+          originalVideoPlatform: 'tiktok',
+          reactionVideoId: OTHER_VIDEO_ID,
+          isPublished: true,
+        },
         TIKTOK_ID,
       ),
     ).toBe(false);
@@ -680,6 +700,7 @@ describe('YouTube comment snapshots', () => {
       reactionVideoId: OTHER_VIDEO_ID,
       originalVideoId: TIKTOK_ID,
       originalVideoPlatform: 'tiktok',
+      isPublished: true,
     });
 
     const unknown = await resolveStoredYouTubeComments({ videoId: VIDEO_ID, apiKey: API_KEY });
@@ -693,7 +714,26 @@ describe('YouTube comment snapshots', () => {
     ).toBe(false);
   });
 
-  it('calls YouTube once for a video id stored on a reaction', async () => {
+  it('does not call YouTube for a video id that exists only on a draft', async () => {
+    const fetchImpl = vi.fn();
+    vi.stubGlobal('fetch', fetchImpl);
+    adminState.adminDb = createFakeAdminDb();
+    seedReaction(adminState.adminDb, 'draft-remix', {
+      reactionVideoId: '',
+      originalVideoId: VIDEO_ID,
+      originalVideoPlatform: 'youtube',
+      isPublished: false,
+    });
+
+    const response = await resolveStoredYouTubeComments({ videoId: VIDEO_ID, apiKey: API_KEY });
+
+    expect(response.headers['x-youtube-comment-cache']).toBe('skip');
+    expect(response.body.status).toBe('empty');
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(await reactionGrantsStoredComments(adminState.adminDb, VIDEO_ID)).toBe(false);
+  });
+
+  it('calls YouTube once for a video id stored on a published reaction', async () => {
     const fetchImpl = vi.fn(async (url) => {
       expect(String(url)).toContain(`videoId=${VIDEO_ID}`);
       expect(String(url)).toContain(`key=${API_KEY}`);
@@ -707,10 +747,17 @@ describe('YouTube comment snapshots', () => {
     });
     vi.stubGlobal('fetch', fetchImpl);
     adminState.adminDb = createFakeAdminDb();
+    seedReaction(adminState.adminDb, 'draft-reaction', {
+      reactionVideoId: OTHER_VIDEO_ID,
+      originalVideoId: VIDEO_ID,
+      originalVideoPlatform: 'youtube',
+      isPublished: false,
+    });
     seedReaction(adminState.adminDb, 'known-reaction', {
       reactionVideoId: OTHER_VIDEO_ID,
       originalVideoId: VIDEO_ID,
       originalVideoPlatform: 'youtube',
+      isPublished: true,
     });
 
     const miss = await resolveStoredYouTubeComments({ videoId: VIDEO_ID, apiKey: API_KEY });

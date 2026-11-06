@@ -34,15 +34,16 @@ export function commentSnapshotTtlMs(outcome) {
 }
 
 /**
- * A reaction grants one comment lookup for its YouTube reaction video.
+ * A published reaction grants one comment lookup for its YouTube reaction video.
  * An original id grants a lookup only when that original is YouTube.
  * A missing platform stays YouTube, matching the reaction schema.
+ * Drafts do not grant a lookup.
  *
  * @param {Record<string, unknown> | null | undefined} reaction
  * @param {string} videoId
  */
 export function reactionGrantsCommentLookup(reaction, videoId) {
-  if (!reaction || typeof reaction !== 'object') return false;
+  if (!reaction || typeof reaction !== 'object' || reaction.isPublished !== true) return false;
   if (reaction.reactionVideoId === videoId) return true;
   if (reaction.originalVideoId !== videoId) return false;
   return normalizeOriginalVideoPlatform(reaction.originalVideoPlatform) === ORIGINAL_VIDEO_PLATFORMS.YOUTUBE;
