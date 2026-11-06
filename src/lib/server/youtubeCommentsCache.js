@@ -124,8 +124,8 @@ export async function reactionGrantsStoredComments(
 ) {
   const collection = adminDb.collection(collectionName);
   const [byReaction, byOriginal] = await Promise.all([
-    collection.where('reactionVideoId', '==', videoId).limit(1).get(),
-    collection.where('originalVideoId', '==', videoId).limit(1).get(),
+    collection.where('reactionVideoId', '==', videoId).where('isPublished', '==', true).limit(1).get(),
+    collection.where('originalVideoId', '==', videoId).where('isPublished', '==', true).limit(1).get(),
   ]);
   return [...byReaction.docs, ...byOriginal.docs].some((entry) =>
     reactionGrantsCommentLookup(entry.data(), videoId),

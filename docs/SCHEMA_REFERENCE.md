@@ -245,9 +245,9 @@ The manifest document id is the YouTube playlist id. Pages live in the `pages` s
 
 Server-only preview of YouTube's top comments, keyed by YouTube video id. `GET /api/youtube/comments/[videoId]` reads it before calling the YouTube Data API. Client Firestore rules deny every read and write. The Admin SDK is the only reader and writer. The browser never queries this collection. It calls the comments route.
 
-The route calls `commentThreads.list` only when the video id is already `reactionVideoId` on a reaction, or `originalVideoId` on a reaction whose original platform is YouTube. Any other id returns an empty preview and is not stored. A missing `originalVideoPlatform` counts as YouTube.
+The route calls `commentThreads.list` only when the video id is already `reactionVideoId` on a published reaction, or `originalVideoId` on a published reaction whose original platform is YouTube. `isPublished` must be `true`. A draft returns an empty preview and is not stored. A missing `originalVideoPlatform` counts as YouTube.
 
-A fresh `ok` snapshot lasts one day. `empty` and `commentsDisabled` last seven days. `error` lasts ten minutes. Expiry is `expiresAt`. Nothing refreshes the document on a timer. The next request after `expiresAt` fetches YouTube again when the id is still on a reaction.
+A fresh `ok` snapshot lasts one day. `empty` and `commentsDisabled` last seven days. `error` lasts ten minutes. Expiry is `expiresAt`. Nothing refreshes the document on a timer. The next request after `expiresAt` fetches YouTube again when the id is still on a published reaction.
 
 The document id is the YouTube video id.
 
@@ -597,6 +597,7 @@ const docRef = await addDoc(collection(db, 'reactions'), {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.19 | 2026-11-06 | Comment lookups call YouTube only when a published reaction already has that video id. Drafts return an empty preview and are not stored |
 | 1.18 | 2026-11-06 | Added server-only `youtubeCommentCache`. The public comments route reads one snapshot per video id and calls `commentThreads.list` only for a reaction video whose snapshot is missing or stale |
 | 1.17 | 2026-11-05 | TikTok `originalVideoUrl` and `originalVideoAuthorUrl` are canonical `https://www.tiktok.com/...` addresses built from the handle and video id. A stored string is not opened unless it parses as that shape |
 | 1.16 | 2026-11-05 | Owning account can delete `sessionViewerOwners/{sessionId}/{slotId}` after the shared session is removed. Creating a claim still requires the session |
