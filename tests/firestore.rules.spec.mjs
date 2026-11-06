@@ -507,6 +507,15 @@ test('logged out users cannot read userData_local', async () => {
   await assertFails(getDoc(doc(anonDb(), 'userData_local', ownerId)));
 });
 
+test('clients cannot read or write the youtube comment cache', async () => {
+  const videoId = 'abcdefghijk';
+  await assertFails(getDoc(doc(anonDb(), 'youtubeCommentCache_local', videoId)));
+  await assertFails(setDoc(doc(anonDb(), 'youtubeCommentCache_local', videoId), { videoId }));
+  await assertFails(getDoc(doc(ownerDb(), 'youtubeCommentCache', videoId)));
+  await assertFails(setDoc(doc(adminDb(), 'youtubeCommentCache_local', videoId), { videoId, comments: [] }));
+  await assertFails(setDoc(doc(ownerDb(), 'youtubeCommentCache-prod', videoId), { status: 'ready' }));
+});
+
 test('clients cannot read or write the youtube playlist cache', async () => {
   const playlistId = 'PL1234567890ab';
   await assertFails(getDoc(doc(anonDb(), 'youtubePlaylistCache_local', playlistId)));
