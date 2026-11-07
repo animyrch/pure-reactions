@@ -141,7 +141,7 @@ const requestTikTokOEmbed = async ({ videoId, videoUrl }) => {
   }
 };
 
-export const fetchTikTokOriginalVideoMetadata = async ({ videoId, videoUrl } = {}) => {
+export const fetchTikTokOriginalVideoMetadata = async ({ videoId, videoUrl, beforeUpstream } = {}) => {
   const normalizedVideoId = trimString(videoId);
   const resolvedUrl = resolveTikTokWatchUrl({
     videoId: normalizedVideoId,
@@ -152,7 +152,10 @@ export const fetchTikTokOriginalVideoMetadata = async ({ videoId, videoUrl } = {
     return emptyTikTokMetadata(normalizedVideoId, resolvedUrl);
   }
 
-  const live = () => requestTikTokOEmbed({ videoId: normalizedVideoId, videoUrl: resolvedUrl });
+  const live = async () => {
+    if (beforeUpstream) await beforeUpstream();
+    return requestTikTokOEmbed({ videoId: normalizedVideoId, videoUrl: resolvedUrl });
+  };
 
   try {
     const { adminDb } = await initializeFirebaseAdmin();
@@ -174,7 +177,9 @@ export const fetchTikTokOriginalVideoMetadata = async ({ videoId, videoUrl } = {
       cached.cache,
     );
   } catch (error) {
-    if (error instanceof TikTokOEmbedError || error?.name === 'TikTokOEmbedError') throw error;
+    if (error instanceof TikTokOEmbedError || error?.name === 'TikTokOEmbedError' || error?.rateLimitResponse) {
+      throw error;
+    }
     console.error('TikTok metadata cache failed', error);
     const fetched = await live();
     return packTikTokMetadata(fetched.meta, normalizedVideoId, resolvedUrl, 'bypass');
@@ -185,11 +190,12 @@ export const fetchOriginalVideoMetadataForPlatform = async ({
   platform,
   videoId,
   videoUrl,
+  beforeUpstream,
 } = {}) => {
   const normalizedPlatform = normalizeOriginalVideoPlatform(platform);
 
   if (normalizedPlatform === ORIGINAL_VIDEO_PLATFORMS.TIKTOK) {
-    return fetchTikTokOriginalVideoMetadata({ videoId, videoUrl });
+    return fetchTikTokOriginalVideoMetadata({ videoId, videoUrl, beforeUpstream });
   }
 
   return {

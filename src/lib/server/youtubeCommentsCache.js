@@ -175,7 +175,7 @@ function unavailableResponse() {
   };
 }
 
-export async function resolveStoredYouTubeComments({ videoId, apiKey }) {
+export async function resolveStoredYouTubeComments({ videoId, apiKey, beforeUpstream } = {}) {
   const { adminDb } = await initializeFirebaseAdmin();
   if (!adminDb) {
     logCacheBypass();
@@ -187,10 +187,14 @@ export async function resolveStoredYouTubeComments({ videoId, apiKey }) {
       videoId,
       store: createFirestoreYouTubeCommentCacheStore(adminDb),
       isKnownVideo: (id) => reactionGrantsStoredComments(adminDb, id),
-      fetchComments: (id) => fetchYouTubeCommentThread({ apiKey, videoId: id }),
+      fetchComments: async (id) => {
+        if (beforeUpstream) await beforeUpstream();
+        return fetchYouTubeCommentThread({ apiKey, videoId: id });
+      },
       inflight,
     });
   } catch (error) {
+    if (error?.rateLimitResponse) throw error;
     const message = error instanceof Error ? error.message : String(error);
     console.error(
       'YouTube comment cache failed',
