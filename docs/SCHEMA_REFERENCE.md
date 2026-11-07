@@ -303,6 +303,25 @@ The document id is the TikTok video id.
 
 ---
 
+### `rateLimits` (COLLECTION_RATE_LIMITS)
+
+Server-only fixed-window counters for expensive routes. Client Firestore rules deny every read and write. The Admin SDK is the only reader and writer. The browser never queries this collection.
+
+A public route counts the visitor address. A signed-in route counts the Firebase user id. The stored document id is the route bucket plus a hash, so the raw address is not stored. One document is reused for that caller and route. When the window changes, the count starts again.
+
+A saved YouTube or TikTok answer does not count. The route spends an allowance only when it is about to call YouTube or TikTok. Signed-in delete, enrich, and age-confirmation calls count after the login token is valid. Account deletion removes those four counters for that user id. Visitor counters are not tied to an account and are left in place.
+
+If the counter cannot be read, the request continues. A caller over the allowance receives HTTP 429.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `bucket` | string | Yes | Route name, such as `youtube-comments` |
+| `count` | number | Yes | Calls already allowed in the current window |
+| `windowStart` | number | Yes | Epoch milliseconds when this window began |
+| `updatedAt` | number | Yes | Epoch milliseconds of the latest allowed call |
+
+---
+
 ### `queues` (COLLECTION_QUEUES)
 
 Temporary playback queues for sequential viewing.
@@ -621,6 +640,7 @@ const docRef = await addDoc(collection(db, 'reactions'), {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.20 | 2026-11-07 | Added server-only `rateLimits` (`COLLECTION_RATE_LIMITS`). Expensive routes share one counter with a per-route allowance. Account deletion removes that user's counters |
 | 1.19 | 2026-11-06 | Comment lookups call YouTube only when a published reaction already has that video id. Drafts return an empty preview and are not stored |
 | 1.18 | 2026-11-06 | Added server-only `youtubeCommentCache`. The public comments route reads one snapshot per video id and calls `commentThreads.list` only for a reaction video whose snapshot is missing or stale |
 | 1.17 | 2026-11-05 | TikTok `originalVideoUrl` and `originalVideoAuthorUrl` are canonical `https://www.tiktok.com/...` addresses built from the handle and video id. A stored string is not opened unless it parses as that shape |

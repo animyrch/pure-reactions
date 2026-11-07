@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { COLLECTION_USER_DATA } from '$lib/constants/firebase';
 import { initializeFirebaseAdmin } from '$lib/server/firebaseAdmin';
+import { RATE_LIMITS, enforceRateLimit } from '$lib/server/rateLimit';
 
 const isTimestamp = (value) => Boolean(value && typeof value.toDate === 'function');
 
@@ -28,6 +29,12 @@ export const POST = async ({ request }) => {
 	}
 
 	const userId = decodedToken.uid;
+
+	const limited = await enforceRateLimit({
+		id: userId,
+		...RATE_LIMITS.ageConfirmation,
+	});
+	if (limited) return limited;
 
 	const ref = adminDb.collection(COLLECTION_USER_DATA).doc(userId);
 	await adminDb.runTransaction(async (transaction) => {

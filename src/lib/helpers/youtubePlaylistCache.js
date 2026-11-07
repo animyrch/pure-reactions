@@ -304,6 +304,7 @@ async function loadPlaylistTitle({
       });
       return updated?.playlistTitle || '';
     } catch (error) {
+      if (error?.rateLimitResponse) throw error;
       console.error('Failed to fetch playlist metadata', error);
       return '';
     }
@@ -411,6 +412,7 @@ export async function prepareYouTubePlaylistResponse({
       headers: result.headers,
     };
   } catch (error) {
+    if (error?.rateLimitResponse) throw error;
     console.error('Error fetching playlist videos', error);
     const status =
       error instanceof YouTubePlaylistRequestError && error.status >= 400 && error.status <= 599

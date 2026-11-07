@@ -241,8 +241,13 @@ export async function resolveStoredYouTubePlaylist({
   includePlaylistTitle = false,
   maxResults,
   apiKey,
+  beforeUpstream,
 }) {
   const { adminDb } = await initializeFirebaseAdmin();
+  const guard = async (run) => {
+    if (beforeUpstream) await beforeUpstream();
+    return run();
+  };
   const request = {
     playlistId,
     pageToken,
@@ -250,8 +255,8 @@ export async function resolveStoredYouTubePlaylist({
     maxResults,
     inflight,
     fetchPlaylistPage: ({ playlistId: id, pageToken: token }) =>
-      fetchYouTubePlaylistPage({ apiKey, playlistId: id, pageToken: token }),
-    fetchPlaylistTitle: (id) => fetchYouTubePlaylistTitle({ apiKey, playlistId: id }),
+      guard(() => fetchYouTubePlaylistPage({ apiKey, playlistId: id, pageToken: token })),
+    fetchPlaylistTitle: (id) => guard(() => fetchYouTubePlaylistTitle({ apiKey, playlistId: id })),
   };
 
   if (!adminDb) {
@@ -267,7 +272,7 @@ export async function resolveStoredYouTubePlaylist({
       store: createFirestoreYouTubePlaylistCacheStore(adminDb),
     });
   } catch (error) {
-    if (error instanceof YouTubePlaylistRequestError) throw error;
+    if (error instanceof YouTubePlaylistRequestError || error?.rateLimitResponse) throw error;
     console.error('YouTube playlist cache failed. Loading the page from YouTube.', error);
     return resolveCachedYouTubePlaylist({
       ...request,

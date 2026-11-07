@@ -32,6 +32,10 @@ export const COLLECTION_TIKTOK_METADATA_CACHE = readCollectionName(
     env.PUBLIC_FIREBASE_COLLECTION_TIKTOK_METADATA_CACHE,
     'tiktokMetadataCache_local',
 );
+export const COLLECTION_RATE_LIMITS = readCollectionName(
+    env.PUBLIC_FIREBASE_COLLECTION_RATE_LIMITS,
+    'rateLimits_local',
+);
 let parsedConfig = {};
 try {
     parsedConfig = env.PUBLIC_FIREBASE_CONFIG ? JSON.parse(env.PUBLIC_FIREBASE_CONFIG) : {};

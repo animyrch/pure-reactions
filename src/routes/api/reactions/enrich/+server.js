@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { COLLECTION_REACTION_BINOMES } from '$lib/constants/firebase';
 import { initializeFirebaseAdmin } from '$lib/server/firebaseAdmin';
+import { RATE_LIMITS, enforceRateLimit } from '$lib/server/rateLimit';
 import { enrichReactionDocument } from '$lib/server/reactionEnrichment';
 
 const reactionIdFromBody = (body) => {
@@ -40,6 +41,12 @@ export const POST = async ({ request }) => {
     if (!reactionId) {
       return json({ error: 'reactionId is required' }, { status: 400 });
     }
+
+    const limited = await enforceRateLimit({
+      id: userId,
+      ...RATE_LIMITS.reactionEnrich,
+    });
+    if (limited) return limited;
 
     const result = await enrichReactionDocument({
       adminDb,

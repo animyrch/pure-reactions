@@ -2,6 +2,7 @@
 import { json } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import { prepareYouTubePlaylistResponse } from '$lib/helpers/youtubePlaylistCache';
+import { RATE_LIMITS, consumeRateLimit } from '$lib/server/rateLimit';
 import { resolveStoredYouTubePlaylist } from '$lib/server/youtubePlaylistCache';
 
 /**
@@ -57,20 +58,33 @@ const PLACEHOLDER_PLAYLIST_ITEMS = [
   },
 ];
 
-export const GET = async ({ params, url }) => {
-  const prepared = await prepareYouTubePlaylistResponse({
-    playlistId: params.id,
-    pageToken: url.searchParams.get('pageToken') || '',
-    includePlaylistTitle: url.searchParams.get('includePlaylistTitle') === '1',
-    maxResults: url.searchParams.get('maxResults'),
-    offset: url.searchParams.get('offset'),
-    apiKey: env.YOUTUBE_API_KEY || '',
-    placeholderItems: PLACEHOLDER_PLAYLIST_ITEMS,
-    resolve: resolveStoredYouTubePlaylist,
-  });
+export const GET = async ({ params, url, request }) => {
+  try {
+    const prepared = await prepareYouTubePlaylistResponse({
+      playlistId: params.id,
+      pageToken: url.searchParams.get('pageToken') || '',
+      includePlaylistTitle: url.searchParams.get('includePlaylistTitle') === '1',
+      maxResults: url.searchParams.get('maxResults'),
+      offset: url.searchParams.get('offset'),
+      apiKey: env.YOUTUBE_API_KEY || '',
+      placeholderItems: PLACEHOLDER_PLAYLIST_ITEMS,
+      resolve: (input) =>
+        resolveStoredYouTubePlaylist({
+          ...input,
+          beforeUpstream: () =>
+            consumeRateLimit({
+              headers: request.headers,
+              ...RATE_LIMITS.youtubePlaylist,
+            }),
+        }),
+    });
 
-  return json(prepared.body, {
-    status: prepared.status,
-    headers: prepared.headers,
-  });
+    return json(prepared.body, {
+      status: prepared.status,
+      headers: prepared.headers,
+    });
+  } catch (error) {
+    if (error?.rateLimitResponse) return error.rateLimitResponse;
+    throw error;
+  }
 };

@@ -523,6 +523,21 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Route rate-limit counters. The Admin SDK bypasses these rules.
+    // Client SDKs, including a signed-in admin claim, cannot read or write them.
+    match /rateLimits/{id} {
+      allow read, write: if false;
+    }
+    match /rateLimits_local/{id} {
+      allow read, write: if false;
+    }
+    match /rateLimits-local/{id} {
+      allow read, write: if false;
+    }
+    match /rateLimits-prod/{id} {
+      allow read, write: if false;
+    }
+
     // Default deny
     match /{document=**} {
       allow read, write: if false;

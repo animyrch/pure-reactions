@@ -525,6 +525,15 @@ test('clients cannot read or write the tiktok metadata cache', async () => {
   await assertFails(setDoc(doc(ownerDb(), 'tiktokMetadataCache-prod', videoId), { status: 'ready' }));
 });
 
+test('clients cannot read or write rate limit counters', async () => {
+  const id = 'original-video-metadata_abc';
+  await assertFails(getDoc(doc(anonDb(), 'rateLimits_local', id)));
+  await assertFails(setDoc(doc(anonDb(), 'rateLimits_local', id), { count: 1 }));
+  await assertFails(getDoc(doc(ownerDb(), 'rateLimits', id)));
+  await assertFails(setDoc(doc(adminDb(), 'rateLimits_local', id), { count: 99 }));
+  await assertFails(setDoc(doc(ownerDb(), 'rateLimits-prod', id), { count: 1 }));
+});
+
 test('clients cannot read or write the youtube playlist cache', async () => {
   const playlistId = 'PL1234567890ab';
   await assertFails(getDoc(doc(anonDb(), 'youtubePlaylistCache_local', playlistId)));
