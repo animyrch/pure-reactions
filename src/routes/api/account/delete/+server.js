@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import { initializeFirebaseAdmin } from '$lib/server/firebaseAdmin';
 import { deleteAccountData } from '$lib/server/deleteAccountData';
+import { RATE_LIMITS, enforceRateLimit } from '$lib/server/rateLimit';
 
 const RECENT_AUTH_THRESHOLD_SECONDS = 5 * 60;
 
@@ -67,6 +68,12 @@ export const POST = async ({ request }) => {
 		}
 
 		const userId = decodedToken.uid;
+
+		const limited = await enforceRateLimit({
+			id: userId,
+			...RATE_LIMITS.accountDelete,
+		});
+		if (limited) return limited;
 
 		try {
 			const {
