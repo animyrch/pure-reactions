@@ -73,6 +73,13 @@ export function rateLimitDocumentId(bucket, id) {
   return `${bucket}_${digest}`;
 }
 
+export const USER_RATE_LIMIT_BUCKETS = [
+  RATE_LIMITS.reactionEnrich.bucket,
+  RATE_LIMITS.contentDelete.bucket,
+  RATE_LIMITS.accountDelete.bucket,
+  RATE_LIMITS.ageConfirmation.bucket,
+];
+
 export function createFirestoreRateLimitStore(adminDb, collectionName = COLLECTION_RATE_LIMITS) {
   return {
     async consume({ bucket, id, limit, windowMs, now }) {
@@ -96,7 +103,23 @@ export function createFirestoreRateLimitStore(adminDb, collectionName = COLLECTI
         return decision;
       });
     },
+    async deleteForUser(userId) {
+      if (!userId) return 0;
+      const batch = adminDb.batch();
+      for (const bucket of USER_RATE_LIMIT_BUCKETS) {
+        batch.delete(adminDb.collection(collectionName).doc(rateLimitDocumentId(bucket, userId)));
+      }
+      await batch.commit();
+      return USER_RATE_LIMIT_BUCKETS.length;
+    },
   };
+}
+
+export async function deleteUserRateLimits({ adminDb, userId, store } = {}) {
+  if (!userId) return 0;
+  const activeStore = store || (adminDb ? createFirestoreRateLimitStore(adminDb) : null);
+  if (!activeStore) return 0;
+  return activeStore.deleteForUser(userId);
 }
 
 function blockedResponse(retryAfterSeconds) {

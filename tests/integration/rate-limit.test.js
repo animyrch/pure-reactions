@@ -8,8 +8,10 @@ import {
 } from '$lib/helpers/rateLimit';
 import {
   RATE_LIMITS,
+  USER_RATE_LIMIT_BUCKETS,
   consumeRateLimit,
   createFirestoreRateLimitStore,
+  deleteUserRateLimits,
   enforceRateLimit,
   rateLimitDocumentId,
 } from '$lib/server/rateLimit';
@@ -40,6 +42,17 @@ function createFakeAdminDb() {
       return {
         doc(id) {
           return makeRef(`${name}/${id}`);
+        },
+      };
+    },
+    batch() {
+      const paths = [];
+      return {
+        delete(ref) {
+          paths.push(ref.path);
+        },
+        async commit() {
+          for (const path of paths) docs.delete(path);
         },
       };
     },
@@ -160,6 +173,35 @@ describe('firestore counter', () => {
       store,
     });
     expect(allowed).toBeNull();
+  });
+
+  it('removes only that user\'s signed-in counters', async () => {
+    const adminDb = createFakeAdminDb();
+    const store = createFirestoreRateLimitStore(adminDb, 'rateLimits_local');
+    const now = 1;
+    await enforceRateLimit({ ...RATE_LIMITS.accountDelete, id: 'user-a', store, now });
+    await enforceRateLimit({ ...RATE_LIMITS.contentDelete, id: 'user-a', store, now });
+    await enforceRateLimit({ ...RATE_LIMITS.accountDelete, id: 'user-b', store, now });
+    await enforceRateLimit({
+      ...RATE_LIMITS.originalVideoMetadata,
+      headers: new Headers({ 'x-nf-client-connection-ip': '198.51.100.20' }),
+      store,
+      now,
+    });
+
+    expect(await deleteUserRateLimits({ store, userId: 'user-a' })).toBe(USER_RATE_LIMIT_BUCKETS.length);
+
+    for (const bucket of USER_RATE_LIMIT_BUCKETS) {
+      expect(adminDb.docs.has(`rateLimits_local/${rateLimitDocumentId(bucket, 'user-a')}`)).toBe(false);
+    }
+    expect(
+      adminDb.docs.has(`rateLimits_local/${rateLimitDocumentId(RATE_LIMITS.accountDelete.bucket, 'user-b')}`),
+    ).toBe(true);
+    expect(
+      adminDb.docs.has(
+        `rateLimits_local/${rateLimitDocumentId(RATE_LIMITS.originalVideoMetadata.bucket, '198.51.100.20')}`,
+      ),
+    ).toBe(true);
   });
 
   it('throws the 429 response for an upstream hook once the limit is spent', async () => {

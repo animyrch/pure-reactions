@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import { initializeFirebaseAdmin } from '$lib/server/firebaseAdmin';
 import { deleteAccountData } from '$lib/server/deleteAccountData';
-import { RATE_LIMITS, enforceRateLimit } from '$lib/server/rateLimit';
+import { RATE_LIMITS, deleteUserRateLimits, enforceRateLimit } from '$lib/server/rateLimit';
 
 const RECENT_AUTH_THRESHOLD_SECONDS = 5 * 60;
 
@@ -99,6 +99,7 @@ export const POST = async ({ request }) => {
 				}
 			});
 			await deleteSearchRecords(reactionIds);
+			await deleteUserRateLimits({ adminDb, userId });
 			console.log(`Deleted ${deleted} documents for user ${userId}`);
 
 			// Revoke all refresh tokens (invalidate all sessions)
