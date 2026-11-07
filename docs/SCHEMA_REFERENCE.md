@@ -303,6 +303,25 @@ The document id is the TikTok video id.
 
 ---
 
+### `rateLimits` (COLLECTION_RATE_LIMITS)
+
+Server-only fixed-window counters for expensive routes. Client Firestore rules deny every read and write. The Admin SDK is the only reader and writer. The browser never queries this collection.
+
+A public route counts the visitor address. A signed-in route counts the Firebase user id. The stored document id is the route bucket plus a hash, so the raw address is not stored. One document is reused for that caller and route. When the window changes, the count starts again.
+
+A saved YouTube or TikTok answer does not count. The route spends an allowance only when it is about to call YouTube or TikTok. Signed-in delete, enrich, and age-confirmation calls count after the login token is valid.
+
+If the counter cannot be read, the request continues. A caller over the allowance receives HTTP 429.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `bucket` | string | Yes | Route name, such as `youtube-comments` |
+| `count` | number | Yes | Calls already allowed in the current window |
+| `windowStart` | number | Yes | Epoch milliseconds when this window began |
+| `updatedAt` | number | Yes | Epoch milliseconds of the latest allowed call |
+
+---
+
 ### `queues` (COLLECTION_QUEUES)
 
 Temporary playback queues for sequential viewing.
