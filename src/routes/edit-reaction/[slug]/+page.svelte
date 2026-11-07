@@ -407,6 +407,7 @@
       <CreatorDetails
         originalVideoAuthor={$state.originalVideoAuthor}
         originalVideoAuthorUrl={$state.originalVideoAuthorUrl}
+        originalVideoAuthorHandle={$state.originalVideoAuthorHandle}
         originalVideoTitle={$state.originalVideoTitle}
         originalVideoId={$state.originalVideoId}
         originalVideoUrl={$state.originalVideoUrl}

@@ -20,6 +20,18 @@ const DEFAULT_YOUTUBE_CHANNEL_VERIFICATIONS = COLLECTION_YOUTUBE_CHANNEL_CLAIMS
     : 'youtubeChannelVerifications_local';
 export const COLLECTION_YOUTUBE_CHANNEL_VERIFICATIONS =
     readCollectionName(env.PUBLIC_FIREBASE_COLLECTION_YOUTUBE_CHANNEL_VERIFICATIONS, DEFAULT_YOUTUBE_CHANNEL_VERIFICATIONS);
+export const COLLECTION_YOUTUBE_PLAYLIST_CACHE = readCollectionName(
+    env.PUBLIC_FIREBASE_COLLECTION_YOUTUBE_PLAYLIST_CACHE,
+    'youtubePlaylistCache_local',
+);
+export const COLLECTION_YOUTUBE_COMMENT_CACHE = readCollectionName(
+    env.PUBLIC_FIREBASE_COLLECTION_YOUTUBE_COMMENT_CACHE,
+    'youtubeCommentCache_local',
+);
+export const COLLECTION_TIKTOK_METADATA_CACHE = readCollectionName(
+    env.PUBLIC_FIREBASE_COLLECTION_TIKTOK_METADATA_CACHE,
+    'tiktokMetadataCache_local',
+);
 let parsedConfig = {};
 try {
     parsedConfig = env.PUBLIC_FIREBASE_CONFIG ? JSON.parse(env.PUBLIC_FIREBASE_CONFIG) : {};

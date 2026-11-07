@@ -6,7 +6,7 @@ Read-only mirroring of YouTube top-level comments on reaction pages.
 
 Reaction pages can display a read-only "Discussion on YouTube" section for the reaction video, the original video, or both — depending on what is available on YouTube.
 
-**Key principle:** Pure Reactions never hosts, stores, or moderates these comments. The feature is an honest preview with outbound links so users can continue the conversation on YouTube.
+**Key principle:** Pure Reactions does not run a comment system. It keeps a short-lived server-side preview of YouTube's top comments and links out to YouTube. Visitors cannot post, like, reply, or moderate here.
 
 ## Scope & Limits
 
@@ -16,7 +16,7 @@ Reaction pages can display a read-only "Discussion on YouTube" section for the r
 | Ordering | YouTube relevance (not configurable) |
 | Replies | Not fetched or rendered inline |
 | In-site engagement | None — no upvote, like, reply, or comment creation inside Pure Reactions |
-| Caching | Set by `CACHE_CONTROL_HEADER` in `src/routes/api/youtube/comments/[videoId]/+server.js` |
+| Caching | Server-only `youtubeCommentCache` snapshot, then `Cache-Control: public, s-maxage=86400, stale-while-revalidate=2592000` on a successful preview |
 | SSR | Comments are **not** server-side rendered (client-side only) |
 
 ## Architecture
@@ -33,11 +33,12 @@ Browser (reaction page)
 
 `src/routes/api/youtube/comments/[videoId]/+server.js`
 
-- Calls YouTube `commentThreads` API with `part=snippet`, `order=relevance`, `maxResults=10`, `textFormat=plainText`.
-- Normalizes the response into the UI-ready shape.
-- Never exposes the YouTube API key to the browser.
+- Reads one `youtubeCommentCache` document for the video id.
+- Calls YouTube `commentThreads` with `part=snippet`, `order=relevance`, `maxResults=10`, `textFormat=plainText` only when that id is already on a published reaction and the snapshot is missing or stale.
+- Normalizes the response into the UI-ready shape and stores at most ten plain-text comments.
+- Never exposes the YouTube API key, and never returns the YouTube error body.
 - Returns structured `status` field: `ok`, `empty`, `commentsDisabled`, or `error`.
-- Applies cache-control headers for CDN/edge caching via `CACHE_CONTROL_HEADER`.
+- Applies `Cache-Control: public, s-maxage=86400, stale-while-revalidate=2592000` to a successful preview so the CDN can skip the function. Error and unknown-id responses use `no-store`.
 
 ### Client helper
 
@@ -93,20 +94,17 @@ All links open in a new tab with `rel="noopener noreferrer"`.
 
 ## Caching Strategy
 
-The server endpoint returns:
+Quota is spent once per distinct catalog video, not once per visitor.
 
-```
-Cache-Control: public, s-maxage=86400, stale-while-revalidate=2592000
-```
+1. The CDN may reuse a successful response for one day (`s-maxage=86400`) and refresh it in the background for 30 days.
+2. On a CDN miss, the route reads `youtubeCommentCache/{videoId}`.
+3. A fresh snapshot is returned as-is. `ok` stays fresh for one day. `empty` and `commentsDisabled` stay fresh for seven days. `error` stays fresh for ten minutes and is not cached by the CDN.
+4. A missing or stale snapshot calls YouTube only if a published reaction already has that id as `reactionVideoId`, or as `originalVideoId` with a YouTube original. One lock is held so concurrent misses share one YouTube call.
+5. An id that is not on a published reaction, including a draft, returns an empty preview, does not call YouTube, and is not written.
 
-- 1 day fresh cache at CDN/edge
-- 30 days stale reuse during background refresh
-- No browser-to-YouTube direct calls
-- No persistent storage of comments
+The collection is denied to every client SDK. The Admin SDK on the server bypasses Firestore security rules, which is why the route can still read and write it. The browser only calls `/api/youtube/comments/{videoId}`.
 
-### Future upgrade path
-
-If quota or latency becomes an issue, add a short-lived cache in Firestore or KV store keyed by `videoId`.
+Without `YOUTUBE_API_KEY`, the route returns placeholder comments and does not touch Firestore. Without Firebase Admin, it returns an empty preview and does not call YouTube.
 
 ## Accessibility
 

@@ -1,6 +1,8 @@
 // Default deny; every new collection must be explicitly added here.
 // Test checklist (run after every rules change):
 // - Logged out read (public collections only)
+// - Verified owner create and publish
+// - Unverified owner create and publish denied
 // - Logged in owner write
 // - Non-owner write denied
 // - Claims get (owner/admin)
@@ -14,6 +16,12 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Email verification is a Firebase Auth claim. Anonymous sessions do not have it.
+    // Age confirmation stays independent: the verify page does not read ageConfirmedAt.
+    function hasVerifiedEmail() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
     function isAdmin() {
       return isSignedIn() && request.auth.token.admin == true;
     }
@@ -23,7 +31,7 @@ service cloud.firestore {
     }
 
     function isReactionOwnerCreate() {
-      return isSignedIn() && request.resource.data.reactorId == request.auth.uid;
+      return hasVerifiedEmail() && request.resource.data.reactorId == request.auth.uid;
     }
 
     function reactionSensitiveKeys() {
@@ -77,7 +85,7 @@ service cloud.firestore {
     }
 
     function isPlaylistOwnerCreate() {
-      return isSignedIn() && request.resource.data.userId == request.auth.uid;
+      return hasVerifiedEmail() && request.resource.data.userId == request.auth.uid;
     }
 
     function isMomentOwner() {
@@ -85,7 +93,7 @@ service cloud.firestore {
     }
 
     function isMomentOwnerCreate() {
-      return isSignedIn() && request.resource.data.creatorId == request.auth.uid;
+      return hasVerifiedEmail() && request.resource.data.creatorId == request.auth.uid;
     }
 
     function isQueueOwner() {
@@ -93,7 +101,7 @@ service cloud.firestore {
     }
 
     function isQueueOwnerCreate() {
-      return isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      return hasVerifiedEmail() && request.resource.data.ownerId == request.auth.uid;
     }
 
     function userDoc(userCollection) {
@@ -119,7 +127,7 @@ service cloud.firestore {
     }
 
     function publicationAllowed(primary, secondary, tertiary) {
-      return !isPublishing() || hasAgeConfirmation(primary, secondary, tertiary);
+      return !isPublishing() || (hasVerifiedEmail() && hasAgeConfirmation(primary, secondary, tertiary));
     }
 
     function ageFieldUntouched() {
@@ -137,7 +145,7 @@ service cloud.firestore {
     }
 
     function isClaimOwnerCreate() {
-      return isSignedIn() && request.resource.data.userId == request.auth.uid;
+      return hasVerifiedEmail() && request.resource.data.userId == request.auth.uid;
     }
 
     function claimIdMatches(claimId, channelId, userId) {
@@ -456,6 +464,63 @@ service cloud.firestore {
       allow get: if true;
       allow list: if false;
       allow create, update, delete: if isAdmin();
+    }
+
+    // YouTube playlist catalog. Written by the Admin SDK only.
+    // A stored page is the response for every visitor until a reactor refresh replaces it.
+    match /youtubePlaylistCache/{playlistId} {
+      allow read, write: if false;
+      match /pages/{pageId} {
+        allow read, write: if false;
+      }
+    }
+    match /youtubePlaylistCache_local/{playlistId} {
+      allow read, write: if false;
+      match /pages/{pageId} {
+        allow read, write: if false;
+      }
+    }
+    match /youtubePlaylistCache-local/{playlistId} {
+      allow read, write: if false;
+      match /pages/{pageId} {
+        allow read, write: if false;
+      }
+    }
+    match /youtubePlaylistCache-prod/{playlistId} {
+      allow read, write: if false;
+      match /pages/{pageId} {
+        allow read, write: if false;
+      }
+    }
+
+    // YouTube comment previews. The Admin SDK bypasses these rules.
+    // Client SDKs, including a signed-in admin claim, cannot read or write them.
+    match /youtubeCommentCache/{videoId} {
+      allow read, write: if false;
+    }
+    match /youtubeCommentCache_local/{videoId} {
+      allow read, write: if false;
+    }
+    match /youtubeCommentCache-local/{videoId} {
+      allow read, write: if false;
+    }
+    match /youtubeCommentCache-prod/{videoId} {
+      allow read, write: if false;
+    }
+
+    // TikTok oEmbed answers. The Admin SDK bypasses these rules.
+    // Client SDKs, including a signed-in admin claim, cannot read or write them.
+    match /tiktokMetadataCache/{videoId} {
+      allow read, write: if false;
+    }
+    match /tiktokMetadataCache_local/{videoId} {
+      allow read, write: if false;
+    }
+    match /tiktokMetadataCache-local/{videoId} {
+      allow read, write: if false;
+    }
+    match /tiktokMetadataCache-prod/{videoId} {
+      allow read, write: if false;
     }
 
     // Default deny

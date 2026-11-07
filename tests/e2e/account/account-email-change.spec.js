@@ -29,13 +29,41 @@ async function authRequest(path, body) {
     return { ok: response.ok, status: response.status, payload };
 }
 
+async function verifyEmail(email) {
+    await expect(async () => {
+        const oobResponse = await fetch(`http://${AUTH_EMULATOR_HOST}/emulator/v1/projects/${AUTH_PROJECT}/oobCodes`);
+        expect(oobResponse.ok).toBe(true);
+        const oobBody = await oobResponse.json();
+        const confirmation = (oobBody.oobCodes || []).find((entry) => {
+            const requestType = entry.requestType || entry.request_type || '';
+            return requestType === 'VERIFY_EMAIL' && JSON.stringify(entry).includes(email);
+        });
+        expect(confirmation, JSON.stringify(oobBody)).toBeTruthy();
+        const applied = await authRequest('accounts:update', { oobCode: confirmation.oobCode });
+        expect(applied.ok, JSON.stringify(applied.payload)).toBe(true);
+    }).toPass({ timeout: 15000 });
+}
+
+async function openVerifiedAccountEdit(page, email) {
+    await signUp(page, email);
+    await verifyEmail(email);
+    await page.getByRole('button', { name: 'I’ve verified my account' }).first().click();
+    await expect(page).toHaveURL(/\/$/, { timeout: 20000 });
+    await page.goto('/account/edit');
+
+    const ageDialog = page.getByRole('dialog', { name: 'Confirm your age' });
+    await expect(ageDialog).toBeVisible();
+    await ageDialog.getByRole('checkbox', { name: 'I am 15 or older.' }).check();
+    await ageDialog.getByRole('button', { name: 'Confirm' }).click();
+    await expect(ageDialog).toHaveCount(0);
+}
+
 test('changing email sends a confirmation and keeps the current address until that link is opened', async ({ page }) => {
-    test.setTimeout(60000);
+    test.setTimeout(90000);
     const currentEmail = `email-current-${Date.now()}@example.com`;
     const nextEmail = `email-next-${Date.now()}@example.com`;
 
-    await signUp(page, currentEmail);
-    await page.goto('/account/edit');
+    await openVerifiedAccountEdit(page, currentEmail);
 
     const emailInput = page.getByLabel('New email');
     await expect(emailInput).toHaveValue(currentEmail, { timeout: 15000 });
@@ -109,13 +137,12 @@ test('changing email sends a confirmation and keeps the current address until th
 });
 
 test('a pending email can be corrected or canceled before the link is opened', async ({ page }) => {
-    test.setTimeout(60000);
+    test.setTimeout(90000);
     const currentEmail = `email-keep-${Date.now()}@example.com`;
     const wrongEmail = `email-wrong-${Date.now()}@example.com`;
     const correctedEmail = `email-fixed-${Date.now()}@example.com`;
 
-    await signUp(page, currentEmail);
-    await page.goto('/account/edit');
+    await openVerifiedAccountEdit(page, currentEmail);
 
     const emailInput = page.getByLabel('New email');
     await expect(emailInput).toHaveValue(currentEmail, { timeout: 15000 });

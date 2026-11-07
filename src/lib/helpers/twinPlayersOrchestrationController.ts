@@ -478,7 +478,8 @@ export function createTwinPlayersOrchestrationController({
       currentOriginalAuthorUrl: normalizedOriginalMetadata.authorUrl,
       currentOriginalDescription: normalizedOriginalMetadata.description,
       currentReactionTitle: reactionData?.reactionVideoTitle,
-      currentReactionAuthor: reactionData?.reactionVideoAuthor
+      currentReactionAuthor: reactionData?.reactionVideoAuthor,
+      reactorId: reactionData?.reactorId
     });
   };
 
@@ -862,7 +863,8 @@ export function createTwinPlayersOrchestrationController({
         currentOriginalAuthorUrl: normalizedOriginalMetadata.authorUrl,
         currentOriginalDescription: normalizedOriginalMetadata.description,
         currentReactionTitle: reactionData?.reactionVideoTitle,
-        currentReactionAuthor: reactionData?.reactionVideoAuthor
+        currentReactionAuthor: reactionData?.reactionVideoAuthor,
+        reactorId: reactionData?.reactorId
       });
     } finally {
       setSwitchingReactionInPlace(false);

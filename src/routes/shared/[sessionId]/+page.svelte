@@ -40,7 +40,7 @@
     let pendingVideoUpdate = null;
     let isConnected = false;
     let errorMessage = '';
-    let viewerId = null;
+    let viewerSlotId = null;
     let originalVideoTitle = '';
     let originalVideoAuthor = '';
     let isPlayerReady = false;
@@ -266,9 +266,8 @@
                 return;
             }
 
-            const viewerUser = await ensureViewerAuth();
-            viewerId = viewerUser.uid;
-            await joinSharedSession(sessionId, viewerId, 'Anonymous Viewer');
+            await ensureViewerAuth();
+            viewerSlotId = await joinSharedSession(sessionId);
 
             currentVideoId = sessionData.originalVideoId;
             await refreshVideoDetails(currentVideoId);
@@ -299,8 +298,8 @@
 
         try {
             clearAllControlTimeouts();
-            if (viewerId && sessionId) {
-                await leaveSharedSession(sessionId, viewerId);
+            if (viewerSlotId && sessionId) {
+                await leaveSharedSession(sessionId, viewerSlotId);
             }
         } catch (error) {
             console.error('Error leaving session:', error);
@@ -343,9 +342,9 @@
             reactionDial.setFullscreen(false);
         }
 
-        if (viewerId && sessionId) {
+        if (viewerSlotId && sessionId) {
             try {
-                await leaveSharedSession(sessionId, viewerId);
+                await leaveSharedSession(sessionId, viewerSlotId);
             } catch (error) {
                 console.error('Error leaving session:', error);
             }
@@ -602,7 +601,7 @@
                     <div class="mt-3 grid gap-3 sm:grid-cols-2">
                         <div class="space-y-1">
                             <p><span class="text-slate-500">Session ID:</span> {sessionId}</p>
-                            <p><span class="text-slate-500">Viewer ID:</span> {viewerId || 'Not set'}</p>
+                            <p><span class="text-slate-500">Viewer slot:</span> {viewerSlotId || 'Not set'}</p>
                             <p><span class="text-slate-500">Connected:</span> {isConnected ? 'Yes' : 'No'}</p>
                             <p><span class="text-slate-500">Player ready:</span> {isPlayerReady ? 'Yes' : 'No'}</p>
                         </div>
