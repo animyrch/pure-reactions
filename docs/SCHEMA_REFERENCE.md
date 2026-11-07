@@ -279,6 +279,30 @@ The route rebuilds each comment's outbound thread URL from `videoId` and `commen
 
 ---
 
+### `tiktokMetadataCache` (COLLECTION_TIKTOK_METADATA_CACHE)
+
+Server-only copy of a successful TikTok oEmbed answer, keyed by TikTok video id. `GET /api/original-video/metadata` reads it before calling `https://www.tiktok.com/oembed` when `platform` is `tiktok`. Client Firestore rules deny every read and write. The Admin SDK is the only reader and writer. The browser never queries this collection. It calls the metadata route.
+
+This lookup happens while a creator is still pasting a link, before a reaction exists, so it is not limited to published reactions. The watch URL is still checked first: only `https://www.tiktok.com/@handle/video/{id}` is sent to TikTok. A failed oEmbed response is not stored, and the upstream body is never written.
+
+A fresh `ok` snapshot lasts one day. Expiry is `expiresAt`. Nothing refreshes the document on a timer. The next request after `expiresAt` calls TikTok again. When Firebase Admin is not configured, the route calls TikTok directly and stores nothing.
+
+The document id is the TikTok video id.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `videoId` | string | Yes | TikTok video id. Matches the document id |
+| `status` | string | Yes | `pending` while a fetch holds the lock, then `ready` |
+| `outcome` | string | Yes on ready | `ok`. Failures are not stored |
+| `canonicalUrl` | string | Yes on ready | `https://www.tiktok.com/@handle/video/{id}` that was fetched |
+| `meta` | object | Yes on ready | The same filtered oEmbed fields stored on `originalTikTok.meta` |
+| `fetchedAt` | number | Yes on ready | Epoch milliseconds when TikTok was called |
+| `expiresAt` | number | Yes on ready | Epoch milliseconds when this answer stops being reused |
+| `lockedAt` | number | No | Epoch milliseconds of an in-flight fetch lock. `0` after the snapshot is ready |
+| `lockId` | string | No | Lock owner. Empty after the snapshot is ready |
+
+---
+
 ### `queues` (COLLECTION_QUEUES)
 
 Temporary playback queues for sequential viewing.
