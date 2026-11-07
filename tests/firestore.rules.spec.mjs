@@ -516,6 +516,15 @@ test('clients cannot read or write the youtube comment cache', async () => {
   await assertFails(setDoc(doc(ownerDb(), 'youtubeCommentCache-prod', videoId), { status: 'ready' }));
 });
 
+test('clients cannot read or write the tiktok metadata cache', async () => {
+  const videoId = '7056208472144235823';
+  await assertFails(getDoc(doc(anonDb(), 'tiktokMetadataCache_local', videoId)));
+  await assertFails(setDoc(doc(anonDb(), 'tiktokMetadataCache_local', videoId), { videoId }));
+  await assertFails(getDoc(doc(ownerDb(), 'tiktokMetadataCache', videoId)));
+  await assertFails(setDoc(doc(adminDb(), 'tiktokMetadataCache_local', videoId), { videoId, outcome: 'ok' }));
+  await assertFails(setDoc(doc(ownerDb(), 'tiktokMetadataCache-prod', videoId), { status: 'ready' }));
+});
+
 test('clients cannot read or write the youtube playlist cache', async () => {
   const playlistId = 'PL1234567890ab';
   await assertFails(getDoc(doc(anonDb(), 'youtubePlaylistCache_local', playlistId)));

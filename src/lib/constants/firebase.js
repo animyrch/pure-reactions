@@ -28,6 +28,10 @@ export const COLLECTION_YOUTUBE_COMMENT_CACHE = readCollectionName(
     env.PUBLIC_FIREBASE_COLLECTION_YOUTUBE_COMMENT_CACHE,
     'youtubeCommentCache_local',
 );
+export const COLLECTION_TIKTOK_METADATA_CACHE = readCollectionName(
+    env.PUBLIC_FIREBASE_COLLECTION_TIKTOK_METADATA_CACHE,
+    'tiktokMetadataCache_local',
+);
 let parsedConfig = {};
 try {
     parsedConfig = env.PUBLIC_FIREBASE_CONFIG ? JSON.parse(env.PUBLIC_FIREBASE_CONFIG) : {};

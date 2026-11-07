@@ -6,6 +6,8 @@ import {
   sanitizeTikTokHandle,
 } from '$lib/helpers/platform';
 import { normalizeOriginalVideoMetadata } from '$lib/helpers/originalVideo';
+import { initializeFirebaseAdmin } from '$lib/server/firebaseAdmin';
+import { resolveStoredTikTokMetadata } from '$lib/server/tiktokMetadataCache';
 
 const TIKTOK_OEMBED_URL = 'https://www.tiktok.com/oembed';
 const TIKTOK_TIMEOUT_MS = 8000;
@@ -30,6 +32,13 @@ const compactObject = (value) =>
       return true;
     }),
   );
+
+export class TikTokOEmbedError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'TikTokOEmbedError';
+  }
+}
 
 export const buildTikTokMetaFromOEmbed = (payload, { videoId, videoUrl } = {}) => {
   const normalizedVideoId = trimString(videoId);
@@ -64,26 +73,42 @@ export const buildTikTokMetaFromOEmbed = (payload, { videoId, videoUrl } = {}) =
   });
 };
 
-export const fetchTikTokOriginalVideoMetadata = async ({ videoId, videoUrl } = {}) => {
-  const normalizedVideoId = trimString(videoId);
-  const resolvedUrl = resolveTikTokWatchUrl({
-    videoId: normalizedVideoId,
+const emptyTikTokMetadata = (videoId, videoUrl) => ({
+  cache: 'skip',
+  meta: null,
+  metadata: normalizeOriginalVideoMetadata({
+    originalVideoPlatform: ORIGINAL_VIDEO_PLATFORMS.TIKTOK,
+    originalVideoId: videoId,
     originalVideoUrl: videoUrl,
-  }) || undefined;
+  }),
+});
 
-  if (!normalizedVideoId || !resolvedUrl) {
-    return {
-      meta: null,
-      metadata: normalizeOriginalVideoMetadata({
-        originalVideoPlatform: ORIGINAL_VIDEO_PLATFORMS.TIKTOK,
-        originalVideoId: normalizedVideoId,
-        originalVideoUrl: resolvedUrl,
-      }),
-    };
-  }
+const packTikTokMetadata = (meta, videoId, videoUrl, cache) => ({
+  cache,
+  meta,
+  metadata: normalizeOriginalVideoMetadata({
+    originalVideoPlatform: ORIGINAL_VIDEO_PLATFORMS.TIKTOK,
+    originalVideoId: videoId,
+    originalVideoUrl: videoUrl,
+    originalVideoTitle: meta?.title,
+    originalVideoAuthor: meta?.authorName,
+    originalVideoAuthorHandle: meta?.authorHandle,
+    originalVideoAuthorUrl: meta?.authorUrl,
+    originalVideoDescription: meta?.description,
+    originalVideoThumbnailUrl: meta?.thumbnail,
+    originalVideoThumbnailWidth: meta?.thumbnailWidth,
+    originalVideoThumbnailHeight: meta?.thumbnailHeight,
+    originalVideoProviderName: meta?.providerName,
+    originalVideoProviderUrl: meta?.providerUrl,
+    originalTikTok: {
+      meta,
+    },
+  }),
+});
 
+const requestTikTokOEmbed = async ({ videoId, videoUrl }) => {
   const requestUrl = new URL(TIKTOK_OEMBED_URL);
-  requestUrl.searchParams.set('url', resolvedUrl);
+  requestUrl.searchParams.set('url', videoUrl);
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), TIKTOK_TIMEOUT_MS);
@@ -98,38 +123,61 @@ export const fetchTikTokOriginalVideoMetadata = async ({ videoId, videoUrl } = {
 
     if (!response.ok) {
       const details = await response.text().catch(() => '');
-      throw new Error(`TikTok oEmbed request failed (${response.status}): ${details.slice(0, 200)}`);
+      throw new TikTokOEmbedError(
+        `TikTok oEmbed request failed (${response.status}): ${details.slice(0, 200)}`,
+      );
     }
 
     const payload = await response.json();
-    const meta = buildTikTokMetaFromOEmbed(payload, {
-      videoId: normalizedVideoId,
-      videoUrl: resolvedUrl,
-    });
-
     return {
-      meta,
-      metadata: normalizeOriginalVideoMetadata({
-        originalVideoPlatform: ORIGINAL_VIDEO_PLATFORMS.TIKTOK,
-        originalVideoId: normalizedVideoId,
-        originalVideoUrl: resolvedUrl,
-        originalVideoTitle: meta?.title,
-        originalVideoAuthor: meta?.authorName,
-        originalVideoAuthorHandle: meta?.authorHandle,
-        originalVideoAuthorUrl: meta?.authorUrl,
-        originalVideoDescription: meta?.description,
-        originalVideoThumbnailUrl: meta?.thumbnail,
-        originalVideoThumbnailWidth: meta?.thumbnailWidth,
-        originalVideoThumbnailHeight: meta?.thumbnailHeight,
-        originalVideoProviderName: meta?.providerName,
-        originalVideoProviderUrl: meta?.providerUrl,
-        originalTikTok: {
-          meta,
-        },
-      }),
+      meta: buildTikTokMetaFromOEmbed(payload, { videoId, videoUrl }),
     };
+  } catch (error) {
+    if (error instanceof TikTokOEmbedError) throw error;
+    const message = error instanceof Error ? error.message : String(error);
+    throw new TikTokOEmbedError(`TikTok oEmbed request failed: ${message}`);
   } finally {
     clearTimeout(timeout);
+  }
+};
+
+export const fetchTikTokOriginalVideoMetadata = async ({ videoId, videoUrl } = {}) => {
+  const normalizedVideoId = trimString(videoId);
+  const resolvedUrl = resolveTikTokWatchUrl({
+    videoId: normalizedVideoId,
+    originalVideoUrl: videoUrl,
+  }) || undefined;
+
+  if (!normalizedVideoId || !resolvedUrl) {
+    return emptyTikTokMetadata(normalizedVideoId, resolvedUrl);
+  }
+
+  const live = () => requestTikTokOEmbed({ videoId: normalizedVideoId, videoUrl: resolvedUrl });
+
+  try {
+    const { adminDb } = await initializeFirebaseAdmin();
+    if (!adminDb) {
+      const fetched = await live();
+      return packTikTokMetadata(fetched.meta, normalizedVideoId, resolvedUrl, 'bypass');
+    }
+
+    const cached = await resolveStoredTikTokMetadata({
+      adminDb,
+      videoId: normalizedVideoId,
+      canonicalUrl: resolvedUrl,
+      fetchMetadata: live,
+    });
+    return packTikTokMetadata(
+      cached.meta,
+      normalizedVideoId,
+      cached.canonicalUrl || resolvedUrl,
+      cached.cache,
+    );
+  } catch (error) {
+    if (error instanceof TikTokOEmbedError || error?.name === 'TikTokOEmbedError') throw error;
+    console.error('TikTok metadata cache failed', error);
+    const fetched = await live();
+    return packTikTokMetadata(fetched.meta, normalizedVideoId, resolvedUrl, 'bypass');
   }
 };
 

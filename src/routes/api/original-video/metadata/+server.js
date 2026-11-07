@@ -17,10 +17,15 @@ export const GET = async ({ url }) => {
       videoUrl: videoUrl.trim(),
     });
 
-    return json({
-      metadata: result.metadata,
-      rawMeta: result.meta,
-    });
+    const headers = result.cache ? { 'x-tiktok-metadata-cache': result.cache } : undefined;
+
+    return json(
+      {
+        metadata: result.metadata,
+        rawMeta: result.meta,
+      },
+      headers ? { headers } : undefined,
+    );
   } catch (error) {
     console.error('Failed to fetch original video metadata', error);
     return json(
