@@ -610,9 +610,17 @@ test('owner can add valid items to queue', async () => {
   );
 });
 
-test('user can read non-existent queue to check availability', async () => {
-  // upsertReactionIntoQueue does a getDoc first to see if it exists
-  await assertSucceeds(getDoc(doc(ownerDb(), 'queues', 'new-non-existent-queue')));
+test('a missing queue id is denied like a private queue', async () => {
+  await seedQueue('private-queue');
+  await assertFails(getDoc(doc(anonDb(), 'queues', 'missing-queue')));
+  await assertFails(getDoc(doc(ownerDb(), 'queues', 'missing-queue')));
+  await assertFails(getDoc(doc(otherDb(), 'queues', 'private-queue')));
+});
+
+test('owner can list their own queues', async () => {
+  await seedQueue('owner-queue');
+  const ownQueues = query(collection(ownerDb(), 'queues'), where('ownerId', '==', ownerId));
+  await assertSucceeds(getDocs(ownQueues));
 });
 
 test('owner cannot publish a queue without age confirmation', async () => {

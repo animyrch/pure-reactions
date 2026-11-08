@@ -567,6 +567,17 @@ export const createPlaylistDocument = async ({
     }
 };
 
+// A missing queue and another user's unpublished queue both deny the read.
+// Callers that are about to create a slug treat that denial as "nothing readable".
+const readQueueSnapshot = async (queueRef) => {
+    try {
+        return await getDoc(queueRef);
+    } catch (error) {
+        if (error?.code === 'permission-denied') return null;
+        throw error;
+    }
+};
+
 export const createQueueDocument = async ({ slug, title, description, items, isPublished, userId }) => {
     const sanitizedSlug = slugifyQueueName(slug);
     if (!userId) {
@@ -580,10 +591,10 @@ export const createQueueDocument = async ({ slug, title, description, items, isP
     const queueRef = doc(queuesCollection, sanitizedSlug);
 
     try {
-        const existingSnap = await getDoc(queueRef);
-        const existingOwner = existingSnap?.data?.().ownerId;
+        const existingSnap = await readQueueSnapshot(queueRef);
+        const existingOwner = existingSnap?.data?.()?.ownerId;
 
-        if (existingSnap.exists() && existingOwner && existingOwner !== userId) {
+        if (existingSnap?.exists() && existingOwner && existingOwner !== userId) {
             throw new Error('You cannot overwrite a queue owned by another user.');
         }
 
@@ -595,7 +606,7 @@ export const createQueueDocument = async ({ slug, title, description, items, isP
             isPublished: !!isPublished,
             ownerId: userId,
             ownerName: (auth?.currentUser?.displayName || '').trim(),
-            createdAt: existingSnap.exists() ? existingSnap.data()?.createdAt ?? serverTimestamp() : serverTimestamp(),
+            createdAt: existingSnap?.exists() ? existingSnap.data()?.createdAt ?? serverTimestamp() : serverTimestamp(),
             updatedAt: serverTimestamp()
         };
 
@@ -619,8 +630,8 @@ export const updateQueueDocument = async ({ slug, title, description, isPublishe
     const queueRef = doc(queuesCollection, slug);
 
     try {
-        const snap = await getDoc(queueRef);
-        if (!snap.exists()) {
+        const snap = await readQueueSnapshot(queueRef);
+        if (!snap?.exists()) {
             throw new Error('Queue not found.');
         }
 
@@ -1111,8 +1122,8 @@ export const upsertReactionIntoQueue = async ({ nameOrSlug, reactionId, userId, 
     const queueRef = doc(queuesCollection, slugFromName);
 
     try {
-        const snap = await getDoc(queueRef);
-        const existingData = snap.exists() ? snap.data() : {};
+        const snap = await readQueueSnapshot(queueRef);
+        const existingData = snap?.exists() ? snap.data() : {};
         const existingOwner = existingData?.ownerId;
 
         if (existingOwner && existingOwner !== userId) {
@@ -1132,12 +1143,12 @@ export const upsertReactionIntoQueue = async ({ nameOrSlug, reactionId, userId, 
             items: nextItems,
             ownerId: userId,
             ownerName: (ownerName || existingData?.ownerName || '').trim(),
-            createdAt: snap.exists() ? existingData?.createdAt || serverTimestamp() : serverTimestamp(),
+            createdAt: snap?.exists() ? existingData?.createdAt || serverTimestamp() : serverTimestamp(),
             updatedAt: serverTimestamp()
         };
 
         await setDoc(queueRef, payload, { merge: false });
-        return { slug: slugFromName, created: !snap.exists() };
+        return { slug: slugFromName, created: !snap?.exists() };
     } catch (error) {
         console.error('Error adding reaction to queue: ', error);
         throw error;
@@ -1159,8 +1170,8 @@ export const removeReactionFromQueue = async ({ queueSlug, reactionId, userId })
     const queueRef = doc(queuesCollection, queueSlug);
 
     try {
-        const snap = await getDoc(queueRef);
-        if (!snap.exists()) {
+        const snap = await readQueueSnapshot(queueRef);
+        if (!snap?.exists()) {
             throw new Error('Queue not found.');
         }
 

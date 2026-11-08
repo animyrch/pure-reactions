@@ -343,11 +343,10 @@ service cloud.firestore {
       allow delete: if isPlaylistOwner();
     }
 
-    // Queues (private to owner)
+    // Queues (private to owner). A missing id is denied the same way as
+    // another user's unpublished queue, so a slug probe cannot tell them apart.
     match /queues/{queueId} {
-      // Allow read if owner OR if document doesn't exist (resource == null)
-      // OR if the queue is published
-      allow read: if resource == null || isQueueOwner() || resource.data.isPublished == true;
+      allow read: if isQueueOwner() || resource.data.isPublished == true;
       allow create: if isQueueOwnerCreate() && publicationAllowed('userData', 'userdata', 'userData');
       allow update: if isQueueOwner() &&
         request.resource.data.ownerId == resource.data.ownerId &&
@@ -355,7 +354,7 @@ service cloud.firestore {
       allow delete: if isQueueOwner();
     }
     match /queues-local/{queueId} {
-      allow read: if resource == null || isQueueOwner() || resource.data.isPublished == true;
+      allow read: if isQueueOwner() || resource.data.isPublished == true;
       allow create: if isQueueOwnerCreate() && publicationAllowed('userData_local', 'userdata-local', 'userData-local');
       allow update: if isQueueOwner() &&
         request.resource.data.ownerId == resource.data.ownerId &&
@@ -363,7 +362,7 @@ service cloud.firestore {
       allow delete: if isQueueOwner();
     }
     match /queues_local/{queueId} {
-      allow read: if resource == null || isQueueOwner() || resource.data.isPublished == true;
+      allow read: if isQueueOwner() || resource.data.isPublished == true;
       allow create: if isQueueOwnerCreate() && publicationAllowed('userData_local', 'userdata-local', 'userData-local');
       allow update: if isQueueOwner() &&
         request.resource.data.ownerId == resource.data.ownerId &&
@@ -371,7 +370,7 @@ service cloud.firestore {
       allow delete: if isQueueOwner();
     }
     match /queues-prod/{queueId} {
-      allow read: if resource == null || isQueueOwner() || resource.data.isPublished == true;
+      allow read: if isQueueOwner() || resource.data.isPublished == true;
       allow create: if isQueueOwnerCreate() && publicationAllowed('userData-prod', 'userdata-prod', 'userData');
       allow update: if isQueueOwner() &&
         request.resource.data.ownerId == resource.data.ownerId &&
