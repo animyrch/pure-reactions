@@ -542,6 +542,54 @@ test('clients cannot read or write the youtube playlist cache', async () => {
   );
 });
 
+const momentCollections = ['moments', 'moments-local', 'moments-prod'];
+
+const seedMoment = async (collectionName, momentId) => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), collectionName, momentId), {
+      creatorId: ownerId,
+      title: 'Owner moment',
+      reactionCount: 1,
+      createdAt: '2024-01-01'
+    });
+  });
+};
+
+test('signed-in non-owner cannot set reactionCount on a moment', async () => {
+  for (const collectionName of momentCollections) {
+    const momentId = `count-${collectionName}`;
+    await seedMoment(collectionName, momentId);
+    await assertFails(
+      updateDoc(doc(otherDb(), collectionName, momentId), {
+        reactionCount: 999,
+        updatedAt: '2024-02-01'
+      })
+    );
+  }
+});
+
+test('moment owner can update reactionCount', async () => {
+  for (const collectionName of momentCollections) {
+    const momentId = `owner-count-${collectionName}`;
+    await seedMoment(collectionName, momentId);
+    await assertSucceeds(
+      updateDoc(doc(ownerDb(), collectionName, momentId), {
+        reactionCount: 2
+      })
+    );
+  }
+});
+
+test('logged-out user cannot set reactionCount on moments-local', async () => {
+  await seedMoment('moments-local', 'public-moment-count');
+  await assertFails(
+    updateDoc(doc(anonDb(), 'moments-local', 'public-moment-count'), {
+      reactionCount: 999,
+      updatedAt: '2024-02-01'
+    })
+  );
+});
+
 test('owner cannot write ageConfirmedAt on user data', async () => {
   const ref = doc(ownerDb(), 'userData_local', ownerId);
   await assertFails(setDoc(ref, {
