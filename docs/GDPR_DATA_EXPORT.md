@@ -62,6 +62,6 @@ Top-level structure:
   3. This document
 
 ## Version History
-- 2026-11-08: Removed `userData.lastExportAt`. The export deletes a leftover value and omits it from the file. Client rules reject the key.
+- 2026-11-08: Removed `userData.lastExportAt`. The export deletes a leftover value and omits it from the file. Firestore rules do not mention the key.
 - 2026-11-08: The 24-hour limit is a server-only `rateLimits` claim. `userData.lastExportAt` is no longer written or enforced.
 - 2026-01-30: Initial GDPR export documentation.

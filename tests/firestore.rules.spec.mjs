@@ -12,7 +12,6 @@ import {
   getDocs,
   query,
   deleteDoc,
-  deleteField,
   setDoc,
   Timestamp,
   updateDoc,
@@ -610,22 +609,4 @@ test('owner cannot write ageConfirmedAt on user data', async () => {
     ageConfirmedAt: Timestamp.fromDate(new Date('2024-02-01T00:00:00Z'))
   }));
   await assertSucceeds(setDoc(ref, { twitchChannel: 'nightbot' }, { merge: true }));
-});
-
-test('owner cannot write lastExportAt on user data', async () => {
-  const ref = doc(ownerDb(), 'userData_local', ownerId);
-  await assertFails(setDoc(ref, {
-    displayName: 'Owner',
-    lastExportAt: Timestamp.fromDate(new Date('2024-01-01T00:00:00Z'))
-  }));
-  await testEnv.withSecurityRulesDisabled(async (context) => {
-    await setDoc(doc(context.firestore(), 'userData_local', ownerId), {
-      displayName: 'Owner',
-      lastExportAt: Timestamp.fromDate(new Date('2024-01-01T00:00:00Z'))
-    });
-  });
-  await assertFails(updateDoc(ref, {
-    lastExportAt: deleteField()
-  }));
-  await assertSucceeds(setDoc(ref, { displayName: 'Renamed' }, { merge: true }));
 });
