@@ -96,6 +96,7 @@
   ],
   "shared": [
     "src/app.html",
+    "src/hooks.server.js",
     "src/app.pcss",
     "src/lib/**",
     "src/routes/+layout.js",
