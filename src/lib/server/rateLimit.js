@@ -2,8 +2,10 @@ import { createHash } from 'node:crypto';
 import { json } from '@sveltejs/kit';
 import { COLLECTION_RATE_LIMITS } from '$lib/constants/firebase';
 import {
+  ONE_DAY_MS,
   ONE_HOUR_MS,
   TEN_MINUTES_MS,
+  exportCooldownDecision,
   rateLimitDecision,
   visitorKey,
 } from '$lib/helpers/rateLimit';
@@ -14,6 +16,7 @@ import { initializeFirebaseAdmin } from '$lib/server/firebaseAdmin';
  * Public routes pass request headers and are counted by visitor.
  * Signed-in routes pass the Firebase uid.
  * A counter outage allows the request. Only an over-limit result blocks it.
+ * Account export claims a 24-hour stamp on this collection before the file is built.
  */
 
 export const RATE_LIMITS = {
@@ -52,6 +55,11 @@ export const RATE_LIMITS = {
     limit: 10,
     windowMs: ONE_HOUR_MS,
   },
+  accountExport: {
+    bucket: 'account-export',
+    limit: 1,
+    windowMs: ONE_DAY_MS,
+  },
 };
 
 let loggedMissingAdmin = false;
@@ -78,6 +86,7 @@ export const USER_RATE_LIMIT_BUCKETS = [
   RATE_LIMITS.contentDelete.bucket,
   RATE_LIMITS.accountDelete.bucket,
   RATE_LIMITS.ageConfirmation.bucket,
+  RATE_LIMITS.accountExport.bucket,
 ];
 
 export function createFirestoreRateLimitStore(adminDb, collectionName = COLLECTION_RATE_LIMITS) {
@@ -101,6 +110,53 @@ export function createFirestoreRateLimitStore(adminDb, collectionName = COLLECTI
           });
         }
         return decision;
+      });
+    },
+    async claimExport({ bucket, id, windowMs, now }) {
+      const ref = adminDb.collection(collectionName).doc(rateLimitDocumentId(bucket, id));
+      return adminDb.runTransaction(async (transaction) => {
+        const snap = await transaction.get(ref);
+        const raw = snap.exists ? Number(snap.data()?.lastExportAt) : NaN;
+        const previousLastExportAt = Number.isFinite(raw) && raw > 0 ? raw : null;
+        const decision = exportCooldownDecision({
+          lastExportAtMs: previousLastExportAt,
+          nowMs: now,
+          windowMs,
+        });
+        if (!decision.allowed) {
+          return { ...decision, claimedAt: null, previousLastExportAt };
+        }
+        transaction.set(ref, {
+          bucket,
+          lastExportAt: now,
+          updatedAt: now,
+        });
+        return {
+          allowed: true,
+          claimedAt: now,
+          previousLastExportAt,
+          retryAfterSeconds: 0,
+          nextAllowedAt: null,
+        };
+      });
+    },
+    async releaseExport({ bucket, id, claimedAt, previousLastExportAt }) {
+      const ref = adminDb.collection(collectionName).doc(rateLimitDocumentId(bucket, id));
+      return adminDb.runTransaction(async (transaction) => {
+        const snap = await transaction.get(ref);
+        const current = snap.exists ? Number(snap.data()?.lastExportAt) : NaN;
+        if (!Number.isFinite(current) || current !== Number(claimedAt)) return false;
+        const previous = Number(previousLastExportAt);
+        if (Number.isFinite(previous) && previous > 0) {
+          transaction.set(ref, {
+            bucket,
+            lastExportAt: previous,
+            updatedAt: previous,
+          });
+        } else {
+          transaction.delete(ref);
+        }
+        return true;
       });
     },
     async deleteForUser(userId) {
@@ -184,4 +240,73 @@ export async function consumeRateLimit(options) {
   error.name = 'RateLimitExceeded';
   error.rateLimitResponse = blocked;
   throw error;
+}
+
+const EXPORT_LIMIT_MESSAGE = 'Export recently requested. Please wait before requesting another export.';
+
+export async function claimAccountExportLimit({ id, now = Date.now(), store } = {}) {
+  const policy = RATE_LIMITS.accountExport;
+  if (!id) return { id, claimed: false, blocked: null };
+  try {
+    const activeStore = store || (await openStore());
+    if (!activeStore) return { id, claimed: false, blocked: null };
+    const decision = await activeStore.claimExport({
+      bucket: policy.bucket,
+      id,
+      windowMs: policy.windowMs,
+      now,
+    });
+    if (decision.allowed) {
+      return {
+        id,
+        claimed: true,
+        claimedAt: decision.claimedAt,
+        previousLastExportAt: decision.previousLastExportAt,
+        blocked: null,
+      };
+    }
+    return {
+      id,
+      claimed: false,
+      blocked: json(
+        {
+          error: EXPORT_LIMIT_MESSAGE,
+          retryAfterSeconds: decision.retryAfterSeconds,
+          nextAllowedAt: decision.nextAllowedAt,
+        },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(decision.retryAfterSeconds),
+            'Cache-Control': 'no-store',
+          },
+        },
+      ),
+    };
+  } catch (error) {
+    console.error('Account export limit check failed', error);
+    return { id, claimed: false, blocked: null };
+  }
+}
+
+export async function releaseAccountExportLimit({
+  id,
+  claimedAt,
+  previousLastExportAt,
+  store,
+} = {}) {
+  if (!id || !claimedAt) return false;
+  try {
+    const activeStore = store || (await openStore());
+    if (!activeStore) return false;
+    return await activeStore.releaseExport({
+      bucket: RATE_LIMITS.accountExport.bucket,
+      id,
+      claimedAt,
+      previousLastExportAt,
+    });
+  } catch (error) {
+    console.error('Account export limit release failed', error);
+    return false;
+  }
 }

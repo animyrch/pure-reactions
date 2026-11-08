@@ -1,7 +1,9 @@
 import { createHash } from 'node:crypto';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  ONE_DAY_MS,
   TEN_MINUTES_MS,
+  exportCooldownDecision,
   isCloudflareAddress,
   rateLimitDecision,
   visitorKey,
@@ -9,11 +11,13 @@ import {
 import {
   RATE_LIMITS,
   USER_RATE_LIMIT_BUCKETS,
+  claimAccountExportLimit,
   consumeRateLimit,
   createFirestoreRateLimitStore,
   deleteUserRateLimits,
   enforceRateLimit,
   rateLimitDocumentId,
+  releaseAccountExportLimit,
 } from '$lib/server/rateLimit';
 
 const adminState = vi.hoisted(() => ({ adminDb: null }));
@@ -64,6 +68,9 @@ function createFakeAdminDb() {
           },
           set(ref, data) {
             docs.set(ref.path, structuredClone(data));
+          },
+          delete(ref) {
+            docs.delete(ref.path);
           },
         };
         return fn(transaction);
@@ -188,6 +195,12 @@ describe('firestore counter', () => {
       store,
       now,
     });
+    await store.claimExport({
+      bucket: RATE_LIMITS.accountExport.bucket,
+      id: 'user-a',
+      windowMs: ONE_DAY_MS,
+      now,
+    });
 
     expect(await deleteUserRateLimits({ store, userId: 'user-a' })).toBe(USER_RATE_LIMIT_BUCKETS.length);
 
@@ -211,5 +224,116 @@ describe('firestore counter', () => {
     await expect(consumeRateLimit({ ...policy, id: '198.51.100.20', store, now: 1 })).rejects.toMatchObject({
       name: 'RateLimitExceeded',
     });
+  });
+});
+
+describe('account export cooldown', () => {
+  it('allows one claim and blocks until 24 hours after that stamp', () => {
+    const start = 1_700_000_000_000;
+    const open = exportCooldownDecision({ lastExportAtMs: null, nowMs: start, windowMs: ONE_DAY_MS });
+    expect(open.allowed).toBe(true);
+
+    const blocked = exportCooldownDecision({
+      lastExportAtMs: start,
+      nowMs: start + ONE_DAY_MS - 1,
+      windowMs: ONE_DAY_MS,
+    });
+    expect(blocked.allowed).toBe(false);
+    expect(blocked.retryAfterSeconds).toBe(1);
+    expect(blocked.nextAllowedAt).toBe(new Date(start + ONE_DAY_MS).toISOString());
+
+    const again = exportCooldownDecision({
+      lastExportAtMs: start,
+      nowMs: start + ONE_DAY_MS,
+      windowMs: ONE_DAY_MS,
+    });
+    expect(again.allowed).toBe(true);
+  });
+
+  it('lets only one of two overlapping claims take the slot', async () => {
+    const adminDb = createFakeAdminDb();
+    const store = createFirestoreRateLimitStore(adminDb, 'rateLimits_local');
+    const now = 5_000;
+    const [first, second] = await Promise.all([
+      store.claimExport({ bucket: 'account-export', id: 'user-a', windowMs: ONE_DAY_MS, now }),
+      store.claimExport({ bucket: 'account-export', id: 'user-a', windowMs: ONE_DAY_MS, now }),
+    ]);
+    const results = [first, second];
+    expect(results.filter((result) => result.allowed)).toHaveLength(1);
+    expect(results.filter((result) => !result.allowed)).toHaveLength(1);
+    expect(adminDb.docs.get(`rateLimits_local/${rateLimitDocumentId('account-export', 'user-a')}`).lastExportAt).toBe(now);
+  });
+
+  it('returns the export 429 payload and keeps the stamp off the user document', async () => {
+    const adminDb = createFakeAdminDb();
+    const store = createFirestoreRateLimitStore(adminDb, 'rateLimits_local');
+    const now = 5_000;
+    const allowed = await claimAccountExportLimit({ id: 'user-a', now, store });
+    expect(allowed.blocked).toBeNull();
+    expect(allowed.claimed).toBe(true);
+
+    const blocked = await claimAccountExportLimit({ id: 'user-a', now: now + 1000, store });
+    expect(blocked.claimed).toBe(false);
+    expect(blocked.blocked.status).toBe(429);
+    expect(blocked.blocked.headers.get('Retry-After')).toBeTruthy();
+    expect(blocked.blocked.headers.get('Cache-Control')).toBe('no-store');
+    expect(await blocked.blocked.json()).toEqual({
+      error: 'Export recently requested. Please wait before requesting another export.',
+      retryAfterSeconds: expect.any(Number),
+      nextAllowedAt: new Date(now + ONE_DAY_MS).toISOString(),
+    });
+    expect([...adminDb.docs.keys()].some((path) => path.startsWith('userData'))).toBe(false);
+  });
+
+  it('restores the previous stamp and leaves a newer claim in place', async () => {
+    const adminDb = createFakeAdminDb();
+    const store = createFirestoreRateLimitStore(adminDb, 'rateLimits_local');
+    const first = await store.claimExport({
+      bucket: 'account-export',
+      id: 'user-a',
+      windowMs: ONE_DAY_MS,
+      now: 1_000,
+    });
+    const second = await store.claimExport({
+      bucket: 'account-export',
+      id: 'user-a',
+      windowMs: ONE_DAY_MS,
+      now: 1_000 + ONE_DAY_MS,
+    });
+
+    expect(
+      await releaseAccountExportLimit({
+        id: 'user-a',
+        claimedAt: first.claimedAt,
+        previousLastExportAt: first.previousLastExportAt,
+        store,
+      }),
+    ).toBe(false);
+    expect(adminDb.docs.get(`rateLimits_local/${rateLimitDocumentId('account-export', 'user-a')}`).lastExportAt).toBe(
+      second.claimedAt,
+    );
+
+    expect(
+      await releaseAccountExportLimit({
+        id: 'user-a',
+        claimedAt: second.claimedAt,
+        previousLastExportAt: second.previousLastExportAt,
+        store,
+      }),
+    ).toBe(true);
+    expect(adminDb.docs.get(`rateLimits_local/${rateLimitDocumentId('account-export', 'user-a')}`).lastExportAt).toBe(
+      1_000,
+    );
+  });
+
+  it('allows the export when the cooldown store is unavailable', async () => {
+    const store = {
+      async claimExport() {
+        throw new Error('firestore down');
+      },
+    };
+    const result = await claimAccountExportLimit({ id: 'user-a', store });
+    expect(result.claimed).toBe(false);
+    expect(result.blocked).toBeNull();
   });
 });
