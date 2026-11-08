@@ -1,4 +1,5 @@
 import { firestoreDeleteField, requestReactionEnrichment, updateFirebaseDocument } from '$lib/helpers/firebase';
+import { publishNameWasDeclined } from '$lib/helpers/publicDisplayNamePrompt';
 import {
   normalizeFullscreenOverlayCorner,
   normalizeFullscreenOverlayWidthPercent,
@@ -1092,7 +1093,7 @@ export function createTwinPlayersEditorController({
 
     const didUpdate = await updateFirebaseDocument({ isPublished: true });
     if (!didUpdate) {
-      if (typeof window !== 'undefined') {
+      if (typeof window !== 'undefined' && !publishNameWasDeclined()) {
         showToast('Failed to publish reaction. Please try again.', TOASTS.WARNING);
       }
       return;
