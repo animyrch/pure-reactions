@@ -159,7 +159,6 @@ User-specific data and preferences.
 | `follows` | array[string] | No | Array of reactor user IDs the user follows |
 | `displayName` | string | No | Optional display name (if stored in Firestore) |
 | `email` | string | No | Optional email (if stored in Firestore) |
-| `lastExportAt` | Timestamp | No | Legacy export stamp on older documents. The 24-hour limit does not read or write this field |
 | `createdAt` | Timestamp | No | Optional creation timestamp |
 | `updatedAt` | Timestamp | No | Optional last update timestamp |
 
@@ -313,7 +312,7 @@ A saved YouTube or TikTok answer does not count. The route spends an allowance o
 
 If the counter cannot be read, the request continues. A caller over the allowance receives HTTP 429.
 
-Account export is the exception to the fixed window. `POST /api/account/export` claims `account-export` in a transaction before it reads the account. The document stores `lastExportAt` instead of `count` and `windowStart`. A second request is refused until 24 hours after that stamp. The claim is written before the export is built, so overlapping requests cannot all pass. A failed export puts the previous stamp back only when the document still holds the stamp this request wrote. The account owner cannot read or write this document. `userData.lastExportAt` is not consulted.
+Account export is the exception to the fixed window. `POST /api/account/export` claims `account-export` in a transaction before it reads the account. The document stores `lastExportAt` instead of `count` and `windowStart`. A second request is refused until 24 hours after that stamp. The claim is written before the export is built, so overlapping requests cannot all pass. A failed export puts the previous stamp back only when the document still holds the stamp this request wrote. The account owner cannot read or write this document. User documents do not have an export stamp. The export deletes a leftover `userData.lastExportAt`, omits it from the file, and client rules reject that key.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -643,6 +642,7 @@ const docRef = await addDoc(collection(db, 'reactions'), {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.22 | 2026-11-08 | Removed `userData.lastExportAt`. Export deletes a leftover value, the file omits it, and client rules reject the key |
 | 1.21 | 2026-11-08 | Account export claims a 24-hour `lastExportAt` stamp on server-only `rateLimits` before building the file. `userData.lastExportAt` is no longer the limit |
 | 1.20 | 2026-11-07 | Added server-only `rateLimits` (`COLLECTION_RATE_LIMITS`). Expensive routes share one counter with a per-route allowance. Account deletion removes that user's counters |
 | 1.19 | 2026-11-06 | Comment lookups call YouTube only when a published reaction already has that video id. Drafts return an empty preview and are not stored |

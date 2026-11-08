@@ -34,6 +34,15 @@ function createExportAdmin() {
       async get() {
         return snapshot(path);
       },
+      async update(patch) {
+        if (!docs.has(path)) throw new Error(`No document to update: ${path}`);
+        const next = { ...docs.get(path) };
+        for (const [key, value] of Object.entries(patch)) {
+          if (value && value.__delete) delete next[key];
+          else next[key] = value;
+        }
+        docs.set(path, next);
+      },
       collection() {
         return { get: async () => ({ docs: [] }) };
       },
@@ -74,6 +83,9 @@ function createExportAdmin() {
         );
         return run;
       },
+    },
+    adminFieldValue: {
+      delete: () => ({ __delete: true }),
     },
     adminAuth: {
       verifyIdToken: vi.fn(async () => ({ uid: 'user-1' })),
@@ -122,13 +134,20 @@ describe('account export route limit', () => {
 
   it('claims the server slot before reading the account and ignores userData.lastExportAt', async () => {
     const admin = createExportAdmin();
-    admin.docs.set(`${COLLECTION_USER_DATA}/user-1`, { lastExportAt: 'legacy' });
+    admin.docs.set(`${COLLECTION_USER_DATA}/user-1`, {
+      displayName: 'Owner',
+      lastExportAt: 'legacy',
+    });
     initializeFirebaseAdmin.mockResolvedValue(admin);
 
     const [first, second] = await Promise.all([exportRequest(), exportRequest()]);
     const statuses = [first.status, second.status].sort();
     expect(statuses).toEqual([200, 429]);
-    expect(admin.docs.get(`${COLLECTION_USER_DATA}/user-1`).lastExportAt).toBe('legacy');
+    expect(admin.docs.get(`${COLLECTION_USER_DATA}/user-1`)).toEqual({ displayName: 'Owner' });
+    const exported = first.status === 200 ? first : second;
+    const payload = await exported.json();
+    expect(payload.export.data.firestore.userData.data.lastExportAt).toBeUndefined();
+    expect(payload.export.data.firestore.userData.data.displayName).toBe('Owner');
 
     admin.docs.delete(`${COLLECTION_USER_DATA}/user-1`);
     const cleared = await exportRequest();

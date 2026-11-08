@@ -69,6 +69,19 @@ async function fetchUserExtraData(adminDbInstance, userId) {
 	};
 }
 
+async function removeStoredExportStamp(adminDbInstance, adminFieldValue, userId) {
+	if (!COLLECTION_USER_DATA || typeof adminFieldValue?.delete !== 'function') return;
+	try {
+		const userDocRef = adminDbInstance.collection(COLLECTION_USER_DATA).doc(userId);
+		const userDocSnapshot = await userDocRef.get();
+		const data = userDocSnapshot.exists ? userDocSnapshot.data() : null;
+		if (!data || !Object.prototype.hasOwnProperty.call(data, 'lastExportAt')) return;
+		await userDocRef.update({ lastExportAt: adminFieldValue.delete() });
+	} catch (error) {
+		console.error('Failed to remove stored export stamp:', error);
+	}
+}
+
 async function fetchUserDataDoc(adminDbInstance, userId) {
 	if (!COLLECTION_USER_DATA) {
 		return null;
@@ -78,7 +91,9 @@ async function fetchUserDataDoc(adminDbInstance, userId) {
 	if (!userDocSnapshot.exists) {
 		return null;
 	}
-	return serializeFirestoreDoc(userDocSnapshot);
+	const serialized = serializeFirestoreDoc(userDocSnapshot);
+	delete serialized.data.lastExportAt;
+	return serialized;
 }
 
 async function fetchYoutubeChannelVerifications(adminDbInstance, claims) {
@@ -168,6 +183,7 @@ export const POST = async ({ request }) => {
 		const initialized = await initializeFirebaseAdmin();
 		const adminAuth = initialized.adminAuth;
 		adminDb = initialized.adminDb;
+		const adminFieldValue = initialized.adminFieldValue;
 
 		const authHeader = request.headers.get('Authorization');
 		if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -190,6 +206,7 @@ export const POST = async ({ request }) => {
 		}
 
 		const userId = decodedToken.uid;
+		await removeStoredExportStamp(adminDb, adminFieldValue, userId);
 		const rateLimitStore = createFirestoreRateLimitStore(adminDb);
 		exportClaim = await claimAccountExportLimit({ id: userId, store: rateLimitStore });
 		if (exportClaim.blocked) return exportClaim.blocked;

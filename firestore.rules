@@ -130,10 +130,11 @@ service cloud.firestore {
       return !isPublishing() || (hasVerifiedEmail() && hasAgeConfirmation(primary, secondary, tertiary));
     }
 
-    function ageFieldUntouched() {
+    // ageConfirmedAt is written by the server. lastExportAt is retired.
+    function protectedUserFieldsUntouched() {
       return resource == null
-        ? !request.resource.data.keys().hasAny(['ageConfirmedAt'])
-        : !request.resource.data.diff(resource.data).affectedKeys().hasAny(['ageConfirmedAt']);
+        ? !request.resource.data.keys().hasAny(['ageConfirmedAt', 'lastExportAt'])
+        : !request.resource.data.diff(resource.data).affectedKeys().hasAny(['ageConfirmedAt', 'lastExportAt']);
     }
 
     function isUserDataOwner(docUserId) {
@@ -267,42 +268,42 @@ service cloud.firestore {
     // User data (private to the user)
     match /userData/{userId} {
       allow read: if isUserDataOwner(userId);
-      allow create, update: if isUserDataOwner(userId) && ageFieldUntouched();
+      allow create, update: if isUserDataOwner(userId) && protectedUserFieldsUntouched();
       allow delete: if isUserDataOwner(userId);
     }
     match /userdata/{userId} {
       allow read: if isUserDataOwner(userId);
-      allow create, update: if isUserDataOwner(userId) && ageFieldUntouched();
+      allow create, update: if isUserDataOwner(userId) && protectedUserFieldsUntouched();
       allow delete: if isUserDataOwner(userId);
     }
     match /userData-local/{userId} {
       allow read: if isUserDataOwner(userId);
-      allow create, update: if isUserDataOwner(userId) && ageFieldUntouched();
+      allow create, update: if isUserDataOwner(userId) && protectedUserFieldsUntouched();
       allow delete: if isUserDataOwner(userId);
     }
     match /userdata-local/{userId} {
       allow read: if isUserDataOwner(userId);
-      allow create, update: if isUserDataOwner(userId) && ageFieldUntouched();
+      allow create, update: if isUserDataOwner(userId) && protectedUserFieldsUntouched();
       allow delete: if isUserDataOwner(userId);
     }
     match /userData_local/{userId} {
       allow read: if isUserDataOwner(userId);
-      allow create, update: if isUserDataOwner(userId) && ageFieldUntouched();
+      allow create, update: if isUserDataOwner(userId) && protectedUserFieldsUntouched();
       allow delete: if isUserDataOwner(userId);
     }
     match /userdata_local/{userId} {
       allow read: if isUserDataOwner(userId);
-      allow create, update: if isUserDataOwner(userId) && ageFieldUntouched();
+      allow create, update: if isUserDataOwner(userId) && protectedUserFieldsUntouched();
       allow delete: if isUserDataOwner(userId);
     }
     match /userData-prod/{userId} {
       allow read: if isUserDataOwner(userId);
-      allow create, update: if isUserDataOwner(userId) && ageFieldUntouched();
+      allow create, update: if isUserDataOwner(userId) && protectedUserFieldsUntouched();
       allow delete: if isUserDataOwner(userId);
     }
     match /userdata-prod/{userId} {
       allow read: if isUserDataOwner(userId);
-      allow create, update: if isUserDataOwner(userId) && ageFieldUntouched();
+      allow create, update: if isUserDataOwner(userId) && protectedUserFieldsUntouched();
       allow delete: if isUserDataOwner(userId);
     }
 
