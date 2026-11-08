@@ -106,8 +106,17 @@ async function readDoc(documentId) {
 	return payload;
 }
 
+function reactionAction(page, name) {
+	return page
+		.getByRole('menuitem', { name })
+		.or(page.getByRole('button', { name, exact: true }));
+}
+
 async function openAppMenu(page) {
-	const menu = page.getByRole('button', { name: 'Menu', exact: true });
+	const desktop = page.getByRole('button', { name: 'Menu', exact: true });
+	const menu = (await desktop.isVisible())
+		? desktop
+		: page.getByRole('button', { name: 'Toggle menu' });
 	if ((await menu.getAttribute('aria-expanded')) !== 'true') {
 		await menu.click();
 	}
@@ -115,7 +124,7 @@ async function openAppMenu(page) {
 
 async function openPublishMenu(page) {
 	await openAppMenu(page);
-	await page.getByRole('menuitem', { name: 'Publish Reaction' }).click();
+	await reactionAction(page, 'Publish Reaction').click();
 }
 
 test('publishing asks for a public name when it still matches the mailbox', async ({ page }) => {
@@ -183,17 +192,17 @@ test('publishing asks for a public name when it still matches the mailbox', asyn
 
 	await expect(async () => {
 		await openAppMenu(page);
-		await expect(page.getByRole('menuitem', { name: 'Unpublish Reaction' })).toBeVisible({ timeout: 1000 });
+		await expect(reactionAction(page, 'Unpublish Reaction')).toBeVisible({ timeout: 1000 });
 	}).toPass({ timeout: 20000 });
-	await page.getByRole('menuitem', { name: 'Unpublish Reaction' }).click();
+	await reactionAction(page, 'Unpublish Reaction').click();
 	await expect(page.getByRole('dialog', { name: 'Choose a public name' })).toHaveCount(0);
 	await expect.poll(async () => (await readDoc(reactionId)).fields.isPublished.booleanValue).toBe(false);
 
 	await expect(async () => {
 		await openAppMenu(page);
-		await expect(page.getByRole('menuitem', { name: 'Publish Reaction' })).toBeVisible({ timeout: 1000 });
+		await expect(reactionAction(page, 'Publish Reaction')).toBeVisible({ timeout: 1000 });
 	}).toPass({ timeout: 20000 });
-	await page.getByRole('menuitem', { name: 'Publish Reaction' }).click();
+	await reactionAction(page, 'Publish Reaction').click();
 	await expect(page.getByRole('dialog', { name: 'Choose a public name' })).toHaveCount(0);
 	await expect.poll(async () => (await readDoc(reactionId)).fields.isPublished.booleanValue).toBe(true);
 	stored = await readDoc(reactionId);
