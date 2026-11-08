@@ -4,6 +4,7 @@
 // - Verified owner create and publish
 // - Unverified owner create and publish denied
 // - Logged in owner write
+// - Owner cannot add, change, or remove moderation fields
 // - Non-owner write denied
 // - Claims get (owner/admin)
 // - Claims list denied
@@ -68,8 +69,10 @@ service cloud.firestore {
       return !request.resource.data.keys().hasAny(reactionSensitiveKeys());
     }
 
+    // changedKeys() only lists fields that already exist and change value.
+    // affectedKeys() also rejects a moderation field the owner adds or deletes.
     function reactionUpdateHasNoSensitiveKeys() {
-      return !request.resource.data.diff(resource.data).changedKeys().hasAny(reactionSensitiveKeys());
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(reactionSensitiveKeys());
     }
 
     function playlistCreateHasNoSensitiveKeys() {
@@ -77,7 +80,7 @@ service cloud.firestore {
     }
 
     function playlistUpdateHasNoSensitiveKeys() {
-      return !request.resource.data.diff(resource.data).changedKeys().hasAny(playlistSensitiveKeys());
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(playlistSensitiveKeys());
     }
 
     function isPlaylistOwner() {

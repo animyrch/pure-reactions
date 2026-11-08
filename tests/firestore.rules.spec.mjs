@@ -12,6 +12,7 @@ import {
   getDocs,
   query,
   deleteDoc,
+  deleteField,
   setDoc,
   Timestamp,
   updateDoc,
@@ -154,6 +155,114 @@ test('owner can update reactions', async () => {
   await assertSucceeds(
     updateDoc(doc(ownerDb(), 'reactions', reactionIds.published), {
       title: 'Updated title'
+    })
+  );
+});
+
+const reactionSensitiveKeys = [
+  'isShadowBanned',
+  'featured',
+  'adminNotes',
+  'searchBoost',
+  'moderationState',
+  'moderationNotes',
+  'reviewNotes',
+  'verificationStatus',
+  'creatorVerified',
+  'creatorVerification',
+  'isCreatorVerified'
+];
+
+const playlistSensitiveKeys = [
+  'reactorId',
+  'isShadowBanned',
+  'featured',
+  'adminNotes',
+  'searchBoost',
+  'moderationState',
+  'moderationNotes',
+  'reviewNotes',
+  'visibilityOverride'
+];
+
+const assertDenied = async (write, label) => {
+  try {
+    await assertFails(write);
+  } catch (error) {
+    throw new Error(`${label} was allowed`, { cause: error });
+  }
+};
+
+test('owner cannot create a reaction with a moderation field', async () => {
+  for (const key of reactionSensitiveKeys) {
+    await assertDenied(
+      setDoc(doc(ownerDb(), 'reactions', `sensitive-create-${key}`), {
+        reactorId: ownerId,
+        isPublished: false,
+        title: 'Draft',
+        [key]: true
+      }),
+      `reaction create ${key}`
+    );
+  }
+});
+
+test('owner cannot add a moderation field when updating a reaction', async () => {
+  for (const key of reactionSensitiveKeys) {
+    await assertDenied(
+      updateDoc(doc(ownerDb(), 'reactions', reactionIds.draft), {
+        [key]: true
+      }),
+      `reaction update add ${key}`
+    );
+  }
+});
+
+test('owner cannot change or remove an existing reaction moderation field', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'reactions', 'moderated-reaction'), {
+      reactorId: ownerId,
+      isPublished: false,
+      title: 'Moderated',
+      featured: false,
+      isShadowBanned: true,
+      creatorVerified: false
+    });
+  });
+  await assertDenied(
+    updateDoc(doc(ownerDb(), 'reactions', 'moderated-reaction'), {
+      featured: true
+    }),
+    'reaction featured change'
+  );
+  await assertDenied(
+    updateDoc(doc(ownerDb(), 'reactions', 'moderated-reaction'), {
+      creatorVerified: true
+    }),
+    'reaction creatorVerified change'
+  );
+  await assertDenied(
+    updateDoc(doc(ownerDb(), 'reactions', 'moderated-reaction'), {
+      isShadowBanned: deleteField()
+    }),
+    'reaction isShadowBanned delete'
+  );
+});
+
+test('owner can edit a reaction that already has moderation fields', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'reactions', 'kept-moderation'), {
+      reactorId: ownerId,
+      isPublished: false,
+      title: 'Kept',
+      featured: true,
+      creatorVerified: true,
+      isShadowBanned: false
+    });
+  });
+  await assertSucceeds(
+    updateDoc(doc(ownerDb(), 'reactions', 'kept-moderation'), {
+      title: 'Retitled'
     })
   );
 });
@@ -318,6 +427,86 @@ test('owner can delete playlists', async () => {
 test('non-owner cannot delete playlists', async () => {
   await seedPlaylist();
   await assertFails(deleteDoc(doc(otherDb(), 'playlists', 'owner-playlist')));
+});
+
+test('owner cannot create a playlist with a moderation field', async () => {
+  for (const key of playlistSensitiveKeys) {
+    await assertDenied(
+      setDoc(doc(ownerDb(), 'playlists', `sensitive-playlist-${key}`), {
+        userId: ownerId,
+        reactionBinomeIds: [],
+        [key]: true
+      }),
+      `playlist create ${key}`
+    );
+  }
+});
+
+test('owner cannot add a moderation field when updating a playlist', async () => {
+  await seedPlaylist('playlist-add-moderation');
+  for (const key of playlistSensitiveKeys) {
+    await assertDenied(
+      updateDoc(doc(ownerDb(), 'playlists', 'playlist-add-moderation'), {
+        [key]: true
+      }),
+      `playlist update add ${key}`
+    );
+  }
+});
+
+test('owner cannot change or remove an existing playlist moderation field', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'playlists', 'moderated-playlist'), {
+      userId: ownerId,
+      reactionBinomeIds: ['reaction-public'],
+      featured: false,
+      isShadowBanned: true
+    });
+  });
+  await assertDenied(
+    updateDoc(doc(ownerDb(), 'playlists', 'moderated-playlist'), {
+      featured: true
+    }),
+    'playlist featured change'
+  );
+  await assertDenied(
+    updateDoc(doc(ownerDb(), 'playlists', 'moderated-playlist'), {
+      isShadowBanned: deleteField()
+    }),
+    'playlist isShadowBanned delete'
+  );
+  await assertDenied(
+    setDoc(doc(ownerDb(), 'playlists', 'moderated-playlist'), {
+      userId: ownerId,
+      reactionBinomeIds: ['reaction-public'],
+      featured: false
+    }),
+    'playlist rewrite dropped isShadowBanned'
+  );
+});
+
+test('owner can edit a playlist that already has moderation fields', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'playlists', 'kept-playlist'), {
+      userId: ownerId,
+      reactionBinomeIds: ['reaction-public'],
+      featured: true,
+      isShadowBanned: false
+    });
+  });
+  await assertSucceeds(
+    updateDoc(doc(ownerDb(), 'playlists', 'kept-playlist'), {
+      reactionBinomeIds: ['reaction-public', 'reaction-draft']
+    })
+  );
+  await assertSucceeds(
+    setDoc(doc(ownerDb(), 'playlists', 'kept-playlist'), {
+      userId: ownerId,
+      reactionBinomeIds: ['reaction-draft'],
+      featured: true,
+      isShadowBanned: false
+    })
+  );
 });
 
 test('owner can create claims', async () => {
