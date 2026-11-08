@@ -399,6 +399,7 @@ export async function prepareYouTubeCommentsResponse({ videoId, apiKey, resolve 
   try {
     return await resolve({ videoId, apiKey });
   } catch (error) {
+    if (error?.rateLimitResponse) throw error;
     const message = error instanceof Error ? error.message : String(error);
     console.error(
       'Error fetching YouTube comments',

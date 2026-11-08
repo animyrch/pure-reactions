@@ -1,7 +1,8 @@
 import { json } from '@sveltejs/kit';
 import { fetchOriginalVideoMetadataForPlatform } from '$lib/server/originalVideoMetadata';
+import { RATE_LIMITS, consumeRateLimit } from '$lib/server/rateLimit';
 
-export const GET = async ({ url }) => {
+export const GET = async ({ url, request }) => {
   try {
     const platform = url.searchParams.get('platform') || 'youtube';
     const videoId = url.searchParams.get('videoId') || '';
@@ -15,6 +16,11 @@ export const GET = async ({ url }) => {
       platform,
       videoId: videoId.trim(),
       videoUrl: videoUrl.trim(),
+      beforeUpstream: () =>
+        consumeRateLimit({
+          headers: request.headers,
+          ...RATE_LIMITS.originalVideoMetadata,
+        }),
     });
 
     const headers = result.cache ? { 'x-tiktok-metadata-cache': result.cache } : undefined;
@@ -27,6 +33,7 @@ export const GET = async ({ url }) => {
       headers ? { headers } : undefined,
     );
   } catch (error) {
+    if (error?.rateLimitResponse) return error.rateLimitResponse;
     console.error('Failed to fetch original video metadata', error);
     return json(
       {

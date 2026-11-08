@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import { initializeFirebaseAdmin } from '$lib/server/firebaseAdmin';
 import { deleteOwnedContent } from '$lib/server/deleteOwnedContent';
+import { RATE_LIMITS, enforceRateLimit } from '$lib/server/rateLimit';
 import {
 	COLLECTION_MOMENTS,
 	COLLECTION_PLAYLISTS,
@@ -63,6 +64,12 @@ export const POST = async ({ request }) => {
 		} catch {
 			return json({ error: 'Invalid request' }, { status: 400 });
 		}
+
+		const limited = await enforceRateLimit({
+			id: decodedToken.uid,
+			...RATE_LIMITS.contentDelete,
+		});
+		if (limited) return limited;
 
 		const result = await deleteOwnedContent({
 			adminDb,
