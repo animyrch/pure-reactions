@@ -15,8 +15,12 @@ import {
 	COLLECTION_YOUTUBE_CHANNEL_VERIFICATIONS
 } from '$lib/constants/firebase';
 import { initializeFirebaseAdmin } from '$lib/server/firebaseAdmin';
+import {
+	claimAccountExportLimit,
+	createFirestoreRateLimitStore,
+	releaseAccountExportLimit
+} from '$lib/server/rateLimit';
 
-const EXPORT_RATE_LIMIT_SECONDS = 60 * 60 * 24;
 const ALGOLIA_BATCH_LIMIT = 1000;
 const USER_EXTRA_DATA_COLLECTION = 'userExtraData';
 
@@ -45,12 +49,6 @@ function buildAuthProfile(userRecord) {
 			lastRefreshTime: userRecord.metadata?.lastRefreshTime ?? null
 		}
 	};
-}
-
-function buildRateLimitPayload({ lastExportAtMs, nowMs }) {
-	const retryAfterSeconds = Math.ceil((EXPORT_RATE_LIMIT_SECONDS * 1000 - (nowMs - lastExportAtMs)) / 1000);
-	const nextAllowedAt = new Date(lastExportAtMs + EXPORT_RATE_LIMIT_SECONDS * 1000).toISOString();
-	return { retryAfterSeconds, nextAllowedAt };
 }
 
 async function fetchCollectionByField(adminDbInstance, collectionName, field, value) {
@@ -164,8 +162,12 @@ async function fetchAlgoliaRecords(reactionIds) {
 }
 
 export const POST = async ({ request }) => {
+	let adminDb = null;
+	let exportClaim = null;
 	try {
-		const { adminAuth, adminDb, adminFieldValue } = await initializeFirebaseAdmin();
+		const initialized = await initializeFirebaseAdmin();
+		const adminAuth = initialized.adminAuth;
+		adminDb = initialized.adminDb;
 
 		const authHeader = request.headers.get('Authorization');
 		if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -188,33 +190,12 @@ export const POST = async ({ request }) => {
 		}
 
 		const userId = decodedToken.uid;
+		const rateLimitStore = createFirestoreRateLimitStore(adminDb);
+		exportClaim = await claimAccountExportLimit({ id: userId, store: rateLimitStore });
+		if (exportClaim.blocked) return exportClaim.blocked;
 
 		const userDataDoc = await fetchUserDataDoc(adminDb, userId);
 		const userExtraData = await fetchUserExtraData(adminDb, userId);
-		const lastExportAtMs = userDataDoc?.data?.lastExportAt
-			? new Date(userDataDoc.data.lastExportAt).getTime()
-			: null;
-		const nowMs = Date.now();
-
-		if (lastExportAtMs && nowMs - lastExportAtMs < EXPORT_RATE_LIMIT_SECONDS * 1000) {
-			const { retryAfterSeconds, nextAllowedAt } = buildRateLimitPayload({
-				lastExportAtMs,
-				nowMs
-			});
-			return json(
-				{
-					error: 'Export recently requested. Please wait before requesting another export.',
-					retryAfterSeconds,
-					nextAllowedAt
-				},
-				{
-					status: 429,
-					headers: {
-						'Retry-After': String(retryAfterSeconds)
-					}
-				}
-			);
-		}
 
 		let authProfile = null;
 		const metaNotes = [];
@@ -303,17 +284,6 @@ export const POST = async ({ request }) => {
 			}
 		};
 
-		if (COLLECTION_USER_DATA && adminFieldValue) {
-			try {
-				await adminDb
-					.collection(COLLECTION_USER_DATA)
-					.doc(userId)
-					.set({ lastExportAt: adminFieldValue.serverTimestamp() }, { merge: true });
-			} catch (error) {
-				console.error('Failed to update export timestamp:', error);
-			}
-		}
-
 		return json(
 			{
 				export: exportPayload,
@@ -328,6 +298,14 @@ export const POST = async ({ request }) => {
 			}
 		);
 	} catch (error) {
+		if (exportClaim?.claimed && adminDb) {
+			await releaseAccountExportLimit({
+				id: exportClaim.id,
+				claimedAt: exportClaim.claimedAt,
+				previousLastExportAt: exportClaim.previousLastExportAt,
+				store: createFirestoreRateLimitStore(adminDb)
+			});
+		}
 		console.error('Error generating export:', error);
 		return json({ error: 'Failed to generate export' }, { status: 500 });
 	}

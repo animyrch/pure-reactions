@@ -36,6 +36,7 @@ const CLOUDFLARE_IPV6 = [
 
 export const TEN_MINUTES_MS = 10 * 60 * 1000;
 export const ONE_HOUR_MS = 60 * 60 * 1000;
+export const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 function ipv4ToInt(ip) {
   const parts = ip.split('.');
@@ -149,5 +150,25 @@ export function rateLimitDecision({ snapshot, now, limit, windowMs }) {
     windowStart,
     count: count + 1,
     retryAfterSeconds: 0,
+  };
+}
+
+/**
+ * Sliding cooldown for one account export per day.
+ * A missing or expired stamp allows the claim. The caller writes `nowMs` before doing the work.
+ */
+export function exportCooldownDecision({ lastExportAtMs, nowMs, windowMs }) {
+  const now = Number(nowMs);
+  const last = Number(lastExportAtMs);
+  const window = Number(windowMs);
+  const hasStamp = Number.isFinite(last) && last > 0;
+  const remainingMs = hasStamp ? last + window - now : 0;
+  if (!hasStamp || !Number.isFinite(now) || !Number.isFinite(window) || remainingMs <= 0) {
+    return { allowed: true, retryAfterSeconds: 0, nextAllowedAt: null };
+  }
+  return {
+    allowed: false,
+    retryAfterSeconds: Math.max(1, Math.ceil(remainingMs / 1000)),
+    nextAllowedAt: new Date(last + window).toISOString(),
   };
 }
