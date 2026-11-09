@@ -221,6 +221,20 @@ describe('TikTok metadata snapshots', () => {
 });
 
 describe('fetchTikTokOriginalVideoMetadata cache', () => {
+  it('does not call TikTok when the video id is not a TikTok id', async () => {
+    const fetchImpl = vi.fn();
+    vi.stubGlobal('fetch', fetchImpl);
+
+    const result = await fetchTikTokOriginalVideoMetadata({
+      videoId: 'not-a-video',
+      videoUrl: CANONICAL,
+    });
+
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(result.cache).toBe('skip');
+    expect(result.meta).toBeNull();
+  });
+
   it('calls TikTok when Firebase Admin is not configured', async () => {
     const fetchImpl = vi.fn(async () => ({
       ok: true,

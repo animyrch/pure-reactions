@@ -4,6 +4,7 @@ import {
   resolveTikTokAuthorUrl,
   resolveTikTokWatchUrl,
   sanitizeTikTokHandle,
+  sanitizeTikTokVideoId,
 } from '$lib/helpers/platform';
 import { normalizeOriginalVideoMetadata } from '$lib/helpers/originalVideo';
 import { initializeFirebaseAdmin } from '$lib/server/firebaseAdmin';
@@ -142,7 +143,7 @@ const requestTikTokOEmbed = async ({ videoId, videoUrl }) => {
 };
 
 export const fetchTikTokOriginalVideoMetadata = async ({ videoId, videoUrl, beforeUpstream } = {}) => {
-  const normalizedVideoId = trimString(videoId);
+  const normalizedVideoId = sanitizeTikTokVideoId(trimString(videoId)) || undefined;
   const resolvedUrl = resolveTikTokWatchUrl({
     videoId: normalizedVideoId,
     originalVideoUrl: videoUrl,
