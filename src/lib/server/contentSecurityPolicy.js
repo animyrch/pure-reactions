@@ -19,6 +19,8 @@ const scriptSrc = [
 
 const connectSrc = [
 	'self',
+	// Reaction and original titles are loaded in the browser from YouTube oEmbed.
+	'https://www.youtube.com',
 	'https://*.googleapis.com',
 	'https://*.firebaseio.com',
 	'wss://*.firebaseio.com',
