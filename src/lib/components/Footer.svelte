@@ -77,6 +77,11 @@
               </a>
             </li>
             <li>
+              <a href="/insights/remix-without-taking-the-upload" class="text-text-secondary transition-colors hover:text-accent-primary">
+                Remix without reuploading
+              </a>
+            </li>
+            <li>
               <a href="/insights/why-synced-content-cant-be-claimed" class="text-text-secondary transition-colors hover:text-accent-primary">
                 What Content ID sees
               </a>

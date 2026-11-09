@@ -22,7 +22,27 @@
 
   <!-- Insights Grid -->
   <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-    
+
+    <!-- Insight: Remix without taking the upload -->
+    <a
+      href="/insights/remix-without-taking-the-upload"
+      class="group rounded-lg border border-border-strong bg-elevated p-6 transition-all duration-subtle hover:border-accent-primary/50 hover:bg-surface"
+    >
+      <div class="mb-4 inline-flex rounded-md bg-accent-primary/20 px-3 py-1 text-xs font-medium text-accent-primary">
+        Remix
+      </div>
+      <h2 class="mb-3 text-xl font-semibold text-text-primary group-hover:text-accent-primary transition-colors">
+        Remix without taking the upload
+      </h2>
+      <p class="mb-4 text-text-secondary">
+        Start later, skip, stop early, or change volume and speed. The episode still plays from the original, so views, ads, and watch time stay with that creator.
+      </p>
+      <span class="inline-flex items-center gap-2 text-sm text-accent-primary">
+        Read article
+        <span aria-hidden="true">→</span>
+      </span>
+    </a>
+
     <!-- Insight 1: Why Synced Content Can't Be Claimed -->
     <a 
       href="/insights/why-synced-content-cant-be-claimed"

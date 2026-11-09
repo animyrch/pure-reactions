@@ -109,6 +109,9 @@
       <p class="mb-4">
         Pure Reactions keeps the streams separate. Sync does not remove original audio or video from a recording. Leave the original out of the file you upload, and Content ID has nothing from it to match. The original plays from the host, and a play still registers on that channel.
       </p>
+      <p class="mb-4">
+        If you are sharing the episode itself, with no recording of your own, a remix is the same idea taken further. You change where it starts, what gets skipped, and when it ends, and the video still plays from the original upload. <a href="/insights/remix-without-taking-the-upload" class="text-accent-primary hover:text-accent-primary/80 transition-colors">Remix without taking the upload</a> is written for that case.
+      </p>
       <div class="my-6 rounded-lg border border-success/30 bg-success/5 p-6">
         <p class="text-text-primary">
           <strong>No compromise:</strong> The reactor keeps their channel safe and monetization intact. The original creator gets the views, watch time, and ad impressions they deserve. You enjoy both without the guilt.
