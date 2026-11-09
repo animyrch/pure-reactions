@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { get } from 'svelte/store';
-import { displayNameMatchesEmailLocalPart } from '../../src/lib/helpers/publicDisplayName.js';
+import {
+	displayNameMatchesEmailLocalPart,
+	needsPublicDisplayName
+} from '../../src/lib/helpers/publicDisplayName.js';
 import {
 	beginPublishNameCheck,
 	endPublishNameCheck,
@@ -27,6 +30,20 @@ describe('displayNameMatchesEmailLocalPart', () => {
 		expect(displayNameMatchesEmailLocalPart('', 'jane.doe@gmail.com')).toBe(false);
 		expect(displayNameMatchesEmailLocalPart('jane.doe', '')).toBe(false);
 		expect(displayNameMatchesEmailLocalPart('jane.doe', 'not-an-email')).toBe(false);
+	});
+});
+
+describe('needsPublicDisplayName', () => {
+	it('asks when the name is missing or still the mailbox', () => {
+		expect(needsPublicDisplayName('', 'jane.doe@gmail.com')).toBe(true);
+		expect(needsPublicDisplayName('   ', 'jane.doe@gmail.com')).toBe(true);
+		expect(needsPublicDisplayName(null, 'jane.doe@gmail.com')).toBe(true);
+		expect(needsPublicDisplayName('Jane.Doe', 'jane.doe@gmail.com')).toBe(true);
+	});
+
+	it('accepts a name that is already different from the mailbox', () => {
+		expect(needsPublicDisplayName('Jane', 'jane.doe@gmail.com')).toBe(false);
+		expect(needsPublicDisplayName('jane.doe', '')).toBe(false);
 	});
 });
 
@@ -73,5 +90,34 @@ describe('ensurePublicDisplayName', () => {
 		await expect(again).resolves.toBe(true);
 		endPublishNameCheck();
 		expect(get(publicDisplayNameRequest)).toBeNull();
+	});
+
+	it('asks when the display name is missing and skips the rest of that publish', async () => {
+		const batchId = beginPublishNameCheck();
+		const first = ensurePublicDisplayName(
+			{ uid: 'user-blank', displayName: '   ', email: 'blank@example.com' },
+			batchId
+		);
+		expect(get(publicDisplayNameRequest)).toEqual({
+			uid: 'user-blank',
+			email: 'blank@example.com',
+			displayName: ''
+		});
+
+		const second = ensurePublicDisplayName(
+			{ uid: 'user-blank', displayName: '', email: 'blank@example.com' },
+			batchId
+		);
+		settlePublicDisplayName(false);
+		await expect(first).resolves.toBe(false);
+		await expect(second).resolves.toBe(false);
+
+		const skipped = await ensurePublicDisplayName(
+			{ uid: 'user-blank', displayName: null, email: 'blank@example.com' },
+			batchId
+		);
+		expect(skipped).toBe(false);
+		expect(get(publicDisplayNameRequest)).toBeNull();
+		endPublishNameCheck();
 	});
 });
