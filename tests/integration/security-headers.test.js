@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { basicVideoDetailsUrl } from '../../src/lib/constants/youtube.js';
 import { contentSecurityDirectives } from '../../src/lib/server/contentSecurityPolicy.js';
 import {
 	FRAME_ANCESTORS_POLICY,
@@ -107,5 +108,12 @@ describe('contentSecurityDirectives', () => {
 
 		expect(directives['connect-src']).toContain('http://127.0.0.1:*');
 		expect(directives['connect-src']).toContain('ws://localhost:*');
+	});
+
+	it('lets the page fetch YouTube oEmbed while saving a reaction video', () => {
+		const origin = new URL(basicVideoDetailsUrl).origin;
+
+		expect(contentSecurityDirectives()['connect-src']).toContain(origin);
+		expect(contentSecurityDirectives({ dev: true })['connect-src']).toContain(origin);
 	});
 });
