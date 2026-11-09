@@ -393,6 +393,10 @@ export function createTwinPlayersOrchestrationController({
 
       if (originalVideoPlatform === 'tiktok') {
         newPlayerOriginal = createTikTokOriginalPlayer(originalVideoId);
+        if (!newPlayerOriginal) {
+          console.error('Failed to initialise TikTok original player', { originalVideoId });
+          setExpectedPlayerReadyCount(normalizedReactionVideoId ? 1 : 0);
+        }
       } else {
         newPlayerOriginal = new YT.Player('player-original', {
           videoId: originalVideoId,
@@ -652,6 +656,10 @@ export function createTwinPlayersOrchestrationController({
         try {
           if (nextOriginalVideoPlatform === 'tiktok') {
             nextPlayerOriginal = createTikTokOriginalPlayer(originalVideoId);
+            if (!nextPlayerOriginal) {
+              console.error('Failed to initialise TikTok original player', { originalVideoId });
+              setExpectedPlayerReadyCount(shouldCreateReactionPlayer ? 1 : 0);
+            }
           } else {
             nextPlayerOriginal = new YT.Player('player-original', {
               videoId: originalVideoId,
