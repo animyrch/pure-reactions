@@ -261,6 +261,9 @@ async function loadStoredOrFreshPage({
       if (claim.state === 'ready' && isReadyPlaylistPage(claim.page)) {
         return { page: claim.page, cache: 'hit' };
       }
+      if (claim.state !== 'claimed' || !claim.lockId) {
+        throw new Error('YouTube playlist page is still being fetched');
+      }
     }
 
     const page = await rememberPage({

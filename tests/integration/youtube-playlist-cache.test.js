@@ -470,6 +470,28 @@ describe('stored YouTube playlist pages', () => {
     }
   });
 
+  it('does not fetch YouTube when another worker still holds the page', async () => {
+    const store = createMemoryStore();
+    const fetchPlaylistPage = vi.fn();
+    store.waitForPage = async () => null;
+    store.claimPage = vi
+      .fn()
+      .mockResolvedValueOnce({ state: 'pending' })
+      .mockResolvedValueOnce({ state: 'pending' });
+
+    await expect(
+      resolveCachedYouTubePlaylist({
+        playlistId: PLAYLIST_ID,
+        store,
+        fetchPlaylistPage,
+        fetchPlaylistTitle: vi.fn(),
+        inflight: new Map(),
+      }),
+    ).rejects.toThrow('YouTube playlist page is still being fetched');
+    expect(fetchPlaylistPage).not.toHaveBeenCalled();
+    expect(store.claimPage).toHaveBeenCalledTimes(2);
+  });
+
   it('returns the fetched page without updating the manifest after losing the claim', async () => {
     const store = createMemoryStore();
     const updateManifest = vi.fn();
