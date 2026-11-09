@@ -255,7 +255,9 @@ export async function verifyAndSyncTwinPlayersMetadata({
         typeof reactorId === 'string' &&
         viewerId === reactorId
       ) {
-        await requestReactionEnrichment(resolvedDocumentId, { force: false });
+        // The owner already saw a difference. force refreshes a snapshot that
+        // is still inside the freshness window, so the stored copy matches.
+        await requestReactionEnrichment(resolvedDocumentId, { force: true });
       } else if (typeof window === 'undefined') {
         await updateFirebaseDocument(metadataUpdates, resolvedDocumentId);
       }
