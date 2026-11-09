@@ -18,6 +18,7 @@ import { initializeFirebaseAdmin } from '$lib/server/firebaseAdmin';
 import {
 	claimAccountExportLimit,
 	createFirestoreRateLimitStore,
+	completeAccountExportLimit,
 	releaseAccountExportLimit
 } from '$lib/server/rateLimit';
 
@@ -301,6 +302,17 @@ export const POST = async ({ request }) => {
 			}
 		};
 
+		if (exportClaim?.claimed) {
+			const completed = await completeAccountExportLimit({
+				id: exportClaim.id,
+				claimedAt: exportClaim.claimedAt,
+				store: rateLimitStore
+			});
+			if (!completed) {
+				throw new Error('Could not record the completed export');
+			}
+		}
+
 		return json(
 			{
 				export: exportPayload,
@@ -319,7 +331,6 @@ export const POST = async ({ request }) => {
 			await releaseAccountExportLimit({
 				id: exportClaim.id,
 				claimedAt: exportClaim.claimedAt,
-				previousLastExportAt: exportClaim.previousLastExportAt,
 				store: createFirestoreRateLimitStore(adminDb)
 			});
 		}

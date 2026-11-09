@@ -5,7 +5,9 @@ import {
   ONE_DAY_MS,
   ONE_HOUR_MS,
   TEN_MINUTES_MS,
+  EXPORT_LEASE_MS,
   exportCooldownDecision,
+  exportLeaseDecision,
   rateLimitDecision,
   visitorKey,
 } from '$lib/helpers/rateLimit';
@@ -16,7 +18,8 @@ import { initializeFirebaseAdmin } from '$lib/server/firebaseAdmin';
  * Public routes pass request headers and are counted by visitor.
  * Signed-in routes pass the Firebase uid.
  * A counter outage allows the request. Only an over-limit result blocks it.
- * Account export claims a 24-hour stamp on this collection before the file is built.
+ * Account export takes a short lease before the file is built and writes the
+ * 24-hour stamp only after the export succeeds.
  */
 
 export const RATE_LIMITS = {
@@ -116,7 +119,8 @@ export function createFirestoreRateLimitStore(adminDb, collectionName = COLLECTI
       const ref = adminDb.collection(collectionName).doc(rateLimitDocumentId(bucket, id));
       return adminDb.runTransaction(async (transaction) => {
         const snap = await transaction.get(ref);
-        const raw = snap.exists ? Number(snap.data()?.lastExportAt) : NaN;
+        const data = snap.exists ? snap.data() : null;
+        const raw = Number(data?.lastExportAt);
         const previousLastExportAt = Number.isFinite(raw) && raw > 0 ? raw : null;
         const decision = exportCooldownDecision({
           lastExportAtMs: previousLastExportAt,
@@ -126,11 +130,24 @@ export function createFirestoreRateLimitStore(adminDb, collectionName = COLLECTI
         if (!decision.allowed) {
           return { ...decision, claimedAt: null, previousLastExportAt };
         }
-        transaction.set(ref, {
+        const lease = exportLeaseDecision({ leaseUntilMs: data?.exportLeaseUntil, nowMs: now });
+        if (lease.active) {
+          return {
+            allowed: false,
+            claimedAt: null,
+            previousLastExportAt,
+            retryAfterSeconds: lease.retryAfterSeconds,
+            nextAllowedAt: lease.nextAllowedAt,
+          };
+        }
+        const next = {
           bucket,
-          lastExportAt: now,
+          exportLeaseAt: now,
+          exportLeaseUntil: now + EXPORT_LEASE_MS,
           updatedAt: now,
-        });
+        };
+        if (previousLastExportAt) next.lastExportAt = previousLastExportAt;
+        transaction.set(ref, next);
         return {
           allowed: true,
           claimedAt: now,
@@ -140,18 +157,34 @@ export function createFirestoreRateLimitStore(adminDb, collectionName = COLLECTI
         };
       });
     },
-    async releaseExport({ bucket, id, claimedAt, previousLastExportAt }) {
+    async completeExport({ bucket, id, claimedAt, now }) {
       const ref = adminDb.collection(collectionName).doc(rateLimitDocumentId(bucket, id));
       return adminDb.runTransaction(async (transaction) => {
         const snap = await transaction.get(ref);
-        const current = snap.exists ? Number(snap.data()?.lastExportAt) : NaN;
-        if (!Number.isFinite(current) || current !== Number(claimedAt)) return false;
-        const previous = Number(previousLastExportAt);
-        if (Number.isFinite(previous) && previous > 0) {
+        const data = snap.exists ? snap.data() : null;
+        const ownsLease = Number(data?.exportLeaseAt) === Number(claimedAt);
+        const lease = exportLeaseDecision({ leaseUntilMs: data?.exportLeaseUntil, nowMs: now });
+        if (!ownsLease && lease.active) return false;
+        transaction.set(ref, {
+          bucket,
+          lastExportAt: now,
+          updatedAt: now,
+        });
+        return true;
+      });
+    },
+    async releaseExport({ bucket, id, claimedAt }) {
+      const ref = adminDb.collection(collectionName).doc(rateLimitDocumentId(bucket, id));
+      return adminDb.runTransaction(async (transaction) => {
+        const snap = await transaction.get(ref);
+        const data = snap.exists ? snap.data() : null;
+        if (Number(data?.exportLeaseAt) !== Number(claimedAt)) return false;
+        const raw = Number(data?.lastExportAt);
+        if (Number.isFinite(raw) && raw > 0) {
           transaction.set(ref, {
             bucket,
-            lastExportAt: previous,
-            updatedAt: previous,
+            lastExportAt: raw,
+            updatedAt: raw,
           });
         } else {
           transaction.delete(ref);
@@ -289,10 +322,26 @@ export async function claimAccountExportLimit({ id, now = Date.now(), store } = 
   }
 }
 
+export async function completeAccountExportLimit({ id, claimedAt, now = Date.now(), store } = {}) {
+  if (!id || !claimedAt) return false;
+  try {
+    const activeStore = store || (await openStore());
+    if (!activeStore) return false;
+    return await activeStore.completeExport({
+      bucket: RATE_LIMITS.accountExport.bucket,
+      id,
+      claimedAt,
+      now,
+    });
+  } catch (error) {
+    console.error('Account export limit completion failed', error);
+    return false;
+  }
+}
+
 export async function releaseAccountExportLimit({
   id,
   claimedAt,
-  previousLastExportAt,
   store,
 } = {}) {
   if (!id || !claimedAt) return false;
@@ -303,7 +352,6 @@ export async function releaseAccountExportLimit({
       bucket: RATE_LIMITS.accountExport.bucket,
       id,
       claimedAt,
-      previousLastExportAt,
     });
   } catch (error) {
     console.error('Account export limit release failed', error);

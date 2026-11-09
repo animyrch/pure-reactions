@@ -37,6 +37,7 @@ const CLOUDFLARE_IPV6 = [
 export const TEN_MINUTES_MS = 10 * 60 * 1000;
 export const ONE_HOUR_MS = 60 * 60 * 1000;
 export const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+export const EXPORT_LEASE_MS = 2 * 60 * 1000;
 
 function ipv4ToInt(ip) {
   const parts = ip.split('.');
@@ -155,8 +156,9 @@ export function rateLimitDecision({ snapshot, now, limit, windowMs }) {
 }
 
 /**
- * Sliding cooldown for one account export per day.
- * A missing or expired stamp allows the claim. The caller writes `nowMs` before doing the work.
+ * Sliding cooldown for one completed account export per day.
+ * A missing or expired stamp allows another export. The 24-hour stamp is written
+ * after the file is built. An in-progress export uses a separate short lease.
  */
 export function exportCooldownDecision({ lastExportAtMs, nowMs, windowMs }) {
   const now = Number(nowMs);
@@ -171,5 +173,22 @@ export function exportCooldownDecision({ lastExportAtMs, nowMs, windowMs }) {
     allowed: false,
     retryAfterSeconds: Math.max(1, Math.ceil(remainingMs / 1000)),
     nextAllowedAt: new Date(last + window).toISOString(),
+  };
+}
+
+/**
+ * An in-progress export holds the slot until `leaseUntilMs`.
+ * An expired lease can be replaced and does not clear a completed export stamp.
+ */
+export function exportLeaseDecision({ leaseUntilMs, nowMs }) {
+  const until = Number(leaseUntilMs);
+  const now = Number(nowMs);
+  if (!Number.isFinite(until) || !Number.isFinite(now) || until <= now) {
+    return { active: false, retryAfterSeconds: 0, nextAllowedAt: null };
+  }
+  return {
+    active: true,
+    retryAfterSeconds: Math.max(1, Math.ceil((until - now) / 1000)),
+    nextAllowedAt: new Date(until).toISOString(),
   };
 }

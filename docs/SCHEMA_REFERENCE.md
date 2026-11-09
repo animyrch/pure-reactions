@@ -312,14 +312,16 @@ A saved YouTube or TikTok answer does not count. The route spends an allowance o
 
 If the counter cannot be read, the request continues. A caller over the allowance receives HTTP 429.
 
-Account export is the exception to the fixed window. `POST /api/account/export` claims `account-export` in a transaction before it reads the account. The document stores `lastExportAt` instead of `count` and `windowStart`. A second request is refused until 24 hours after that stamp. The claim is written before the export is built, so overlapping requests cannot all pass. A failed export puts the previous stamp back only when the document still holds the stamp this request wrote. The account owner cannot read or write this document. User documents do not keep an export stamp. The export deletes a leftover `userData.lastExportAt` and omits it from the file.
+Account export is the exception to the fixed window. `POST /api/account/export` takes a two-minute `exportLeaseUntil` on `account-export` before it reads the account. Overlapping requests cannot all pass while that lease is current. The 24-hour `lastExportAt` stamp is written only after the file is built. A failed export removes the lease and leaves a completed stamp in place. An expired lease can be replaced without clearing that stamp. The account owner cannot read or write this document. User documents do not keep an export stamp. The export deletes a leftover `userData.lastExportAt` and omits it from the file.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `bucket` | string | Yes | Route name, such as `youtube-comments` or `account-export` |
 | `count` | number | Yes for fixed windows | Calls already allowed in the current window |
 | `windowStart` | number | Yes for fixed windows | Epoch milliseconds when this window began |
-| `lastExportAt` | number | Yes for account export | Epoch milliseconds when this export slot was claimed |
+| `lastExportAt` | number | After a successful export | Epoch milliseconds when the export file was built. A second export waits 24 hours from this stamp |
+| `exportLeaseAt` | number | While an export is in progress | Epoch milliseconds when this request took the in-progress lease |
+| `exportLeaseUntil` | number | While an export is in progress | Epoch milliseconds when the in-progress lease expires. Two minutes after `exportLeaseAt` |
 | `updatedAt` | number | Yes | Epoch milliseconds of the latest allowed call |
 
 ---
@@ -644,6 +646,7 @@ const docRef = await addDoc(collection(db, 'reactions'), {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.25 | 2026-11-09 | Account export holds a two-minute lease and writes `lastExportAt` only after the file is built. An expired lease can be replaced without clearing a completed export |
 | 1.24 | 2026-11-09 | Added server-only `tiktokMetadataCache`. A successful TikTok oEmbed answer is reused until `expiresAt`, one day after it was fetched |
 | 1.23 | 2026-11-09 | `sessionViewerOwners/{sessionId}/{uid}/{index}` stores one public slot id at indexes `0` through `2`. The host deletes that session's claims before deleting an expired session |
 | 1.22 | 2026-11-08 | Removed `userData.lastExportAt`. Export deletes a leftover value and the file omits it. Firestore rules do not mention the key |
