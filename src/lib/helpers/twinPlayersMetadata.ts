@@ -18,8 +18,15 @@ type ReactionMetadataField =
 type OriginalMetadataField =
   | 'originalVideoTitle'
   | 'originalVideoAuthor'
+  | 'originalVideoAuthorHandle'
   | 'originalVideoAuthorUrl'
-  | 'originalVideoDescription';
+  | 'originalVideoDescription'
+  | 'originalVideoThumbnailUrl'
+  | 'originalVideoThumbnailWidth'
+  | 'originalVideoThumbnailHeight'
+  | 'originalVideoProviderName'
+  | 'originalVideoProviderUrl'
+  | 'originalVideoUrl';
 
 type TwinPlayersMetadataField =
   | OriginalMetadataField
@@ -61,8 +68,15 @@ export type VerifyAndSyncTwinPlayersMetadataParams = {
   reactionVideoId?: string;
   currentOriginalTitle?: string | null;
   currentOriginalAuthor?: string | null;
+  currentOriginalAuthorHandle?: string | null;
   currentOriginalAuthorUrl?: string | null;
   currentOriginalDescription?: string | null;
+  currentOriginalThumbnailUrl?: string | null;
+  currentOriginalThumbnailWidth?: number | null;
+  currentOriginalThumbnailHeight?: number | null;
+  currentOriginalProviderName?: string | null;
+  currentOriginalProviderUrl?: string | null;
+  currentOriginalCanonicalUrl?: string | null;
   currentReactionTitle?: string | null;
   currentReactionAuthor?: string | null;
   reactorId?: string | null;
@@ -78,6 +92,9 @@ export type VerifyAndSyncTwinPlayersMetadataResult = {
 const trimString = (value: string | null | undefined) =>
   typeof value === 'string' ? value.trim() : undefined;
 
+const finiteNumber = (value: number | null | undefined) =>
+  typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+
 const hasKeys = (value: object) => Object.keys(value).length > 0;
 
 const verifyOriginalVideoDetails = async ({
@@ -86,16 +103,30 @@ const verifyOriginalVideoDetails = async ({
   videoUrl,
   currentTitle,
   currentAuthor,
+  currentAuthorHandle,
   currentAuthorUrl,
-  currentDescription
+  currentDescription,
+  currentThumbnailUrl,
+  currentThumbnailWidth,
+  currentThumbnailHeight,
+  currentProviderName,
+  currentProviderUrl,
+  currentCanonicalUrl
 }: {
   platform?: 'youtube' | 'tiktok';
   videoId?: string;
   videoUrl?: string | null;
   currentTitle?: string | null;
   currentAuthor?: string | null;
+  currentAuthorHandle?: string | null;
   currentAuthorUrl?: string | null;
   currentDescription?: string | null;
+  currentThumbnailUrl?: string | null;
+  currentThumbnailWidth?: number | null;
+  currentThumbnailHeight?: number | null;
+  currentProviderName?: string | null;
+  currentProviderUrl?: string | null;
+  currentCanonicalUrl?: string | null;
 }): Promise<VerifyOriginalVideoDetailsResult> => {
   const result: VerifyOriginalVideoDetailsResult = {
     updates: {}
@@ -112,11 +143,18 @@ const verifyOriginalVideoDetails = async ({
       videoUrl: videoUrl || undefined
     });
     const normalizedFields = originalVideoMetadataToFirestoreFields(metadata);
-    const currentComparison = {
+    const currentComparison: Partial<Record<OriginalMetadataField, string | number>> = {
       originalVideoTitle: trimString(currentTitle),
       originalVideoAuthor: trimString(currentAuthor),
+      originalVideoAuthorHandle: trimString(currentAuthorHandle),
       originalVideoAuthorUrl: trimString(currentAuthorUrl),
-      originalVideoDescription: trimString(currentDescription)
+      originalVideoDescription: trimString(currentDescription),
+      originalVideoThumbnailUrl: trimString(currentThumbnailUrl),
+      originalVideoThumbnailWidth: finiteNumber(currentThumbnailWidth),
+      originalVideoThumbnailHeight: finiteNumber(currentThumbnailHeight),
+      originalVideoProviderName: trimString(currentProviderName),
+      originalVideoProviderUrl: trimString(currentProviderUrl),
+      originalVideoUrl: trimString(currentCanonicalUrl) || trimString(videoUrl)
     };
 
     for (const [key, value] of Object.entries(normalizedFields)) {
@@ -192,8 +230,15 @@ export async function verifyAndSyncTwinPlayersMetadata({
   reactionVideoId,
   currentOriginalTitle,
   currentOriginalAuthor,
+  currentOriginalAuthorHandle,
   currentOriginalAuthorUrl,
   currentOriginalDescription,
+  currentOriginalThumbnailUrl,
+  currentOriginalThumbnailWidth,
+  currentOriginalThumbnailHeight,
+  currentOriginalProviderName,
+  currentOriginalProviderUrl,
+  currentOriginalCanonicalUrl,
   currentReactionTitle,
   currentReactionAuthor,
   reactorId
@@ -213,8 +258,15 @@ export async function verifyAndSyncTwinPlayersMetadata({
       videoUrl: originalVideoUrl,
       currentTitle: currentOriginalTitle,
       currentAuthor: currentOriginalAuthor,
+      currentAuthorHandle: currentOriginalAuthorHandle,
       currentAuthorUrl: currentOriginalAuthorUrl,
-      currentDescription: currentOriginalDescription
+      currentDescription: currentOriginalDescription,
+      currentThumbnailUrl: currentOriginalThumbnailUrl,
+      currentThumbnailWidth: currentOriginalThumbnailWidth,
+      currentThumbnailHeight: currentOriginalThumbnailHeight,
+      currentProviderName: currentOriginalProviderName,
+      currentProviderUrl: currentOriginalProviderUrl,
+      currentCanonicalUrl: currentOriginalCanonicalUrl
     }),
     verifyVideoDetails({
       videoId: reactionVideoId,
@@ -255,9 +307,12 @@ export async function verifyAndSyncTwinPlayersMetadata({
         typeof reactorId === 'string' &&
         viewerId === reactorId
       ) {
-        // The owner already saw a difference. force refreshes a snapshot that
-        // is still inside the freshness window, so the stored copy matches.
-        await requestReactionEnrichment(resolvedDocumentId, { force: true });
+        // Refresh only the side that differs. A fresh YouTube snapshot stays
+        // in place, and a YouTube failure does not block the TikTok write.
+        await requestReactionEnrichment(resolvedDocumentId, {
+          forceReaction: hasKeys(reactionVerification.updates),
+          forceOriginal: hasKeys(originalVerification.updates)
+        });
       } else if (typeof window === 'undefined') {
         await updateFirebaseDocument(metadataUpdates, resolvedDocumentId);
       }

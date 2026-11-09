@@ -217,6 +217,82 @@ describe('POST /api/reactions/enrich', () => {
     });
   });
 
+  it('writes a TikTok snapshot when the YouTube refresh fails', async () => {
+    const tiktokId = '7056208472144235823';
+    admin.seed(COLLECTION_REACTION_BINOMES, 'rx', {
+      reactorId: 'owner',
+      reactionVideoId: 'yt-owner',
+      originalVideoPlatform: 'tiktok',
+      originalVideoId: tiktokId,
+      originalVideoUrl: `https://www.tiktok.com/@creator/video/${tiktokId}`,
+    });
+    fetchMock.mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes('googleapis.com')) {
+        throw new Error('YouTube unavailable');
+      }
+      return {
+        ok: true,
+        json: async () => ({
+          title: 'Live caption',
+          author_name: 'Creator',
+          author_unique_id: 'creator',
+          author_url: 'https://www.tiktok.com/@creator',
+          thumbnail_url: 'https://example.com/tiktok.jpg',
+        }),
+        text: async () => '',
+      };
+    });
+
+    const response = await postEnrich({ reactionId: 'rx', force: true }, 'owner-token');
+    const stored = admin.read(COLLECTION_REACTION_BINOMES, 'rx');
+
+    expect(response.status).toBe(200);
+    expect(stored.youtube).toBeUndefined();
+    expect(stored.originalTikTok.meta.title).toBe('Live caption');
+  });
+
+  it('reuses a fresh YouTube snapshot when only the TikTok side is refreshed', async () => {
+    const tiktokId = '7056208472144235823';
+    admin.seed(COLLECTION_REACTION_BINOMES, 'rx', {
+      reactorId: 'owner',
+      reactionVideoId: 'yt-owner',
+      youtube: { meta: freshMeta('yt-owner', 90) },
+      lastEnrichedAt: new Date().toISOString(),
+      originalVideoPlatform: 'tiktok',
+      originalVideoId: tiktokId,
+      originalVideoUrl: `https://www.tiktok.com/@creator/video/${tiktokId}`,
+    });
+    fetchMock.mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes('googleapis.com')) {
+        throw new Error('YouTube should stay cached');
+      }
+      return {
+        ok: true,
+        json: async () => ({
+          title: 'Live caption',
+          author_name: 'Creator',
+          author_unique_id: 'creator',
+          author_url: 'https://www.tiktok.com/@creator',
+          thumbnail_url: 'https://example.com/tiktok.jpg',
+        }),
+        text: async () => '',
+      };
+    });
+
+    const response = await postEnrich(
+      { reactionId: 'rx', forceOriginal: true, forceReaction: false },
+      'owner-token',
+    );
+    const stored = admin.read(COLLECTION_REACTION_BINOMES, 'rx');
+
+    expect(response.status).toBe(200);
+    expect(fetchMock.mock.calls.some(([input]) => String(input).includes('googleapis.com'))).toBe(false);
+    expect(stored.youtube.meta.title).toBe('Stored title');
+    expect(stored.originalTikTok.meta.title).toBe('Live caption');
+  });
+
   it('does not admin-write another user playlist or its reactions', async () => {
     const reaction = {
       reactorId: 'owner',

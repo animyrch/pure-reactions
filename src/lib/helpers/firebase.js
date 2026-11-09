@@ -197,7 +197,10 @@ const createClientWatchDurationIo = () => {
     };
 };
 
-export const requestReactionEnrichment = async (reactionId, { force = false } = {}) => {
+export const requestReactionEnrichment = async (
+    reactionId,
+    { force = false, forceReaction = false, forceOriginal = false } = {}
+) => {
     if (!reactionId || typeof fetch !== 'function') {
         return false;
     }
@@ -215,7 +218,12 @@ export const requestReactionEnrichment = async (reactionId, { force = false } = 
                 'content-type': 'application/json',
                 Authorization: `Bearer ${idToken}`
             },
-            body: JSON.stringify({ reactionId, force })
+            body: JSON.stringify({
+                reactionId,
+                force: force === true,
+                forceReaction: forceReaction === true,
+                forceOriginal: forceOriginal === true
+            })
         });
 
         if (response.status === 401 || response.status === 403) {

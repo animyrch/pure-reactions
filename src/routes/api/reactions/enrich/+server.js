@@ -54,7 +54,9 @@ export const POST = async ({ request }) => {
       collectionName: COLLECTION_REACTION_BINOMES,
       reactionId,
       ownerId: userId,
-      force: body?.force === true
+      force: body?.force === true,
+      forceReaction: body?.forceReaction === true,
+      forceOriginal: body?.forceOriginal === true
     });
 
     if (!result.found) {

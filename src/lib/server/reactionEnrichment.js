@@ -180,7 +180,9 @@ export async function enrichReactionDocument({
   collectionName,
   reactionId,
   ownerId,
-  force = false
+  force = false,
+  forceReaction = false,
+  forceOriginal = false
 }) {
   const docRef = adminDb.collection(collectionName).doc(reactionId);
   const snapshot = await docRef.get();
@@ -244,17 +246,20 @@ export async function enrichReactionDocument({
     return { found: true, updated: false, reason: 'missing-youtube-id' };
   }
 
+  const refreshReaction = force || forceReaction === true;
+  const refreshOriginal = force || forceOriginal === true;
+
   const reactionNeedsUpdate =
     Boolean(reactionYoutubeId) &&
-    (force || !isMetaComplete(data?.youtube?.meta, reactionYoutubeId) || isStale(data?.lastEnrichedAt));
+    (refreshReaction || !isMetaComplete(data?.youtube?.meta, reactionYoutubeId) || isStale(data?.lastEnrichedAt));
 
   const originalNeedsUpdate =
     originalPlatform === 'youtube'
       ? Boolean(originalYoutubeId) &&
-        (force || !isMetaComplete(data?.originalYoutube?.meta, originalYoutubeId) ||
+        (refreshOriginal || !isMetaComplete(data?.originalYoutube?.meta, originalYoutubeId) ||
           isStale(data?.originalYoutube?.lastEnrichedAt))
       : Boolean(originalTikTokId) &&
-        (force || !isTikTokMetaComplete(data?.originalTikTok?.meta, originalTikTokId) ||
+        (refreshOriginal || !isTikTokMetaComplete(data?.originalTikTok?.meta, originalTikTokId) ||
           isStale(data?.originalTikTok?.lastEnrichedAt));
 
   if (!reactionNeedsUpdate && !originalNeedsUpdate) {
@@ -278,15 +283,23 @@ export async function enrichReactionDocument({
   let originalTikTokResponse = null;
 
   if (reactionNeedsUpdate) {
-    reactionResponse = await fetchYoutubeMeta(reactionYoutubeId);
+    try {
+      reactionResponse = await fetchYoutubeMeta(reactionYoutubeId);
+    } catch (error) {
+      console.error('YouTube enrichment failed', error);
+    }
   }
 
   if (originalNeedsUpdate) {
     if (originalPlatform === 'youtube') {
-      if (originalYoutubeId === reactionYoutubeId && reactionResponse) {
-        originalResponse = reactionResponse;
-      } else {
-        originalResponse = await fetchYoutubeMeta(originalYoutubeId);
+      try {
+        if (originalYoutubeId === reactionYoutubeId && reactionResponse) {
+          originalResponse = reactionResponse;
+        } else {
+          originalResponse = await fetchYoutubeMeta(originalYoutubeId);
+        }
+      } catch (error) {
+        console.error('YouTube enrichment failed', error);
       }
     } else {
       if (safeTikTok?.originalVideoUrl) {
