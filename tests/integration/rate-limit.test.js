@@ -109,6 +109,16 @@ describe('visitor identity', () => {
     expect(visitorKey(headers)).toBe('198.51.100.20');
   });
 
+  it('keeps a bucket when Cloudflare omits the client address', () => {
+    expect(visitorKey(new Headers({
+      'x-nf-client-connection-ip': '104.16.1.1',
+    }))).toBe('104.16.1.1');
+    expect(visitorKey(new Headers({
+      'x-nf-client-connection-ip': '104.16.1.1',
+      'cf-connecting-ip': 'not an ip',
+    }))).toBe('104.16.1.1');
+  });
+
   it('fails open when the visitor cannot be identified', () => {
     expect(visitorKey(new Headers())).toBe('');
     expect(visitorKey(new Headers({ 'x-nf-client-connection-ip': 'not an ip' }))).toBe('');

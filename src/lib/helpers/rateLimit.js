@@ -122,12 +122,13 @@ function headerValue(headers, name) {
  * Visitor identity for a public route.
  * A request that arrived from Cloudflare uses CF-Connecting-IP.
  * A direct Netlify request ignores that header, because the caller can set it.
+ * If that header is missing, the Cloudflare peer address is still a bucket.
  * An empty string means the check should fail open.
  */
 export function visitorKey(headers) {
   const peer = normalizeIp(headerValue(headers, 'x-nf-client-connection-ip'));
   const claimed = normalizeIp(headerValue(headers, 'cf-connecting-ip'));
-  if (peer && isCloudflareAddress(peer)) return claimed;
+  if (peer && isCloudflareAddress(peer)) return claimed || peer;
   return peer;
 }
 
