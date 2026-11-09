@@ -240,6 +240,7 @@ export async function resolveStoredYouTubePlaylist({
   pageToken = '',
   includePlaylistTitle = false,
   maxResults,
+  offset = 0,
   apiKey,
   beforeUpstream,
 }) {
@@ -253,6 +254,7 @@ export async function resolveStoredYouTubePlaylist({
     pageToken,
     includePlaylistTitle,
     maxResults,
+    offset,
     inflight,
     fetchPlaylistPage: ({ playlistId: id, pageToken: token }) =>
       guard(() => fetchYouTubePlaylistPage({ apiKey, playlistId: id, pageToken: token })),

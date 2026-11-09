@@ -13,11 +13,16 @@ import {
 import {
   createFirestoreYouTubePlaylistCacheStore,
   fetchYouTubePlaylistPage,
+  resolveStoredYouTubePlaylist,
   YOUTUBE_PLAYLIST_FETCH_TIMEOUT_MS,
 } from '$lib/server/youtubePlaylistCache';
 
 vi.mock('$env/dynamic/private', () => ({
   env: {},
+}));
+
+vi.mock('$lib/server/firebaseAdmin', () => ({
+  initializeFirebaseAdmin: async () => ({ adminDb: null }),
 }));
 
 const PLAYLIST_ID = 'PL1234567890ab';
@@ -436,6 +441,33 @@ describe('stored YouTube playlist pages', () => {
     expect(response.payload[0].snippet.resourceId.videoId).toBe('bcdefghijkl');
     expect(response.headers['x-next-offset']).toBeUndefined();
     expect(response.headers['x-next-page-token']).toBe('next-page');
+  });
+
+  it('keeps the requested offset when the stored resolver loads the page', async () => {
+    const fetchImpl = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      text: async () =>
+        JSON.stringify({
+          items: [youtubeItem('abcdefghijk', 'First'), youtubeItem('bcdefghijkl', 'Second')],
+        }),
+    }));
+    vi.stubGlobal('fetch', fetchImpl);
+
+    try {
+      const response = await resolveStoredYouTubePlaylist({
+        playlistId: PLAYLIST_ID,
+        maxResults: 1,
+        offset: 1,
+        apiKey: 'key',
+      });
+
+      expect(response.payload).toHaveLength(1);
+      expect(response.payload[0].snippet.resourceId.videoId).toBe('bcdefghijkl');
+      expect(response.headers['x-next-offset']).toBeUndefined();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('returns the fetched page without updating the manifest after losing the claim', async () => {
