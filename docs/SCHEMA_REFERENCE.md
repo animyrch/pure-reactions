@@ -644,6 +644,7 @@ const docRef = await addDoc(collection(db, 'reactions'), {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.24 | 2026-11-09 | Added server-only `tiktokMetadataCache`. A successful TikTok oEmbed answer is reused until `expiresAt`, one day after it was fetched |
 | 1.23 | 2026-11-09 | `sessionViewerOwners/{sessionId}/{uid}/{index}` stores one public slot id at indexes `0` through `2`. The host deletes that session's claims before deleting an expired session |
 | 1.22 | 2026-11-08 | Removed `userData.lastExportAt`. Export deletes a leftover value and the file omits it. Firestore rules do not mention the key |
 | 1.21 | 2026-11-08 | Account export claims a 24-hour `lastExportAt` stamp on server-only `rateLimits` before building the file. `userData.lastExportAt` is no longer the limit |
