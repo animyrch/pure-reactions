@@ -153,9 +153,12 @@ export const fetchTikTokOriginalVideoMetadata = async ({ videoId, videoUrl, befo
     return emptyTikTokMetadata(normalizedVideoId, resolvedUrl);
   }
 
+  let fetchedResult;
   const live = async () => {
+    if (fetchedResult) return fetchedResult;
     if (beforeUpstream) await beforeUpstream();
-    return requestTikTokOEmbed({ videoId: normalizedVideoId, videoUrl: resolvedUrl });
+    fetchedResult = await requestTikTokOEmbed({ videoId: normalizedVideoId, videoUrl: resolvedUrl });
+    return fetchedResult;
   };
 
   try {

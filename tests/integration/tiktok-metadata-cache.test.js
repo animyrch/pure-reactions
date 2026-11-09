@@ -235,6 +235,36 @@ describe('fetchTikTokOriginalVideoMetadata cache', () => {
     expect(result.meta).toBeNull();
   });
 
+  it('returns the fetched answer when the cache write fails', async () => {
+    const adminDb = createFakeAdminDb();
+    const runTransaction = adminDb.runTransaction.bind(adminDb);
+    adminDb.runTransaction = (fn) =>
+      runTransaction(async (transaction) => {
+        const set = transaction.set.bind(transaction);
+        transaction.set = (ref, data) => {
+          if (data?.outcome === 'ok') throw new Error('cache write failed');
+          set(ref, data);
+        };
+        return fn(transaction);
+      });
+    adminState.adminDb = adminDb;
+    const fetchImpl = vi.fn(async () => ({
+      ok: true,
+      json: async () => oEmbedPayload(),
+      text: async () => '',
+    }));
+    vi.stubGlobal('fetch', fetchImpl);
+
+    const result = await fetchTikTokOriginalVideoMetadata({
+      videoId: VIDEO_ID,
+      videoUrl: CANONICAL,
+    });
+
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(result.cache).toBe('bypass');
+    expect(result.meta.title).toBe('Live caption');
+  });
+
   it('calls TikTok when Firebase Admin is not configured', async () => {
     const fetchImpl = vi.fn(async () => ({
       ok: true,
