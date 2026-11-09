@@ -13,3 +13,9 @@ export const displayNameMatchesEmailLocalPart = (displayName, email) => {
 	if (!name || !localPart) return false;
 	return name.toLowerCase() === localPart.toLowerCase();
 };
+
+export const needsPublicDisplayName = (displayName, email) => {
+	const name = trimmedText(displayName);
+	if (!name) return true;
+	return displayNameMatchesEmailLocalPart(name, email);
+};

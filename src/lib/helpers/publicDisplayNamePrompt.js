@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store';
-import { displayNameMatchesEmailLocalPart } from '$lib/helpers/publicDisplayName';
+import { needsPublicDisplayName } from '$lib/helpers/publicDisplayName';
 
 export const publicDisplayNameRequest = writable(null);
 
@@ -32,9 +32,8 @@ export function ensurePublicDisplayName(user, checkBatch) {
 	const uid = userId(user);
 	if (!uid) return Promise.resolve(false);
 
-	const stillMatchesMailbox = displayNameMatchesEmailLocalPart(user?.displayName, user?.email);
-	if (stillMatchesMailbox && declinedBatch === checkBatch) return Promise.resolve(false);
-	if (!stillMatchesMailbox) return Promise.resolve(true);
+	if (!needsPublicDisplayName(user?.displayName, user?.email)) return Promise.resolve(true);
+	if (declinedBatch === checkBatch) return Promise.resolve(false);
 	if (pending?.uid === uid) return pending.promise;
 
 	let resolvePrompt;
@@ -42,10 +41,11 @@ export function ensurePublicDisplayName(user, checkBatch) {
 		resolvePrompt = resolve;
 	});
 	pending = { uid, promise, resolve: resolvePrompt };
+	const displayName = typeof user?.displayName === 'string' ? user.displayName.trim() : '';
 	publicDisplayNameRequest.set({
 		uid,
 		email: typeof user?.email === 'string' ? user.email : '',
-		displayName: typeof user?.displayName === 'string' ? user.displayName : ''
+		displayName
 	});
 	return promise;
 }
