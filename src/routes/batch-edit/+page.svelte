@@ -198,7 +198,7 @@
                 reactionId,
             );
             if (!ok) {
-                if (!publishNameWasDeclined()) {
+                if (!(nextIsPublished && publishNameWasDeclined())) {
                     showToast(
                         "Failed to update publish status",
                         TOASTS.ERROR,
@@ -256,7 +256,7 @@
                 );
             }
 
-            if (failedCount > 0 && !publishNameWasDeclined()) {
+            if (failedCount > 0 && !(nextIsPublished && publishNameWasDeclined())) {
                 showToast(
                     `Some updates failed (${failedCount})`,
                     TOASTS.ERROR,
