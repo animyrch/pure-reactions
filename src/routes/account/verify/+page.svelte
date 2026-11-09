@@ -122,7 +122,14 @@
     }
 
     if (user.emailVerified) {
-      await goToRoute(redirectTarget);
+      try {
+        await user.getIdToken(true);
+        await goToRoute(redirectTarget);
+      } catch (error) {
+        console.error('Failed to refresh verification token:', error);
+        statusMessage = 'Could not refresh your verification status. Please try again.';
+        statusTone = 'error';
+      }
       return;
     }
 
