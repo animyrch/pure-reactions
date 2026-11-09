@@ -484,17 +484,19 @@ Real-time co-watching sessions.
 }
 ```
 
-### Session viewer owners (`sessionViewerOwners/{sessionId}/{slotId}`)
+### Session viewer owners (`sessionViewerOwners/{sessionId}/{uid}/{index}`)
 
-Unreadable claim that ties one public presence slot to the signed-in account that created it. The value is that account's Firebase Auth uid. Clients cannot read this path. The public `viewers` map does not contain the account id.
+Unreadable claim that ties one public presence slot to the signed-in account that created it. `index` is `"0"` through `"2"`. The value is the public slot id (`^[0-9a-f]{32}$`). Clients cannot read this path. The public `viewers` map does not contain the account id.
 
 #### Access Pattern
 
 - Reads are public for anyone with the share URL.
 - Session writes require `auth.uid === reactorId`.
-- A viewer claims `sessionViewerOwners/{sessionId}/{slotId}` with their own `auth.uid` only while `sharedSessions/{sessionId}` exists, then writes `sharedSessions/{sessionId}/viewers/{slotId}`.
-- The slot id must match `^[0-9a-f]{32}$`.
-- Only that same account can remove the public slot and the owner claim. Deleting the claim stays allowed after the session node is gone.
+- A viewer writes `sessionViewerOwners/{sessionId}/{auth.uid}/{index}` with the new slot id only while `sharedSessions/{sessionId}` exists and that index is empty, then writes `sharedSessions/{sessionId}/viewers/{slotId}`.
+- The public slot id must match `^[0-9a-f]{32}$`. The viewer write is allowed only when one of that account's three indexes stores the same id.
+- Realtime Database rules cannot count children. The three indexes are the cap. A fourth index is rejected, and an existing index cannot be overwritten. A claim can be deleted only after its public viewer row is gone, so replacing an index cannot leave an extra viewer behind.
+- Only that same account can remove its public slot and its owner claim. Deleting the claim stays allowed after the session node is gone.
+- The session host can delete the whole `sessionViewerOwners/{sessionId}` node while the session still exists. Expired-session cleanup does that before it deletes the session.
 
 ---
 
@@ -642,6 +644,7 @@ const docRef = await addDoc(collection(db, 'reactions'), {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.23 | 2026-11-09 | `sessionViewerOwners/{sessionId}/{uid}/{index}` stores one public slot id at indexes `0` through `2`. The host deletes that session's claims before deleting an expired session |
 | 1.22 | 2026-11-08 | Removed `userData.lastExportAt`. Export deletes a leftover value and the file omits it. Firestore rules do not mention the key |
 | 1.21 | 2026-11-08 | Account export claims a 24-hour `lastExportAt` stamp on server-only `rateLimits` before building the file. `userData.lastExportAt` is no longer the limit |
 | 1.20 | 2026-11-07 | Added server-only `rateLimits` (`COLLECTION_RATE_LIMITS`). Expensive routes share one counter with a per-route allowance. Account deletion removes that user's counters |

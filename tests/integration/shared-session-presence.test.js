@@ -40,7 +40,7 @@ vi.mock('$lib/constants/firebase', () => ({
 }));
 
 import { remove, set } from 'firebase/database';
-import { joinSharedSession, leaveSharedSession } from '$lib/helpers/sharedSession';
+import { cleanupInactiveSessions, joinSharedSession, leaveSharedSession } from '$lib/helpers/sharedSession';
 
 const permissionDenied = () => {
     const error = new Error('permission_denied at /sessionViewerOwners');
@@ -109,11 +109,14 @@ describe('shared session viewer presence', () => {
 
         expect(slotId).toMatch(/^[0-9a-f]{32}$/);
         expect(operationNames(calls)).toEqual([
+            'set owner',
             'onDisconnect.remove viewer',
             'onDisconnect.remove owner',
-            'set owner',
             'set viewer'
         ]);
+        const ownerSet = calls.find(([operation, path]) => operation === 'set' && String(path).startsWith('sessionViewerOwners/'));
+        expect(ownerSet[1]).toBe('sessionViewerOwners/session-arm/viewer-1/0');
+        expect(ownerSet[2]).toBe(slotId);
         expect(calls.at(-1)[2]).toEqual({
             name: 'Anonymous Viewer',
             joinedAt: { '.sv': 'timestamp' },
@@ -135,9 +138,9 @@ describe('shared session viewer presence', () => {
         await flush();
 
         expect(operationNames(calls)).toEqual([
+            'set owner',
             'onDisconnect.remove viewer',
             'onDisconnect.remove owner',
-            'set owner',
             'set viewer'
         ]);
 
@@ -159,9 +162,9 @@ describe('shared session viewer presence', () => {
         await flush();
 
         expect(operationNames(calls)).toEqual([
+            'set owner',
             'onDisconnect.remove viewer',
             'onDisconnect.remove owner',
-            'set owner',
             'set viewer'
         ]);
 
@@ -179,14 +182,12 @@ describe('shared session viewer presence', () => {
 
         await expect(pending).rejects.toThrow(/permission_denied/);
         expect(operationNames(calls)).toEqual([
-            'onDisconnect.remove viewer',
-            'onDisconnect.remove owner',
+            'set owner',
+            'set owner',
             'set owner',
             'unsubscribe connected',
             'remove viewer',
-            'onDisconnect.cancel viewer',
-            'remove owner',
-            'onDisconnect.cancel owner'
+            'onDisconnect.cancel viewer'
         ]);
     });
 
@@ -221,6 +222,24 @@ describe('shared session viewer presence', () => {
         expect(operationNames(calls)).toEqual([
             'unsubscribe connected',
             'remove viewer'
+        ]);
+    });
+
+    it('removes owner claims before an expired session', async () => {
+        const pending = cleanupInactiveSessions();
+        await flush();
+        const listener = listeners.find((entry) => entry.path === 'sharedSessions');
+        listener.callback({
+            val: () => ({
+                old: { createdAt: Date.now() - 25 * 60 * 60 * 1000 },
+                fresh: { createdAt: Date.now() }
+            })
+        });
+        await pending;
+
+        expect(calls.map(([operation, path]) => [operation, path])).toEqual([
+            ['remove', 'sessionViewerOwners/old'],
+            ['remove', 'sharedSessions/old']
         ]);
     });
 });
