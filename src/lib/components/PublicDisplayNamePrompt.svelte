@@ -50,7 +50,6 @@
 			if (!user || user.uid !== request.uid) {
 				throw new Error('Sign in again to choose a public name.');
 			}
-			await updateDisplayNameHelper(user, trimmedName);
 			const updated = await updateReactorDisplayNameForUser({
 				userId: user.uid,
 				displayName: trimmedName
@@ -58,6 +57,7 @@
 			if (updated?.error) {
 				throw new Error('Could not update the name on your reactions.');
 			}
+			await updateDisplayNameHelper(user, trimmedName);
 			settlePublicDisplayName(true);
 			reset();
 		} catch (error) {
