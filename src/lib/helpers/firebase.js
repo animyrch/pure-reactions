@@ -31,6 +31,11 @@ import {
 } from "firebase/auth";
 import { ensureAgeConfirmed } from '$lib/helpers/ageConfirmation';
 import {
+    beginPublishNameCheck,
+    endPublishNameCheck,
+    ensurePublicDisplayName
+} from '$lib/helpers/publicDisplayNamePrompt';
+import {
     COLLECTION_REACTION_BINOMES,
     COLLECTION_USER_DATA,
     COLLECTION_PLAYLISTS,
@@ -828,8 +833,15 @@ export const updateFirebaseDocument = async (dataToUpdate, documentId) => {
         }
 
         if (dataToUpdate?.isPublished === true) {
-            const allowed = await ensureAgeConfirmed(auth?.currentUser?.uid);
-            if (!allowed) return false;
+            const nameCheck = beginPublishNameCheck();
+            try {
+                const allowed = await ensureAgeConfirmed(auth?.currentUser?.uid);
+                if (!allowed) return false;
+                const nameAllowed = await ensurePublicDisplayName(auth?.currentUser, nameCheck);
+                if (!nameAllowed) return false;
+            } finally {
+                endPublishNameCheck();
+            }
         }
 
         const documentRef = doc(reactionsCollection, targetDocumentId);

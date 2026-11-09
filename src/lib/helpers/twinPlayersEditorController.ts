@@ -1,4 +1,5 @@
 import { firestoreDeleteField, requestReactionEnrichment, updateFirebaseDocument } from '$lib/helpers/firebase';
+import { publishNameWasDeclined } from '$lib/helpers/publicDisplayNamePrompt';
 import {
   normalizeFullscreenOverlayCorner,
   normalizeFullscreenOverlayWidthPercent,
@@ -297,16 +298,19 @@ export function createTwinPlayersEditorController({
       throw new Error(error ?? 'Could not extract a valid YouTube video ID.');
     }
     const { videoAuthor, videoTitle } = await getBasicDetailsReaction(cleanedId);
-    await updateFirebaseDocument({
-      reactionVideoId: cleanedId,
-      reactionVideoAuthor: videoAuthor,
-      reactionVideoTitle: videoTitle
-    });
-    updateState({
-      reactionVideoId: cleanedId,
-      reactionVideoAuthor: videoAuthor,
-      reactionVideoTitle: videoTitle
-    });
+    // Firestore rejects undefined fields and drops the whole update.
+    const patch: Record<string, string> = { reactionVideoId: cleanedId };
+    if (typeof videoAuthor === 'string' && videoAuthor.trim()) {
+      patch.reactionVideoAuthor = videoAuthor.trim();
+    }
+    if (typeof videoTitle === 'string' && videoTitle.trim()) {
+      patch.reactionVideoTitle = videoTitle.trim();
+    }
+    const didUpdate = await updateFirebaseDocument(patch);
+    if (!didUpdate) {
+      throw new Error('Failed to save the reaction video.');
+    }
+    updateState(patch);
   };
 
   const setOffsetStartTime = async (value: number) => {
@@ -1092,7 +1096,7 @@ export function createTwinPlayersEditorController({
 
     const didUpdate = await updateFirebaseDocument({ isPublished: true });
     if (!didUpdate) {
-      if (typeof window !== 'undefined') {
+      if (typeof window !== 'undefined' && !publishNameWasDeclined()) {
         showToast('Failed to publish reaction. Please try again.', TOASTS.WARNING);
       }
       return;

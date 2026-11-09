@@ -13,6 +13,7 @@
   import AnalyticsConsent from "$lib/components/AnalyticsConsent.svelte";
   import GoogleAnalytics from "$lib/components/Analytics/GoogleAnalytics.svelte";
   import AgeConfirmation from "$lib/components/AgeConfirmation.svelte";
+  import PublicDisplayNamePrompt from "$lib/components/PublicDisplayNamePrompt.svelte";
   import ArticleHeadingAnchors from "$lib/components/ArticleHeadingAnchors.svelte";
 
   $: currentToasts = $toasts; // Access the store value
@@ -75,6 +76,7 @@
 
 <GoogleAnalytics />
 <AgeConfirmation />
+<PublicDisplayNamePrompt />
 <AnalyticsConsent />
 
 <header class="w-full safe-padding-x">

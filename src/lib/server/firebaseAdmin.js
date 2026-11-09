@@ -111,6 +111,9 @@ export async function initializeFirebaseAdmin() {
 
     // Auth is not required for public reads. A failure to load it must not
     // discard the Firestore client the homepage uses.
+    // firebase-admin/auth loads jwks-rsa at import time. Keep that package on
+    // the CommonJS 3.2.0 override: version 4 require()s ESM-only jose, and the
+    // function runtime then leaves adminAuth null ("Server configuration error").
     try {
       const { getAuth } = await import('firebase-admin/auth');
       adminAuth = getAuth(adminApp);
