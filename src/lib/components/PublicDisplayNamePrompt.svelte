@@ -6,7 +6,7 @@
 	import {
 		publicDisplayNameRequest,
 		settlePublicDisplayName
-	} from '$lib/helpers/publicDisplayNamePrompt';
+	} from '$lib/stores/publicDisplayNamePrompt';
 
 	let name = '';
 	let filledFor = '';

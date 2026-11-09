@@ -7,7 +7,7 @@
         getReactionsByIds,
         updateFirebaseDocument,
     } from "$lib/helpers/firebase";
-    import { publishNameWasDeclined } from "$lib/helpers/publicDisplayNamePrompt";
+    import { publishNameWasDeclined } from "$lib/stores/publicDisplayNamePrompt";
     import {
         parseYouTubeUrl,
         downloadBasicVideoDetails,

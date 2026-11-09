@@ -11,7 +11,7 @@ import {
 	publicDisplayNameRequest,
 	publishNameWasDeclined,
 	settlePublicDisplayName
-} from '../../src/lib/helpers/publicDisplayNamePrompt.js';
+} from '../../src/lib/stores/publicDisplayNamePrompt.js';
 
 const mailboxUser = {
 	uid: 'user-1',

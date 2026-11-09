@@ -34,7 +34,7 @@ import {
     beginPublishNameCheck,
     endPublishNameCheck,
     ensurePublicDisplayName
-} from '$lib/helpers/publicDisplayNamePrompt';
+} from '$lib/stores/publicDisplayNamePrompt';
 import {
     COLLECTION_REACTION_BINOMES,
     COLLECTION_USER_DATA,
