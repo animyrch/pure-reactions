@@ -58,9 +58,22 @@
       await auth.currentUser.reload();
       const user = await syncCurrentUser();
       if (user?.emailVerified) {
-        await user.getIdToken(true);
+        try {
+          await user.getIdToken(true);
+        } catch (error) {
+          console.error('Failed to refresh verification token:', error);
+          statusMessage = 'Could not refresh your verification status. Please try again.';
+          statusTone = 'error';
+          return;
+        }
         showToast('Account verified. You can continue.', TOASTS.SUCCESS);
-        await goToRoute(redirectTarget);
+        try {
+          await goToRoute(redirectTarget);
+        } catch (error) {
+          console.error('Failed to open the next page:', error);
+          statusMessage = 'Your account is verified, but the next page did not open. Please try again.';
+          statusTone = 'error';
+        }
         return;
       }
 
@@ -124,10 +137,17 @@
     if (user.emailVerified) {
       try {
         await user.getIdToken(true);
-        await goToRoute(redirectTarget);
       } catch (error) {
         console.error('Failed to refresh verification token:', error);
         statusMessage = 'Could not refresh your verification status. Please try again.';
+        statusTone = 'error';
+        return;
+      }
+      try {
+        await goToRoute(redirectTarget);
+      } catch (error) {
+        console.error('Failed to open the next page:', error);
+        statusMessage = 'Your account is verified, but the next page did not open. Please try again.';
         statusTone = 'error';
       }
       return;
