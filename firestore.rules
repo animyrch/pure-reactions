@@ -124,9 +124,16 @@ service cloud.firestore {
       return confirmedIn(primary) || confirmedIn(secondary) || confirmedIn(tertiary);
     }
 
+    // Verification applies when a write starts publishing. An edit that leaves
+    // an already published reaction or queue published does not publish again.
     function isPublishing() {
       return request.resource.data.keys().hasAny(['isPublished'])
-        && request.resource.data.isPublished == true;
+        && request.resource.data.isPublished == true
+        && (
+          resource == null
+          || !resource.data.keys().hasAny(['isPublished'])
+          || resource.data.isPublished != true
+        );
     }
 
     function publicationAllowed(primary, secondary, tertiary) {

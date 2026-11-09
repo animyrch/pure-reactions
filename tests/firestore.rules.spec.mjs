@@ -299,10 +299,25 @@ test('unverified owner can edit an existing reaction without publishing', async 
       isPublished: false,
       title: 'Existing'
     });
+    await setDoc(doc(context.firestore(), 'reactions', 'unverified-published'), {
+      reactorId: unverifiedId,
+      isPublished: true,
+      title: 'Already public'
+    });
   });
   await assertSucceeds(
     updateDoc(doc(unverifiedDb(), 'reactions', 'unverified-existing'), {
       title: 'Retitled'
+    })
+  );
+  await assertFails(
+    updateDoc(doc(unverifiedDb(), 'reactions', 'unverified-existing'), {
+      isPublished: true
+    })
+  );
+  await assertSucceeds(
+    updateDoc(doc(unverifiedDb(), 'reactions', 'unverified-published'), {
+      title: 'Retitled public'
     })
   );
 });
@@ -653,6 +668,36 @@ test('owner cannot publish a local queue without the local age confirmation', as
   });
   await assertFails(
     updateDoc(doc(ownerDb(), 'queues_local', 'local-queue'), {
+      isPublished: true
+    })
+  );
+});
+
+test('unverified owner can edit a published queue without publishing a draft', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, 'queues', 'unverified-published-queue'), {
+      ownerId: unverifiedId,
+      slug: 'unverified-published-queue',
+      title: 'Public queue',
+      isPublished: true,
+      items: []
+    });
+    await setDoc(doc(db, 'queues', 'unverified-draft-queue'), {
+      ownerId: unverifiedId,
+      slug: 'unverified-draft-queue',
+      title: 'Draft queue',
+      isPublished: false,
+      items: []
+    });
+  });
+  await assertSucceeds(
+    updateDoc(doc(unverifiedDb(), 'queues', 'unverified-published-queue'), {
+      title: 'Renamed public queue'
+    })
+  );
+  await assertFails(
+    updateDoc(doc(unverifiedDb(), 'queues', 'unverified-draft-queue'), {
       isPublished: true
     })
   );
