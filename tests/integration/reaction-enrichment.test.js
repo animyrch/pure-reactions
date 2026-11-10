@@ -89,6 +89,14 @@ function postEnrich(body, token) {
   });
 }
 
+function isYoutubeDataApiRequest(input) {
+  try {
+    return new URL(input).hostname === 'www.googleapis.com';
+  } catch {
+    return false;
+  }
+}
+
 describe('POST /api/reactions/enrich', () => {
   let admin;
   let fetchMock;
@@ -227,8 +235,7 @@ describe('POST /api/reactions/enrich', () => {
       originalVideoUrl: `https://www.tiktok.com/@creator/video/${tiktokId}`,
     });
     fetchMock.mockImplementation(async (input) => {
-      const url = String(input);
-      if (url.includes('googleapis.com')) {
+      if (isYoutubeDataApiRequest(input)) {
         throw new Error('YouTube unavailable');
       }
       return {
@@ -264,8 +271,7 @@ describe('POST /api/reactions/enrich', () => {
       originalVideoUrl: `https://www.tiktok.com/@creator/video/${tiktokId}`,
     });
     fetchMock.mockImplementation(async (input) => {
-      const url = String(input);
-      if (url.includes('googleapis.com')) {
+      if (isYoutubeDataApiRequest(input)) {
         throw new Error('YouTube should stay cached');
       }
       return {
@@ -288,7 +294,7 @@ describe('POST /api/reactions/enrich', () => {
     const stored = admin.read(COLLECTION_REACTION_BINOMES, 'rx');
 
     expect(response.status).toBe(200);
-    expect(fetchMock.mock.calls.some(([input]) => String(input).includes('googleapis.com'))).toBe(false);
+    expect(fetchMock.mock.calls.some(([input]) => isYoutubeDataApiRequest(input))).toBe(false);
     expect(stored.youtube.meta.title).toBe('Stored title');
     expect(stored.originalTikTok.meta.title).toBe('Live caption');
   });
