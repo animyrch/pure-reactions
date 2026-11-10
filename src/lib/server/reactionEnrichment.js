@@ -1,4 +1,4 @@
-import { normalizeOriginalVideoPlatform } from '$lib/helpers/platform';
+import { canonicalTikTokStorageFields, normalizeOriginalVideoPlatform } from '$lib/helpers/platform';
 import { originalVideoMetadataToFirestoreFields } from '$lib/helpers/originalVideo';
 import { hasStoredWatchDuration } from '$lib/helpers/watchDuration';
 import { fetchTikTokOriginalVideoMetadata } from '$lib/server/originalVideoMetadata';
@@ -144,10 +144,11 @@ function compactMeta(meta) {
   return cleaned;
 }
 
-async function storeWatchDuration(adminDb, collectionName, reactionId) {
+async function storeWatchDuration(adminDb, collectionName, reactionId, ownerId) {
   try {
     await persistReactionWatchDurationAdmin(adminDb, reactionId, {
       reactionCollection: collectionName,
+      ownerId,
     });
   } catch (error) {
     console.error('Failed to store watch duration after enrichment', {
@@ -173,7 +174,16 @@ function buildMetaFromResponse(response, youtubeId) {
   });
 }
 
-export async function enrichReactionDocument({ adminDb, adminFieldValue, collectionName, reactionId, force = false }) {
+export async function enrichReactionDocument({
+  adminDb,
+  adminFieldValue,
+  collectionName,
+  reactionId,
+  ownerId,
+  force = false,
+  forceReaction = false,
+  forceOriginal = false
+}) {
   const docRef = adminDb.collection(collectionName).doc(reactionId);
   const snapshot = await docRef.get();
   if (!snapshot.exists) {
@@ -181,33 +191,91 @@ export async function enrichReactionDocument({ adminDb, adminFieldValue, collect
   }
 
   const data = snapshot.data();
+  if (typeof ownerId !== 'string' || !ownerId || data?.reactorId !== ownerId) {
+    return { found: true, updated: false, reason: 'forbidden' };
+  }
+
   const reactionYoutubeId = getYoutubeId(data);
   const originalPlatform = normalizeOriginalVideoPlatform(data?.originalVideoPlatform);
   const originalYoutubeId = originalPlatform === 'youtube' ? getOriginalYoutubeId(data) : null;
   const originalTikTokId = originalPlatform === 'tiktok' ? getOriginalTikTokId(data) : null;
+  const safeTikTok = originalPlatform === 'tiktok'
+    ? canonicalTikTokStorageFields({
+        videoId: originalTikTokId,
+        authorHandle: data?.originalVideoAuthorHandle || data?.originalTikTok?.meta?.authorHandle,
+        authorUrl: data?.originalVideoAuthorUrl || data?.originalTikTok?.meta?.authorUrl,
+        originalVideoUrl: data?.originalVideoUrl || data?.originalTikTok?.meta?.canonicalUrl,
+      })
+    : null;
+
+  const applyTikTokLinkRepair = (updates) => {
+    if (!safeTikTok) return;
+    const currentUrl = typeof data?.originalVideoUrl === 'string' ? data.originalVideoUrl.trim() : '';
+    if (safeTikTok.originalVideoUrl) {
+      if (currentUrl !== safeTikTok.originalVideoUrl) updates.originalVideoUrl = safeTikTok.originalVideoUrl;
+    } else if (currentUrl) {
+      updates.originalVideoUrl = adminFieldValue.delete();
+    }
+
+    const currentAuthorUrl = typeof data?.originalVideoAuthorUrl === 'string'
+      ? data.originalVideoAuthorUrl.trim()
+      : '';
+    if (safeTikTok.originalVideoAuthorUrl) {
+      if (currentAuthorUrl !== safeTikTok.originalVideoAuthorUrl) {
+        updates.originalVideoAuthorUrl = safeTikTok.originalVideoAuthorUrl;
+      }
+    } else if (currentAuthorUrl) {
+      updates.originalVideoAuthorUrl = adminFieldValue.delete();
+    }
+
+    const currentHandle = typeof data?.originalVideoAuthorHandle === 'string'
+      ? data.originalVideoAuthorHandle.trim()
+      : '';
+    if (safeTikTok.originalVideoAuthorHandle && currentHandle !== safeTikTok.originalVideoAuthorHandle) {
+      updates.originalVideoAuthorHandle = safeTikTok.originalVideoAuthorHandle;
+    }
+  };
 
   if (!reactionYoutubeId && !originalYoutubeId && !originalTikTokId) {
+    const repair = {};
+    applyTikTokLinkRepair(repair);
+    if (Object.keys(repair).length > 0) {
+      await docRef.set(repair, { merge: true });
+      return { found: true, updated: true, reason: 'tiktok-url-repaired' };
+    }
     return { found: true, updated: false, reason: 'missing-youtube-id' };
   }
 
+  const refreshReaction = force || forceReaction === true;
+  const refreshOriginal = force || forceOriginal === true;
+
   const reactionNeedsUpdate =
     Boolean(reactionYoutubeId) &&
-    (force || !isMetaComplete(data?.youtube?.meta, reactionYoutubeId) || isStale(data?.lastEnrichedAt));
+    (refreshReaction || !isMetaComplete(data?.youtube?.meta, reactionYoutubeId) || isStale(data?.lastEnrichedAt));
 
   const originalNeedsUpdate =
     originalPlatform === 'youtube'
       ? Boolean(originalYoutubeId) &&
-        (force || !isMetaComplete(data?.originalYoutube?.meta, originalYoutubeId) ||
+        (refreshOriginal || !isMetaComplete(data?.originalYoutube?.meta, originalYoutubeId) ||
           isStale(data?.originalYoutube?.lastEnrichedAt))
       : Boolean(originalTikTokId) &&
-        (force || !isTikTokMetaComplete(data?.originalTikTok?.meta, originalTikTokId) ||
+        (refreshOriginal || !isTikTokMetaComplete(data?.originalTikTok?.meta, originalTikTokId) ||
           isStale(data?.originalTikTok?.lastEnrichedAt));
 
   if (!reactionNeedsUpdate && !originalNeedsUpdate) {
-    if (!hasStoredWatchDuration(data)) {
-      await storeWatchDuration(adminDb, collectionName, reactionId);
+    const repair = {};
+    applyTikTokLinkRepair(repair);
+    if (Object.keys(repair).length > 0) {
+      await docRef.set(repair, { merge: true });
     }
-    return { found: true, updated: false, reason: 'meta-fresh' };
+    if (!hasStoredWatchDuration(data)) {
+      await storeWatchDuration(adminDb, collectionName, reactionId, ownerId);
+    }
+    return {
+      found: true,
+      updated: Object.keys(repair).length > 0,
+      reason: Object.keys(repair).length > 0 ? 'tiktok-url-repaired' : 'meta-fresh'
+    };
   }
 
   let reactionResponse = null;
@@ -215,21 +283,35 @@ export async function enrichReactionDocument({ adminDb, adminFieldValue, collect
   let originalTikTokResponse = null;
 
   if (reactionNeedsUpdate) {
-    reactionResponse = await fetchYoutubeMeta(reactionYoutubeId);
+    try {
+      reactionResponse = await fetchYoutubeMeta(reactionYoutubeId);
+    } catch (error) {
+      console.error('YouTube enrichment failed', error);
+    }
   }
 
   if (originalNeedsUpdate) {
     if (originalPlatform === 'youtube') {
-      if (originalYoutubeId === reactionYoutubeId && reactionResponse) {
-        originalResponse = reactionResponse;
-      } else {
-        originalResponse = await fetchYoutubeMeta(originalYoutubeId);
+      try {
+        if (originalYoutubeId === reactionYoutubeId && reactionResponse) {
+          originalResponse = reactionResponse;
+        } else {
+          originalResponse = await fetchYoutubeMeta(originalYoutubeId);
+        }
+      } catch (error) {
+        console.error('YouTube enrichment failed', error);
       }
     } else {
-      originalTikTokResponse = await fetchTikTokOriginalVideoMetadata({
-        videoId: originalTikTokId,
-        videoUrl: data?.originalVideoUrl,
-      });
+      if (safeTikTok?.originalVideoUrl) {
+        try {
+          originalTikTokResponse = await fetchTikTokOriginalVideoMetadata({
+            videoId: originalTikTokId,
+            videoUrl: safeTikTok.originalVideoUrl,
+          });
+        } catch (error) {
+          console.error('TikTok enrichment failed', error);
+        }
+      }
     }
   }
 
@@ -259,13 +341,14 @@ export async function enrichReactionDocument({ adminDb, adminFieldValue, collect
     };
     Object.assign(updates, originalVideoMetadataToFirestoreFields(originalTikTokResponse.metadata));
   }
+  applyTikTokLinkRepair(updates);
 
   if (Object.keys(updates).length === 0) {
     return { found: true, updated: false, reason: 'no-updates' };
   }
 
   await docRef.set(updates, { merge: true });
-  await storeWatchDuration(adminDb, collectionName, reactionId);
+  await storeWatchDuration(adminDb, collectionName, reactionId, ownerId);
 
   return {
     found: true,

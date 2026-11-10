@@ -1,5 +1,5 @@
 import { env } from '$env/dynamic/public';
-import { updateFirebaseDocument } from '$lib/helpers/firebase';
+import { auth, requestReactionEnrichment, updateFirebaseDocument } from '$lib/helpers/firebase';
 import {
   fetchOriginalVideoMetadata,
   originalVideoMetadataToFirestoreFields,
@@ -18,8 +18,15 @@ type ReactionMetadataField =
 type OriginalMetadataField =
   | 'originalVideoTitle'
   | 'originalVideoAuthor'
+  | 'originalVideoAuthorHandle'
   | 'originalVideoAuthorUrl'
-  | 'originalVideoDescription';
+  | 'originalVideoDescription'
+  | 'originalVideoThumbnailUrl'
+  | 'originalVideoThumbnailWidth'
+  | 'originalVideoThumbnailHeight'
+  | 'originalVideoProviderName'
+  | 'originalVideoProviderUrl'
+  | 'originalVideoUrl';
 
 type TwinPlayersMetadataField =
   | OriginalMetadataField
@@ -61,10 +68,18 @@ export type VerifyAndSyncTwinPlayersMetadataParams = {
   reactionVideoId?: string;
   currentOriginalTitle?: string | null;
   currentOriginalAuthor?: string | null;
+  currentOriginalAuthorHandle?: string | null;
   currentOriginalAuthorUrl?: string | null;
   currentOriginalDescription?: string | null;
+  currentOriginalThumbnailUrl?: string | null;
+  currentOriginalThumbnailWidth?: number | null;
+  currentOriginalThumbnailHeight?: number | null;
+  currentOriginalProviderName?: string | null;
+  currentOriginalProviderUrl?: string | null;
+  currentOriginalCanonicalUrl?: string | null;
   currentReactionTitle?: string | null;
   currentReactionAuthor?: string | null;
+  reactorId?: string | null;
 };
 
 export type TwinPlayersMetadataStatePatch = Partial<Record<TwinPlayersMetadataField, string>>;
@@ -77,6 +92,9 @@ export type VerifyAndSyncTwinPlayersMetadataResult = {
 const trimString = (value: string | null | undefined) =>
   typeof value === 'string' ? value.trim() : undefined;
 
+const finiteNumber = (value: number | null | undefined) =>
+  typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+
 const hasKeys = (value: object) => Object.keys(value).length > 0;
 
 const verifyOriginalVideoDetails = async ({
@@ -85,16 +103,30 @@ const verifyOriginalVideoDetails = async ({
   videoUrl,
   currentTitle,
   currentAuthor,
+  currentAuthorHandle,
   currentAuthorUrl,
-  currentDescription
+  currentDescription,
+  currentThumbnailUrl,
+  currentThumbnailWidth,
+  currentThumbnailHeight,
+  currentProviderName,
+  currentProviderUrl,
+  currentCanonicalUrl
 }: {
   platform?: 'youtube' | 'tiktok';
   videoId?: string;
   videoUrl?: string | null;
   currentTitle?: string | null;
   currentAuthor?: string | null;
+  currentAuthorHandle?: string | null;
   currentAuthorUrl?: string | null;
   currentDescription?: string | null;
+  currentThumbnailUrl?: string | null;
+  currentThumbnailWidth?: number | null;
+  currentThumbnailHeight?: number | null;
+  currentProviderName?: string | null;
+  currentProviderUrl?: string | null;
+  currentCanonicalUrl?: string | null;
 }): Promise<VerifyOriginalVideoDetailsResult> => {
   const result: VerifyOriginalVideoDetailsResult = {
     updates: {}
@@ -111,11 +143,18 @@ const verifyOriginalVideoDetails = async ({
       videoUrl: videoUrl || undefined
     });
     const normalizedFields = originalVideoMetadataToFirestoreFields(metadata);
-    const currentComparison = {
+    const currentComparison: Partial<Record<OriginalMetadataField, string | number>> = {
       originalVideoTitle: trimString(currentTitle),
       originalVideoAuthor: trimString(currentAuthor),
+      originalVideoAuthorHandle: trimString(currentAuthorHandle),
       originalVideoAuthorUrl: trimString(currentAuthorUrl),
-      originalVideoDescription: trimString(currentDescription)
+      originalVideoDescription: trimString(currentDescription),
+      originalVideoThumbnailUrl: trimString(currentThumbnailUrl),
+      originalVideoThumbnailWidth: finiteNumber(currentThumbnailWidth),
+      originalVideoThumbnailHeight: finiteNumber(currentThumbnailHeight),
+      originalVideoProviderName: trimString(currentProviderName),
+      originalVideoProviderUrl: trimString(currentProviderUrl),
+      originalVideoUrl: trimString(currentCanonicalUrl) || trimString(videoUrl)
     };
 
     for (const [key, value] of Object.entries(normalizedFields)) {
@@ -191,10 +230,18 @@ export async function verifyAndSyncTwinPlayersMetadata({
   reactionVideoId,
   currentOriginalTitle,
   currentOriginalAuthor,
+  currentOriginalAuthorHandle,
   currentOriginalAuthorUrl,
   currentOriginalDescription,
+  currentOriginalThumbnailUrl,
+  currentOriginalThumbnailWidth,
+  currentOriginalThumbnailHeight,
+  currentOriginalProviderName,
+  currentOriginalProviderUrl,
+  currentOriginalCanonicalUrl,
   currentReactionTitle,
-  currentReactionAuthor
+  currentReactionAuthor,
+  reactorId
 }: VerifyAndSyncTwinPlayersMetadataParams): Promise<VerifyAndSyncTwinPlayersMetadataResult> {
   const resolvedDocumentId = documentId ?? fallbackDocumentId;
   if (DISABLE_YOUTUBE_METADATA_SYNC || !resolvedDocumentId) {
@@ -211,8 +258,15 @@ export async function verifyAndSyncTwinPlayersMetadata({
       videoUrl: originalVideoUrl,
       currentTitle: currentOriginalTitle,
       currentAuthor: currentOriginalAuthor,
+      currentAuthorHandle: currentOriginalAuthorHandle,
       currentAuthorUrl: currentOriginalAuthorUrl,
-      currentDescription: currentOriginalDescription
+      currentDescription: currentOriginalDescription,
+      currentThumbnailUrl: currentOriginalThumbnailUrl,
+      currentThumbnailWidth: currentOriginalThumbnailWidth,
+      currentThumbnailHeight: currentOriginalThumbnailHeight,
+      currentProviderName: currentOriginalProviderName,
+      currentProviderUrl: currentOriginalProviderUrl,
+      currentCanonicalUrl: currentOriginalCanonicalUrl
     }),
     verifyVideoDetails({
       videoId: reactionVideoId,
@@ -244,22 +298,22 @@ export async function verifyAndSyncTwinPlayersMetadata({
 
   if (hasKeys(metadataUpdates)) {
     try {
-      // In production-like environments clients should not write directly to
-      // the production collection. Request server-side enrichment which
-      // performs admin-updates safely with the Admin SDK.
-      if (typeof window !== 'undefined') {
-        try {
-          await fetch('/api/reactions/enrich', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ reactionId: resolvedDocumentId, force: false })
-          });
-        } catch (err) {
-          // Do not attempt client-side writes — keep Firestore rules strict.
-          console.error('Enrichment endpoint call failed; metadata update skipped', err);
-        }
-      } else {
-        // Server-side (non-browser) context: attempt direct update
+      // Viewers keep the fresh titles in local state. Only the owner may ask
+      // the server to merge host metadata through the Admin SDK.
+      const viewerId = auth?.currentUser?.uid;
+      if (
+        typeof window !== 'undefined' &&
+        viewerId &&
+        typeof reactorId === 'string' &&
+        viewerId === reactorId
+      ) {
+        // Refresh only the side that differs. A fresh YouTube snapshot stays
+        // in place, and a YouTube failure does not block the TikTok write.
+        await requestReactionEnrichment(resolvedDocumentId, {
+          forceReaction: hasKeys(reactionVerification.updates),
+          forceOriginal: hasKeys(originalVerification.updates)
+        });
+      } else if (typeof window === 'undefined') {
         await updateFirebaseDocument(metadataUpdates, resolvedDocumentId);
       }
     } catch (error) {

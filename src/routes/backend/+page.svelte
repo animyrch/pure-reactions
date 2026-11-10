@@ -16,7 +16,7 @@
     import { handlePrivateRoute, goToRoute } from "$lib/helpers/routing";
     import { isMobileDevice } from "$lib/helpers/system";
     import { getCompensatedReactionTime } from "$lib/helpers/reaction";
-    import { getTikTokEmbedUrl } from "$lib/helpers/platform";
+    import { getTikTokEmbedUrl, resolveTikTokWatchUrl } from "$lib/helpers/platform";
     import { fetchOriginalVideoMetadata } from "$lib/helpers/originalVideo";
     import {
         buildRecorderStateConfigs,
@@ -176,7 +176,14 @@
                     autoStartedBufferVideoId = "";
                 }
             }
-            const nextOriginalVideoUrl = params.get("originalUrl") || "";
+            const nextPlatform = params.get("platform") === "tiktok" ? "tiktok" : "youtube";
+            const rawOriginalVideoUrl = params.get("originalUrl") || "";
+            const nextOriginalVideoUrl = nextPlatform === "tiktok"
+                ? resolveTikTokWatchUrl({
+                    videoId: params.get("id") || "",
+                    originalVideoUrl: rawOriginalVideoUrl,
+                }) || ""
+                : rawOriginalVideoUrl;
             if (nextOriginalVideoUrl !== originalVideoUrl) {
                 originalVideoUrl = nextOriginalVideoUrl;
             }
@@ -316,7 +323,8 @@
     }
 
     function loadTikTokPlayer(videoId) {
-        if (!playerContainerNode || !videoId) return;
+        const embedUrl = getTikTokEmbedUrl(videoId);
+        if (!playerContainerNode || !embedUrl) return;
         // Remove any existing TikTok message listener
         if (tiktokMessageUnlisten) {
             tiktokMessageUnlisten();
@@ -327,7 +335,7 @@
         tiktokIframeElement = null;
 
         const iframe = document.createElement('iframe');
-        iframe.src = getTikTokEmbedUrl(videoId);
+        iframe.src = embedUrl;
         iframe.title = `TikTok video ${videoId}`;
         iframe.style.width = '100%';
         iframe.style.height = '100%';
@@ -381,10 +389,17 @@
                     playlistSequenceItems[currentSequenceIndex] || null;
                 if (currentSequenceItem) {
                     originalVideoId = currentSequenceItem.originalVideoId;
-                    originalVideoUrl =
-                        currentSequenceItem.originalVideoUrl || originalVideoUrl;
                     isTikTokOriginal =
                         currentSequenceItem.originalVideoPlatform === "tiktok";
+                    const sequenceOriginalUrl =
+                        currentSequenceItem.originalVideoUrl || originalVideoUrl;
+                    originalVideoUrl = isTikTokOriginal
+                        ? resolveTikTokWatchUrl({
+                            videoId: currentSequenceItem.originalVideoId,
+                            authorHandle: currentSequenceItem.originalVideoAuthorHandle,
+                            originalVideoUrl: sequenceOriginalUrl,
+                        }) || ""
+                        : sequenceOriginalUrl;
                 }
                 return;
             }

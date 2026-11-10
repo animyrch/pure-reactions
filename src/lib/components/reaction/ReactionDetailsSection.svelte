@@ -35,6 +35,7 @@
       <CreatorDetails
         originalVideoAuthor={reactionState?.originalVideoAuthor}
         originalVideoAuthorUrl={reactionState?.originalVideoAuthorUrl}
+        originalVideoAuthorHandle={reactionState?.originalVideoAuthorHandle}
         originalVideoTitle={reactionState?.originalVideoTitle}
         originalVideoId={reactionState?.originalVideoId}
         originalVideoUrl={reactionState?.originalVideoUrl}

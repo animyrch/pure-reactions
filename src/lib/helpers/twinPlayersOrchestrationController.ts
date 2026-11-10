@@ -393,6 +393,10 @@ export function createTwinPlayersOrchestrationController({
 
       if (originalVideoPlatform === 'tiktok') {
         newPlayerOriginal = createTikTokOriginalPlayer(originalVideoId);
+        if (!newPlayerOriginal) {
+          console.error('Failed to initialise TikTok original player', { originalVideoId });
+          setExpectedPlayerReadyCount(normalizedReactionVideoId ? 1 : 0);
+        }
       } else {
         newPlayerOriginal = new YT.Player('player-original', {
           videoId: originalVideoId,
@@ -475,10 +479,18 @@ export function createTwinPlayersOrchestrationController({
       reactionVideoId: normalizedReactionVideoId,
       currentOriginalTitle: normalizedOriginalMetadata.title,
       currentOriginalAuthor: normalizedOriginalMetadata.author,
+      currentOriginalAuthorHandle: normalizedOriginalMetadata.authorHandle,
       currentOriginalAuthorUrl: normalizedOriginalMetadata.authorUrl,
       currentOriginalDescription: normalizedOriginalMetadata.description,
+      currentOriginalThumbnailUrl: normalizedOriginalMetadata.thumbnailUrl,
+      currentOriginalThumbnailWidth: normalizedOriginalMetadata.thumbnailWidth,
+      currentOriginalThumbnailHeight: normalizedOriginalMetadata.thumbnailHeight,
+      currentOriginalProviderName: normalizedOriginalMetadata.providerName,
+      currentOriginalProviderUrl: normalizedOriginalMetadata.providerUrl,
+      currentOriginalCanonicalUrl: normalizedOriginalMetadata.canonicalUrl,
       currentReactionTitle: reactionData?.reactionVideoTitle,
-      currentReactionAuthor: reactionData?.reactionVideoAuthor
+      currentReactionAuthor: reactionData?.reactionVideoAuthor,
+      reactorId: reactionData?.reactorId
     });
   };
 
@@ -651,6 +663,10 @@ export function createTwinPlayersOrchestrationController({
         try {
           if (nextOriginalVideoPlatform === 'tiktok') {
             nextPlayerOriginal = createTikTokOriginalPlayer(originalVideoId);
+            if (!nextPlayerOriginal) {
+              console.error('Failed to initialise TikTok original player', { originalVideoId });
+              setExpectedPlayerReadyCount(shouldCreateReactionPlayer ? 1 : 0);
+            }
           } else {
             nextPlayerOriginal = new YT.Player('player-original', {
               videoId: originalVideoId,
@@ -859,10 +875,18 @@ export function createTwinPlayersOrchestrationController({
         reactionVideoId: normalizedReactionVideoId,
         currentOriginalTitle: normalizedOriginalMetadata.title,
         currentOriginalAuthor: normalizedOriginalMetadata.author,
+        currentOriginalAuthorHandle: normalizedOriginalMetadata.authorHandle,
         currentOriginalAuthorUrl: normalizedOriginalMetadata.authorUrl,
         currentOriginalDescription: normalizedOriginalMetadata.description,
+        currentOriginalThumbnailUrl: normalizedOriginalMetadata.thumbnailUrl,
+        currentOriginalThumbnailWidth: normalizedOriginalMetadata.thumbnailWidth,
+        currentOriginalThumbnailHeight: normalizedOriginalMetadata.thumbnailHeight,
+        currentOriginalProviderName: normalizedOriginalMetadata.providerName,
+        currentOriginalProviderUrl: normalizedOriginalMetadata.providerUrl,
+        currentOriginalCanonicalUrl: normalizedOriginalMetadata.canonicalUrl,
         currentReactionTitle: reactionData?.reactionVideoTitle,
-        currentReactionAuthor: reactionData?.reactionVideoAuthor
+        currentReactionAuthor: reactionData?.reactionVideoAuthor,
+        reactorId: reactionData?.reactorId
       });
     } finally {
       setSwitchingReactionInPlace(false);

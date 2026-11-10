@@ -1,5 +1,6 @@
-import { ref, set, update, onValue, remove, serverTimestamp } from "firebase/database";
-import { database } from "$lib/constants/firebase";
+import { ref, set, update, onValue, remove, serverTimestamp, onDisconnect } from "firebase/database";
+import { auth, database } from "$lib/constants/firebase";
+import { resolveTikTokWatchUrl } from "$lib/helpers/platform";
 
 // Session state constants
 export const SESSION_STATES = {
@@ -19,10 +20,16 @@ export const createSharedSession = async (
 ) => {
     try {
         const sessionRef = ref(database, `sharedSessions/${reactionDocumentId}`);
+        const storedOriginalVideoUrl = originalVideoPlatform === 'tiktok'
+            ? resolveTikTokWatchUrl({
+                videoId: originalVideoId,
+                originalVideoUrl,
+            }) || ''
+            : originalVideoUrl;
         const sessionData = {
             originalVideoId,
             originalVideoPlatform,
-            originalVideoUrl,
+            originalVideoUrl: storedOriginalVideoUrl,
             reactorId,
             activeReactionDocumentId: reactionDocumentId,
             state: SESSION_STATES.WAITING,
@@ -43,29 +50,200 @@ export const createSharedSession = async (
     }
 };
 
-// Join a shared session as a viewer
-export const joinSharedSession = async (sessionId, viewerId, viewerName = 'Anonymous') => {
+const VIEWER_PRESENCE_NAME = 'Anonymous Viewer';
+
+// Public slot keys are 32 hex chars so they cannot be a Firebase account id.
+const createViewerSlotId = () => {
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+};
+
+const VIEWER_SLOT_LIMIT = 3;
+
+const viewerSlotRef = (sessionId, slotId) => ref(database, `sharedSessions/${sessionId}/viewers/${slotId}`);
+// Indexes 0-2 are the cap. Rules have no count operator, so a free index is
+// the only way to add a slot. The value is the public slot id.
+const viewerOwnerRef = (sessionId, viewerUid, index) =>
+    ref(database, `sessionViewerOwners/${sessionId}/${viewerUid}/${index}`);
+
+const presenceBySlot = new Map();
+const claimBySlot = new Map();
+const presenceKey = (sessionId, slotId) => `${sessionId}/${slotId}`;
+
+const presenceRecord = () => ({
+    name: VIEWER_PRESENCE_NAME,
+    joinedAt: serverTimestamp(),
+    isActive: true
+});
+
+const isPermissionDenied = (error) => {
+    const code = String(error?.code || '').toLowerCase().replace(/-/g, '_');
+    return code === 'permission_denied';
+};
+
+// A second claim of the same index is denied once the row exists. After this
+// tab has claimed it, that denial means the row survived a short disconnect.
+const claimViewerSlot = async (state, sessionId, viewerUid, slotId) => {
+    if (state.index != null) {
+        const ownerRef = viewerOwnerRef(sessionId, viewerUid, state.index);
+        try {
+            await set(ownerRef, slotId);
+        } catch (error) {
+            if (!state.claimed || !isPermissionDenied(error)) throw error;
+        }
+        state.claimed = true;
+        return ownerRef;
+    }
+
+    let lastError;
+    for (let index = 0; index < VIEWER_SLOT_LIMIT; index += 1) {
+        const ownerRef = viewerOwnerRef(sessionId, viewerUid, index);
+        try {
+            await set(ownerRef, slotId);
+            state.index = index;
+            state.claimed = true;
+            claimBySlot.set(presenceKey(sessionId, slotId), { uid: viewerUid, index });
+            return ownerRef;
+        } catch (error) {
+            lastError = error;
+            if (!isPermissionDenied(error)) throw error;
+        }
+    }
+    throw lastError ?? new Error('No viewer slot is available.');
+};
+
+// Claim an index before arming cleanup. Disconnect work runs in queue order,
+// and the public slot write rule requires that claim to still exist.
+const armPresenceDisconnect = async (viewerRef, ownerRef) => {
+    await onDisconnect(viewerRef).remove();
+    await onDisconnect(ownerRef).remove();
+};
+
+const publishViewerPresence = async (state, sessionId, viewerUid, slotId, viewerRef) => {
+    if (state.left) return;
+    const ownerRef = await claimViewerSlot(state, sessionId, viewerUid, slotId);
+    if (state.left) return;
+    await armPresenceDisconnect(viewerRef, ownerRef);
+    if (state.left) return;
+    await set(viewerRef, presenceRecord());
+};
+
+// Drop the public slot before canceling its disconnect handler, then drop
+// the owner claim. Canceling first would leave a ghost if the tab dies mid-leave.
+const disarmPresence = async (viewerRef, ownerRef) => {
+    await remove(viewerRef);
+    await onDisconnect(viewerRef).cancel();
+    if (!ownerRef) return;
+    await remove(ownerRef);
+    await onDisconnect(ownerRef).cancel();
+};
+
+const detachPresence = async (sessionId, slotId) => {
+    const state = presenceBySlot.get(presenceKey(sessionId, slotId));
+    if (!state) return;
+
+    presenceBySlot.delete(presenceKey(sessionId, slotId));
+    state.left = true;
+    state.unsubscribe?.();
+    state.unsubscribe = null;
     try {
-        const viewerRef = ref(database, `sharedSessions/${sessionId}/viewers/${viewerId}`);
-        const viewerData = {
-            name: viewerName,
-            joinedAt: serverTimestamp(),
-            isActive: true
-        };
-        
-        await set(viewerRef, viewerData);
-        return sessionId;
+        await state.pending;
+    } catch {
+        // A failed restore should not block cleanup.
+    }
+};
+
+const watchViewerPresence = (sessionId, slotId, viewerUid, viewerRef) => {
+    const state = {
+        left: false,
+        claimed: false,
+        index: null,
+        settled: false,
+        unsubscribe: null,
+        pending: Promise.resolve()
+    };
+    let resolveReady;
+    let rejectReady;
+    const ready = new Promise((resolve, reject) => {
+        resolveReady = resolve;
+        rejectReady = reject;
+    });
+
+    const connectedRef = ref(database, '.info/connected');
+    state.unsubscribe = onValue(connectedRef, (snapshot) => {
+        if (snapshot.val() !== true || state.left) return;
+
+        state.pending = state.pending
+            .catch(() => {})
+            .then(async () => {
+                if (state.left) return;
+                await publishViewerPresence(state, sessionId, viewerUid, slotId, viewerRef);
+                if (state.left || state.settled) return;
+                state.settled = true;
+                resolveReady(slotId);
+            })
+            .catch((error) => {
+                if (state.settled) {
+                    if (!state.left) {
+                        console.error('Error restoring shared session presence:', error);
+                    }
+                    return;
+                }
+                state.settled = true;
+                rejectReady(error);
+            });
+    });
+
+    presenceBySlot.set(presenceKey(sessionId, slotId), state);
+    return ready;
+};
+
+// Join a shared session as a viewer. Returns the public slot id.
+export const joinSharedSession = async (sessionId) => {
+    const viewerUid = auth?.currentUser?.uid;
+    if (!viewerUid) {
+        throw new Error('Sign in before joining a shared session.');
+    }
+
+    const slotId = createViewerSlotId();
+    const viewerRef = viewerSlotRef(sessionId, slotId);
+    const key = presenceKey(sessionId, slotId);
+
+    try {
+        return await watchViewerPresence(sessionId, slotId, viewerUid, viewerRef);
     } catch (error) {
+        const claim = claimBySlot.get(key);
+        claimBySlot.delete(key);
+        await detachPresence(sessionId, slotId);
+        const ownerRef = claim ? viewerOwnerRef(sessionId, claim.uid, claim.index) : null;
+        try {
+            await disarmPresence(viewerRef, ownerRef);
+        } catch {
+            // The claim may have failed before either record existed.
+        }
         console.error('Error joining shared session:', error);
         throw error;
     }
 };
 
 // Leave a shared session
-export const leaveSharedSession = async (sessionId, viewerId) => {
+export const leaveSharedSession = async (sessionId, slotId) => {
+    if (!sessionId || !slotId) return;
+
+    const key = presenceKey(sessionId, slotId);
+    const claim = claimBySlot.get(key);
+    claimBySlot.delete(key);
+    await detachPresence(sessionId, slotId);
+
+    const viewerUid = claim?.uid || auth?.currentUser?.uid;
+    if (!viewerUid) return;
+
+    const viewerRef = viewerSlotRef(sessionId, slotId);
+    const ownerRef = claim ? viewerOwnerRef(sessionId, viewerUid, claim.index) : null;
+
     try {
-        const viewerRef = ref(database, `sharedSessions/${sessionId}/viewers/${viewerId}`);
-        await remove(viewerRef);
+        await disarmPresence(viewerRef, ownerRef);
     } catch (error) {
         console.error('Error leaving shared session:', error);
         throw error;
@@ -76,8 +254,15 @@ export const leaveSharedSession = async (sessionId, viewerId) => {
 export const updateSessionState = async (sessionId, updates) => {
     try {
         const sessionRef = ref(database, `sharedSessions/${sessionId}`);
+        const nextUpdates = { ...updates };
+        if (nextUpdates.originalVideoPlatform === 'tiktok' && typeof nextUpdates.originalVideoUrl === 'string') {
+            nextUpdates.originalVideoUrl = resolveTikTokWatchUrl({
+                videoId: nextUpdates.originalVideoId,
+                originalVideoUrl: nextUpdates.originalVideoUrl,
+            }) || '';
+        }
         const updateData = {
-            ...updates,
+            ...nextUpdates,
             lastUpdated: serverTimestamp()
         };
 
@@ -121,6 +306,12 @@ export const getSessionData = async (sessionId) => {
     }
 };
 
+// Owner claims are a sibling of the session, so deleting the session leaves them behind.
+const removeExpiredSession = async (sessionId) => {
+    await remove(ref(database, `sessionViewerOwners/${sessionId}`));
+    await remove(ref(database, `sharedSessions/${sessionId}`));
+};
+
 // Clean up inactive sessions (call this periodically)
 export const cleanupInactiveSessions = async () => {
     try {
@@ -138,9 +329,10 @@ export const cleanupInactiveSessions = async () => {
         const cleanupPromises = [];
         
         Object.entries(sessions).forEach(([sessionId, sessionData]) => {
-            // Remove sessions older than 24 hours
+            // Remove sessions older than 24 hours. Owner claims go first, while
+            // the session still exists, so the host rule can authorize the delete.
             if (sessionData.createdAt && (now - sessionData.createdAt) > 24 * 60 * 60 * 1000) {
-                cleanupPromises.push(remove(ref(database, `sharedSessions/${sessionId}`)));
+                cleanupPromises.push(removeExpiredSession(sessionId));
             }
         });
         

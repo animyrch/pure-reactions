@@ -47,9 +47,9 @@
         },
         "viewers": {
           ".validate": "!newData.exists() || newData.hasChildren() || newData.val() === null",
-          "$viewerId": {
-            ".write": "auth != null && auth.uid === $viewerId && root.child('sharedSessions/' + $sessionId).exists()",
-            ".validate": "!newData.exists() || (newData.hasChildren(['name', 'joinedAt', 'isActive']) && newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 80 && newData.child('joinedAt').exists() && newData.child('isActive').isBoolean())",
+          "$slotId": {
+            ".write": "auth != null && $slotId.matches(/^[0-9a-f]{32}$/) && root.child('sharedSessions/' + $sessionId).exists() && (root.child('sessionViewerOwners/' + $sessionId + '/' + auth.uid + '/0').val() === $slotId || root.child('sessionViewerOwners/' + $sessionId + '/' + auth.uid + '/1').val() === $slotId || root.child('sessionViewerOwners/' + $sessionId + '/' + auth.uid + '/2').val() === $slotId)",
+            ".validate": "$slotId.matches(/^[0-9a-f]{32}$/) && (!newData.exists() || (newData.hasChildren(['name', 'joinedAt', 'isActive']) && newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 80 && newData.child('joinedAt').exists() && newData.child('isActive').isBoolean()))",
             "name": {
               ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 80"
             },
@@ -66,6 +66,19 @@
         },
         "$other": {
           ".validate": false
+        }
+      }
+    },
+    "sessionViewerOwners": {
+      "$sessionId": {
+        ".read": false,
+        ".write": "auth != null && root.child('sharedSessions/' + $sessionId + '/reactorId').val() === auth.uid && !newData.exists()",
+        "$uid": {
+          ".read": false,
+          "$index": {
+            ".write": "auth != null && auth.uid === $uid && $index.matches(/^[0-2]$/) && ((root.child('sharedSessions/' + $sessionId).exists() && !data.exists() && newData.isString() && newData.val().matches(/^[0-9a-f]{32}$/)) || (data.exists() && !newData.exists() && !root.child('sharedSessions/' + $sessionId + '/viewers/' + data.val()).exists()))",
+            ".validate": "!newData.exists() || (newData.isString() && newData.val().matches(/^[0-9a-f]{32}$/))"
+          }
         }
       }
     }

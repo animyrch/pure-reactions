@@ -1,3 +1,4 @@
+import { strict as assert } from 'node:assert';
 import { readFileSync } from 'node:fs';
 import { after, before, beforeEach, test } from 'node:test';
 import {
@@ -57,8 +58,18 @@ const viewerDb = () =>
   }).database();
 const anonDb = () => testEnv.unauthenticatedContext().database();
 
+const slotId = '0123456789abcdef0123456789abcdef';
+const otherSlotId = 'fedcba9876543210fedcba9876543210';
+const presence = {
+  name: 'Anonymous Viewer',
+  joinedAt: 1713657605000,
+  isActive: true
+};
+
 const sessionRef = (db) => ref(db, `sharedSessions/${sessionId}`);
-const viewerRef = (db, uid = viewerId) => ref(db, `sharedSessions/${sessionId}/viewers/${uid}`);
+const ownerRef = (db, index = '0', uid = viewerId) =>
+  ref(db, `sessionViewerOwners/${sessionId}/${uid}/${index}`);
+const viewerSlotRef = (db, slot = slotId) => ref(db, `sharedSessions/${sessionId}/viewers/${slot}`);
 
 const seedSession = async () => {
   await testEnv.withSecurityRulesDisabled(async (context) => {
@@ -101,37 +112,89 @@ test('only the host can update session state', async () => {
   );
 });
 
-test('viewer can write and remove only their own presence node', async () => {
+test('viewer can claim a random slot and remove only that presence', async () => {
   await seedSession();
 
-  await assertSucceeds(
-    set(viewerRef(viewerDb()), {
-      name: 'Anonymous Viewer',
-      joinedAt: 1713657605000,
-      isActive: true
-    })
-  );
+  await assertSucceeds(set(ownerRef(viewerDb()), slotId));
+  await assertFails(set(ownerRef(viewerDb()), slotId));
+  await assertSucceeds(set(viewerSlotRef(viewerDb()), presence));
 
-  await assertFails(
-    set(viewerRef(viewerDb(), otherId), {
-      name: 'Imposter',
-      joinedAt: 1713657605000,
-      isActive: true
-    })
-  );
+  await assertFails(set(ownerRef(otherDb()), slotId));
+  await assertFails(set(viewerSlotRef(otherDb()), presence));
+  await assertFails(set(viewerSlotRef(otherDb(), otherSlotId), presence));
+  await assertFails(set(viewerSlotRef(viewerDb()), { ...presence, uid: viewerId }));
+  await assertFails(remove(ownerRef(viewerDb())));
 
-  await assertSucceeds(remove(viewerRef(viewerDb())));
+  const snapshot = await get(sessionRef(anonDb()));
+  const viewers = snapshot.val().viewers;
+  assert.deepEqual(Object.keys(viewers), [slotId]);
+  assert.equal(viewers[slotId].name, 'Anonymous Viewer');
+  assert.equal('uid' in viewers[slotId], false);
+
+  await assertSucceeds(remove(viewerSlotRef(viewerDb())));
+  await assertSucceeds(remove(ownerRef(viewerDb())));
+});
+
+test('one account can claim at most three viewer slots in a session', async () => {
+  await seedSession();
+
+  for (let index = 0; index < 3; index += 1) {
+    const slot = index.toString(16).padStart(32, '0');
+    await assertSucceeds(set(ownerRef(viewerDb(), String(index)), slot));
+  }
+
+  await assertFails(set(ownerRef(viewerDb(), '3'), otherSlotId));
+  await assertSucceeds(set(ownerRef(otherDb(), '0', otherId), otherSlotId));
+});
+
+test('the host deletes viewer owner claims while the session exists', async () => {
+  await seedSession();
+  await assertSucceeds(set(ownerRef(viewerDb()), slotId));
+
+  await assertFails(remove(ref(otherDb(), `sessionViewerOwners/${sessionId}`)));
+  await assertFails(remove(ref(viewerDb(), `sessionViewerOwners/${sessionId}`)));
+  await assertSucceeds(remove(ref(hostDb(), `sessionViewerOwners/${sessionId}`)));
+});
+
+test('a viewer cannot claim a slot before the shared session exists', async () => {
+  await assertFails(set(ownerRef(viewerDb()), slotId));
+});
+
+test('owning account can delete its viewer claim after the session is removed', async () => {
+  await seedSession();
+  await assertSucceeds(set(ownerRef(viewerDb()), slotId));
+
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await remove(sessionRef(context.database()));
+  });
+
+  await assertFails(set(ownerRef(viewerDb()), slotId));
+  await assertFails(remove(ownerRef(otherDb())));
+  await assertSucceeds(remove(ownerRef(viewerDb())));
+});
+
+test('a viewer cannot use an account id as the public slot key', async () => {
+  await seedSession();
+  await assertFails(set(ownerRef(viewerDb(), viewerId), slotId));
+  await assertFails(set(viewerSlotRef(viewerDb(), viewerId), presence));
+});
+
+test('presence owner records are not readable', async () => {
+  await seedSession();
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await set(ownerRef(context.database()), slotId);
+  });
+
+  await assertFails(get(ownerRef(anonDb())));
+  await assertFails(get(ownerRef(viewerDb())));
+  await assertFails(get(ownerRef(hostDb())));
+  await assertFails(get(ref(anonDb(), `sessionViewerOwners/${sessionId}`)));
 });
 
 test('anonymous users cannot write viewer presence', async () => {
   await seedSession();
-  await assertFails(
-    set(viewerRef(anonDb()), {
-      name: 'Anonymous Viewer',
-      joinedAt: 1713657605000,
-      isActive: true
-    })
-  );
+  await assertFails(set(ownerRef(anonDb()), slotId));
+  await assertFails(set(viewerSlotRef(anonDb()), presence));
 });
 
 test('host can publish or clear a twitch channel and other users cannot', async () => {

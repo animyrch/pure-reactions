@@ -12,6 +12,7 @@ import {
   getDocs,
   query,
   deleteDoc,
+  deleteField,
   setDoc,
   Timestamp,
   updateDoc,
@@ -84,8 +85,16 @@ after(async () => {
 
 let _ownerDb;
 const ownerDb = () => {
-  if (!_ownerDb) _ownerDb = testEnv.authenticatedContext(ownerId).firestore();
+  if (!_ownerDb) _ownerDb = testEnv.authenticatedContext(ownerId, { email_verified: true }).firestore();
   return _ownerDb;
+};
+const unverifiedId = 'user-unverified';
+let _unverifiedDb;
+const unverifiedDb = () => {
+  if (!_unverifiedDb) {
+    _unverifiedDb = testEnv.authenticatedContext(unverifiedId, { email_verified: false }).firestore();
+  }
+  return _unverifiedDb;
 };
 let _otherDb;
 const otherDb = () => {
@@ -146,6 +155,199 @@ test('owner can update reactions', async () => {
   await assertSucceeds(
     updateDoc(doc(ownerDb(), 'reactions', reactionIds.published), {
       title: 'Updated title'
+    })
+  );
+});
+
+const reactionSensitiveKeys = [
+  'isShadowBanned',
+  'featured',
+  'adminNotes',
+  'searchBoost',
+  'moderationState',
+  'moderationNotes',
+  'reviewNotes',
+  'verificationStatus',
+  'creatorVerified',
+  'creatorVerification',
+  'isCreatorVerified'
+];
+
+const playlistSensitiveKeys = [
+  'reactorId',
+  'isShadowBanned',
+  'featured',
+  'adminNotes',
+  'searchBoost',
+  'moderationState',
+  'moderationNotes',
+  'reviewNotes',
+  'visibilityOverride'
+];
+
+const assertDenied = async (write, label) => {
+  try {
+    await assertFails(write);
+  } catch (error) {
+    throw new Error(`${label} was allowed`, { cause: error });
+  }
+};
+
+test('owner cannot create a reaction with a moderation field', async () => {
+  for (const key of reactionSensitiveKeys) {
+    await assertDenied(
+      setDoc(doc(ownerDb(), 'reactions', `sensitive-create-${key}`), {
+        reactorId: ownerId,
+        isPublished: false,
+        title: 'Draft',
+        [key]: true
+      }),
+      `reaction create ${key}`
+    );
+  }
+});
+
+test('owner cannot add a moderation field when updating a reaction', async () => {
+  for (const key of reactionSensitiveKeys) {
+    await assertDenied(
+      updateDoc(doc(ownerDb(), 'reactions', reactionIds.draft), {
+        [key]: true
+      }),
+      `reaction update add ${key}`
+    );
+  }
+});
+
+test('owner cannot change or remove an existing reaction moderation field', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'reactions', 'moderated-reaction'), {
+      reactorId: ownerId,
+      isPublished: false,
+      title: 'Moderated',
+      featured: false,
+      isShadowBanned: true,
+      creatorVerified: false
+    });
+  });
+  await assertDenied(
+    updateDoc(doc(ownerDb(), 'reactions', 'moderated-reaction'), {
+      featured: true
+    }),
+    'reaction featured change'
+  );
+  await assertDenied(
+    updateDoc(doc(ownerDb(), 'reactions', 'moderated-reaction'), {
+      creatorVerified: true
+    }),
+    'reaction creatorVerified change'
+  );
+  await assertDenied(
+    updateDoc(doc(ownerDb(), 'reactions', 'moderated-reaction'), {
+      isShadowBanned: deleteField()
+    }),
+    'reaction isShadowBanned delete'
+  );
+});
+
+test('owner can edit a reaction that already has moderation fields', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'reactions', 'kept-moderation'), {
+      reactorId: ownerId,
+      isPublished: false,
+      title: 'Kept',
+      featured: true,
+      creatorVerified: true,
+      isShadowBanned: false
+    });
+  });
+  await assertSucceeds(
+    updateDoc(doc(ownerDb(), 'reactions', 'kept-moderation'), {
+      title: 'Retitled'
+    })
+  );
+});
+
+test('unverified owner cannot create a draft reaction', async () => {
+  await assertFails(
+    setDoc(doc(unverifiedDb(), 'reactions', 'unverified-draft'), {
+      reactorId: unverifiedId,
+      isPublished: false,
+      title: 'Draft'
+    })
+  );
+});
+
+test('unverified owner cannot publish a reaction after age confirmation', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'userData', unverifiedId), {
+      ageConfirmedAt: Timestamp.fromDate(new Date('2024-01-01T00:00:00Z'))
+    });
+  });
+  await assertFails(
+    setDoc(doc(unverifiedDb(), 'reactions', 'unverified-public'), {
+      reactorId: unverifiedId,
+      isPublished: true,
+      title: 'Public'
+    })
+  );
+});
+
+test('unverified owner can edit an existing reaction without publishing', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'reactions', 'unverified-existing'), {
+      reactorId: unverifiedId,
+      isPublished: false,
+      title: 'Existing'
+    });
+    await setDoc(doc(context.firestore(), 'reactions', 'unverified-published'), {
+      reactorId: unverifiedId,
+      isPublished: true,
+      title: 'Already public'
+    });
+  });
+  await assertSucceeds(
+    updateDoc(doc(unverifiedDb(), 'reactions', 'unverified-existing'), {
+      title: 'Retitled'
+    })
+  );
+  await assertFails(
+    updateDoc(doc(unverifiedDb(), 'reactions', 'unverified-existing'), {
+      isPublished: true
+    })
+  );
+  await assertSucceeds(
+    updateDoc(doc(unverifiedDb(), 'reactions', 'unverified-published'), {
+      title: 'Retitled public'
+    })
+  );
+});
+
+test('unverified owner cannot create a playlist, moment, queue, or claim', async () => {
+  await assertFails(
+    setDoc(doc(unverifiedDb(), 'playlists', 'unverified-playlist'), {
+      userId: unverifiedId,
+      reactionBinomeIds: []
+    })
+  );
+  await assertFails(
+    setDoc(doc(unverifiedDb(), 'moments', 'unverified-moment'), {
+      creatorId: unverifiedId,
+      title: 'Moment'
+    })
+  );
+  await assertFails(
+    setDoc(doc(unverifiedDb(), 'queues', 'unverified-queue'), {
+      ownerId: unverifiedId,
+      slug: 'unverified-queue',
+      title: 'Queue',
+      items: []
+    })
+  );
+  const unverifiedClaimId = `channel-handle__${unverifiedId}`;
+  await assertFails(
+    setDoc(doc(unverifiedDb(), 'youtubeChannelClaims', unverifiedClaimId), {
+      ...claimData,
+      userId: unverifiedId
     })
   );
 });
@@ -240,6 +442,86 @@ test('owner can delete playlists', async () => {
 test('non-owner cannot delete playlists', async () => {
   await seedPlaylist();
   await assertFails(deleteDoc(doc(otherDb(), 'playlists', 'owner-playlist')));
+});
+
+test('owner cannot create a playlist with a moderation field', async () => {
+  for (const key of playlistSensitiveKeys) {
+    await assertDenied(
+      setDoc(doc(ownerDb(), 'playlists', `sensitive-playlist-${key}`), {
+        userId: ownerId,
+        reactionBinomeIds: [],
+        [key]: true
+      }),
+      `playlist create ${key}`
+    );
+  }
+});
+
+test('owner cannot add a moderation field when updating a playlist', async () => {
+  await seedPlaylist('playlist-add-moderation');
+  for (const key of playlistSensitiveKeys) {
+    await assertDenied(
+      updateDoc(doc(ownerDb(), 'playlists', 'playlist-add-moderation'), {
+        [key]: true
+      }),
+      `playlist update add ${key}`
+    );
+  }
+});
+
+test('owner cannot change or remove an existing playlist moderation field', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'playlists', 'moderated-playlist'), {
+      userId: ownerId,
+      reactionBinomeIds: ['reaction-public'],
+      featured: false,
+      isShadowBanned: true
+    });
+  });
+  await assertDenied(
+    updateDoc(doc(ownerDb(), 'playlists', 'moderated-playlist'), {
+      featured: true
+    }),
+    'playlist featured change'
+  );
+  await assertDenied(
+    updateDoc(doc(ownerDb(), 'playlists', 'moderated-playlist'), {
+      isShadowBanned: deleteField()
+    }),
+    'playlist isShadowBanned delete'
+  );
+  await assertDenied(
+    setDoc(doc(ownerDb(), 'playlists', 'moderated-playlist'), {
+      userId: ownerId,
+      reactionBinomeIds: ['reaction-public'],
+      featured: false
+    }),
+    'playlist rewrite dropped isShadowBanned'
+  );
+});
+
+test('owner can edit a playlist that already has moderation fields', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'playlists', 'kept-playlist'), {
+      userId: ownerId,
+      reactionBinomeIds: ['reaction-public'],
+      featured: true,
+      isShadowBanned: false
+    });
+  });
+  await assertSucceeds(
+    updateDoc(doc(ownerDb(), 'playlists', 'kept-playlist'), {
+      reactionBinomeIds: ['reaction-public', 'reaction-draft']
+    })
+  );
+  await assertSucceeds(
+    setDoc(doc(ownerDb(), 'playlists', 'kept-playlist'), {
+      userId: ownerId,
+      reactionBinomeIds: ['reaction-draft'],
+      featured: true,
+      isShadowBanned: false
+    })
+  );
 });
 
 test('owner can create claims', async () => {
@@ -343,9 +625,17 @@ test('owner can add valid items to queue', async () => {
   );
 });
 
-test('user can read non-existent queue to check availability', async () => {
-  // upsertReactionIntoQueue does a getDoc first to see if it exists
-  await assertSucceeds(getDoc(doc(ownerDb(), 'queues', 'new-non-existent-queue')));
+test('a missing queue id is denied like a private queue', async () => {
+  await seedQueue('private-queue');
+  await assertFails(getDoc(doc(anonDb(), 'queues', 'missing-queue')));
+  await assertFails(getDoc(doc(ownerDb(), 'queues', 'missing-queue')));
+  await assertFails(getDoc(doc(otherDb(), 'queues', 'private-queue')));
+});
+
+test('owner can list their own queues', async () => {
+  await seedQueue('owner-queue');
+  const ownQueues = query(collection(ownerDb(), 'queues'), where('ownerId', '==', ownerId));
+  await assertSucceeds(getDocs(ownQueues));
 });
 
 test('owner cannot publish a queue without age confirmation', async () => {
@@ -378,6 +668,36 @@ test('owner cannot publish a local queue without the local age confirmation', as
   });
   await assertFails(
     updateDoc(doc(ownerDb(), 'queues_local', 'local-queue'), {
+      isPublished: true
+    })
+  );
+});
+
+test('unverified owner can edit a published queue without publishing a draft', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, 'queues', 'unverified-published-queue'), {
+      ownerId: unverifiedId,
+      slug: 'unverified-published-queue',
+      title: 'Public queue',
+      isPublished: true,
+      items: []
+    });
+    await setDoc(doc(db, 'queues', 'unverified-draft-queue'), {
+      ownerId: unverifiedId,
+      slug: 'unverified-draft-queue',
+      title: 'Draft queue',
+      isPublished: false,
+      items: []
+    });
+  });
+  await assertSucceeds(
+    updateDoc(doc(unverifiedDb(), 'queues', 'unverified-published-queue'), {
+      title: 'Renamed public queue'
+    })
+  );
+  await assertFails(
+    updateDoc(doc(unverifiedDb(), 'queues', 'unverified-draft-queue'), {
       isPublished: true
     })
   );
@@ -427,6 +747,98 @@ test('another user cannot read or write a twitch channel', async () => {
 
 test('logged out users cannot read userData_local', async () => {
   await assertFails(getDoc(doc(anonDb(), 'userData_local', ownerId)));
+});
+
+test('clients cannot read or write the youtube comment cache', async () => {
+  const videoId = 'abcdefghijk';
+  await assertFails(getDoc(doc(anonDb(), 'youtubeCommentCache_local', videoId)));
+  await assertFails(setDoc(doc(anonDb(), 'youtubeCommentCache_local', videoId), { videoId }));
+  await assertFails(getDoc(doc(ownerDb(), 'youtubeCommentCache', videoId)));
+  await assertFails(setDoc(doc(adminDb(), 'youtubeCommentCache_local', videoId), { videoId, comments: [] }));
+  await assertFails(setDoc(doc(ownerDb(), 'youtubeCommentCache-prod', videoId), { status: 'ready' }));
+});
+
+test('clients cannot read or write the tiktok metadata cache', async () => {
+  const videoId = '7056208472144235823';
+  await assertFails(getDoc(doc(anonDb(), 'tiktokMetadataCache_local', videoId)));
+  await assertFails(setDoc(doc(anonDb(), 'tiktokMetadataCache_local', videoId), { videoId }));
+  await assertFails(getDoc(doc(ownerDb(), 'tiktokMetadataCache', videoId)));
+  await assertFails(setDoc(doc(adminDb(), 'tiktokMetadataCache_local', videoId), { videoId, outcome: 'ok' }));
+  await assertFails(setDoc(doc(ownerDb(), 'tiktokMetadataCache-prod', videoId), { status: 'ready' }));
+});
+
+test('clients cannot read or write rate limit counters', async () => {
+  const id = 'original-video-metadata_abc';
+  await assertFails(getDoc(doc(anonDb(), 'rateLimits_local', id)));
+  await assertFails(setDoc(doc(anonDb(), 'rateLimits_local', id), { count: 1 }));
+  await assertFails(getDoc(doc(ownerDb(), 'rateLimits', id)));
+  await assertFails(setDoc(doc(adminDb(), 'rateLimits_local', id), { count: 99 }));
+  await assertFails(setDoc(doc(ownerDb(), 'rateLimits-prod', id), { count: 1 }));
+});
+
+test('clients cannot read or write the youtube playlist cache', async () => {
+  const playlistId = 'PL1234567890ab';
+  await assertFails(getDoc(doc(anonDb(), 'youtubePlaylistCache_local', playlistId)));
+  await assertFails(setDoc(doc(anonDb(), 'youtubePlaylistCache_local', playlistId), { playlistId }));
+  await assertFails(getDoc(doc(ownerDb(), 'youtubePlaylistCache', playlistId)));
+  await assertFails(setDoc(doc(adminDb(), 'youtubePlaylistCache_local', playlistId), { playlistId }));
+  await assertFails(
+    getDoc(doc(anonDb(), 'youtubePlaylistCache_local', playlistId, 'pages', 'page-first')),
+  );
+  await assertFails(
+    setDoc(doc(ownerDb(), 'youtubePlaylistCache-prod', playlistId, 'pages', 'page-first'), {
+      status: 'ready',
+      items: [],
+    }),
+  );
+});
+
+const momentCollections = ['moments', 'moments-local', 'moments-prod'];
+
+const seedMoment = async (collectionName, momentId) => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), collectionName, momentId), {
+      creatorId: ownerId,
+      title: 'Owner moment',
+      reactionCount: 1,
+      createdAt: '2024-01-01'
+    });
+  });
+};
+
+test('signed-in non-owner cannot set reactionCount on a moment', async () => {
+  for (const collectionName of momentCollections) {
+    const momentId = `count-${collectionName}`;
+    await seedMoment(collectionName, momentId);
+    await assertFails(
+      updateDoc(doc(otherDb(), collectionName, momentId), {
+        reactionCount: 999,
+        updatedAt: '2024-02-01'
+      })
+    );
+  }
+});
+
+test('moment owner can update reactionCount', async () => {
+  for (const collectionName of momentCollections) {
+    const momentId = `owner-count-${collectionName}`;
+    await seedMoment(collectionName, momentId);
+    await assertSucceeds(
+      updateDoc(doc(ownerDb(), collectionName, momentId), {
+        reactionCount: 2
+      })
+    );
+  }
+});
+
+test('logged-out user cannot set reactionCount on moments-local', async () => {
+  await seedMoment('moments-local', 'public-moment-count');
+  await assertFails(
+    updateDoc(doc(anonDb(), 'moments-local', 'public-moment-count'), {
+      reactionCount: 999,
+      updatedAt: '2024-02-01'
+    })
+  );
 });
 
 test('owner cannot write ageConfirmedAt on user data', async () => {

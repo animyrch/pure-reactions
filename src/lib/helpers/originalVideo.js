@@ -1,6 +1,10 @@
 import {
   ORIGINAL_VIDEO_PLATFORMS,
   normalizeOriginalVideoPlatform,
+  canonicalTikTokStorageFields,
+  resolveTikTokAuthorUrl,
+  resolveTikTokWatchUrl,
+  sanitizeTikTokHandle,
 } from '$lib/helpers/platform';
 import { downloadBasicVideoDetails } from '$lib/helpers/youtube';
 
@@ -225,26 +229,112 @@ export const buildYouTubeAuthorUrl = (author) => {
   return `https://www.youtube.com/${normalizedAuthor.replace(/^\/+/, '')}`;
 };
 
-export const buildTikTokAuthorUrl = (authorHandle) => {
-  const normalizedHandle = trimString(authorHandle)?.replace(/^@/, '');
-  return normalizedHandle
-    ? `https://www.tiktok.com/@${encodeURIComponent(normalizedHandle)}`
-    : undefined;
+export const buildTikTokAuthorUrl = (authorHandle) =>
+  resolveTikTokAuthorUrl({ authorHandle }) || undefined;
+
+export const buildTikTokVideoUrl = ({ videoId, authorHandle, authorUrl } = {}) =>
+  resolveTikTokWatchUrl({ videoId, authorHandle, authorUrl }) || undefined;
+
+const YOUTUBE_PROFILE_HOSTS = new Set(['youtube.com', 'www.youtube.com', 'm.youtube.com']);
+const TIKTOK_PROFILE_HOSTS = new Set(['tiktok.com', 'www.tiktok.com', 'm.tiktok.com']);
+const RESERVED_PROFILE_SEGMENTS = new Set([
+  'about',
+  'account',
+  'attribution_link',
+  'channel',
+  'clip',
+  'create',
+  'embed',
+  'feed',
+  'gaming',
+  'hashtag',
+  'iframe_api',
+  'live',
+  'login',
+  'logout',
+  'playlist',
+  'post',
+  'premium',
+  'redirect',
+  'results',
+  'shorts',
+  'signin',
+  'signup',
+  'upload',
+  'user',
+  'watch',
+]);
+const PROFILE_HANDLE = /^@[\p{L}\p{N}._-]{1,64}$/u;
+const PROFILE_CUSTOM_SEGMENT = /^[\p{L}\p{N}][\p{L}\p{N}._ &'+-]{0,79}$/u;
+const YOUTUBE_CHANNEL_ID = /^UC[A-Za-z0-9_-]{22}$/;
+
+const isCustomProfileSegment = (segment) =>
+  PROFILE_CUSTOM_SEGMENT.test(segment) && !RESERVED_PROFILE_SEGMENTS.has(segment.toLowerCase());
+
+const isYouTubeProfilePath = (parts) => {
+  if (parts.length === 1 && PROFILE_HANDLE.test(parts[0])) return true;
+  if (parts.length === 1 && isCustomProfileSegment(parts[0])) return true;
+  if (parts.length === 2 && parts[0] === 'channel' && YOUTUBE_CHANNEL_ID.test(parts[1])) return true;
+  if (
+    parts.length === 2 &&
+    (parts[0] === 'c' || parts[0] === 'user') &&
+    isCustomProfileSegment(parts[1])
+  ) {
+    return true;
+  }
+  return false;
 };
 
-export const buildTikTokVideoUrl = ({ videoId, authorHandle, authorUrl } = {}) => {
-  const normalizedVideoId = trimString(videoId);
-  if (!normalizedVideoId) {
+const isTikTokProfilePath = (parts) => parts.length === 1 && PROFILE_HANDLE.test(parts[0]);
+
+// Reject C0 controls, DEL, and backslash before URL parsing. The URL parser
+// treats "\" as "/" on YouTube and TikTok hosts, which would hide the character.
+const hasDisallowedProfileCharacter = (value) => {
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code <= 0x1f || code === 0x7f || code === 0x5c) return true;
+  }
+  return false;
+};
+
+/**
+ * Owner-controlled author URLs are rendered as the public creator link.
+ * Only https YouTube and TikTok profile addresses are returned.
+ */
+export const safeCreatorProfileHref = (value) => {
+  if (typeof value !== 'string') return undefined;
+  const candidate = value.trim();
+  if (!candidate || hasDisallowedProfileCharacter(candidate)) return undefined;
+
+  let url;
+  try {
+    url = new URL(candidate);
+  } catch {
     return undefined;
   }
 
-  const normalizedHandle = trimString(authorHandle)?.replace(/^@/, '');
-  if (normalizedHandle) {
-    return `https://www.tiktok.com/@${encodeURIComponent(normalizedHandle)}/video/${encodeURIComponent(normalizedVideoId)}`;
+  if (url.protocol !== 'https:' || url.username || url.password || url.port) return undefined;
+
+  const host = url.hostname.toLowerCase();
+  const youtube = YOUTUBE_PROFILE_HOSTS.has(host);
+  const tiktok = TIKTOK_PROFILE_HOSTS.has(host);
+  if (!youtube && !tiktok) return undefined;
+
+  let decodedPath;
+  try {
+    decodedPath = decodeURIComponent(url.pathname).replace(/\/+$/, '');
+  } catch {
+    return undefined;
   }
 
-  const normalizedAuthorUrl = trimString(authorUrl)?.replace(/\/$/, '');
-  return normalizedAuthorUrl ? `${normalizedAuthorUrl}/video/${encodeURIComponent(normalizedVideoId)}` : undefined;
+  const parts = decodedPath.split('/').filter(Boolean);
+  if (parts.length === 0 || parts.some((part) => part.includes('%'))) return undefined;
+
+  const allowed = youtube ? isYouTubeProfilePath(parts) : isTikTokProfilePath(parts);
+  if (!allowed) return undefined;
+
+  const pathname = url.pathname.replace(/\/+$/, '') || '/';
+  return `${url.origin}${pathname}`;
 };
 
 export const normalizeOriginalVideoMetadata = (reactionData = {}) => {
@@ -254,25 +344,37 @@ export const normalizeOriginalVideoMetadata = (reactionData = {}) => {
     platform === ORIGINAL_VIDEO_PLATFORMS.TIKTOK
       ? reactionData?.originalTikTok?.meta || {}
       : reactionData?.originalYoutube?.meta || {};
-  const authorHandle = trimString(
+  const rawAuthorHandle = trimString(
     firstDefined(reactionData?.originalVideoAuthorHandle, sourceMeta?.authorHandle),
   );
+  const rawAuthorUrl = trimString(
+    firstDefined(reactionData?.originalVideoAuthorUrl, sourceMeta?.authorUrl),
+  );
+  const tiktokLinks = platform === ORIGINAL_VIDEO_PLATFORMS.TIKTOK
+    ? canonicalTikTokStorageFields({
+        videoId: originalVideoId,
+        authorHandle: rawAuthorHandle,
+        authorUrl: rawAuthorUrl,
+        originalVideoUrl: firstDefined(reactionData?.originalVideoUrl, sourceMeta?.canonicalUrl),
+      })
+    : null;
+  const authorHandle = platform === ORIGINAL_VIDEO_PLATFORMS.TIKTOK
+    ? tiktokLinks.originalVideoAuthorHandle || sanitizeTikTokHandle(rawAuthorHandle) || undefined
+    : rawAuthorHandle;
   const author = trimString(
     firstDefined(
       reactionData?.originalVideoAuthor,
       sourceMeta?.authorName,
-      authorHandle ? `@${authorHandle.replace(/^@/, '')}` : undefined,
+      authorHandle ? `@${String(authorHandle).replace(/^@/, '')}` : undefined,
     ),
   );
-  const authorUrl = trimString(
-    firstDefined(
-      reactionData?.originalVideoAuthorUrl,
-      sourceMeta?.authorUrl,
-      platform === ORIGINAL_VIDEO_PLATFORMS.TIKTOK
-        ? buildTikTokAuthorUrl(authorHandle)
-        : buildYouTubeAuthorUrl(author),
-    ),
-  );
+  const authorUrl = platform === ORIGINAL_VIDEO_PLATFORMS.TIKTOK
+    ? tiktokLinks.originalVideoAuthorUrl || undefined
+    : (
+        safeCreatorProfileHref(reactionData?.originalVideoAuthorUrl)
+        || safeCreatorProfileHref(sourceMeta?.authorUrl)
+        || safeCreatorProfileHref(buildYouTubeAuthorUrl(author))
+      );
   const title = trimString(
     firstDefined(
       reactionData?.originalVideoTitle,
@@ -305,26 +407,24 @@ export const normalizeOriginalVideoMetadata = (reactionData = {}) => {
       platform === ORIGINAL_VIDEO_PLATFORMS.TIKTOK ? 'TikTok' : 'YouTube',
     ),
   );
-  const providerUrl = trimString(
-    firstDefined(
-      reactionData?.originalVideoProviderUrl,
-      sourceMeta?.providerUrl,
-      platform === ORIGINAL_VIDEO_PLATFORMS.TIKTOK ? 'https://www.tiktok.com' : 'https://www.youtube.com',
-    ),
-  );
-  const canonicalUrl = trimString(
-    firstDefined(
-      reactionData?.originalVideoUrl,
-      sourceMeta?.canonicalUrl,
-      platform === ORIGINAL_VIDEO_PLATFORMS.TIKTOK
-        ? buildTikTokVideoUrl({
-            videoId: originalVideoId,
-            authorHandle,
-            authorUrl,
-          })
-        : buildYouTubeVideoUrl(originalVideoId),
-    ),
-  );
+  const providerUrl = platform === ORIGINAL_VIDEO_PLATFORMS.TIKTOK
+    ? 'https://www.tiktok.com'
+    : trimString(
+        firstDefined(
+          reactionData?.originalVideoProviderUrl,
+          sourceMeta?.providerUrl,
+          'https://www.youtube.com',
+        ),
+      );
+  const canonicalUrl = platform === ORIGINAL_VIDEO_PLATFORMS.TIKTOK
+    ? tiktokLinks.originalVideoUrl || undefined
+    : trimString(
+        firstDefined(
+          reactionData?.originalVideoUrl,
+          sourceMeta?.canonicalUrl,
+          buildYouTubeVideoUrl(originalVideoId),
+        ),
+      );
 
   return {
     platform,
@@ -353,7 +453,7 @@ export const originalVideoMetadataToFirestoreFields = (metadata = {}) =>
     originalVideoTitle: trimString(metadata.title),
     originalVideoAuthor: trimString(metadata.author),
     originalVideoAuthorHandle: trimString(metadata.authorHandle),
-    originalVideoAuthorUrl: trimString(metadata.authorUrl),
+    originalVideoAuthorUrl: safeCreatorProfileHref(metadata.authorUrl),
     originalVideoDescription: trimString(metadata.description),
     originalVideoThumbnailUrl: trimString(metadata.thumbnailUrl),
     originalVideoThumbnailWidth: toFiniteNumber(metadata.thumbnailWidth),
@@ -377,12 +477,16 @@ export const fetchOriginalVideoMetadata = async ({ platform, videoId, videoUrl }
   }
 
   if (normalizedPlatform === ORIGINAL_VIDEO_PLATFORMS.TIKTOK) {
+    const safeVideoUrl = resolveTikTokWatchUrl({
+      videoId: normalizedVideoId,
+      originalVideoUrl: normalizedVideoUrl,
+    });
     const params = new URLSearchParams({
       platform: normalizedPlatform,
       videoId: normalizedVideoId,
     });
-    if (normalizedVideoUrl) {
-      params.set('videoUrl', normalizedVideoUrl);
+    if (safeVideoUrl) {
+      params.set('videoUrl', safeVideoUrl);
     }
 
     const response = await fetch(`/api/original-video/metadata?${params.toString()}`);
@@ -395,7 +499,7 @@ export const fetchOriginalVideoMetadata = async ({ platform, videoId, videoUrl }
     return normalizeOriginalVideoMetadata({
       originalVideoPlatform: normalizedPlatform,
       originalVideoId: normalizedVideoId,
-      originalVideoUrl: normalizedVideoUrl,
+      originalVideoUrl: safeVideoUrl || undefined,
       ...originalVideoMetadataToFirestoreFields(payload?.metadata || {}),
       originalTikTok: payload?.rawMeta
         ? {

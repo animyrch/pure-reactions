@@ -7,6 +7,7 @@
         getReactionsByIds,
         updateFirebaseDocument,
     } from "$lib/helpers/firebase";
+    import { publishNameWasDeclined } from "$lib/stores/publicDisplayNamePrompt";
     import {
         parseYouTubeUrl,
         downloadBasicVideoDetails,
@@ -197,10 +198,12 @@
                 reactionId,
             );
             if (!ok) {
-                showToast(
-                    "Failed to update publish status",
-                    TOASTS.ERROR,
-                );
+                if (!(nextIsPublished && publishNameWasDeclined())) {
+                    showToast(
+                        "Failed to update publish status",
+                        TOASTS.ERROR,
+                    );
+                }
                 return;
             }
             reactions = reactions.map((r) =>
@@ -253,12 +256,12 @@
                 );
             }
 
-            if (failedCount > 0) {
+            if (failedCount > 0 && !(nextIsPublished && publishNameWasDeclined())) {
                 showToast(
                     `Some updates failed (${failedCount})`,
                     TOASTS.ERROR,
                 );
-            } else {
+            } else if (failedCount === 0) {
                 const suffix = skipped ? ` (skipped ${skipped} missing)` : "";
                 showToast(
                     `${nextIsPublished ? "Published" : "Unpublished"} ${

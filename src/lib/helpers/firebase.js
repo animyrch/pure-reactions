@@ -31,6 +31,11 @@ import {
 } from "firebase/auth";
 import { ensureAgeConfirmed } from '$lib/helpers/ageConfirmation';
 import {
+    beginPublishNameCheck,
+    endPublishNameCheck,
+    ensurePublicDisplayName
+} from '$lib/stores/publicDisplayNamePrompt';
+import {
     COLLECTION_REACTION_BINOMES,
     COLLECTION_USER_DATA,
     COLLECTION_PLAYLISTS,
@@ -50,7 +55,8 @@ import {
     createPlaylistDocumentPayload,
     getPlaylistSequenceItems,
 } from '$lib/helpers/reactionSequence';
-import { generateOriginalVideoSlug } from '$lib/helpers/originalVideo';
+import { generateOriginalVideoSlug, safeCreatorProfileHref } from '$lib/helpers/originalVideo';
+import { canonicalTikTokStorageFields, normalizeOriginalVideoPlatform } from '$lib/helpers/platform';
 import { normalizeTwitchChannel } from '$lib/helpers/twitchChannel';
 import { assertMomentReady } from '$lib/helpers/moments';
 import { affectsWatchDuration } from '$lib/helpers/watchDuration';
@@ -62,6 +68,41 @@ import {
 
 const createCollection = (db, params, caller) => {
     return collection(db, params);
+};
+
+const applyTikTokLinkSafety = (dataToAdd, {
+    platform,
+    videoId,
+    authorHandle,
+    authorUrl,
+    originalVideoUrl,
+}) => {
+    if (normalizeOriginalVideoPlatform(platform) !== 'tiktok') {
+        return;
+    }
+
+    const safe = canonicalTikTokStorageFields({
+        videoId,
+        authorHandle,
+        authorUrl,
+        originalVideoUrl,
+    });
+
+    if (safe.originalVideoAuthorHandle) {
+        dataToAdd.originalVideoAuthorHandle = safe.originalVideoAuthorHandle;
+    } else {
+        delete dataToAdd.originalVideoAuthorHandle;
+    }
+    if (safe.originalVideoAuthorUrl) {
+        dataToAdd.originalVideoAuthorUrl = safe.originalVideoAuthorUrl;
+    } else {
+        delete dataToAdd.originalVideoAuthorUrl;
+    }
+    if (safe.originalVideoUrl) {
+        dataToAdd.originalVideoUrl = safe.originalVideoUrl;
+    } else {
+        delete dataToAdd.originalVideoUrl;
+    }
 };
 
 const shouldRequestReactionEnrichment = (data) => {
@@ -156,19 +197,38 @@ const createClientWatchDurationIo = () => {
     };
 };
 
-export const requestReactionEnrichment = async (reactionId, { force = false } = {}) => {
+export const requestReactionEnrichment = async (
+    reactionId,
+    { force = false, forceReaction = false, forceOriginal = false } = {}
+) => {
     if (!reactionId || typeof fetch !== 'function') {
         return false;
     }
 
+    const user = auth?.currentUser;
+    if (!user) {
+        return false;
+    }
+
     try {
+        const idToken = await user.getIdToken();
         const response = await fetch('/api/reactions/enrich', {
             method: 'POST',
             headers: {
-                'content-type': 'application/json'
+                'content-type': 'application/json',
+                Authorization: `Bearer ${idToken}`
             },
-            body: JSON.stringify({ reactionId, force })
+            body: JSON.stringify({
+                reactionId,
+                force: force === true,
+                forceReaction: forceReaction === true,
+                forceOriginal: forceOriginal === true
+            })
         });
+
+        if (response.status === 401 || response.status === 403) {
+            return false;
+        }
 
         if (!response.ok) {
             const details = await response.text().catch(() => '');
@@ -242,8 +302,9 @@ export const createReactionDocument = async ({
         if (typeof originalVideoAuthorHandle === 'string' && originalVideoAuthorHandle.trim()) {
             dataToAdd.originalVideoAuthorHandle = originalVideoAuthorHandle.trim();
         }
-        if (typeof originalVideoAuthorUrl === 'string' && originalVideoAuthorUrl.trim()) {
-            dataToAdd.originalVideoAuthorUrl = originalVideoAuthorUrl.trim();
+        const safeAuthorUrl = safeCreatorProfileHref(originalVideoAuthorUrl);
+        if (safeAuthorUrl) {
+            dataToAdd.originalVideoAuthorUrl = safeAuthorUrl;
         }
         if (typeof originalVideoDescription === 'string' && originalVideoDescription.trim()) {
             dataToAdd.originalVideoDescription = originalVideoDescription.trim();
@@ -266,6 +327,13 @@ export const createReactionDocument = async ({
         if (typeof originalVideoUrl === 'string' && originalVideoUrl.trim()) {
             dataToAdd.originalVideoUrl = originalVideoUrl.trim();
         }
+        applyTikTokLinkSafety(dataToAdd, {
+            platform: originalVideoPlatform,
+            videoId: originalVideoId,
+            authorHandle: originalVideoAuthorHandle,
+            authorUrl: originalVideoAuthorUrl,
+            originalVideoUrl,
+        });
 
         const documentRef = await addDoc(reactionsCollection, dataToAdd);
         window.currentReactionDocumentId = documentRef.id;
@@ -301,7 +369,19 @@ export const createMomentDocument = async ({
     creatorDisplayName = ''
 }) => {
     try {
-        const ready = assertMomentReady({ title, originalVideoUrl, momentTimeSeconds });
+        const tiktokLinks = normalizeOriginalVideoPlatform(originalVideoPlatform) === 'tiktok'
+            ? canonicalTikTokStorageFields({
+                videoId: originalVideoId,
+                authorHandle: originalVideoAuthorHandle,
+                authorUrl: originalVideoAuthorUrl,
+                originalVideoUrl,
+            })
+            : null;
+        const ready = assertMomentReady({
+            title,
+            originalVideoUrl: tiktokLinks ? tiktokLinks.originalVideoUrl : originalVideoUrl,
+            momentTimeSeconds,
+        });
         if (!ready.ok) {
             throw new Error(ready.error);
         }
@@ -317,7 +397,7 @@ export const createMomentDocument = async ({
             originalVideoTitle: originalVideoTitle?.trim?.() || '',
             originalVideoPlatform: originalVideoPlatform || 'youtube',
             originalVideoSlug,
-            originalVideoUrl: ready.value.originalVideoUrl,
+            originalVideoUrl: tiktokLinks?.originalVideoUrl || ready.value.originalVideoUrl,
             momentTimeSeconds: ready.value.momentTimeSeconds,
             tags: Array.isArray(tags) ? tags : [],
             reactionCount: 0,
@@ -337,8 +417,9 @@ export const createMomentDocument = async ({
         if (typeof originalVideoAuthorHandle === 'string' && originalVideoAuthorHandle.trim()) {
             dataToAdd.originalVideoAuthorHandle = originalVideoAuthorHandle.trim();
         }
-        if (typeof originalVideoAuthorUrl === 'string' && originalVideoAuthorUrl.trim()) {
-            dataToAdd.originalVideoAuthorUrl = originalVideoAuthorUrl.trim();
+        const safeAuthorUrl = safeCreatorProfileHref(originalVideoAuthorUrl);
+        if (safeAuthorUrl) {
+            dataToAdd.originalVideoAuthorUrl = safeAuthorUrl;
         }
         if (typeof originalVideoDescription === 'string' && originalVideoDescription.trim()) {
             dataToAdd.originalVideoDescription = originalVideoDescription.trim();
@@ -358,6 +439,13 @@ export const createMomentDocument = async ({
         if (typeof originalVideoProviderUrl === 'string' && originalVideoProviderUrl.trim()) {
             dataToAdd.originalVideoProviderUrl = originalVideoProviderUrl.trim();
         }
+        applyTikTokLinkSafety(dataToAdd, {
+            platform: originalVideoPlatform,
+            videoId: originalVideoId,
+            authorHandle: originalVideoAuthorHandle,
+            authorUrl: originalVideoAuthorUrl,
+            originalVideoUrl,
+        });
 
         const documentRef = await addDoc(momentsCollection, dataToAdd);
         return documentRef.id;
@@ -417,8 +505,9 @@ export const createMomentReactionDocument = async ({
         if (typeof originalVideoAuthorHandle === 'string' && originalVideoAuthorHandle.trim()) {
             dataToAdd.originalVideoAuthorHandle = originalVideoAuthorHandle.trim();
         }
-        if (typeof originalVideoAuthorUrl === 'string' && originalVideoAuthorUrl.trim()) {
-            dataToAdd.originalVideoAuthorUrl = originalVideoAuthorUrl.trim();
+        const safeAuthorUrl = safeCreatorProfileHref(originalVideoAuthorUrl);
+        if (safeAuthorUrl) {
+            dataToAdd.originalVideoAuthorUrl = safeAuthorUrl;
         }
         if (typeof originalVideoDescription === 'string' && originalVideoDescription.trim()) {
             dataToAdd.originalVideoDescription = originalVideoDescription.trim();
@@ -441,6 +530,13 @@ export const createMomentReactionDocument = async ({
         if (typeof originalVideoUrl === 'string' && originalVideoUrl.trim()) {
             dataToAdd.originalVideoUrl = originalVideoUrl.trim();
         }
+        applyTikTokLinkSafety(dataToAdd, {
+            platform: originalVideoPlatform,
+            videoId: originalVideoId,
+            authorHandle: originalVideoAuthorHandle,
+            authorUrl: originalVideoAuthorUrl,
+            originalVideoUrl,
+        });
 
         const documentRef = await addDoc(reactionsCollection, dataToAdd);
         window.currentReactionDocumentId = documentRef.id;
@@ -484,6 +580,17 @@ export const createPlaylistDocument = async ({
     }
 };
 
+// A missing queue and another user's unpublished queue both deny the read.
+// Callers that are about to create a slug treat that denial as "nothing readable".
+const readQueueSnapshot = async (queueRef) => {
+    try {
+        return await getDoc(queueRef);
+    } catch (error) {
+        if (error?.code === 'permission-denied') return null;
+        throw error;
+    }
+};
+
 export const createQueueDocument = async ({ slug, title, description, items, isPublished, userId }) => {
     const sanitizedSlug = slugifyQueueName(slug);
     if (!userId) {
@@ -497,10 +604,10 @@ export const createQueueDocument = async ({ slug, title, description, items, isP
     const queueRef = doc(queuesCollection, sanitizedSlug);
 
     try {
-        const existingSnap = await getDoc(queueRef);
-        const existingOwner = existingSnap?.data?.().ownerId;
+        const existingSnap = await readQueueSnapshot(queueRef);
+        const existingOwner = existingSnap?.data?.()?.ownerId;
 
-        if (existingSnap.exists() && existingOwner && existingOwner !== userId) {
+        if (existingSnap?.exists() && existingOwner && existingOwner !== userId) {
             throw new Error('You cannot overwrite a queue owned by another user.');
         }
 
@@ -512,7 +619,7 @@ export const createQueueDocument = async ({ slug, title, description, items, isP
             isPublished: !!isPublished,
             ownerId: userId,
             ownerName: (auth?.currentUser?.displayName || '').trim(),
-            createdAt: existingSnap.exists() ? existingSnap.data()?.createdAt ?? serverTimestamp() : serverTimestamp(),
+            createdAt: existingSnap?.exists() ? existingSnap.data()?.createdAt ?? serverTimestamp() : serverTimestamp(),
             updatedAt: serverTimestamp()
         };
 
@@ -536,8 +643,8 @@ export const updateQueueDocument = async ({ slug, title, description, isPublishe
     const queueRef = doc(queuesCollection, slug);
 
     try {
-        const snap = await getDoc(queueRef);
-        if (!snap.exists()) {
+        const snap = await readQueueSnapshot(queueRef);
+        if (!snap?.exists()) {
             throw new Error('Queue not found.');
         }
 
@@ -734,8 +841,15 @@ export const updateFirebaseDocument = async (dataToUpdate, documentId) => {
         }
 
         if (dataToUpdate?.isPublished === true) {
-            const allowed = await ensureAgeConfirmed(auth?.currentUser?.uid);
-            if (!allowed) return false;
+            const nameCheck = beginPublishNameCheck();
+            try {
+                const allowed = await ensureAgeConfirmed(auth?.currentUser?.uid);
+                if (!allowed) return false;
+                const nameAllowed = await ensurePublicDisplayName(auth?.currentUser, nameCheck);
+                if (!nameAllowed) return false;
+            } finally {
+                endPublishNameCheck();
+            }
         }
 
         const documentRef = doc(reactionsCollection, targetDocumentId);
@@ -1028,8 +1142,8 @@ export const upsertReactionIntoQueue = async ({ nameOrSlug, reactionId, userId, 
     const queueRef = doc(queuesCollection, slugFromName);
 
     try {
-        const snap = await getDoc(queueRef);
-        const existingData = snap.exists() ? snap.data() : {};
+        const snap = await readQueueSnapshot(queueRef);
+        const existingData = snap?.exists() ? snap.data() : {};
         const existingOwner = existingData?.ownerId;
 
         if (existingOwner && existingOwner !== userId) {
@@ -1049,12 +1163,12 @@ export const upsertReactionIntoQueue = async ({ nameOrSlug, reactionId, userId, 
             items: nextItems,
             ownerId: userId,
             ownerName: (ownerName || existingData?.ownerName || '').trim(),
-            createdAt: snap.exists() ? existingData?.createdAt || serverTimestamp() : serverTimestamp(),
+            createdAt: snap?.exists() ? existingData?.createdAt || serverTimestamp() : serverTimestamp(),
             updatedAt: serverTimestamp()
         };
 
         await setDoc(queueRef, payload, { merge: false });
-        return { slug: slugFromName, created: !snap.exists() };
+        return { slug: slugFromName, created: !snap?.exists() };
     } catch (error) {
         console.error('Error adding reaction to queue: ', error);
         throw error;
@@ -1076,8 +1190,8 @@ export const removeReactionFromQueue = async ({ queueSlug, reactionId, userId })
     const queueRef = doc(queuesCollection, queueSlug);
 
     try {
-        const snap = await getDoc(queueRef);
-        if (!snap.exists()) {
+        const snap = await readQueueSnapshot(queueRef);
+        if (!snap?.exists()) {
             throw new Error('Queue not found.');
         }
 

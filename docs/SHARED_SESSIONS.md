@@ -44,8 +44,11 @@ This feature allows reactors to share their reaction sessions in real-time with 
 
 ## Security Considerations
 - Sessions are public by design (anyone with the URL can join)
-- Viewers authenticate with Firebase anonymous auth before writing presence data
+- Viewers authenticate with Firebase before writing presence. Signed-out viewers use anonymous auth
+- The public viewers list is a set of random slot ids. Account ids are stored only in `sessionViewerOwners/{sessionId}/{uid}/{index}`, which clients cannot read
+- One account can claim at most 3 slots in a session, at indexes `0` through `2`. The Realtime Database rules reject another index
 - Only the session host can create, update, or delete the session state in Realtime Database
+- Expired-session cleanup deletes that session's `sessionViewerOwners` node before it deletes the session
 - Sessions automatically expire after 24 hours
 - Reactor controls all video playback
 
@@ -61,7 +64,7 @@ const shareUrl = generateShareUrl(sessionId);
 ### Joining a Session
 ```javascript
 // Called when a viewer visits the shared URL
-await joinSharedSession(sessionId, viewerId, viewerName);
+const slotId = await joinSharedSession(sessionId);
 ```
 
 ### Syncing Video State

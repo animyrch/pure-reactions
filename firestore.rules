@@ -1,7 +1,10 @@
 // Default deny; every new collection must be explicitly added here.
 // Test checklist (run after every rules change):
 // - Logged out read (public collections only)
+// - Verified owner create and publish
+// - Unverified owner create and publish denied
 // - Logged in owner write
+// - Owner cannot add, change, or remove moderation fields
 // - Non-owner write denied
 // - Claims get (owner/admin)
 // - Claims list denied
@@ -14,6 +17,12 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Email verification is a Firebase Auth claim. Anonymous sessions do not have it.
+    // Age confirmation stays independent: the verify page does not read ageConfirmedAt.
+    function hasVerifiedEmail() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
     function isAdmin() {
       return isSignedIn() && request.auth.token.admin == true;
     }
@@ -23,7 +32,7 @@ service cloud.firestore {
     }
 
     function isReactionOwnerCreate() {
-      return isSignedIn() && request.resource.data.reactorId == request.auth.uid;
+      return hasVerifiedEmail() && request.resource.data.reactorId == request.auth.uid;
     }
 
     function reactionSensitiveKeys() {
@@ -60,8 +69,10 @@ service cloud.firestore {
       return !request.resource.data.keys().hasAny(reactionSensitiveKeys());
     }
 
+    // changedKeys() only lists fields that already exist and change value.
+    // affectedKeys() also rejects a moderation field the owner adds or deletes.
     function reactionUpdateHasNoSensitiveKeys() {
-      return !request.resource.data.diff(resource.data).changedKeys().hasAny(reactionSensitiveKeys());
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(reactionSensitiveKeys());
     }
 
     function playlistCreateHasNoSensitiveKeys() {
@@ -69,7 +80,7 @@ service cloud.firestore {
     }
 
     function playlistUpdateHasNoSensitiveKeys() {
-      return !request.resource.data.diff(resource.data).changedKeys().hasAny(playlistSensitiveKeys());
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(playlistSensitiveKeys());
     }
 
     function isPlaylistOwner() {
@@ -77,7 +88,7 @@ service cloud.firestore {
     }
 
     function isPlaylistOwnerCreate() {
-      return isSignedIn() && request.resource.data.userId == request.auth.uid;
+      return hasVerifiedEmail() && request.resource.data.userId == request.auth.uid;
     }
 
     function isMomentOwner() {
@@ -85,7 +96,7 @@ service cloud.firestore {
     }
 
     function isMomentOwnerCreate() {
-      return isSignedIn() && request.resource.data.creatorId == request.auth.uid;
+      return hasVerifiedEmail() && request.resource.data.creatorId == request.auth.uid;
     }
 
     function isQueueOwner() {
@@ -93,7 +104,7 @@ service cloud.firestore {
     }
 
     function isQueueOwnerCreate() {
-      return isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      return hasVerifiedEmail() && request.resource.data.ownerId == request.auth.uid;
     }
 
     function userDoc(userCollection) {
@@ -113,13 +124,20 @@ service cloud.firestore {
       return confirmedIn(primary) || confirmedIn(secondary) || confirmedIn(tertiary);
     }
 
+    // Verification applies when a write starts publishing. An edit that leaves
+    // an already published reaction or queue published does not publish again.
     function isPublishing() {
       return request.resource.data.keys().hasAny(['isPublished'])
-        && request.resource.data.isPublished == true;
+        && request.resource.data.isPublished == true
+        && (
+          resource == null
+          || !resource.data.keys().hasAny(['isPublished'])
+          || resource.data.isPublished != true
+        );
     }
 
     function publicationAllowed(primary, secondary, tertiary) {
-      return !isPublishing() || hasAgeConfirmation(primary, secondary, tertiary);
+      return !isPublishing() || (hasVerifiedEmail() && hasAgeConfirmation(primary, secondary, tertiary));
     }
 
     function ageFieldUntouched() {
@@ -137,7 +155,7 @@ service cloud.firestore {
     }
 
     function isClaimOwnerCreate() {
-      return isSignedIn() && request.resource.data.userId == request.auth.uid;
+      return hasVerifiedEmail() && request.resource.data.userId == request.auth.uid;
     }
 
     function claimIdMatches(claimId, channelId, userId) {
@@ -240,15 +258,13 @@ service cloud.firestore {
       allow update, delete: if isMomentOwner() &&
         request.resource.data.creatorId == resource.data.creatorId;
     }
+    // reactionCount stays with the owner, same as moments and moments-prod.
+    // Another signed-in reactor cannot set the catalogue counter from the client.
     match /moments-local/{momentId} {
       allow read: if true;
       allow create: if isMomentOwnerCreate();
-      allow update: if (
-        isSignedIn() &&
-        request.resource.data.diff(resource.data).changedKeys().hasOnly(['reactionCount', 'updatedAt'])
-      ) || (
-        isMomentOwner() && request.resource.data.creatorId == resource.data.creatorId
-      );
+      allow update: if isMomentOwner() &&
+        request.resource.data.creatorId == resource.data.creatorId;
       // No delete allowed
     }
     match /moments-prod/{momentId} {
@@ -334,11 +350,10 @@ service cloud.firestore {
       allow delete: if isPlaylistOwner();
     }
 
-    // Queues (private to owner)
+    // Queues (private to owner). A missing id is denied the same way as
+    // another user's unpublished queue, so a slug probe cannot tell them apart.
     match /queues/{queueId} {
-      // Allow read if owner OR if document doesn't exist (resource == null)
-      // OR if the queue is published
-      allow read: if resource == null || isQueueOwner() || resource.data.isPublished == true;
+      allow read: if isQueueOwner() || resource.data.isPublished == true;
       allow create: if isQueueOwnerCreate() && publicationAllowed('userData', 'userdata', 'userData');
       allow update: if isQueueOwner() &&
         request.resource.data.ownerId == resource.data.ownerId &&
@@ -346,7 +361,7 @@ service cloud.firestore {
       allow delete: if isQueueOwner();
     }
     match /queues-local/{queueId} {
-      allow read: if resource == null || isQueueOwner() || resource.data.isPublished == true;
+      allow read: if isQueueOwner() || resource.data.isPublished == true;
       allow create: if isQueueOwnerCreate() && publicationAllowed('userData_local', 'userdata-local', 'userData-local');
       allow update: if isQueueOwner() &&
         request.resource.data.ownerId == resource.data.ownerId &&
@@ -354,7 +369,7 @@ service cloud.firestore {
       allow delete: if isQueueOwner();
     }
     match /queues_local/{queueId} {
-      allow read: if resource == null || isQueueOwner() || resource.data.isPublished == true;
+      allow read: if isQueueOwner() || resource.data.isPublished == true;
       allow create: if isQueueOwnerCreate() && publicationAllowed('userData_local', 'userdata-local', 'userData-local');
       allow update: if isQueueOwner() &&
         request.resource.data.ownerId == resource.data.ownerId &&
@@ -362,7 +377,7 @@ service cloud.firestore {
       allow delete: if isQueueOwner();
     }
     match /queues-prod/{queueId} {
-      allow read: if resource == null || isQueueOwner() || resource.data.isPublished == true;
+      allow read: if isQueueOwner() || resource.data.isPublished == true;
       allow create: if isQueueOwnerCreate() && publicationAllowed('userData-prod', 'userdata-prod', 'userData');
       allow update: if isQueueOwner() &&
         request.resource.data.ownerId == resource.data.ownerId &&
@@ -456,6 +471,78 @@ service cloud.firestore {
       allow get: if true;
       allow list: if false;
       allow create, update, delete: if isAdmin();
+    }
+
+    // YouTube playlist catalog. Written by the Admin SDK only.
+    // A stored page is the response for every visitor until a reactor refresh replaces it.
+    match /youtubePlaylistCache/{playlistId} {
+      allow read, write: if false;
+      match /pages/{pageId} {
+        allow read, write: if false;
+      }
+    }
+    match /youtubePlaylistCache_local/{playlistId} {
+      allow read, write: if false;
+      match /pages/{pageId} {
+        allow read, write: if false;
+      }
+    }
+    match /youtubePlaylistCache-local/{playlistId} {
+      allow read, write: if false;
+      match /pages/{pageId} {
+        allow read, write: if false;
+      }
+    }
+    match /youtubePlaylistCache-prod/{playlistId} {
+      allow read, write: if false;
+      match /pages/{pageId} {
+        allow read, write: if false;
+      }
+    }
+
+    // YouTube comment previews. The Admin SDK bypasses these rules.
+    // Client SDKs, including a signed-in admin claim, cannot read or write them.
+    match /youtubeCommentCache/{videoId} {
+      allow read, write: if false;
+    }
+    match /youtubeCommentCache_local/{videoId} {
+      allow read, write: if false;
+    }
+    match /youtubeCommentCache-local/{videoId} {
+      allow read, write: if false;
+    }
+    match /youtubeCommentCache-prod/{videoId} {
+      allow read, write: if false;
+    }
+
+    // TikTok oEmbed answers. The Admin SDK bypasses these rules.
+    // Client SDKs, including a signed-in admin claim, cannot read or write them.
+    match /tiktokMetadataCache/{videoId} {
+      allow read, write: if false;
+    }
+    match /tiktokMetadataCache_local/{videoId} {
+      allow read, write: if false;
+    }
+    match /tiktokMetadataCache-local/{videoId} {
+      allow read, write: if false;
+    }
+    match /tiktokMetadataCache-prod/{videoId} {
+      allow read, write: if false;
+    }
+
+    // Route rate-limit counters. The Admin SDK bypasses these rules.
+    // Client SDKs, including a signed-in admin claim, cannot read or write them.
+    match /rateLimits/{id} {
+      allow read, write: if false;
+    }
+    match /rateLimits_local/{id} {
+      allow read, write: if false;
+    }
+    match /rateLimits-local/{id} {
+      allow read, write: if false;
+    }
+    match /rateLimits-prod/{id} {
+      allow read, write: if false;
     }
 
     // Default deny

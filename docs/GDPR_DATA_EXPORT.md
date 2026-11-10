@@ -12,7 +12,7 @@ This document describes how Pure Reactions fulfills GDPR data access requests (D
 
 ### Firestore (Primary Application Data)
 - **Collections (user-scoped)**:
-  - `userData` (doc ID = userId): bookmarks, follows, optional profile fields, `lastExportAt`.
+  - `userData` (doc ID = userId): bookmarks, follows, and optional profile fields. A leftover `lastExportAt` is deleted and is not included in the file.
   - `reactions`: documents where `reactorId == userId`.
   - `playlists`: documents where `userId == userId`.
   - `queues`: documents where `ownerId == userId`.
@@ -31,7 +31,7 @@ This document describes how Pure Reactions fulfills GDPR data access requests (D
 ## Export Implementation
 - **Endpoint**: `POST /api/account/export`.
 - **Authentication**: Firebase ID token required; userId derived from token only.
-- **Rate limit**: One export per user per 24 hours, enforced via `userData.lastExportAt`.
+- **Rate limit**: One completed export per user per 24 hours. The server takes a two-minute lease on `rateLimits` (`account-export`) before building the export, and writes the 24-hour stamp only after the file is built. A failed export releases that lease. An expired lease can be replaced. The account owner cannot read or write that document. Overlapping requests share one lease.
 - **Determinism**: Export arrays are sorted by document ID / objectID.
 
 ## Export Format (JSON)
@@ -62,4 +62,7 @@ Top-level structure:
   3. This document
 
 ## Version History
+- 2026-11-09: The export holds a two-minute lease and writes the 24-hour stamp only after the file is built.
+- 2026-11-08: Removed `userData.lastExportAt`. The export deletes a leftover value and omits it from the file. Firestore rules do not mention the key.
+- 2026-11-08: The 24-hour limit is a server-only `rateLimits` claim. `userData.lastExportAt` is no longer written or enforced.
 - 2026-01-30: Initial GDPR export documentation.

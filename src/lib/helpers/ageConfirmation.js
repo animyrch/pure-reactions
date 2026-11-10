@@ -17,13 +17,22 @@ export async function recordAgeConfirmation(userId) {
 	if (!userId || !user || user.uid !== userId) {
 		throw new Error('Could not record age confirmation');
 	}
-	const idToken = await user.getIdToken();
+	const idToken = await user.getIdToken(true);
 	const response = await fetch('/api/account/age-confirmation', {
 		method: 'POST',
 		headers: { Authorization: `Bearer ${idToken}` }
 	});
 	if (!response.ok) {
-		throw new Error('Could not record age confirmation');
+		let message = 'Could not record age confirmation';
+		try {
+			const body = await response.json();
+			if (typeof body?.error === 'string' && body.error.trim()) {
+				message = body.error.trim();
+			}
+		} catch {
+			// The status is enough when the body is empty.
+		}
+		throw new Error(message);
 	}
 }
 

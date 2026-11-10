@@ -15,3 +15,11 @@
 # Netlify private env vars – no secrets are checked in or exposed to the client.
 [[plugins]]
   package = "./netlify/plugins/algolia-reindex"
+
+# Static files only. SSR pages set the same framing headers in src/hooks.server.js.
+# Netlify does not apply this block to function or SSR responses.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    Content-Security-Policy = "frame-ancestors 'self'"

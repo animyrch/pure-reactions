@@ -423,10 +423,18 @@ export function useTwinPlayers({
     reactionVideoId,
     currentOriginalTitle,
     currentOriginalAuthor,
+    currentOriginalAuthorHandle,
     currentOriginalAuthorUrl,
     currentOriginalDescription,
+    currentOriginalThumbnailUrl,
+    currentOriginalThumbnailWidth,
+    currentOriginalThumbnailHeight,
+    currentOriginalProviderName,
+    currentOriginalProviderUrl,
+    currentOriginalCanonicalUrl,
     currentReactionTitle,
-    currentReactionAuthor
+    currentReactionAuthor,
+    reactorId
   }: VerifyAndSyncTwinPlayersMetadataParams) => {
     const { resolvedDocumentId, statePatch } = await verifyAndSyncTwinPlayersMetadata({
       documentId,
@@ -437,10 +445,18 @@ export function useTwinPlayers({
       reactionVideoId,
       currentOriginalTitle,
       currentOriginalAuthor,
+      currentOriginalAuthorHandle,
       currentOriginalAuthorUrl,
       currentOriginalDescription,
+      currentOriginalThumbnailUrl,
+      currentOriginalThumbnailWidth,
+      currentOriginalThumbnailHeight,
+      currentOriginalProviderName,
+      currentOriginalProviderUrl,
+      currentOriginalCanonicalUrl,
       currentReactionTitle,
-      currentReactionAuthor
+      currentReactionAuthor,
+      reactorId
     });
 
     if (!resolvedDocumentId) {

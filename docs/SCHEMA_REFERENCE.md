@@ -22,12 +22,12 @@ The main collection for reaction videos.
 | `originalVideoTitle` | string | Yes | Title of the original video |
 | `originalVideoAuthor` | string | No | Platform-native creator handle for the original video |
 | `originalVideoAuthorHandle` | string | No | Platform-native creator handle/unique ID for the original video |
-| `originalVideoAuthorUrl` | string | No | Canonical profile URL for the original creator |
+| `originalVideoAuthorUrl` | string | No | Canonical profile URL for the original creator. TikTok values are `https://www.tiktok.com/@handle` |
 | `originalVideoDescription` | string | No | Normalized description or caption for the original video |
 | `originalVideoThumbnailUrl` | string | No | Canonical thumbnail/poster URL for the original video |
 | `originalVideoThumbnailWidth` | number | No | Thumbnail width when known |
 | `originalVideoThumbnailHeight` | number | No | Thumbnail height when known |
-| `originalVideoUrl` | string | No | Canonical public URL of the original video |
+| `originalVideoUrl` | string | No | Canonical public URL of the original video. TikTok values are `https://www.tiktok.com/@handle/video/{id}` built from the handle and video id |
 | `originalVideoSlug` | string | No | SEO-friendly canonical slug for the original video (format: `{title-slugified}-{author-slugified}`) |
 | `originalVideoProviderName` | string | No | Source platform display name (for example `YouTube`, `TikTok`) |
 | `originalVideoProviderUrl` | string | No | Source platform base URL |
@@ -132,7 +132,7 @@ Discoverable emotional/event anchors on original content. A moment is not a clip
 | `originalVideoTitle` | string | Yes | Snapshot title for discovery UI |
 | `originalVideoAuthor` | string | No | Creator/channel label snapshot |
 | `originalVideoSlug` | string | No | SEO-friendly canonical slug for the original video (format: `{title-slugified}-{author-slugified}`) |
-| `originalVideoUrl` | string | No | Canonical original URL |
+| `originalVideoUrl` | string | No | Canonical original URL. TikTok values use `https://www.tiktok.com/@handle/video/{id}` |
 | `momentTimeSeconds` | number | Yes | Anchor time in original content (seconds) |
 | `tags` | array[string] | No | Discovery tags/categories |
 | `reactionCount` | number | No | Denormalized count of published moment reactions (maintained on publish/unpublish) |
@@ -159,7 +159,6 @@ User-specific data and preferences.
 | `follows` | array[string] | No | Array of reactor user IDs the user follows |
 | `displayName` | string | No | Optional display name (if stored in Firestore) |
 | `email` | string | No | Optional email (if stored in Firestore) |
-| `lastExportAt` | Timestamp | No | Last self-service export timestamp |
 | `createdAt` | Timestamp | No | Optional creation timestamp |
 | `updatedAt` | Timestamp | No | Optional last update timestamp |
 
@@ -185,7 +184,7 @@ User-created playlists of reactions.
 | `sequenceItems[].playlistItemIndex` | number/null | No | Index inside the expanded YouTube playlist source when applicable |
 | `sequenceItems[].originalVideoId` | string | No | Platform-native original video ID for the sequence slot |
 | `sequenceItems[].originalVideoPlatform` | string | No | `youtube` or `tiktok` |
-| `sequenceItems[].originalVideoUrl` | string | No | Canonical original URL used by recorder/playback |
+| `sequenceItems[].originalVideoUrl` | string | No | Canonical original URL used by recorder/playback. TikTok values use `https://www.tiktok.com/@handle/video/{id}` |
 | `sequenceItems[].youtubePlaylistId` | string | No | Source YouTube playlist ID when the item came from an expanded playlist |
 | `sequenceItems[].title` | string | No | Optional snapshot title for playlist UI |
 | `sequenceItems[].channelTitle` | string | No | Optional snapshot creator/channel label for playlist UI |
@@ -200,6 +199,130 @@ User-created playlists of reactions.
 
 **Note**: Playlists do NOT have an `isPublished` field.
 **Legacy**: Older playlists may store `reactions` instead of `reactionBinomeIds` and may omit `sequenceItems` entirely. New code should prefer `sequenceItems` when present and fall back to `originalVideoIds` only for legacy reads.
+
+---
+
+### `youtubePlaylistCache` (COLLECTION_YOUTUBE_PLAYLIST_CACHE)
+
+Server-only catalog of a YouTube playlist, keyed by YouTube playlist id. `GET /api/youtube/playlist/[id]` reads it before calling the YouTube Data API. Client Firestore rules deny every read and write. The Admin SDK is the only writer.
+
+A stored page is reused at any age. Nothing refreshes it on a timer. A future reactor-controlled refresh replaces these documents.
+
+The manifest document id is the YouTube playlist id. Pages live in the `pages` subcollection. The first page is `page-first`. Any later page id is `page-` plus the first 32 hex characters of the SHA-256 of YouTube's `pageToken`.
+
+#### Manifest fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `playlistId` | string | Yes | YouTube playlist id. Matches the document id |
+| `playlistTitle` | string | No | Playlist title from `playlists.list`. Empty when YouTube has no title |
+| `titleFetchedAt` | number | No | Epoch milliseconds of the title lookup. Absent until that lookup succeeds |
+| `fetchedAt` | number | No | Epoch milliseconds of the latest stored page |
+| `updatedAt` | number | No | Epoch milliseconds of the latest manifest write |
+| `complete` | boolean | No | True once a stored page has no further `nextPageToken`. Stays true after that |
+
+#### `pages` fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `status` | string | Yes | `pending` while a fetch holds the lock, then `ready` |
+| `pageToken` | string | Yes | YouTube page token. Empty for the first page |
+| `nextPageToken` | string | No | Token for the following page. Empty on the last page |
+| `items` | array[object] | Yes | Trimmed playlist entries for this page, at most 50 |
+| `items[].videoId` | string | Yes | YouTube video id |
+| `items[].title` | string | No | Video title snapshot |
+| `items[].channelTitle` | string | No | Channel name snapshot |
+| `items[].thumbnailUrl` | string | No | One thumbnail URL. The route copies it onto the snippet thumbnail sizes the UI already reads |
+| `items[].itemId` | string | No | YouTube playlist item id when YouTube sent one |
+| `fetchedAt` | number | No | Epoch milliseconds when this page was stored |
+| `lockedAt` | number | No | Epoch milliseconds of an in-flight fetch lock. `0` after the page is ready |
+| `lockId` | string | No | Lock owner. Empty after the page is ready |
+
+---
+
+### `youtubeCommentCache` (COLLECTION_YOUTUBE_COMMENT_CACHE)
+
+Server-only preview of YouTube's top comments, keyed by YouTube video id. `GET /api/youtube/comments/[videoId]` reads it before calling the YouTube Data API. Client Firestore rules deny every read and write. The Admin SDK is the only reader and writer. The browser never queries this collection. It calls the comments route.
+
+The route calls `commentThreads.list` only when the video id is already `reactionVideoId` on a published reaction, or `originalVideoId` on a published reaction whose original platform is YouTube. `isPublished` must be `true`. A draft returns an empty preview and is not stored. A missing `originalVideoPlatform` counts as YouTube.
+
+A fresh `ok` snapshot lasts one day. `empty` and `commentsDisabled` last seven days. `error` lasts ten minutes. Expiry is `expiresAt`. Nothing refreshes the document on a timer. The next request after `expiresAt` fetches YouTube again when the id is still on a published reaction.
+
+The document id is the YouTube video id.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `videoId` | string | Yes | YouTube video id. Matches the document id |
+| `status` | string | Yes | `pending` while a fetch holds the lock, then `ready` |
+| `outcome` | string | Yes on ready | `ok`, `empty`, `commentsDisabled`, or `error` |
+| `comments` | array[object] | Yes on ready | At most 10 plain-text top-level comments. Empty unless `outcome` is `ok` |
+| `comments[].threadId` | string | Yes | YouTube comment thread id |
+| `comments[].commentId` | string | Yes | YouTube comment id |
+| `comments[].authorDisplayName` | string | Yes | Author name shown on the card |
+| `comments[].authorProfileUrl` | string | No | Author channel URL. Omitted when YouTube did not send one |
+| `comments[].authorAvatarUrl` | string | No | Author avatar URL. Omitted when YouTube did not send one |
+| `comments[].textDisplay` | string | Yes | Plain-text comment body |
+| `comments[].publishedAt` | string | No | ISO timestamp |
+| `comments[].updatedAt` | string | No | ISO timestamp |
+| `comments[].likeCount` | number | Yes | Like count from YouTube. `0` when missing |
+| `comments[].replyCount` | number | Yes | Reply count from YouTube. `0` when missing |
+| `canonicalVideoUrl` | string | Yes on ready | `https://www.youtube.com/watch?v={videoId}` |
+| `sectionActionUrl` | string | Yes on ready | The same watch URL with `&lc=comments` |
+| `fetchedAt` | number | Yes on ready | Epoch milliseconds of the YouTube call |
+| `expiresAt` | number | Yes on ready | Epoch milliseconds when this snapshot stops being fresh |
+| `errorKind` | string | No | `quota`, `timeout`, or `upstream` on an error snapshot. Never sent to the browser |
+| `lockedAt` | number | No | Epoch milliseconds of an in-flight fetch lock. `0` after the snapshot is ready |
+| `lockId` | string | No | Lock owner. Empty after the snapshot is ready |
+
+The route rebuilds each comment's outbound thread URL from `videoId` and `commentId`. That URL is not stored.
+
+---
+
+### `tiktokMetadataCache` (COLLECTION_TIKTOK_METADATA_CACHE)
+
+Server-only copy of a successful TikTok oEmbed answer, keyed by TikTok video id. `GET /api/original-video/metadata` reads it before calling `https://www.tiktok.com/oembed` when `platform` is `tiktok`. Client Firestore rules deny every read and write. The Admin SDK is the only reader and writer. The browser never queries this collection. It calls the metadata route.
+
+This lookup happens while a creator is still pasting a link, before a reaction exists, so it is not limited to published reactions. The watch URL is still checked first: only `https://www.tiktok.com/@handle/video/{id}` is sent to TikTok. A failed oEmbed response is not stored, and the upstream body is never written.
+
+A fresh `ok` snapshot lasts one day. Expiry is `expiresAt`. Nothing refreshes the document on a timer. The next request after `expiresAt` calls TikTok again. When Firebase Admin is not configured, the route calls TikTok directly and stores nothing.
+
+The document id is the TikTok video id.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `videoId` | string | Yes | TikTok video id. Matches the document id |
+| `status` | string | Yes | `pending` while a fetch holds the lock, then `ready` |
+| `outcome` | string | Yes on ready | `ok`. Failures are not stored |
+| `canonicalUrl` | string | Yes on ready | `https://www.tiktok.com/@handle/video/{id}` that was fetched |
+| `meta` | object | Yes on ready | The same filtered oEmbed fields stored on `originalTikTok.meta` |
+| `fetchedAt` | number | Yes on ready | Epoch milliseconds when TikTok was called |
+| `expiresAt` | number | Yes on ready | Epoch milliseconds when this answer stops being reused |
+| `lockedAt` | number | No | Epoch milliseconds of an in-flight fetch lock. `0` after the snapshot is ready |
+| `lockId` | string | No | Lock owner. Empty after the snapshot is ready |
+
+---
+
+### `rateLimits` (COLLECTION_RATE_LIMITS)
+
+Server-only fixed-window counters for expensive routes. Client Firestore rules deny every read and write. The Admin SDK is the only reader and writer. The browser never queries this collection.
+
+A public route counts the visitor address. A signed-in route counts the Firebase user id. The stored document id is the route bucket plus a hash, so the raw address is not stored. One document is reused for that caller and route. When the window changes, the count starts again.
+
+A saved YouTube or TikTok answer does not count. The route spends an allowance only when it is about to call YouTube or TikTok. Signed-in delete, enrich, and age-confirmation calls count after the login token is valid. Account deletion removes that user's signed-in counters. Visitor counters are not tied to an account and are left in place.
+
+If the counter cannot be read, the request continues. A caller over the allowance receives HTTP 429.
+
+Account export is the exception to the fixed window. `POST /api/account/export` takes a two-minute `exportLeaseUntil` on `account-export` before it reads the account. Overlapping requests cannot all pass while that lease is current. The 24-hour `lastExportAt` stamp is written only after the file is built. A failed export removes the lease and leaves a completed stamp in place. An expired lease can be replaced without clearing that stamp. The account owner cannot read or write this document. User documents do not keep an export stamp. The export deletes a leftover `userData.lastExportAt` and omits it from the file.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `bucket` | string | Yes | Route name, such as `youtube-comments` or `account-export` |
+| `count` | number | Yes for fixed windows | Calls already allowed in the current window |
+| `windowStart` | number | Yes for fixed windows | Epoch milliseconds when this window began |
+| `lastExportAt` | number | After a successful export | Epoch milliseconds when the export file was built. A second export waits 24 hours from this stamp |
+| `exportLeaseAt` | number | While an export is in progress | Epoch milliseconds when this request took the in-progress lease |
+| `exportLeaseUntil` | number | While an export is in progress | Epoch milliseconds when the in-progress lease expires. Two minutes after `exportLeaseAt` |
+| `updatedAt` | number | Yes | Epoch milliseconds of the latest allowed call |
 
 ---
 
@@ -353,21 +476,29 @@ Real-time co-watching sessions.
   playbackRate: number,     // Playback speed (0.25-2.0)
   createdAt: timestamp,     // Server timestamp
   lastUpdated: timestamp,   // Server timestamp
-  viewers: {                // Map of viewer IDs
-    [authUid]: {
+  viewers: {                // Anonymous presence slots. Keys are random 32-char hex ids.
+    [slotId]: {
       joinedAt: timestamp,
-      name: string,
+      name: string,          // Always "Anonymous Viewer"
       isActive: boolean
     }
   }
 }
 ```
 
+### Session viewer owners (`sessionViewerOwners/{sessionId}/{uid}/{index}`)
+
+Unreadable claim that ties one public presence slot to the signed-in account that created it. `index` is `"0"` through `"2"`. The value is the public slot id (`^[0-9a-f]{32}$`). Clients cannot read this path. The public `viewers` map does not contain the account id.
+
 #### Access Pattern
 
 - Reads are public for anyone with the share URL.
 - Session writes require `auth.uid === reactorId`.
-- Viewer presence writes require Firebase Auth and must use the viewer's own `auth.uid` as the `viewers/{authUid}` key.
+- A viewer writes `sessionViewerOwners/{sessionId}/{auth.uid}/{index}` with the new slot id only while `sharedSessions/{sessionId}` exists and that index is empty, then writes `sharedSessions/{sessionId}/viewers/{slotId}`.
+- The public slot id must match `^[0-9a-f]{32}$`. The viewer write is allowed only when one of that account's three indexes stores the same id.
+- Realtime Database rules cannot count children. The three indexes are the cap. A fourth index is rejected, and an existing index cannot be overwritten. A claim can be deleted only after its public viewer row is gone, so replacing an index cannot leave an extra viewer behind.
+- Only that same account can remove its public slot and its owner claim. Deleting the claim stays allowed after the session node is gone.
+- The session host can delete the whole `sessionViewerOwners/{sessionId}` node while the session still exists. Expired-session cleanup does that before it deletes the session.
 
 ---
 
@@ -515,6 +646,18 @@ const docRef = await addDoc(collection(db, 'reactions'), {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.25 | 2026-11-09 | Account export holds a two-minute lease and writes `lastExportAt` only after the file is built. An expired lease can be replaced without clearing a completed export |
+| 1.24 | 2026-11-09 | Added server-only `tiktokMetadataCache`. A successful TikTok oEmbed answer is reused until `expiresAt`, one day after it was fetched |
+| 1.23 | 2026-11-09 | `sessionViewerOwners/{sessionId}/{uid}/{index}` stores one public slot id at indexes `0` through `2`. The host deletes that session's claims before deleting an expired session |
+| 1.22 | 2026-11-08 | Removed `userData.lastExportAt`. Export deletes a leftover value and the file omits it. Firestore rules do not mention the key |
+| 1.21 | 2026-11-08 | Account export claims a 24-hour `lastExportAt` stamp on server-only `rateLimits` before building the file. `userData.lastExportAt` is no longer the limit |
+| 1.20 | 2026-11-07 | Added server-only `rateLimits` (`COLLECTION_RATE_LIMITS`). Expensive routes share one counter with a per-route allowance. Account deletion removes that user's counters |
+| 1.19 | 2026-11-06 | Comment lookups call YouTube only when a published reaction already has that video id. Drafts return an empty preview and are not stored |
+| 1.18 | 2026-11-06 | Added server-only `youtubeCommentCache`. The public comments route reads one snapshot per video id and calls `commentThreads.list` only for a reaction video whose snapshot is missing or stale |
+| 1.17 | 2026-11-05 | TikTok `originalVideoUrl` and `originalVideoAuthorUrl` are canonical `https://www.tiktok.com/...` addresses built from the handle and video id. A stored string is not opened unless it parses as that shape |
+| 1.16 | 2026-11-05 | Owning account can delete `sessionViewerOwners/{sessionId}/{slotId}` after the shared session is removed. Creating a claim still requires the session |
+| 1.15 | 2026-11-05 | Shared-session `viewers` keys are random 32-char hex slot ids. Account ids live only in unreadable `sessionViewerOwners/{sessionId}/{slotId}` |
+| 1.14 | 2026-11-04 | Added server-only `youtubePlaylistCache` catalog. Playlist route reads a stored YouTube page before calling the Data API. Stored pages do not expire |
 | 1.13 | 2026-10-10 | Reactions store `watchDurationSeconds` for thumbnail badges. Playlist docs store the summed reaction-window total. The reactions index retrieves `watchDurationSeconds` |
 | 1.12 | 2026-10-10 | Reactions index retrieves `remixMode` so remix cards can use the teal REMIX badge. Remixes stay on `/reaction/{reactionId}` |
 | 1.11 | 2026-10-10 | Added optional `customReactionTitle` on reactions. Cards, the reaction page heading, and the SEO title use it only when filled in. The YouTube `reactionVideoTitle` is unchanged. The reactions index retrieves and searches the custom title |
