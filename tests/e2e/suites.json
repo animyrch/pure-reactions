@@ -100,6 +100,7 @@
     "src/app.css",
     "src/env.js",
     "src/lib/**",
+    "src/routes/api/admin/**",
     "src/routes/+layout.js",
     "src/routes/+layout.svelte",
     "src/routes/+page.server.js",

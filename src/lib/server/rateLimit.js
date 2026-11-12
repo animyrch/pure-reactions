@@ -63,6 +63,12 @@ export const RATE_LIMITS = {
     limit: 1,
     windowMs: ONE_DAY_MS,
   },
+  // Lists every account and reaction. One shared token bucket, thirty calls an hour.
+  adminStats: {
+    bucket: 'admin-stats',
+    limit: 30,
+    windowMs: ONE_HOUR_MS,
+  },
 };
 
 let loggedMissingAdmin = false;
@@ -90,6 +96,7 @@ export const USER_RATE_LIMIT_BUCKETS = [
   RATE_LIMITS.accountDelete.bucket,
   RATE_LIMITS.ageConfirmation.bucket,
   RATE_LIMITS.accountExport.bucket,
+  RATE_LIMITS.adminStats.bucket,
 ];
 
 export function createFirestoreRateLimitStore(adminDb, collectionName = COLLECTION_RATE_LIMITS) {
