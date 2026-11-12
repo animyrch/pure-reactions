@@ -646,6 +646,7 @@ const docRef = await addDoc(collection(db, 'reactions'), {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.27 | 2026-11-12 | `GET /api/admin/stats` also returns `outside_reactions_published_ids`, the document ids of published reactions whose creator is outside |
 | 1.26 | 2026-11-12 | `GET /api/admin/stats` reads account and reaction counts. It stores nothing of its own. Its allowance is the existing `admin-stats` bucket on `rateLimits` |
 | 1.25 | 2026-11-09 | Account export holds a two-minute lease and writes `lastExportAt` only after the file is built. An expired lease can be replaced without clearing a completed export |
 | 1.24 | 2026-11-09 | Added server-only `tiktokMetadataCache`. A successful TikTok oEmbed answer is reused until `expiresAt`, one day after it was fetched |

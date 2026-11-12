@@ -79,6 +79,7 @@ export async function loadOutsideStats({ adminAuth, adminDb }) {
 
   let published = 0;
   let unpublished = 0;
+  const publishedIds = [];
   let lastDoc = null;
   let lastId = '';
   const collection = adminDb.collection(COLLECTION_REACTION_BINOMES);
@@ -94,8 +95,10 @@ export async function loadOutsideStats({ adminAuth, adminDb }) {
     if (docs.length === 0) break;
     for (const doc of docs) {
       const bucket = classifyStatsReaction(doc.data(), excluded);
-      if (bucket === 'published') published += 1;
-      else if (bucket === 'unpublished') unpublished += 1;
+      if (bucket === 'published') {
+        published += 1;
+        publishedIds.push(doc.id);
+      } else if (bucket === 'unpublished') unpublished += 1;
     }
     const nextId = docs[docs.length - 1]?.id || '';
     if (!nextId || nextId === lastId) throw new Error('Could not list reactions');
@@ -104,5 +107,5 @@ export async function loadOutsideStats({ adminAuth, adminDb }) {
     if (docs.length < STATS_REACTION_PAGE_SIZE) break;
   }
 
-  return { outsideSignups, published, unpublished };
+  return { outsideSignups, published, unpublished, publishedIds };
 }

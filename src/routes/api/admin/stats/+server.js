@@ -34,6 +34,7 @@ export const GET = async ({ request }) => {
       {
         outside_signups: counts.outsideSignups,
         outside_reactions_published: counts.published,
+        outside_reactions_published_ids: counts.publishedIds,
         outside_reactions_unpublished: counts.unpublished,
         generated_at: new Date().toISOString(),
       },

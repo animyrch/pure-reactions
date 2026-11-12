@@ -254,7 +254,7 @@ describe('GET /api/admin/stats', () => {
     expect(adminState.adminAuth.listUsers).not.toHaveBeenCalled();
   });
 
-  it('returns the four outside counts and no personal data or ids', async () => {
+  it('returns the outside counts and the published reaction ids', async () => {
     adminState.adminAuth.listUsers.mockImplementation(async (pageSize, pageToken) => {
       expect(pageSize).toBe(STATS_USER_PAGE_SIZE);
       if (!pageToken) {
@@ -315,11 +315,17 @@ describe('GET /api/admin/stats', () => {
     expect(Object.keys(body).sort()).toEqual([
       'generated_at',
       'outside_reactions_published',
+      'outside_reactions_published_ids',
       'outside_reactions_unpublished',
       'outside_signups',
     ]);
     expect(body.outside_signups).toBe(3);
     expect(body.outside_reactions_published).toBe(3);
+    expect(body.outside_reactions_published_ids).toEqual([
+      'reaction-secret-id',
+      'rx-page-two',
+      'rx-unknown',
+    ]);
     expect(body.outside_reactions_unpublished).toBe(4);
     expect(body.outside_reactions_published + body.outside_reactions_unpublished).toBe(7);
     expect(Number.isInteger(body.outside_signups)).toBe(true);
@@ -337,7 +343,9 @@ describe('GET /api/admin/stats', () => {
       'uid-outside-secret',
       'uid-emir',
       'uid-plus',
-      'reaction-secret-id',
+      'rx-draft',
+      'rx-emir',
+      'rx-no-plus',
       'Secret Reaction Title',
       'Emir private',
       'draft notes',
@@ -369,6 +377,9 @@ describe('GET /api/admin/stats', () => {
     expect(body.outside_signups).toBe(1);
     expect(body.outside_reactions_published + body.outside_reactions_unpublished).toBe(total);
     expect(body.outside_reactions_published).toBe(Math.ceil(total / 2));
+    expect(body.outside_reactions_published_ids).toHaveLength(body.outside_reactions_published);
+    expect(body.outside_reactions_published_ids[0]).toBe('rx-0000');
+    expect(body.outside_reactions_published_ids.at(-1)).toBe('rx-0500');
     expect(adminDb.queries.length).toBeGreaterThan(1);
     expect(adminState.adminAuth.listUsers).toHaveBeenCalledWith(STATS_USER_PAGE_SIZE, undefined);
   });
@@ -416,7 +427,8 @@ describe('GET /api/admin/stats', () => {
     const body = await response.json();
     expect(response.status).toBe(200);
     expect(body.outside_signups).toBe(1);
-    expect(Object.keys(body)).toHaveLength(4);
+    expect(Object.keys(body)).toHaveLength(5);
+    expect(body.outside_reactions_published_ids).toEqual([]);
     expect(JSON.stringify(body)).not.toContain('admin-2@example.com');
     expect(adminState.adminAuth.verifyIdToken).toHaveBeenCalledOnce();
   });
