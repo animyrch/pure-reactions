@@ -1,4 +1,4 @@
-import { env } from '$env/dynamic/private';
+import { STATS_ADMIN_UIDS, STATS_API_TOKEN, STATS_EXCLUDED_UIDS } from '$app/env/private';
 import { FieldPath } from 'firebase-admin/firestore';
 import { COLLECTION_REACTION_BINOMES } from '#lib/constants/firebase.js';
 import {
@@ -12,8 +12,18 @@ export const STATS_USER_PAGE_SIZE = 1000;
 export const STATS_REACTION_PAGE_SIZE = 500;
 
 function readEnv(name) {
-  const value = env?.[name];
-  return typeof value === 'string' ? value.trim() : '';
+  const fromKit =
+    name === 'STATS_API_TOKEN'
+      ? STATS_API_TOKEN
+      : name === 'STATS_ADMIN_UIDS'
+        ? STATS_ADMIN_UIDS
+        : name === 'STATS_EXCLUDED_UIDS'
+          ? STATS_EXCLUDED_UIDS
+          : '';
+  const trimmed = typeof fromKit === 'string' ? fromKit.trim() : '';
+  if (trimmed) return trimmed;
+  const fromProcess = process.env[name];
+  return typeof fromProcess === 'string' ? fromProcess.trim() : '';
 }
 
 export function presentedStatsBearer(header) {

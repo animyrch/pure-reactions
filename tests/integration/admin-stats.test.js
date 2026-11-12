@@ -16,15 +16,16 @@ const TOKEN = 'a'.repeat(32);
 const privateEnv = vi.hoisted(() => ({ values: {} }));
 const adminState = vi.hoisted(() => ({ adminAuth: null, adminDb: null }));
 
-vi.mock('$env/dynamic/private', () => ({
-  env: new Proxy(
-    {},
-    {
-      get(_target, property) {
-        return privateEnv.values[property];
-      },
-    },
-  ),
+vi.mock('$app/env/private', () => ({
+  get STATS_API_TOKEN() {
+    return privateEnv.values.STATS_API_TOKEN;
+  },
+  get STATS_EXCLUDED_UIDS() {
+    return privateEnv.values.STATS_EXCLUDED_UIDS;
+  },
+  get STATS_ADMIN_UIDS() {
+    return privateEnv.values.STATS_ADMIN_UIDS;
+  },
 }));
 
 vi.mock('#lib/server/firebaseAdmin.js', () => ({
@@ -210,6 +211,9 @@ describe('GET /api/admin/stats', () => {
 
   afterEach(() => {
     privateEnv.values = {};
+    delete process.env.STATS_API_TOKEN;
+    delete process.env.STATS_EXCLUDED_UIDS;
+    delete process.env.STATS_ADMIN_UIDS;
     adminState.adminAuth = null;
     adminState.adminDb = null;
     vi.restoreAllMocks();
@@ -231,6 +235,15 @@ describe('GET /api/admin/stats', () => {
     expect(adminState.adminAuth.verifyIdToken).not.toHaveBeenCalled();
     expect(adminState.adminAuth.listUsers).not.toHaveBeenCalled();
     spy.mockRestore();
+  });
+
+  it('accepts the token from the process environment when the declared value is empty', async () => {
+    privateEnv.values.STATS_API_TOKEN = '';
+    process.env.STATS_API_TOKEN = TOKEN;
+
+    const response = await statsRequest(bearer(TOKEN));
+    expect(response.status).toBe(200);
+    expect(adminState.adminAuth.listUsers).toHaveBeenCalled();
   });
 
   it('rejects a server token shorter than 32 bytes', async () => {
