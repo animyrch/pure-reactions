@@ -7,7 +7,7 @@
 import { createHash } from 'node:crypto';
 import * as secrets from '#lib/helpers/secretEqual.js';
 
-export const STATS_EXCLUDED_EMAIL_PREFIX = 'emirgokhanozcelik+';
+export const STATS_EXCLUDED_EMAIL_PREFIXES = ['emirgokhanozcelik@', 'emirgokhanozcelik+'];
 export const STATS_EXCLUDED_EMAIL_SUFFIX = '@test.com';
 export const MIN_STATS_API_TOKEN_BYTES = 32;
 
@@ -49,7 +49,7 @@ export function isExcludedStatsEmail(email) {
   const normalized = email.trim().toLowerCase();
   if (!normalized) return false;
   return (
-    normalized.startsWith(STATS_EXCLUDED_EMAIL_PREFIX) ||
+    STATS_EXCLUDED_EMAIL_PREFIXES.some((prefix) => normalized.startsWith(prefix)) ||
     normalized.endsWith(STATS_EXCLUDED_EMAIL_SUFFIX)
   );
 }

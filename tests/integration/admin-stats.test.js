@@ -162,7 +162,9 @@ describe('outside stats rules', () => {
   it('leaves out the private and test email patterns', () => {
     expect(isExcludedStatsEmail('EmirGokhanOzcelik+lab@gmail.com')).toBe(true);
     expect(isExcludedStatsEmail(' emirgokhanozcelik+lab@gmail.com ')).toBe(true);
-    expect(isExcludedStatsEmail('emirgokhanozcelik@gmail.com')).toBe(false);
+    expect(isExcludedStatsEmail('emirgokhanozcelik@gmail.com')).toBe(true);
+    expect(isExcludedStatsEmail('EmirGokhanOzcelik@gmail.com')).toBe(true);
+    expect(isExcludedStatsEmail('emirgokhanozcelik.other@gmail.com')).toBe(false);
     expect(isExcludedStatsEmail('qa@test.com')).toBe(true);
     expect(isExcludedStatsEmail('qa@TEST.com')).toBe(true);
     expect(isExcludedStatsEmail('qa@test.com.example')).toBe(false);
@@ -303,10 +305,10 @@ describe('GET /api/admin/stats', () => {
       'outside_reactions_unpublished',
       'outside_signups',
     ]);
-    expect(body.outside_signups).toBe(4);
-    expect(body.outside_reactions_published).toBe(4);
+    expect(body.outside_signups).toBe(3);
+    expect(body.outside_reactions_published).toBe(3);
     expect(body.outside_reactions_unpublished).toBe(4);
-    expect(body.outside_reactions_published + body.outside_reactions_unpublished).toBe(8);
+    expect(body.outside_reactions_published + body.outside_reactions_unpublished).toBe(7);
     expect(Number.isInteger(body.outside_signups)).toBe(true);
     expect(Number.isInteger(body.outside_reactions_published)).toBe(true);
     expect(Number.isInteger(body.outside_reactions_unpublished)).toBe(true);
@@ -315,6 +317,7 @@ describe('GET /api/admin/stats', () => {
 
     for (const secret of [
       'outside-secret@example.com',
+      'emirgokhanozcelik@gmail.com',
       'EmirGokhanOzcelik+secret@gmail.com',
       'qa@test.com',
       'alias@test.com',
