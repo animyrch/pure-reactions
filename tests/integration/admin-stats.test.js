@@ -3,6 +3,7 @@ import { COLLECTION_REACTION_BINOMES } from '#lib/constants/firebase.js';
 import {
   classifyStatsReaction,
   classifyStatsUser,
+  isExcludedStatsDisplayName,
   isExcludedStatsEmail,
   statsBearerTokensMatch,
 } from '#lib/helpers/adminStats.js';
@@ -171,6 +172,10 @@ describe('outside stats rules', () => {
     expect(isExcludedStatsEmail('qa@test.com.example')).toBe(false);
     expect(isExcludedStatsEmail('person@example.com')).toBe(false);
     expect(isExcludedStatsEmail('')).toBe(false);
+    expect(isExcludedStatsDisplayName('Animy Reacts To Music')).toBe(true);
+    expect(isExcludedStatsDisplayName(' animyrch ')).toBe(true);
+    expect(isExcludedStatsDisplayName('Demo by Admin')).toBe(true);
+    expect(isExcludedStatsDisplayName('Outside Person')).toBe(false);
 
     const excluded = new Set(['uid-emir']);
     expect(classifyStatsUser({ uid: 'uid-emir', email: 'person@example.com' }, excluded).excluded).toBe(true);
@@ -181,6 +186,18 @@ describe('outside stats rules', () => {
       ).excluded,
     ).toBe(true);
     expect(classifyStatsUser({ uid: 'uid-outside', email: 'person@example.com' }, excluded).excluded).toBe(false);
+    expect(
+      classifyStatsUser(
+        { uid: 'uid-animy', email: 'channel@example.com', displayName: 'Animy Reacts To Music' },
+        excluded,
+      ).excluded,
+    ).toBe(true);
+    expect(
+      classifyStatsReaction(
+        { reactorId: 'uid-animy', reactorDisplayName: 'Animy Reacts To Music', isPublished: true },
+        excluded,
+      ),
+    ).toBe('excluded');
     expect(classifyStatsReaction({ reactorId: 'uid-emir', isPublished: true }, excluded)).toBe('excluded');
     expect(classifyStatsReaction({ reactorId: 'uid-outside', isPublished: true }, excluded)).toBe('published');
     expect(classifyStatsReaction({ reactorId: 'uid-outside', isPublished: false }, excluded)).toBe('unpublished');
@@ -305,6 +322,11 @@ describe('GET /api/admin/stats', () => {
     seedReaction(adminDb, 'rx-page-two', { reactorId: 'uid-page-two', isPublished: true });
     seedReaction(adminDb, 'rx-string-true', { reactorId: 'uid-plain', isPublished: 'true' });
     seedReaction(adminDb, 'rx-no-plus', { reactorId: 'uid-no-plus', isPublished: true });
+    seedReaction(adminDb, 'rx-animy', {
+      reactorId: 'uid-animy-channel',
+      reactorDisplayName: 'Animy Reacts To Music',
+      isPublished: true,
+    });
 
     const response = await statsRequest(bearer(TOKEN), 'http://localhost/api/admin/stats?since=2020-01-01');
     const raw = await response.text();
@@ -346,6 +368,7 @@ describe('GET /api/admin/stats', () => {
       'rx-draft',
       'rx-emir',
       'rx-no-plus',
+      'rx-animy',
       'Secret Reaction Title',
       'Emir private',
       'draft notes',
@@ -354,7 +377,7 @@ describe('GET /api/admin/stats', () => {
     }
 
     expect(adminDb.queries).toHaveLength(1);
-    expect(adminDb.queries[0].selected).toEqual(['reactorId', 'isPublished']);
+    expect(adminDb.queries[0].selected).toEqual(['reactorId', 'reactorDisplayName', 'isPublished']);
     expect(adminState.adminAuth.verifyIdToken).not.toHaveBeenCalled();
     expect(adminState.adminAuth.listUsers).toHaveBeenCalledTimes(2);
   });

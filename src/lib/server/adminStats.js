@@ -86,7 +86,7 @@ export async function loadOutsideStats({ adminAuth, adminDb }) {
 
   for (;;) {
     let query = collection
-      .select('reactorId', 'isPublished')
+      .select('reactorId', 'reactorDisplayName', 'isPublished')
       .orderBy(FieldPath.documentId())
       .limit(STATS_REACTION_PAGE_SIZE);
     if (lastDoc) query = query.startAfter(lastDoc);

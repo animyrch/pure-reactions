@@ -1,7 +1,8 @@
 /**
  * Outside-stats rules. Firebase reads and HTTP live in the server module.
- * An account is outside when its UID is not listed and none of its emails
- * match the private or test patterns. A reaction follows its creator UID.
+ * An account is outside when its UID is not listed, none of its emails match
+ * the private or test patterns, and none of its names are an owner channel.
+ * A reaction follows its creator UID, and also the name stored on the reaction.
  */
 
 import { createHash } from 'node:crypto';
@@ -9,6 +10,8 @@ import * as secrets from '#lib/helpers/secretEqual.js';
 
 export const STATS_EXCLUDED_EMAIL_PREFIXES = ['emirgokhanozcelik@', 'emirgokhanozcelik+'];
 export const STATS_EXCLUDED_EMAIL_SUFFIX = '@test.com';
+export const STATS_EXCLUDED_DISPLAY_NAME_PREFIX = 'animy';
+export const STATS_EXCLUDED_DISPLAY_NAMES = ['demo by admin'];
 export const MIN_STATS_API_TOKEN_BYTES = 32;
 
 const UNCONFIGURED_TOKEN = '0'.repeat(MIN_STATS_API_TOKEN_BYTES);
@@ -54,6 +57,16 @@ export function isExcludedStatsEmail(email) {
   );
 }
 
+export function isExcludedStatsDisplayName(name) {
+  if (typeof name !== 'string') return false;
+  const normalized = name.trim().toLowerCase();
+  if (!normalized) return false;
+  return (
+    normalized.startsWith(STATS_EXCLUDED_DISPLAY_NAME_PREFIX) ||
+    STATS_EXCLUDED_DISPLAY_NAMES.includes(normalized)
+  );
+}
+
 function accountEmails(user) {
   const emails = [];
   if (typeof user?.email === 'string') emails.push(user.email);
@@ -65,11 +78,23 @@ function accountEmails(user) {
   return emails;
 }
 
+function accountDisplayNames(user) {
+  const names = [];
+  if (typeof user?.displayName === 'string') names.push(user.displayName);
+  if (Array.isArray(user?.providerData)) {
+    for (const provider of user.providerData) {
+      if (typeof provider?.displayName === 'string') names.push(provider.displayName);
+    }
+  }
+  return names;
+}
+
 export function classifyStatsUser(user, excludedUids) {
   const uid = typeof user?.uid === 'string' ? user.uid : '';
   const excluded =
     (uid !== '' && excludedUids.has(uid)) ||
-    accountEmails(user).some((email) => isExcludedStatsEmail(email));
+    accountEmails(user).some((email) => isExcludedStatsEmail(email)) ||
+    accountDisplayNames(user).some((name) => isExcludedStatsDisplayName(name));
   return { uid, excluded };
 }
 
@@ -80,5 +105,6 @@ export function classifyStatsUser(user, excludedUids) {
 export function classifyStatsReaction(data, excludedUids) {
   const creatorUid = typeof data?.reactorId === 'string' ? data.reactorId : '';
   if (creatorUid !== '' && excludedUids.has(creatorUid)) return 'excluded';
+  if (isExcludedStatsDisplayName(data?.reactorDisplayName)) return 'excluded';
   return data?.isPublished === true ? 'published' : 'unpublished';
 }
