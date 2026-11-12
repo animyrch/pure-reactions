@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { COLLECTION_REACTION_BINOMES } from '$lib/constants/firebase';
+import { COLLECTION_REACTION_BINOMES } from '#lib/constants/firebase.js';
 import {
   classifyStatsReaction,
   classifyStatsUser,
   isExcludedStatsEmail,
   statsBearerTokensMatch,
-} from '$lib/helpers/adminStats';
-import * as secrets from '$lib/helpers/secretEqual.js';
-import { RATE_LIMITS } from '$lib/server/rateLimit';
-import { STATS_REACTION_PAGE_SIZE, STATS_USER_PAGE_SIZE } from '$lib/server/adminStats';
-import { initializeFirebaseAdmin } from '$lib/server/firebaseAdmin';
+} from '#lib/helpers/adminStats.js';
+import * as secrets from '#lib/helpers/secretEqual.js';
+import { RATE_LIMITS } from '#lib/server/rateLimit.js';
+import { STATS_REACTION_PAGE_SIZE, STATS_USER_PAGE_SIZE } from '#lib/server/adminStats.js';
+import { initializeFirebaseAdmin } from '#lib/server/firebaseAdmin.js';
 import { GET } from '../../src/routes/api/admin/stats/+server.js';
 
 const TOKEN = 'a'.repeat(32);
@@ -27,7 +27,7 @@ vi.mock('$env/dynamic/private', () => ({
   ),
 }));
 
-vi.mock('$lib/server/firebaseAdmin', () => ({
+vi.mock('#lib/server/firebaseAdmin.js', () => ({
   initializeFirebaseAdmin: vi.fn(async () => ({
     adminAuth: adminState.adminAuth,
     adminDb: adminState.adminDb,

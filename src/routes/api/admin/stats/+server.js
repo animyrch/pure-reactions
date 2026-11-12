@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
-import { authorizeStatsRequest, loadOutsideStats, presentedStatsBearer } from '$lib/server/adminStats';
-import { initializeFirebaseAdmin } from '$lib/server/firebaseAdmin';
-import { RATE_LIMITS, enforceRateLimit } from '$lib/server/rateLimit';
+import { authorizeStatsRequest, loadOutsideStats, presentedStatsBearer } from '#lib/server/adminStats.js';
+import { initializeFirebaseAdmin } from '#lib/server/firebaseAdmin.js';
+import { RATE_LIMITS, enforceRateLimit } from '#lib/server/rateLimit.js';
 
 const NO_STORE = { 'Cache-Control': 'no-store' };
 const API_TOKEN_RATE_ID = 'admin-stats-api-token';

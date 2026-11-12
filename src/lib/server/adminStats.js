@@ -1,12 +1,12 @@
 import { env } from '$env/dynamic/private';
 import { FieldPath } from 'firebase-admin/firestore';
-import { COLLECTION_REACTION_BINOMES } from '$lib/constants/firebase';
+import { COLLECTION_REACTION_BINOMES } from '#lib/constants/firebase.js';
 import {
   classifyStatsReaction,
   classifyStatsUser,
   parseStatsUidList,
   statsBearerTokensMatch,
-} from '$lib/helpers/adminStats';
+} from '#lib/helpers/adminStats.js';
 
 export const STATS_USER_PAGE_SIZE = 1000;
 export const STATS_REACTION_PAGE_SIZE = 500;

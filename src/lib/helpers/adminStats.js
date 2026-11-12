@@ -5,7 +5,7 @@
  */
 
 import { createHash } from 'node:crypto';
-import * as secrets from '$lib/helpers/secretEqual.js';
+import * as secrets from '#lib/helpers/secretEqual.js';
 
 export const STATS_EXCLUDED_EMAIL_PREFIX = 'emirgokhanozcelik+';
 export const STATS_EXCLUDED_EMAIL_SUFFIX = '@test.com';
