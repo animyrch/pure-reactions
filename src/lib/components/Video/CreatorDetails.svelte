@@ -1,12 +1,12 @@
 <script>
-    import { userExtraDataStore } from '$lib/stores/userExtraData';
+    import { userExtraDataStore } from '#lib/stores/userExtraData.js';
     import BookmarkManagement from '../BookmarkManagement.svelte';
-    import FollowManagement from '$lib/components/FollowManagement.svelte';
-    import RateVideo from '$lib/components/Video/RateVideo.svelte';
-    import { linkifyText } from '$lib/helpers/system';
-    import { safeCreatorProfileHref } from '$lib/helpers/originalVideo';
-    import { reactionThumbnailSourceTitle } from '$lib/helpers/reactionListItem';
-    import { resolveTikTokAuthorUrl } from '$lib/helpers/platform';
+    import FollowManagement from '#lib/components/FollowManagement.svelte';
+    import RateVideo from '#lib/components/Video/RateVideo.svelte';
+    import { linkifyText } from '#lib/helpers/system.js';
+    import { safeCreatorProfileHref } from '#lib/helpers/originalVideo.js';
+    import { reactionThumbnailSourceTitle } from '#lib/helpers/reactionListItem.js';
+    import { resolveTikTokAuthorUrl } from '#lib/helpers/platform.js';
 
     export let originalVideoTitle;
     export let originalVideoAuthor;

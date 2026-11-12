@@ -8,17 +8,17 @@ const downloadBasicVideoDetails = vi.hoisted(() => vi.fn(async (videoId) => {
   return { videoTitle: 'Stored title', videoAuthor: 'Stored author' };
 }));
 
-vi.mock('$lib/helpers/firebase', () => ({
+vi.mock('#lib/helpers/firebase.js', () => ({
   auth: { currentUser: { uid: 'owner' } },
   requestReactionEnrichment,
   updateFirebaseDocument: vi.fn(),
 }));
 
-vi.mock('$lib/helpers/youtube', () => ({
+vi.mock('#lib/helpers/youtube.js', () => ({
   downloadBasicVideoDetails,
 }));
 
-import { verifyAndSyncTwinPlayersMetadata } from '$lib/helpers/twinPlayersMetadata';
+import { verifyAndSyncTwinPlayersMetadata } from '#lib/helpers/twinPlayersMetadata.ts';
 
 const storedOriginal = {
   originalVideoId: 'abcdefghijk',

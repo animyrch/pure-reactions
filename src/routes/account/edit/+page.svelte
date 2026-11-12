@@ -1,266 +1,266 @@
 <script>
-    import { onMount } from 'svelte';
-    import { goto } from '$app/navigation';
-    import { onAuthStateChanged } from 'firebase/auth';
-    import { env } from '$env/dynamic/public';
-    import {
-        auth,
-        updateDisplayNameHelper,
-        updateReactorDisplayNameForUser,
-        updateEmailHelper,
-        updatePasswordHelper,
-        reauthenticateUserHelper,
-        getUserExtraData,
-        updateTwitchChannelForUser
-    } from '$lib/helpers/firebase';
-    import { ensureAgeConfirmed } from '$lib/helpers/ageConfirmation';
-    import { showToast } from '$lib/stores/toast';
-    import { TOASTS } from '$lib/constants/toasts';
-    import CinematicButton from '$lib/components/design-system/CinematicButton.svelte';
-    import { handlePrivateRoute } from '$lib/helpers/routing';
+  import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
+  import { onAuthStateChanged } from 'firebase/auth';
+  import { PUBLIC_FIREBASE_USE_EMULATORS } from '$app/env/public';
+  import {
+    auth,
+    updateDisplayNameHelper,
+    updateReactorDisplayNameForUser,
+    updateEmailHelper,
+    updatePasswordHelper,
+    reauthenticateUserHelper,
+    getUserExtraData,
+    updateTwitchChannelForUser
+  } from '#lib/helpers/firebase.js';
+  import { ensureAgeConfirmed } from '#lib/helpers/ageConfirmation.js';
+  import { showToast } from '#lib/stores/toast.js';
+  import { TOASTS } from '#lib/constants/toasts.js';
+  import CinematicButton from '#lib/components/design-system/CinematicButton.svelte';
+  import { handlePrivateRoute } from '#lib/helpers/routing.js';
 
-    let user;
-    let accountReady = false;
-    let newName = '';
-    let newEmail = '';
-    let newPassword = '';
-    let pendingEmail = '';
-    let twitchChannel = '';
-    let twitchChannelReady = false;
-    let savingField = '';
+  let user;
+  let accountReady = false;
+  let newName = '';
+  let newEmail = '';
+  let newPassword = '';
+  let pendingEmail = '';
+  let twitchChannel = '';
+  let twitchChannelReady = false;
+  let savingField = '';
 
-    const isUsingFirebaseEmulators = env.PUBLIC_FIREBASE_USE_EMULATORS === 'true';
+  const isUsingFirebaseEmulators = PUBLIC_FIREBASE_USE_EMULATORS === 'true';
 
-    const pendingEmailStorageKey = (uid) => `pure-reactions:pending-email:${uid}`;
+  const pendingEmailStorageKey = (uid) => `pure-reactions:pending-email:${uid}`;
 
-    const readPendingEmail = (uid) => {
-      if (!uid || typeof sessionStorage === 'undefined') {
-        return '';
-      }
-      try {
-        return sessionStorage.getItem(pendingEmailStorageKey(uid)) || '';
+  const readPendingEmail = (uid) => {
+    if (!uid || typeof sessionStorage === 'undefined') {
+      return '';
+    }
+    try {
+      return sessionStorage.getItem(pendingEmailStorageKey(uid)) || '';
       } catch (error) {
-        return '';
-      }
-    };
+      return '';
+    }
+  };
 
-    const writePendingEmail = (uid, email) => {
-      if (!uid || typeof sessionStorage === 'undefined') {
+  const writePendingEmail = (uid, email) => {
+    if (!uid || typeof sessionStorage === 'undefined') {
+      return;
+    }
+    try {
+      if (!email) {
+        sessionStorage.removeItem(pendingEmailStorageKey(uid));
         return;
       }
-      try {
-        if (!email) {
-          sessionStorage.removeItem(pendingEmailStorageKey(uid));
-          return;
-        }
-        sessionStorage.setItem(pendingEmailStorageKey(uid), email);
+      sessionStorage.setItem(pendingEmailStorageKey(uid), email);
       } catch (error) {
-        console.error('Could not remember the pending email change:', error);
-      }
-    };
+      console.error('Could not remember the pending email change:', error);
+    }
+  };
 
-    const normalizeEmail = (value) => (typeof value === 'string' ? value.trim() : '');
+  const normalizeEmail = (value) => typeof value === 'string' ? value.trim() : '';
 
-    const emailsMatch = (left, right) => normalizeEmail(left).toLowerCase() === normalizeEmail(right).toLowerCase();
+  const emailsMatch = (left, right) => normalizeEmail(left).toLowerCase() === normalizeEmail(right).toLowerCase();
 
-    const isPlausibleEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(value));
+  const isPlausibleEmail = (value) => (/^[^\s@]+@[^\s@]+\.[^\s@]+$/).test(normalizeEmail(value));
 
-    const syncPendingEmail = (account) => {
-      const stored = readPendingEmail(account?.uid);
-      if (stored && emailsMatch(stored, account?.email)) {
-        writePendingEmail(account.uid, '');
-        pendingEmail = '';
+  const syncPendingEmail = (account) => {
+    const stored = readPendingEmail(account?.uid);
+    if (stored && emailsMatch(stored, account?.email)) {
+      writePendingEmail(account.uid, '');
+      pendingEmail = '';
+      return;
+    }
+    pendingEmail = stored;
+  };
+
+  const emailChangeErrorMessage = (error) => {
+    const code = error?.code || '';
+    if (code === 'auth/user-cancelled') {
+      return 'Enter your current password to send the confirmation.';
+    }
+    if (code === 'auth/wrong-password' || code === 'auth/invalid-credential' || code === 'auth/invalid-login-credentials') {
+      return 'Incorrect password. Your sign-in email is unchanged.';
+    }
+    if (code === 'auth/invalid-email') {
+      return 'Enter a valid email address.';
+    }
+    if (code === 'auth/email-already-in-use') {
+      return 'That email already belongs to another account.';
+    }
+    if (code === 'auth/requires-recent-login') {
+      return 'Enter your current password again to send the confirmation.';
+    }
+    if (code === 'auth/too-many-requests') {
+      return 'Too many attempts. Wait a moment and try again.';
+    }
+    if (code === 'auth/network-request-failed') {
+      return 'Network error. Your sign-in email is unchanged.';
+    }
+    return 'Could not send the confirmation email. Your sign-in email is unchanged.';
+  };
+
+  onMount(() => {
+    let started = false;
+    const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
+      if (!nextUser) {
+        user = null;
+        accountReady = false;
+        handlePrivateRoute();
         return;
       }
-      pendingEmail = stored;
-    };
 
-    const emailChangeErrorMessage = (error) => {
-      const code = error?.code || '';
-      if (code === 'auth/user-cancelled') {
-        return 'Enter your current password to send the confirmation.';
-      }
-      if (code === 'auth/wrong-password' || code === 'auth/invalid-credential' || code === 'auth/invalid-login-credentials') {
-        return 'Incorrect password. Your sign-in email is unchanged.';
-      }
-      if (code === 'auth/invalid-email') {
-        return 'Enter a valid email address.';
-      }
-      if (code === 'auth/email-already-in-use') {
-        return 'That email already belongs to another account.';
-      }
-      if (code === 'auth/requires-recent-login') {
-        return 'Enter your current password again to send the confirmation.';
-      }
-      if (code === 'auth/too-many-requests') {
-        return 'Too many attempts. Wait a moment and try again.';
-      }
-      if (code === 'auth/network-request-failed') {
-        return 'Network error. Your sign-in email is unchanged.';
-      }
-      return 'Could not send the confirmation email. Your sign-in email is unchanged.';
-    };
-
-    onMount(() => {
-      let started = false;
-      const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
-        if (!nextUser) {
-          user = null;
-          accountReady = false;
-          handlePrivateRoute();
-          return;
-        }
-
-        if (started) {
-          user = auth.currentUser || nextUser;
-          syncPendingEmail(user);
-          return;
-        }
-
-        started = true;
-        try {
-          await nextUser.reload();
-        } catch (error) {
-          console.error('Could not refresh the signed-in account:', error);
-        }
-
+      if (started) {
         user = auth.currentUser || nextUser;
-        const allowed = await ensureAgeConfirmed(user.uid);
-        if (!allowed) {
-          await goto('/account');
-          return;
-        }
-        newName = user?.displayName || '';
         syncPendingEmail(user);
-        newEmail = pendingEmail || user?.email || '';
-        accountReady = true;
+        return;
+      }
 
-        const extra = await getUserExtraData(user.uid);
-        twitchChannel = typeof extra?.twitchChannel === 'string' ? extra.twitchChannel : '';
-        twitchChannelReady = true;
-      });
+      started = true;
+      try {
+        await nextUser.reload();
+        } catch (error) {
+        console.error('Could not refresh the signed-in account:', error);
+      }
 
-      return unsubscribe;
+      user = auth.currentUser || nextUser;
+      const allowed = await ensureAgeConfirmed(user.uid);
+      if (!allowed) {
+        await goto('/account');
+        return;
+      }
+      newName = user?.displayName || '';
+      syncPendingEmail(user);
+      newEmail = pendingEmail || user?.email || '';
+      accountReady = true;
+
+      const extra = await getUserExtraData(user.uid);
+      twitchChannel = typeof extra?.twitchChannel === 'string' ? extra.twitchChannel : '';
+      twitchChannelReady = true;
     });
 
-    const updateDisplayName = async () => {
-      savingField = 'name';
-      try {
-        await updateDisplayNameHelper(user, newName);
-        await updateReactorDisplayNameForUser({ userId: user?.uid, displayName: newName });
-        showToast('Profile updated successfully', TOASTS.SUCCESS);
-      } finally {
-        savingField = '';
-      }
-    };
+    return unsubscribe;
+  });
 
-    const performSensitiveOperation = async (operation) => {
-        try {
-            await reauthenticateUserHelper(user);
-            await operation();
-            location.reload();
+  const updateDisplayName = async () => {
+    savingField = 'name';
+    try {
+      await updateDisplayNameHelper(user, newName);
+      await updateReactorDisplayNameForUser({ userId: user?.uid, displayName: newName });
+      showToast('Profile updated successfully', TOASTS.SUCCESS);
+    } finally {
+      savingField = '';
+    }
+  };
+
+  const performSensitiveOperation = async (operation) => {
+    try {
+      await reauthenticateUserHelper(user);
+      await operation();
+      location.reload();
         } catch (error) {
-            console.error('Error performing sensitive operation:', error.message);
-        }
-    };
+      console.error('Error performing sensitive operation:', error.message);
+    }
+  };
 
-    const setNewPassword = async () => {
-        if (newPassword) {
-            await updatePasswordHelper(user, newPassword);
-            showToast('Password updated successfully', TOASTS.SUCCESS);
-        }
-    };
+  const setNewPassword = async () => {
+    if (newPassword) {
+      await updatePasswordHelper(user, newPassword);
+      showToast('Password updated successfully', TOASTS.SUCCESS);
+    }
+  };
 
-    const updateEmail = async () => {
-      const nextEmail = normalizeEmail(newEmail);
-      const signedInEmail = normalizeEmail(user?.email);
+  const updateEmail = async () => {
+    const nextEmail = normalizeEmail(newEmail);
+    const signedInEmail = normalizeEmail(user?.email);
 
-      if (!isPlausibleEmail(nextEmail)) {
-        showToast('Enter a valid email address.', TOASTS.WARNING);
-        return;
-      }
-      if (emailsMatch(nextEmail, signedInEmail)) {
-        showToast('That is already your sign-in email.', TOASTS.WARNING);
-        return;
-      }
+    if (!isPlausibleEmail(nextEmail)) {
+      showToast('Enter a valid email address.', TOASTS.WARNING);
+      return;
+    }
+    if (emailsMatch(nextEmail, signedInEmail)) {
+      showToast('That is already your sign-in email.', TOASTS.WARNING);
+      return;
+    }
 
-      savingField = 'email';
-      try {
+    savingField = 'email';
+    try {
         await reauthenticateUserHelper(
           user,
           'Enter your current password to email a confirmation link to the new address.'
         );
-        const replacedPending = Boolean(pendingEmail) && !emailsMatch(pendingEmail, nextEmail);
-        await updateEmailHelper(user, nextEmail);
-        writePendingEmail(user?.uid, nextEmail);
-        pendingEmail = nextEmail;
-        newEmail = nextEmail;
-        user = auth.currentUser || user;
-        showToast(
-          replacedPending
-            ? `Confirmation sent to ${nextEmail}. An earlier link can still switch this account if it is opened.`
-            : 'Confirmation email sent. Your sign-in email stays the same until you open that link.',
-          TOASTS.SUCCESS,
-          8000
-        );
+      const replacedPending = Boolean(pendingEmail) && !emailsMatch(pendingEmail, nextEmail);
+      await updateEmailHelper(user, nextEmail);
+      writePendingEmail(user?.uid, nextEmail);
+      pendingEmail = nextEmail;
+      newEmail = nextEmail;
+      user = auth.currentUser || user;
+      showToast(
+        replacedPending
+          ? `Confirmation sent to ${nextEmail}. An earlier link can still switch this account if it is opened.`
+          : 'Confirmation email sent. Your sign-in email stays the same until you open that link.',
+        TOASTS.SUCCESS,
+        8000
+      );
       } catch (error) {
-        console.error('Error sending email confirmation:', error);
-        showToast(emailChangeErrorMessage(error), TOASTS.WARNING);
-      } finally {
-        savingField = '';
-      }
-    };
+      console.error('Error sending email confirmation:', error);
+      showToast(emailChangeErrorMessage(error), TOASTS.WARNING);
+    } finally {
+      savingField = '';
+    }
+  };
 
-    const cancelEmailChange = () => {
-      const signedInEmail = normalizeEmail(user?.email);
-      writePendingEmail(user?.uid, '');
-      pendingEmail = '';
-      newEmail = signedInEmail;
+  const cancelEmailChange = () => {
+    const signedInEmail = normalizeEmail(user?.email);
+    writePendingEmail(user?.uid, '');
+    pendingEmail = '';
+    newEmail = signedInEmail;
       showToast(
         `Email change canceled. You still sign in as ${signedInEmail}. Ignore the link already sent. Opening it can still switch this account.`,
         TOASTS.SUCCESS,
         8000
       );
-    };
+  };
 
-    $: emailUnchanged = emailsMatch(newEmail, user?.email);
+  $: emailUnchanged = emailsMatch(newEmail, user?.email);
     $: emailActionLabel = pendingEmail && emailsMatch(newEmail, pendingEmail)
       ? 'Resend confirmation'
       : 'Send confirmation';
 
-    const updatePassword = async () => {
-      savingField = 'password';
-      try {
-        await performSensitiveOperation(setNewPassword);
-      } finally {
-        savingField = '';
-      }
-    };
+  const updatePassword = async () => {
+    savingField = 'password';
+    try {
+      await performSensitiveOperation(setNewPassword);
+    } finally {
+      savingField = '';
+    }
+  };
 
-    const updateTwitchChannel = async () => {
-      savingField = 'twitch';
-      try {
+  const updateTwitchChannel = async () => {
+    savingField = 'twitch';
+    try {
         const saved = await updateTwitchChannelForUser({
           userId: user?.uid,
           twitchChannel,
         });
-        twitchChannel = saved;
+      twitchChannel = saved;
         showToast(
           saved ? 'Twitch channel updated' : 'Twitch channel cleared',
           TOASTS.SUCCESS
         );
       } catch (error) {
-        const message = error?.message || '';
+      const message = error?.message || '';
         showToast(
           message.includes('Twitch') ? message : 'Could not update your Twitch channel.',
           TOASTS.WARNING
         );
-      } finally {
-        savingField = '';
-      }
-    };
+    } finally {
+      savingField = '';
+    }
+  };
 
-    const fieldClass = 'w-full rounded-xl border border-border-strong/40 bg-background px-4 py-3 text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-hidden focus:ring-2 focus:ring-accent-primary/30 disabled:opacity-60';
+  const fieldClass = 'w-full rounded-xl border border-border-strong/40 bg-background px-4 py-3 text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-hidden focus:ring-2 focus:ring-accent-primary/30 disabled:opacity-60';
 </script>
 
 <div class="mx-auto w-full max-w-3xl px-4 py-8 sm:py-12">
@@ -268,8 +268,19 @@
     href="/account"
     class="inline-flex items-center gap-2 text-sm text-text-secondary transition hover:text-text-primary"
   >
-    <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-      <path d="M12.5 4.5 7 10l5.5 5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+    <svg
+      class="h-4 w-4"
+      viewBox="0 0 20 20"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M12.5 4.5 7 10l5.5 5.5"
+        stroke="currentColor"
+        stroke-width="1.6"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      ></path>
     </svg>
     Account settings
   </a>
@@ -343,7 +354,7 @@
               size="sm"
               variant="secondary"
               loading={savingField === 'email'}
-              disabled={!accountReady || emailUnchanged || (savingField !== '' && savingField !== 'email')}
+              disabled={!accountReady || emailUnchanged || savingField !== '' && savingField !== 'email'}
               on:click={updateEmail}
             >
               {emailActionLabel}
@@ -398,7 +409,7 @@
             size="sm"
             variant="secondary"
             loading={savingField === 'password'}
-            disabled={!newPassword || (savingField !== '' && savingField !== 'password')}
+            disabled={!newPassword || savingField !== '' && savingField !== 'password'}
             on:click={updatePassword}
           >
             Save password
@@ -434,7 +445,7 @@
           size="sm"
           variant="secondary"
           loading={savingField === 'twitch'}
-          disabled={!twitchChannelReady || (savingField !== '' && savingField !== 'twitch')}
+          disabled={!twitchChannelReady || savingField !== '' && savingField !== 'twitch'}
           on:click={updateTwitchChannel}
         >
           Save channel

@@ -1,4 +1,4 @@
-import { isMomentReactionData } from '$lib/helpers/reactionListItem';
+import { isMomentReactionData } from '#lib/helpers/reactionListItem.js';
 
 /**
  * Stored watch time for thumbnail badges.

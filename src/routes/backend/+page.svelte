@@ -1,6 +1,6 @@
 <script>
     /* global YT */
-    import Recorder from "$lib/components/Recorder.svelte";
+    import Recorder from "#lib/components/Recorder.svelte";
     import { onDestroy, onMount, tick } from "svelte";
     import {
         createReactionDocument,
@@ -12,32 +12,33 @@
         auth,
         getUserExtraData,
         updateTwitchChannelForUser,
-    } from "$lib/helpers/firebase";
-    import { handlePrivateRoute, goToRoute } from "$lib/helpers/routing";
-    import { isMobileDevice } from "$lib/helpers/system";
-    import { getCompensatedReactionTime } from "$lib/helpers/reaction";
-    import { getTikTokEmbedUrl, resolveTikTokWatchUrl } from "$lib/helpers/platform";
-    import { fetchOriginalVideoMetadata } from "$lib/helpers/originalVideo";
+    } from "#lib/helpers/firebase.js";
+    import { handlePrivateRoute, goToRoute } from "#lib/helpers/routing.js";
+    import { isMobileDevice } from "#lib/helpers/system.js";
+    import { getCompensatedReactionTime } from "#lib/helpers/reaction.js";
+    import { getTikTokEmbedUrl, resolveTikTokWatchUrl } from "#lib/helpers/platform.js";
+    import { fetchOriginalVideoMetadata } from "#lib/helpers/originalVideo.js";
     import {
         buildRecorderStateConfigs,
         RECORDER_PLAYER_STATES,
-    } from "$lib/helpers/recorderState";
+    } from "#lib/helpers/recorderState.js";
     import {
         AUDIO_LEAD,
         buildReactionEndPauseCue,
         getAudioLeadVolumes,
-    } from "$lib/helpers/audioLead";
-    import HelpfulTip from "$lib/components/design-system/HelpfulTip.svelte";
-    import BackendActionDock from "$lib/components/Video/BackendActionDock.svelte";
-    import BackendScrubber from "$lib/components/Video/BackendScrubber.svelte";
-    import PlaylistQueue from "$lib/components/Video/PlaylistQueue.svelte";
-    import { isLoggedIn } from "$lib/stores/user";
-    import { page } from "$app/stores";
+    } from "#lib/helpers/audioLead.js";
+    import HelpfulTip from "#lib/components/design-system/HelpfulTip.svelte";
+    import BackendActionDock from "#lib/components/Video/BackendActionDock.svelte";
+    import BackendScrubber from "#lib/components/Video/BackendScrubber.svelte";
+    import PlaylistQueue from "#lib/components/Video/PlaylistQueue.svelte";
+    import { isLoggedIn } from "#lib/stores/user.js";
+    import { pageStore } from "#lib/helpers/pageStore.js";
+const page = pageStore();
     import { get } from "svelte/store";
     import { afterNavigate } from "$app/navigation";
-    import ShareSessionModal from "$lib/components/session/ShareSessionModal.svelte";
-    import { showToast } from "$lib/stores/toast";
-    import { TOASTS } from "$lib/constants/toasts";
+    import ShareSessionModal from "#lib/components/session/ShareSessionModal.svelte";
+    import { showToast } from "#lib/stores/toast.js";
+    import { TOASTS } from "#lib/constants/toasts.js";
     import {
         BullhornSolid,
         PauseSolid,
@@ -47,11 +48,9 @@
         DownloadSolid,
         UsersSolid,
     } from "flowbite-svelte-icons";
-    import { fetchFirstPlaylistVideos } from "$lib/helpers/youtube";
-    import {
-        getPlaylistSequenceItems,
-        toPlaylistQueueItem,
-    } from "$lib/helpers/reactionSequence";
+    import { fetchFirstPlaylistVideos } from "#lib/helpers/youtube.js";
+    import { getPlaylistSequenceItems, toPlaylistQueueItem } from "#lib/helpers/reactionSequence.js";
+
     import {
         createSharedSession,
         updateSessionState,
@@ -59,8 +58,8 @@
         SESSION_STATES,
         cleanupInactiveSessions,
         listenToSession,
-    } from "$lib/helpers/sharedSession";
-    import { normalizeTwitchChannel } from "$lib/helpers/twitchChannel";
+    } from "#lib/helpers/sharedSession.js";
+    import { normalizeTwitchChannel } from "#lib/helpers/twitchChannel.js";
 
     export let data;
 
@@ -247,7 +246,9 @@
     let lastSubscribedSessionId = "";
 
     if (typeof window !== "undefined") {
-        afterNavigateUnsubscribe = afterNavigate(() => {
+        afterNavigateUnsubscribe = afterNavigate(({ shallow, type }) => {
+            if (shallow && type === 'goto') return;
+
             triggerBackendInitialisation("after-navigate");
         });
     }
@@ -508,18 +509,17 @@
                     wait(10000).then(() => "timeout"),
                     new Promise((resolve) => {
                         const checkAbort = setInterval(() => {
-                            if (controller.signal.aborted) {
-                                clearInterval(checkAbort);
-                                resolve("aborted");
-                            }
-                        }, 100);
-                        // Also hook into signal directly if possible but interval is safe
-                        controller.signal.addEventListener(
-                            "abort",
-                            () => resolve("aborted"),
-                            { once: true },
+                                if (controller.signal.aborted) {
+                                    clearInterval(checkAbort);
+                                    resolve("aborted");
+                                }
+                            },
+                            100
                         );
-                    }),
+
+                        // Also hook into signal directly if possible but interval is safe
+                        controller.signal.addEventListener("abort", () => resolve("aborted"), { once: true });
+                    })
                 ]);
 
                 if (readyOrAborted === "timeout") {
@@ -666,8 +666,8 @@
         if (event?.target === playerOriginal) {
             const playerRates =
                 typeof playerOriginal.getAvailablePlaybackRates === "function"
-                    ? playerOriginal.getAvailablePlaybackRates()
-                    : availablePlaybackRates;
+                ? playerOriginal.getAvailablePlaybackRates()
+                : availablePlaybackRates;
             availablePlaybackRates =
                 Array.isArray(playerRates) && playerRates.length
                     ? [...playerRates].sort((a, b) => a - b)
@@ -676,19 +676,11 @@
             const desiredRate = pendingPlaybackRate ?? playbackRate;
             const fallbackRate = availablePlaybackRates.includes(desiredRate)
                 ? desiredRate
-                : availablePlaybackRates.includes(1)
-                  ? 1
-                  : availablePlaybackRates[0];
-            playbackRateIndex = Math.max(
-                availablePlaybackRates.indexOf(fallbackRate),
-                0,
-            );
-            playbackRate = availablePlaybackRates[playbackRateIndex] ?? 1;
+                : availablePlaybackRates.includes(1) ? 1 : availablePlaybackRates[0];
 
-            applyPlaybackRate(playbackRate, {
-                shouldLog: false,
-                syncSession: false,
-            });
+            playbackRateIndex = Math.max(availablePlaybackRates.indexOf(fallbackRate), 0);
+            playbackRate = availablePlaybackRates[playbackRateIndex] ?? 1;
+            applyPlaybackRate(playbackRate, { shouldLog: false, syncSession: false });
             pendingPlaybackRate = null;
             isPlayerOriginalReady = true;
             if (shouldStartWhenReady) {
@@ -774,11 +766,9 @@
             nextStateConfigs.map.forEach((value, key) => {
                 reactionConfigs.set(key, value);
             });
-            reactionConfigsArray = nextStateConfigs.entries;
 
-            updateFirebaseDocument({
-                reactionConfigs: nextStateConfigs.object,
-            });
+            reactionConfigsArray = nextStateConfigs.entries;
+            updateFirebaseDocument({ reactionConfigs: nextStateConfigs.object });
         }
     }
 
@@ -919,7 +909,7 @@
                 : null;
         const normalizedRates =
             Array.isArray(playerRates) && playerRates.length
-                ? [...playerRates].sort((a, b) => a - b)
+            ? [...playerRates].sort((a, b) => a - b)
                 : availablePlaybackRates.length
                   ? [...availablePlaybackRates]
                   : [1];
@@ -1253,8 +1243,8 @@
         scrubSeekMax >= scrubSeekMin ? scrubSeekMax : scrubSeekMin;
     $: scrubDisplayTime =
         scrubSafeSeekMax > scrubSeekMin
-            ? clampNumber(scrubCurrentTime, scrubSeekMin, scrubSafeSeekMax)
-            : scrubSeekMin;
+        ? clampNumber(scrubCurrentTime, scrubSeekMin, scrubSafeSeekMax)
+        : scrubSeekMin;
     $: isScrubberSeekable = Boolean(
         playerOriginal &&
             typeof playerOriginal.getDuration === "function" &&
@@ -1276,9 +1266,7 @@
 
             // Update shared session volume
             if (sharedSessionId) {
-                updateSessionState(sharedSessionId, {
-                    volume: volume,
-                });
+                updateSessionState(sharedSessionId, { volume });
             }
         } else {
             console.error(
@@ -1296,10 +1284,8 @@
         }
 
         const label = platform === "tiktok" ? "TikTok" : "YouTube";
-        return (
-            normalizedTitle === `${label} ${videoId}` ||
-            normalizedTitle === `${label} video`
-        );
+
+        return normalizedTitle === `${label} ${videoId}` || normalizedTitle === `${label} video`;
     };
 
     const buildPlaylistSequenceSnapshot = (sequenceItem) => {
@@ -1509,14 +1495,14 @@
         const playlistHasItems = Array.isArray(playlistElements) && playlistElements.length > 0;
         const currentPlaylistIndex =
             !hasSequenceItems && isPlaylistFlow && playlistHasItems
-                ? playlistElements.findIndex((item) => item === originalVideoId)
-                : -1;
+            ? playlistElements.findIndex((item) => item === originalVideoId)
+            : -1;
         const nextVideoId =
             !hasSequenceItems &&
             currentPlaylistIndex !== -1 &&
             currentPlaylistIndex < playlistElements.length - 1
-                ? playlistElements[currentPlaylistIndex + 1]
-                : undefined;
+            ? playlistElements[currentPlaylistIndex + 1]
+            : undefined;
 
         // Always save reactionFinishTime for playlist flows
         if (isPlaylistFlow) {
@@ -1616,12 +1602,10 @@
             await goToRoute(nextRoute);
             location.reload();
             return;
-        }
-        // No next video - go to reaction configuration
-        else if (currentPlaylistDocumentId) {
-            goToRoute(
-                `/batch-edit?playlistDocumentId=${currentPlaylistDocumentId}`,
-            );
+        } else // No next video - go to reaction configuration
+        if (currentPlaylistDocumentId) {
+            goToRoute(`/batch-edit?playlistDocumentId=${currentPlaylistDocumentId}`);
+
             return;
         }
         goToReactionConfiguration();
@@ -1789,12 +1773,7 @@
             return null;
         }
 
-        return (
-            document.fullscreenElement ||
-            document.webkitFullscreenElement ||
-            document.msFullscreenElement ||
-            null
-        );
+        return document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement || null;
     };
 
     const handleDocumentFullscreenChange = () => {
@@ -2123,12 +2102,8 @@
         }
 
         const tagName = target.tagName;
-        return (
-            tagName === "INPUT" ||
-            tagName === "TEXTAREA" ||
-            tagName === "SELECT" ||
-            target.isContentEditable
-        );
+
+        return tagName === "INPUT" || tagName === "TEXTAREA" || tagName === "SELECT" || target.isContentEditable;
     };
 
     function handleKeydown(event) {
@@ -2205,11 +2180,12 @@
     }
 </script>
 
+
 <svelte:window
     on:keydown={handleKeydown}
     on:keyup={handleKeyup}
     on:beforeunload={handleBeforeUnload}
-/>
+></svelte:window>
 
 {#if $isLoggedIn}
     <div class="min-h-screen bg-slate-950 text-slate-100">
@@ -2446,21 +2422,21 @@
                     {/if}
 
                     {#if !isTikTokOriginal}
-                    <div
-                        class="rounded-3xl border border-slate-900/60 bg-slate-900/40 p-5"
-                    >
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p
-                                    class="text-xs uppercase tracking-[0.3em] text-slate-500"
+                        <div
+                            class="rounded-3xl border border-slate-900/60 bg-slate-900/40 p-5"
+                        >
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p
+                                        class="text-xs uppercase tracking-[0.3em] text-slate-500"
                                 >
                                     Playback Rate
                                 </p>
                                 <p class="text-sm font-semibold text-slate-100">
                                     {formatPlaybackRate(playbackRate)}x
                                 </p>
-                            </div>
-                            <span class="text-xs text-slate-500">
+                                </div>
+                                <span class="text-xs text-slate-500">
                                 {formatPlaybackRate(
                                     availablePlaybackRates[0] ?? 1,
                                 )}x – {formatPlaybackRate(
@@ -2468,71 +2444,71 @@
                                         availablePlaybackRates.length - 1
                                     ] ?? 1,
                                 )}x
-                            </span>
-                        </div>
-                        <div class="mt-4 flex items-center gap-3">
-                            <input
-                                type="range"
-                                min="0"
+                                </span>
+                            </div>
+                            <div class="mt-4 flex items-center gap-3">
+                                <input
+                                    type="range"
+                                    min="0"
                                 max={Math.max(
                                     availablePlaybackRates.length - 1,
                                     0,
                                 )}
-                                step="1"
-                                bind:value={playbackRateIndex}
+                                    step="1"
+                                    bind:value={playbackRateIndex}
                                 on:input={() =>
                                     updatePlaybackRateFromIndex(
                                         playbackRateIndex,
                                         { userInitiated: true },
                                     )}
-                                class="h-1 flex-1 appearance-none rounded-full bg-slate-800 accent-blue-500"
-                                disabled={availablePlaybackRates.length <= 1}
-                            />
-                        </div>
-                        <div
-                            class="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-500"
-                        >
-                            {#each availablePlaybackRates as rate, idx}
-                                <span
-                                    class={`rounded-full px-2 py-1 ${idx === playbackRateIndex ? "bg-slate-800 text-slate-200" : ""}`}
+                                    class="h-1 flex-1 appearance-none rounded-full bg-slate-800 accent-blue-500"
+                                    disabled={availablePlaybackRates.length <= 1}
+                                />
+                            </div>
+                            <div
+                                class="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-500"
+                            >
+                                {#each availablePlaybackRates as rate, idx}
+                                    <span
+                                        class={`rounded-full px-2 py-1 ${idx === playbackRateIndex ? "bg-slate-800 text-slate-200" : ""}`}
                                 >
                                     {formatPlaybackRate(rate)}x
                                 </span>
-                            {/each}
+                                {/each}
+                            </div>
                         </div>
-                    </div>
                     {/if}
 
                     {#if !isTikTokOriginal}
-                    <div
-                        class="rounded-3xl border border-slate-900/60 bg-slate-900/40 p-5"
-                    >
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p
-                                    class="text-xs uppercase tracking-[0.3em] text-slate-500"
+                        <div
+                            class="rounded-3xl border border-slate-900/60 bg-slate-900/40 p-5"
+                        >
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p
+                                        class="text-xs uppercase tracking-[0.3em] text-slate-500"
                                 >
                                     Volume
                                 </p>
                                 <p class="text-sm font-semibold text-slate-100">
                                     {soundLevel}%
                                 </p>
+                                </div>
+                                <span class="text-xs text-slate-500">0% – 100%</span>
                             </div>
-                            <span class="text-xs text-slate-500">0% – 100%</span>
+                            <div class="mt-4 flex items-center gap-3">
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="100"
+                                    step="1"
+                                    bind:value={soundLevel}
+                                    on:change={() => logVolumeChange(soundLevel)}
+                                    class="h-1 flex-1 appearance-none rounded-full bg-slate-800 accent-blue-500"
+                                    aria-label="Volume"
+                                />
+                            </div>
                         </div>
-                        <div class="mt-4 flex items-center gap-3">
-                            <input
-                                type="range"
-                                min="0"
-                                max="100"
-                                step="1"
-                                bind:value={soundLevel}
-                                on:change={() => logVolumeChange(soundLevel)}
-                                class="h-1 flex-1 appearance-none rounded-full bg-slate-800 accent-blue-500"
-                                aria-label="Volume"
-                            />
-                        </div>
-                    </div>
                     {/if}
 
                     {#if showRecorder}
@@ -2541,10 +2517,12 @@
                         >
                             <p
                                 class="mb-3 text-xs uppercase tracking-[0.3em] text-slate-500"
-                            >
-                                Recorder
-                            </p>
-                            <Recorder {startRecording} {stopRecording} />
+                            >Recorder</p>
+
+                            <Recorder
+                                startRecording={startRecording}
+                                stopRecording={stopRecording}
+                            />
                         </div>
                     {/if}
 
@@ -2558,14 +2536,14 @@
                         </p>
                         <PlaylistQueue
                             currentlyViewed={originalVideoId}
-                            {playlistId}
-                            {playlistItems}
-                            {playlistDocument}
+                            playlistId={playlistId}
+                            playlistItems={playlistItems}
+                            playlistDocument={playlistDocument}
                             playlistDocumentId={currentPlaylistDocumentId}
                             currentIndex={currentSequenceIndex}
                             hideCurrentItem={true}
-                            {startTime}
-                            {playlistBufferTime}
+                            startTime={startTime}
+                            playlistBufferTime={playlistBufferTime}
                         />
                     </div>
 
@@ -2697,14 +2675,14 @@
 
     <ShareSessionModal
         bind:open={showShareModal}
-        {shareUrl}
-        {savedTwitchChannel}
+        shareUrl={shareUrl}
+        savedTwitchChannel={savedTwitchChannel}
         bind:twitchChannelDraft
-        {twitchChannelError}
-        {isSavingTwitchChannel}
-        {isCopyingShareUrl}
-        {viewerCount}
-        {originalVideoTitle}
+        twitchChannelError={twitchChannelError}
+        isSavingTwitchChannel={isSavingTwitchChannel}
+        isCopyingShareUrl={isCopyingShareUrl}
+        viewerCount={viewerCount}
+        originalVideoTitle={originalVideoTitle}
         onSaveChannel={saveTwitchChannelFromShare}
         onCopy={copyShareUrl}
     />

@@ -1,7 +1,7 @@
 <script>
   import { createEventDispatcher } from 'svelte';
-  import AccessibleInput from '$lib/components/design-system/AccessibleInput.svelte';
-  import CinematicButton from '$lib/components/design-system/CinematicButton.svelte';
+  import AccessibleInput from '#lib/components/design-system/AccessibleInput.svelte';
+  import CinematicButton from '#lib/components/design-system/CinematicButton.svelte';
 
   export let loading = false;
   export let error = '';

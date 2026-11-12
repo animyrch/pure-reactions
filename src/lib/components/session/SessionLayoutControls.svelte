@@ -3,7 +3,7 @@
         FULLSCREEN_OVERLAY_WIDTH_MAX,
         FULLSCREEN_OVERLAY_WIDTH_MIN,
         FULLSCREEN_OVERLAY_WIDTH_STEP,
-    } from "$lib/helpers/twinPlayersReactionData.ts";
+    } from "#lib/helpers/twinPlayersReactionData.ts";
 
     export let fullscreenPrimaryVideo = "original";
     export let fullscreenOverlayWidthPercent = 35;

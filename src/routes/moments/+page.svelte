@@ -1,17 +1,18 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
-  import { page } from '$app/stores';
+  import { pageStore } from "#lib/helpers/pageStore.js";
+const page = pageStore();
   import { goto } from '$app/navigation';
   import { SearchOutline as SearchIcon, PlusOutline } from 'flowbite-svelte-icons';
-  import SEO from '$lib/components/SEO.svelte';
-  import MomentDiscoveryCard from '$lib/components/Moments/MomentDiscoveryCard.svelte';
-  import { searchMoments } from '$lib/helpers/momentsSearch';
-  import { DEFAULT_MOMENT_SORT, MOMENT_SORT_LABELS } from '$lib/constants/moments';
-  import { currentUser } from '$lib/stores/user';
-  import { handlePrivateRoute } from '$lib/helpers/routing';
-  import { showToast } from '$lib/stores/toast';
-  import { TOASTS } from '$lib/constants/toasts';
-  import { startMomentReactionDraft } from '$lib/helpers/momentsFirestore';
+  import SEO from '#lib/components/SEO.svelte';
+  import MomentDiscoveryCard from '#lib/components/Moments/MomentDiscoveryCard.svelte';
+  import { searchMoments } from '#lib/helpers/momentsSearch.js';
+  import { DEFAULT_MOMENT_SORT, MOMENT_SORT_LABELS } from '#lib/constants/moments.js';
+  import { currentUser } from '#lib/stores/user.js';
+  import { handlePrivateRoute } from '#lib/helpers/routing.js';
+  import { showToast } from '#lib/stores/toast.js';
+  import { TOASTS } from '#lib/constants/toasts.js';
+  import { startMomentReactionDraft } from '#lib/helpers/momentsFirestore.js';
 
   const HITS_PER_PAGE = 12;
   const DEBOUNCE_DELAY = 600;
@@ -66,7 +67,7 @@
     if (query.trim()) params.set('q', query.trim());
     if (sortBy && sortBy !== DEFAULT_MOMENT_SORT) params.set('sort', sortBy);
     const suffix = params.toString();
-    goto(suffix ? `/moments?${suffix}` : '/moments', { replaceState: true, keepFocus: true });
+    goto(suffix ? `/moments?${suffix}` : '/moments', { replace: true, reset: false });
   }
 
   async function loadResults(pageNum) {
@@ -89,7 +90,7 @@
       if (pageNum === 0) {
         results = searchResult.hits || [];
       } else {
-        results = [...results, ...(searchResult.hits || [])];
+        results = [...results, ...searchResult.hits || []];
       }
 
       currentPage = searchResult.page;
@@ -135,7 +136,7 @@
   const handleAddReaction = async (moment) => {
     if (!moment || !moment.objectID) return;
     let user;
-    currentUser.subscribe((value) => (user = value))();
+    currentUser.subscribe((value) => user = value)();
     if (!user || !user.uid) {
       handlePrivateRoute();
       showToast('You must be logged in to add a reaction.', TOASTS.WARNING);
@@ -164,6 +165,7 @@
     }
   };
 </script>
+
 
 <SEO
   title="Moments Discovery"
@@ -212,7 +214,7 @@
         aria-label="Sort moments"
       >
         {#each Object.entries(MOMENT_SORT_LABELS) as [value, label]}
-          <option {value}>{label}</option>
+          <option value={value}>{label}</option>
         {/each}
       </select>
     </div>
@@ -233,7 +235,7 @@
     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {#each results as moment (moment.objectID || moment.id)}
         <MomentDiscoveryCard
-          {moment}
+          moment={moment}
           showAddReaction={true}
           addReactionLoading={addReactionLoadingFor === moment.objectID}
           on:addReaction={() => handleAddReaction(moment)}

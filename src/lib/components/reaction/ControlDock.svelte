@@ -1,5 +1,5 @@
 <script>
-  import VideoControl from "$lib/components/Video/VideoControl.svelte";
+  import VideoControl from "#lib/components/Video/VideoControl.svelte";
 
   export let isFullscreen = false;
   export let stickyControlsClass = "opacity-100";

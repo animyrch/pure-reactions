@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { json } from '@sveltejs/kit';
-import { COLLECTION_RATE_LIMITS } from '$lib/constants/firebase';
+import { COLLECTION_RATE_LIMITS } from '#lib/constants/firebase.js';
 import {
   ONE_DAY_MS,
   ONE_HOUR_MS,
@@ -10,8 +10,8 @@ import {
   exportLeaseDecision,
   rateLimitDecision,
   visitorKey,
-} from '$lib/helpers/rateLimit';
-import { initializeFirebaseAdmin } from '$lib/server/firebaseAdmin';
+} from '#lib/helpers/rateLimit.js';
+import { initializeFirebaseAdmin } from '#lib/server/firebaseAdmin.js';
 
 /**
  * Shared fixed-window counter. Each route passes its own bucket, limit, and window.

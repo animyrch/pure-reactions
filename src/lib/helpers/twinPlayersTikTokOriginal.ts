@@ -1,4 +1,4 @@
-import { getTikTokEmbedUrl } from '$lib/helpers/platform';
+import { getTikTokEmbedUrl } from '#lib/helpers/platform.js';
 
 const TIKTOK_ORIGIN = 'https://www.tiktok.com';
 

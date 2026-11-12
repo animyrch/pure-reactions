@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { COLLECTION_PLAYLISTS, COLLECTION_REACTION_BINOMES } from '$lib/constants/firebase';
+import { COLLECTION_PLAYLISTS, COLLECTION_REACTION_BINOMES } from '#lib/constants/firebase.js';
 
 const initializeFirebaseAdmin = vi.hoisted(() => vi.fn());
 
-vi.mock('$lib/server/firebaseAdmin', () => ({
+vi.mock('#lib/server/firebaseAdmin.js', () => ({
   initializeFirebaseAdmin,
 }));
 

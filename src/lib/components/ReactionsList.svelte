@@ -1,5 +1,5 @@
 <script>
-    import ReactionsListElement from '$lib/components/ReactionsListElement.svelte';
+    import ReactionsListElement from '#lib/components/ReactionsListElement.svelte';
 
     export let reactions = [];
     export let loading = false;

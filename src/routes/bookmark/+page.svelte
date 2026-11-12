@@ -1,16 +1,17 @@
 <script>
     import { onDestroy } from "svelte";
-    import PageBackLink from "$lib/components/PageBackLink.svelte";
-    import PersonalPage from "$lib/components/PersonalPage.svelte";
-    import PersonalListSection from "$lib/components/PersonalListSection.svelte";
-    import { userExtraDataStore } from "$lib/stores/userExtraData";
-    import { isLoggedIn, currentUser } from "$lib/stores/user";
-    import { getPlaylist, getReactionsByIds, getUserQueues } from "$lib/helpers/firebase";
-    import { deleteOwnedContent } from "$lib/helpers/deleteOwnedContent";
-    import { attachQueueCovers } from "$lib/helpers/queueCover";
-    import { showToast } from "$lib/stores/toast";
-    import { TOASTS } from "$lib/constants/toasts";
-    import { page } from "$app/stores";
+    import PageBackLink from "#lib/components/PageBackLink.svelte";
+    import PersonalPage from "#lib/components/PersonalPage.svelte";
+    import PersonalListSection from "#lib/components/PersonalListSection.svelte";
+    import { userExtraDataStore } from "#lib/stores/userExtraData.js";
+    import { isLoggedIn, currentUser } from "#lib/stores/user.js";
+    import { getPlaylist, getReactionsByIds, getUserQueues } from "#lib/helpers/firebase.js";
+    import { deleteOwnedContent } from "#lib/helpers/deleteOwnedContent.js";
+    import { attachQueueCovers } from "#lib/helpers/queueCover.js";
+    import { showToast } from "#lib/stores/toast.js";
+    import { TOASTS } from "#lib/constants/toasts.js";
+    import { pageStore } from "#lib/helpers/pageStore.js";
+const page = pageStore();
 
     let reactions = [];
     let queues = [];
@@ -33,7 +34,7 @@
 
     const queueTitle = (item) => {
         const title = item?.data?.title;
-        return (typeof title === "string" && title.trim()) || "this queue";
+        return typeof title === "string" && title.trim() || "this queue";
     };
 
     const askDelete = (item) => {

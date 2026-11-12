@@ -1,7 +1,7 @@
 <script>
-    import ReactionAction from "$lib/components/ReactionAction.svelte";
-    import { userExtraDataStore } from '$lib/stores/userExtraData';
-    import { currentUser } from '$lib/stores/user';
+    import ReactionAction from "#lib/components/ReactionAction.svelte";
+    import { userExtraDataStore } from '#lib/stores/userExtraData.js';
+    import { currentUser } from '#lib/stores/user.js';
     import { BellOutline, BellSolid } from 'flowbite-svelte-icons';
     export let reactionCreator;
     export let follows;

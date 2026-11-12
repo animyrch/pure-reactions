@@ -1,6 +1,6 @@
 import { ref, set, update, onValue, remove, serverTimestamp, onDisconnect } from "firebase/database";
-import { auth, database } from "$lib/constants/firebase";
-import { resolveTikTokWatchUrl } from "$lib/helpers/platform";
+import { auth, database } from "#lib/constants/firebase.js";
+import { resolveTikTokWatchUrl } from "#lib/helpers/platform.js";
 
 // Session state constants
 export const SESSION_STATES = {

@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store';
-import { needsPublicDisplayName } from '$lib/helpers/publicDisplayName';
+import { needsPublicDisplayName } from '#lib/helpers/publicDisplayName.js';
 
 export const publicDisplayNameRequest = writable(null);
 

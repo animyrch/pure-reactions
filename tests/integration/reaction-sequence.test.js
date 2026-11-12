@@ -9,7 +9,7 @@ import {
     getPlaylistSequenceItems,
     parseReactionSourceInput,
     shouldCreatePlaylistDocumentForSequence,
-} from '$lib/helpers/reactionSequence';
+} from '#lib/helpers/reactionSequence.js';
 
 describe('reaction sequence helpers', () => {
     it('parses playlist, youtube video, and tiktok video inputs', () => {

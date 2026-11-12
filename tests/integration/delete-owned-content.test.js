@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { deleteOwnedContent } from '$lib/server/deleteOwnedContent';
+import { deleteOwnedContent } from '#lib/server/deleteOwnedContent.js';
 
 const collections = {
 	reactions: 'reactions',

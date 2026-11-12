@@ -1,4 +1,4 @@
-import { deriveTwinPlayersReactionData } from '$lib/helpers/twinPlayersReactionData';
+import { deriveTwinPlayersReactionData } from '#lib/helpers/twinPlayersReactionData.ts';
 
 type TwinPlayersDerivedReactionData = ReturnType<typeof deriveTwinPlayersReactionData>;
 

@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
-import { COLLECTION_USER_DATA } from '$lib/constants/firebase';
-import { initializeFirebaseAdmin } from '$lib/server/firebaseAdmin';
-import { RATE_LIMITS, enforceRateLimit } from '$lib/server/rateLimit';
+import { COLLECTION_USER_DATA } from '#lib/constants/firebase.js';
+import { initializeFirebaseAdmin } from '#lib/server/firebaseAdmin.js';
+import { RATE_LIMITS, enforceRateLimit } from '#lib/server/rateLimit.js';
 
 const isTimestamp = (value) => Boolean(value && typeof value.toDate === 'function');
 

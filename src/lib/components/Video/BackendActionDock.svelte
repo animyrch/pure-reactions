@@ -1,7 +1,7 @@
 <script>
     import { createEventDispatcher } from "svelte";
-    import HelpfulTip from "$lib/components/design-system/HelpfulTip.svelte";
-    import BackendScrubber from "$lib/components/Video/BackendScrubber.svelte";
+    import HelpfulTip from "#lib/components/design-system/HelpfulTip.svelte";
+    import BackendScrubber from "#lib/components/Video/BackendScrubber.svelte";
 
     export let actions = [];
     export let visible = false;

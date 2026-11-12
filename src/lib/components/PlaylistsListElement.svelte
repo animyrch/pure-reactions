@@ -1,5 +1,5 @@
 <script>
-    import ReactionThumbnail from "$lib/components/ReactionThumbnail.svelte";
+    import ReactionThumbnail from "#lib/components/ReactionThumbnail.svelte";
 
     export let playlist;
     const reaction = playlist.firstReactionBinomeData;

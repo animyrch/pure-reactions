@@ -1,7 +1,7 @@
 <script>
   import { goto } from '$app/navigation';
   import { PlusOutline, VideoCameraOutline } from 'flowbite-svelte-icons';
-  import CinematicButton from '$lib/components/design-system/CinematicButton.svelte';
+  import CinematicButton from '#lib/components/design-system/CinematicButton.svelte';
 
   export let momentId = '';
   export let momentTitle = '';

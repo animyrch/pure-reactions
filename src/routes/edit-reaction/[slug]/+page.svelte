@@ -1,23 +1,24 @@
 <script>
-  import { page } from "$app/stores";
+  import { pageStore } from "#lib/helpers/pageStore.js";
+const page = pageStore();
   import { goto } from "$app/navigation";
-  import { browser } from "$app/environment";
+  import { browser } from '$app/env';
   import { onDestroy } from "svelte";
-  import CreatorDetails from "$lib/components/Video/CreatorDetails.svelte";
-  import PlaylistQueue from "$lib/components/Video/PlaylistQueue.svelte";
-  import SubtleLoader from "$lib/components/design-system/SubtleLoader.svelte";
-  import CinematicButton from "$lib/components/design-system/CinematicButton.svelte";
-  import HelpfulTip from "$lib/components/design-system/HelpfulTip.svelte";
-  import EditorPanelsV2 from "$lib/components/reaction/EditorPanelsV2.svelte";
-  import ReactionStage from "$lib/components/reaction/ReactionStage.svelte";
+  import CreatorDetails from "#lib/components/Video/CreatorDetails.svelte";
+  import PlaylistQueue from "#lib/components/Video/PlaylistQueue.svelte";
+  import SubtleLoader from "#lib/components/design-system/SubtleLoader.svelte";
+  import CinematicButton from "#lib/components/design-system/CinematicButton.svelte";
+  import HelpfulTip from "#lib/components/design-system/HelpfulTip.svelte";
+  import EditorPanelsV2 from "#lib/components/reaction/EditorPanelsV2.svelte";
+  import ReactionStage from "#lib/components/reaction/ReactionStage.svelte";
   import {
     useTwinPlayers,
     CONTROLS_FADE_CLASS,
-  } from "$lib/composables/useTwinPlayers";
-  import { reactionDial } from "$lib/stores/reactionDial";
-  import { showToast } from "$lib/stores/toast";
-  import { TOASTS } from "$lib/constants/toasts";
-  import { resolvePlaybackFrameKind } from "$lib/helpers/reactionListItem";
+  } from "#lib/composables/useTwinPlayers.ts";
+  import { reactionDial } from "#lib/stores/reactionDial.js";
+  import { showToast } from "#lib/stores/toast.js";
+  import { TOASTS } from "#lib/constants/toasts.js";
+  import { resolvePlaybackFrameKind } from "#lib/helpers/reactionListItem.js";
 
   export let data;
   const { state, actions } = useTwinPlayers({ data, enableAutoPlay: false });
@@ -213,11 +214,7 @@
   });
 </script>
 
-<div class={$state.isLoading ? "" : "hidden"}>
-  <div class="flex justify-center py-24">
-    <SubtleLoader label="Loading editor" />
-  </div>
-</div>
+<div class={$state.isLoading ? "" : "hidden"}><div class="flex justify-center py-24"><SubtleLoader label="Loading editor" /></div></div>
 
 <div
   class={`website-inner-container bg-background text-text-primary ${$state.isLoading ? "hidden" : ""}`}
@@ -231,10 +228,10 @@
       reactionVideoId={$state.reactionVideoId}
       reactionVideoTitle={$state.reactionVideoTitle}
       customReactionTitle={$state.customReactionTitle}
-      {reactionVideoIdError}
-      {isSettingReactionVideoId}
+      reactionVideoIdError={reactionVideoIdError}
+      isSettingReactionVideoId={isSettingReactionVideoId}
       remixMode={$state.remixMode}
-      {isSettingRemixMode}
+      isSettingRemixMode={isSettingRemixMode}
       offsetStartTime={$state.offsetStartTime}
       introBufferTime={$state.introBufferTime}
       reactionFinishTime={$state.reactionFinishTime}
@@ -281,26 +278,26 @@
   {/snippet}
 
   <div class={fineTuneHalf ? "edit-finetune-top" : ""}>
-  {#if !$state.isFullscreen}
-    <div
-      class="mx-auto flex w-full shrink-0 flex-wrap items-center justify-between gap-3 px-4 pt-6 sm:px-6 lg:px-10"
-    >
-      <h1 class="text-xl font-semibold text-text-primary">Edit Reaction</h1>
-      <div class="flex items-center gap-2">
-        <HelpfulTip
-          variant="tooltip"
-          placement="bottom"
-          label="About fine-tune mode"
-        >
-          {$state.remixMode
-            ? "Remix mode times every cue to the original video. Click a track to add or fix pauses, volume, or speed. The original stays fullscreen, so there is no overlay track. To zoom into a section, press and drag across any track, then release."
-            : "Cues from your recording are already on the timeline. Click a track to add or fix pauses, volume, speed, or overlay. To zoom into a section, press and drag across any track, then release."}
-        </HelpfulTip>
-        <CinematicButton
-          type="button"
-          size="sm"
-          variant={$state.isFineTuneModeOn ? "muted" : "secondary"}
-          on:click={actions.toggleFineTuneMode}
+    {#if !$state.isFullscreen}
+      <div
+        class="mx-auto flex w-full shrink-0 flex-wrap items-center justify-between gap-3 px-4 pt-6 sm:px-6 lg:px-10"
+      >
+        <h1 class="text-xl font-semibold text-text-primary">Edit Reaction</h1>
+        <div class="flex items-center gap-2">
+          <HelpfulTip
+            variant="tooltip"
+            placement="bottom"
+            label="About fine-tune mode"
+          >
+            {$state.remixMode
+              ? "Remix mode times every cue to the original video. Click a track to add or fix pauses, volume, or speed. The original stays fullscreen, so there is no overlay track. To zoom into a section, press and drag across any track, then release."
+              : "Cues from your recording are already on the timeline. Click a track to add or fix pauses, volume, speed, or overlay. To zoom into a section, press and drag across any track, then release."}
+          </HelpfulTip>
+          <CinematicButton
+            type="button"
+            size="sm"
+            variant={$state.isFineTuneModeOn ? "muted" : "secondary"}
+            on:click={actions.toggleFineTuneMode}
         >
           <span
             >{$state.isFineTuneModeOn
@@ -308,90 +305,90 @@
               : "Enable fine-tune mode"}</span
           >
         </CinematicButton>
-        <CinematicButton
-          variant="secondary"
-          size="sm"
-          ariaLabel="Return to reaction page"
-          on:click={handleExitEditor}
+          <CinematicButton
+            variant="secondary"
+            size="sm"
+            ariaLabel="Return to reaction page"
+            on:click={handleExitEditor}
         >
           <span>View Live Page</span>
         </CinematicButton>
 
+        </div>
       </div>
-    </div>
-  {/if}
+    {/if}
 
-  <div
-    class={generalSettingsSplit
-      ? "edit-general-layout mx-auto w-full lg:grid lg:grid-cols-5 lg:items-start lg:gap-6 lg:px-10 lg:pt-6"
+    <div
+      class={generalSettingsSplit
+        ? "edit-general-layout mx-auto w-full lg:grid lg:grid-cols-5 lg:items-start lg:gap-6 lg:px-10 lg:pt-6"
       : fineTuneHalf
         ? "edit-finetune-stage"
         : ""}
-  >
-    <div
-      class={generalSettingsSplit
-        ? "min-w-0 lg:col-span-3 lg:col-start-3 lg:row-start-1 lg:sticky lg:top-24 lg:z-10 lg:self-start"
+    >
+      <div
+        class={generalSettingsSplit
+          ? "min-w-0 lg:col-span-3 lg:col-start-3 lg:row-start-1 lg:sticky lg:top-24 lg:z-10 lg:self-start"
         : fineTuneHalf
           ? "flex min-h-0 flex-1 flex-col"
           : ""}
-    >
-      <ReactionStage
-        limitToHalfScreen={fineTuneHalf}
-        isFullscreen={$state.isFullscreen}
-        isControlSurfaceVisible={$state.isControlSurfaceVisible}
-        isExitButtonExpanded={$state.isExitButtonExpanded}
-        showCinematicBars={$state.showCinematicBars}
-        isReactionMissing={$state.isReactionMissing}
-        remixMode={$state.remixMode}
-        isUsersOwnVideo={$state.isUsersOwnVideo}
-        playerOriginal={$state.playerOriginal}
-        playerReaction={$state.playerReaction}
-        originalVideoPlatform={$state.originalVideoPlatform}
-        {stickyControlsClass}
-        bothVideosStarted={$state.bothVideosStarted}
-        isPlaylist={Boolean($state.playlistDocumentId)}
-        isPlaylistAutoPlay={$state.isPlaylistAutoPlay}
-        itemType={playbackFrameKind}
-        showAutoPlayButton={false}
-        reactionCurrentTime={$state.reactionCurrentTime}
-        reactionDuration={$state.reactionDuration}
-        originalCurrentTime={$state.originalCurrentTime}
-        originalDuration={$state.originalDuration}
-        offsetStartTime={$state.offsetStartTime}
-        reactionFinishTime={$state.reactionFinishTime}
-        fullscreenPrimaryVideo={$state.fullscreenPrimaryVideo}
-        fullscreenOverlayWidthPercent={$state.fullscreenOverlayWidthPercent}
-        fullscreenOverlayCorner={$state.fullscreenOverlayCorner}
-        fullscreenOverlayVisible={$state.fullscreenOverlayVisible}
-        missingReactionLoading={isSettingReactionVideoId}
-        missingReactionError={reactionVideoIdError}
-        bind:overlayRef
-        on:exitClick={actions.handleExitFullscreenClick}
-        on:exitEnter={actions.handleExitButtonEnter}
-        on:exitLeave={actions.handleExitButtonLeave}
-        on:pointerMove={actions.handleFullscreenPointerMove}
-        on:pointerDown={actions.handleFullscreenPointerDown}
-        on:pointerLeave={actions.scheduleHideControls}
-        on:missingReactionSubmit={handleMissingReactionSubmit}
-        on:playStateChanged={handlePlayStateChanged}
-        on:syncVideos={actions.syncVideos}
-        on:toggleAutoPlaylist={actions.toggleAutoPlaylist}
-        on:toggleCinematicBars={actions.toggleCinematicBars}
-        on:enterFullscreen={actions.openWithFullscreen}
-        on:seek={(e) => actions.seekTo(e.detail)}
-      />
-    </div>
+      >
+        <ReactionStage
+          limitToHalfScreen={fineTuneHalf}
+          isFullscreen={$state.isFullscreen}
+          isControlSurfaceVisible={$state.isControlSurfaceVisible}
+          isExitButtonExpanded={$state.isExitButtonExpanded}
+          showCinematicBars={$state.showCinematicBars}
+          isReactionMissing={$state.isReactionMissing}
+          remixMode={$state.remixMode}
+          isUsersOwnVideo={$state.isUsersOwnVideo}
+          playerOriginal={$state.playerOriginal}
+          playerReaction={$state.playerReaction}
+          originalVideoPlatform={$state.originalVideoPlatform}
+          stickyControlsClass={stickyControlsClass}
+          bothVideosStarted={$state.bothVideosStarted}
+          isPlaylist={Boolean($state.playlistDocumentId)}
+          isPlaylistAutoPlay={$state.isPlaylistAutoPlay}
+          itemType={playbackFrameKind}
+          showAutoPlayButton={false}
+          reactionCurrentTime={$state.reactionCurrentTime}
+          reactionDuration={$state.reactionDuration}
+          originalCurrentTime={$state.originalCurrentTime}
+          originalDuration={$state.originalDuration}
+          offsetStartTime={$state.offsetStartTime}
+          reactionFinishTime={$state.reactionFinishTime}
+          fullscreenPrimaryVideo={$state.fullscreenPrimaryVideo}
+          fullscreenOverlayWidthPercent={$state.fullscreenOverlayWidthPercent}
+          fullscreenOverlayCorner={$state.fullscreenOverlayCorner}
+          fullscreenOverlayVisible={$state.fullscreenOverlayVisible}
+          missingReactionLoading={isSettingReactionVideoId}
+          missingReactionError={reactionVideoIdError}
+          bind:overlayRef
+          on:exitClick={actions.handleExitFullscreenClick}
+          on:exitEnter={actions.handleExitButtonEnter}
+          on:exitLeave={actions.handleExitButtonLeave}
+          on:pointerMove={actions.handleFullscreenPointerMove}
+          on:pointerDown={actions.handleFullscreenPointerDown}
+          on:pointerLeave={actions.scheduleHideControls}
+          on:missingReactionSubmit={handleMissingReactionSubmit}
+          on:playStateChanged={handlePlayStateChanged}
+          on:syncVideos={actions.syncVideos}
+          on:toggleAutoPlaylist={actions.toggleAutoPlaylist}
+          on:toggleCinematicBars={actions.toggleCinematicBars}
+          on:enterFullscreen={actions.openWithFullscreen}
+          on:seek={(e) => actions.seekTo(e.detail)}
+        />
+      </div>
 
-    {#if !$state.isFullscreen && !fineTuneHalf}
-      <div
-        class={generalSettingsSplit
-          ? "mx-auto mt-6 w-full min-w-0 px-4 sm:px-6 lg:col-span-2 lg:col-start-1 lg:row-start-1 lg:mt-0 lg:px-0"
-          : "mx-auto mt-6 w-full px-4 sm:px-6 lg:px-10"}
+      {#if !$state.isFullscreen && !fineTuneHalf}
+        <div
+          class={generalSettingsSplit
+            ? "mx-auto mt-6 w-full min-w-0 px-4 sm:px-6 lg:col-span-2 lg:col-start-1 lg:row-start-1 lg:mt-0 lg:px-0"
+            : "mx-auto mt-6 w-full px-4 sm:px-6 lg:px-10"}
       >
           {@render editorPanels()}
       </div>
-    {/if}
-  </div>
+      {/if}
+    </div>
   </div>
 
   {#if fineTuneHalf}

@@ -1,6 +1,6 @@
 <script>
-    import ReactionThumbnail from '$lib/components/ReactionThumbnail.svelte';
-    import { isMomentReactionData, isRemixReactionData, momentIdFromReactionData } from '$lib/helpers/reactionListItem';
+    import ReactionThumbnail from '#lib/components/ReactionThumbnail.svelte';
+    import { isMomentReactionData, isRemixReactionData, momentIdFromReactionData } from '#lib/helpers/reactionListItem.js';
 
     export let item;
     export let index = 0;

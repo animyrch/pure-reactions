@@ -4,14 +4,14 @@ import {
   getCurrentVolumeFromVolumeConfigs,
   getCurrentOverlaySnapshotFromConfigs,
   integratePlaybackRate
-} from '$lib/helpers/reaction';
+} from '#lib/helpers/reaction.js';
 import {
   decideSyncMode,
   isSoftSyncAllowed,
   computePlaybackRate,
   computeSoftSyncDuration,
   DEFAULT_SOFT_SYNC_CONFIG
-} from '$lib/sync/softSync/logic.js';
+} from '#lib/sync/softSync/logic.js';
 
 export type TwinPlayersSyncTracking = {
   lastOriginalTargetTime?: number;

@@ -1,14 +1,15 @@
 import { json } from '@sveltejs/kit';
-import { env } from '$env/dynamic/private';
-import { initializeFirebaseAdmin } from '$lib/server/firebaseAdmin';
-import { deleteAccountData } from '$lib/server/deleteAccountData';
-import { RATE_LIMITS, deleteUserRateLimits, enforceRateLimit } from '$lib/server/rateLimit';
+import { ALGOLIA_ADMIN_KEY } from '$app/env/private';
+import { PUBLIC_ALGOLIA_APP_ID, PUBLIC_ALGOLIA_REACTIONS_INDEX } from '$app/env/public';
+import { initializeFirebaseAdmin } from '#lib/server/firebaseAdmin.js';
+import { deleteAccountData } from '#lib/server/deleteAccountData.js';
+import { RATE_LIMITS, deleteUserRateLimits, enforceRateLimit } from '#lib/server/rateLimit.js';
 
 const RECENT_AUTH_THRESHOLD_SECONDS = 5 * 60;
 
-const readEnv = (name) => {
-	const fromPrivate = env?.[name];
-	if (typeof fromPrivate === 'string' && fromPrivate.trim()) return fromPrivate.trim();
+const readEnv = (kitValue, name) => {
+	const fromKit = typeof kitValue === 'string' ? kitValue.trim() : '';
+	if (fromKit) return fromKit;
 	const fromProcess = process.env[name];
 	return typeof fromProcess === 'string' ? fromProcess.trim() : '';
 };
@@ -17,9 +18,9 @@ async function deleteSearchRecords(reactionIds) {
 	const ids = (reactionIds || []).filter((id) => typeof id === 'string' && id.trim());
 	if (!ids.length) return;
 
-	const appId = readEnv('PUBLIC_ALGOLIA_APP_ID');
-	const adminKey = readEnv('ALGOLIA_ADMIN_KEY');
-	const indexName = readEnv('PUBLIC_ALGOLIA_REACTIONS_INDEX');
+	const appId = readEnv(PUBLIC_ALGOLIA_APP_ID, 'PUBLIC_ALGOLIA_APP_ID');
+	const adminKey = readEnv(ALGOLIA_ADMIN_KEY, 'ALGOLIA_ADMIN_KEY');
+	const indexName = readEnv(PUBLIC_ALGOLIA_REACTIONS_INDEX, 'PUBLIC_ALGOLIA_REACTIONS_INDEX');
 	if (!appId || !adminKey || !indexName) return;
 
 	try {
@@ -84,7 +85,7 @@ export const POST = async ({ request }) => {
 				COLLECTION_MOMENTS,
 				COLLECTION_YOUTUBE_CHANNEL_CLAIMS,
 				COLLECTION_YOUTUBE_CHANNEL_VERIFICATIONS
-			} = await import('$lib/constants/firebase');
+			} = await import('#lib/constants/firebase.js');
 			const { deleted, reactionIds } = await deleteAccountData({
 				adminDb,
 				userId,

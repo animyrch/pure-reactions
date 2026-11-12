@@ -2,7 +2,7 @@ import {
   basicVideoDetailsUrl,
   videoIdPlaceholder,
   YOUTUBE_URL
-} from '$lib/constants/youtube';
+} from '#lib/constants/youtube.js';
 
 const getBasicVideoDetailsWithEmbedApi = async (videoId) => {
     try {

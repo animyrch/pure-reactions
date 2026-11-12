@@ -1,14 +1,15 @@
 <script>
-  import { browser } from '$app/environment';
-  import { env } from '$env/dynamic/public';
+  import { browser } from '$app/env';
+  import { PUBLIC_FIREBASE_USE_EMULATORS } from '$app/env/public';
   import { invalidate } from '$app/navigation';
-  import { page } from '$app/stores';
+  import { pageStore } from "#lib/helpers/pageStore.js";
+const page = pageStore();
   import { onMount } from 'svelte';
-  import { auth, sendAccountVerificationEmail } from '$lib/helpers/firebase';
-  import { TOASTS } from '$lib/constants/toasts';
-  import { goToRoute } from '$lib/helpers/routing';
-  import { currentUser } from '$lib/stores/user';
-  import { showToast } from '$lib/stores/toast';
+  import { auth, sendAccountVerificationEmail } from '#lib/helpers/firebase.js';
+  import { TOASTS } from '#lib/constants/toasts.js';
+  import { goToRoute } from '#lib/helpers/routing.js';
+  import { currentUser } from '#lib/stores/user.js';
+  import { showToast } from '#lib/stores/toast.js';
 
   export let data;
 
@@ -18,7 +19,7 @@
   let statusMessage = '';
   let statusTone = 'neutral';
 
-  const isUsingFirebaseEmulators = env.PUBLIC_FIREBASE_USE_EMULATORS === 'true';
+  const isUsingFirebaseEmulators = PUBLIC_FIREBASE_USE_EMULATORS === 'true';
 
   const getRedirectTarget = () => {
     const redirect = $page.url.searchParams.get('redirect') || '/';
@@ -159,7 +160,10 @@
   });
 </script>
 
-<div class="min-h-screen bg-slate-950 px-4 py-16 text-slate-100 sm:px-6 lg:px-8">
+
+<div
+  class="min-h-screen bg-slate-950 px-4 py-16 text-slate-100 sm:px-6 lg:px-8"
+>
   <div class="mx-auto max-w-3xl">
     <div class="overflow-hidden rounded-4xl border border-slate-800/70 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.18),transparent_45%),linear-gradient(180deg,rgba(15,23,42,0.98),rgba(2,6,23,0.98))] shadow-[0_35px_120px_-60px_rgba(15,23,42,1)]">
       <div class="border-b border-slate-800/80 px-6 py-5 sm:px-10 sm:py-8">

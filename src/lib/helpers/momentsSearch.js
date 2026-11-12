@@ -1,20 +1,15 @@
-import { env } from '$env/dynamic/public';
-import { getSearchProvider, normalizeQuery } from '$lib/services/search';
-import { ALGOLIA_MOMENTS_INDEX } from '$lib/constants/algolia';
-import { getMomentsByPage } from '$lib/helpers/momentsFirestore';
-import { MOMENT_SORT_OPTIONS } from '$lib/constants/moments';
+import { PUBLIC_ALGOLIA_APP_ID, PUBLIC_ALGOLIA_SEARCH_API_KEY } from '$app/env/public';
+import { getSearchProvider, normalizeQuery } from '#lib/services/search/index.js';
+import { ALGOLIA_MOMENTS_INDEX } from '#lib/constants/algolia.js';
+import { getMomentsByPage } from '#lib/helpers/momentsFirestore.js';
+import { MOMENT_SORT_OPTIONS } from '#lib/constants/moments.js';
 import {
   mergeUnindexedMomentHits,
   momentMatchesQuery,
   shouldListMomentsFromFirestore
-} from '$lib/helpers/moments';
+} from '#lib/helpers/moments.js';
 
-export const hasMomentsAlgoliaIndex = () =>
-  Boolean(
-    env.PUBLIC_ALGOLIA_APP_ID &&
-      env.PUBLIC_ALGOLIA_SEARCH_API_KEY &&
-      ALGOLIA_MOMENTS_INDEX
-  );
+export const hasMomentsAlgoliaIndex = () => Boolean(PUBLIC_ALGOLIA_APP_ID && PUBLIC_ALGOLIA_SEARCH_API_KEY && ALGOLIA_MOMENTS_INDEX);
 
 /**
  * @param {Object} params
@@ -26,12 +21,12 @@ export const hasMomentsAlgoliaIndex = () =>
  * @param {import('firebase/firestore').DocumentSnapshot | null} params.lastFirestoreDoc
  */
 async function listMomentsFromFirestore({
-  normalizedQuery,
-  page,
-  hitsPerPage,
-  sortBy,
-  tag,
-  lastFirestoreDoc
+    normalizedQuery,
+    page,
+    hitsPerPage,
+    sortBy,
+    tag,
+    lastFirestoreDoc
 }) {
   const { moments, lastVisible } = await getMomentsByPage({
     lastDoc: lastFirestoreDoc,
@@ -91,7 +86,7 @@ export async function searchMoments({
     index: ALGOLIA_MOMENTS_INDEX,
     hitsPerPage,
     page,
-    ...(tag ? { filters: `tags:"${tag.replace(/"/g, '')}"` } : {})
+    ...tag ? { filters: `tags:"${tag.replace(/"/g, '')}"` } : {}
   });
 
   let hits = result.hits || [];

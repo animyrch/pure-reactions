@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render } from 'svelte/server';
 import CreatorDetails from '../../src/lib/components/Video/CreatorDetails.svelte';
-import { parseYouTubeUrl, extractYouTubeVideoId, safeYouTubeAuthorUrl } from '$lib/helpers/youtube';
+import { parseYouTubeUrl, extractYouTubeVideoId, safeYouTubeAuthorUrl } from '#lib/helpers/youtube.js';
 
 const VALID_ID = 'LEv2fMoVvXE';
 

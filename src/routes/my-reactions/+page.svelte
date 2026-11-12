@@ -1,16 +1,17 @@
 <script>
 	import { onDestroy } from 'svelte';
-	import { getUserReactions, getUserPlaylists } from '$lib/helpers/firebase';
-	import { deleteOwnedContent } from '$lib/helpers/deleteOwnedContent';
-    import PageBackLink from '$lib/components/PageBackLink.svelte';
-    import ReactionsList from '$lib/components/ReactionsList.svelte';
-	import ReactionFilters from '$lib/components/Navigation/ReactionFilters.svelte';
-	import { handlePrivateRoute } from '$lib/helpers/routing';
-    import { isLoggedIn } from '$lib/stores/user';
-	import { FILTERS, TYPE_FILTERS } from '$lib/constants/filters';
-	import { showToast } from '$lib/stores/toast';
-	import { TOASTS } from '$lib/constants/toasts';
-	import { page } from '$app/stores';
+	import { getUserReactions, getUserPlaylists } from '#lib/helpers/firebase.js';
+	import { deleteOwnedContent } from '#lib/helpers/deleteOwnedContent.js';
+    import PageBackLink from '#lib/components/PageBackLink.svelte';
+    import ReactionsList from '#lib/components/ReactionsList.svelte';
+	import ReactionFilters from '#lib/components/Navigation/ReactionFilters.svelte';
+	import { handlePrivateRoute } from '#lib/helpers/routing.js';
+    import { isLoggedIn } from '#lib/stores/user.js';
+	import { FILTERS, TYPE_FILTERS } from '#lib/constants/filters.js';
+	import { showToast } from '#lib/stores/toast.js';
+	import { TOASTS } from '#lib/constants/toasts.js';
+	import { pageStore } from "#lib/helpers/pageStore.js";
+const page = pageStore();
 
 	export let data;
 
@@ -35,12 +36,8 @@
 
 	const itemTitle = (item) => {
 		const data = item?.data || {};
-		return (
-			(typeof data.customReactionTitle === 'string' && data.customReactionTitle.trim()) ||
-			(typeof data.reactionVideoTitle === 'string' && data.reactionVideoTitle.trim()) ||
-			(typeof data.originalVideoTitle === 'string' && data.originalVideoTitle.trim()) ||
-			(item?.type === 'playlist' ? 'this playlist' : 'this reaction')
-		);
+
+		return typeof data.customReactionTitle === 'string' && data.customReactionTitle.trim() || typeof data.reactionVideoTitle === 'string' && data.reactionVideoTitle.trim() || typeof data.originalVideoTitle === 'string' && data.originalVideoTitle.trim() || (item?.type === 'playlist' ? 'this playlist' : 'this reaction');
 	};
 
 	$: pendingIsPlaylist = pendingDelete?.type === 'playlist';
@@ -99,27 +96,25 @@
 		if (!$isLoggedIn) {
 			return;
 		}
-        isLoading = true;
-        combinedItems = [];
-        clearTimeout(loadTimeout);
+		isLoading = true;
+		combinedItems = [];
+		clearTimeout(loadTimeout);
         loadTimeout = setTimeout(async () => {
-			if (destroyed) return;
-			// Load data in parallel when both are needed
-			const loadReactionsPromise = (typeFilter === TYPE_FILTERS.ALL || typeFilter === TYPE_FILTERS.REACTIONS_ONLY)
-				? getUserReactions(data.userId, publishedFilter)
-				: Promise.resolve([]);
-			
-			const loadPlaylistsPromise = (typeFilter === TYPE_FILTERS.ALL || typeFilter === TYPE_FILTERS.PLAYLISTS_ONLY)
-				? getUserPlaylists(data.userId, publishedFilter)
-				: Promise.resolve([]);
-			
-			const [reactions, playlists] = await Promise.all([loadReactionsPromise, loadPlaylistsPromise]);
-			
-			// Transform playlists to match reaction structure
-			// Filter out playlists without required data to prevent broken rendering
-			const transformedPlaylists = playlists
-				.filter(playlist => playlist.firstReactionBinomeData)
-				.map(playlist => ({
+				if (destroyed) return;
+				// Load data in parallel when both are needed
+				const loadReactionsPromise = typeFilter === TYPE_FILTERS.ALL || typeFilter === TYPE_FILTERS.REACTIONS_ONLY
+					? getUserReactions(data.userId, publishedFilter)
+					: Promise.resolve([]);
+
+				const loadPlaylistsPromise = typeFilter === TYPE_FILTERS.ALL || typeFilter === TYPE_FILTERS.PLAYLISTS_ONLY
+					? getUserPlaylists(data.userId, publishedFilter)
+					: Promise.resolve([]);
+
+				const [reactions, playlists] = await Promise.all([loadReactionsPromise, loadPlaylistsPromise]);
+
+				// Transform playlists to match reaction structure
+				// Filter out playlists without required data to prevent broken rendering
+				const transformedPlaylists = playlists.filter((playlist) => playlist.firstReactionBinomeData).map((playlist) => ({
 					id: playlist.id,
 					type: 'playlist',
 					data: {
@@ -133,16 +128,16 @@
 					}
 				}));
 
-			// Combine reactions and playlists
-			if (destroyed) return;
+				// Combine reactions and playlists
+				if (destroyed) return;
 			combinedItems = [...reactions, ...transformedPlaylists].filter(
 				(item) => !deletedKeys.has(itemKey(item))
 			);
-			isLoading = false;
+				isLoading = false;
         }, 100);
     }
 
-    $: loadReactions(), publishedFilter, typeFilter;
+	$: (loadReactions(), publishedFilter, typeFilter);
 </script>
 
 <PageBackLink path="/my-reactions" />

@@ -1,9 +1,9 @@
 <script>
     import PlaylistQueueItem from "./PlaylistQueueItem.svelte";
-    import { getPlaylist } from '$lib/helpers/firebase';
-    import { getPlaylistSequenceItems, toPlaylistQueueItem } from '$lib/helpers/reactionSequence';
+    import { getPlaylist } from '#lib/helpers/firebase.js';
+    import { getPlaylistSequenceItems, toPlaylistQueueItem } from '#lib/helpers/reactionSequence.js';
     import { onMount } from "svelte";
-    import { fetchFirstPlaylistVideos } from '$lib/helpers/youtube';
+    import { fetchFirstPlaylistVideos } from '#lib/helpers/youtube.js';
 
     export let currentlyViewed = '';
     export let playlistId = '';

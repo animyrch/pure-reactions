@@ -29,12 +29,12 @@ import {
     EmailAuthProvider,
     verifyBeforeUpdateEmail
 } from "firebase/auth";
-import { ensureAgeConfirmed } from '$lib/helpers/ageConfirmation';
+import { ensureAgeConfirmed } from '#lib/helpers/ageConfirmation.js';
 import {
     beginPublishNameCheck,
     endPublishNameCheck,
     ensurePublicDisplayName
-} from '$lib/stores/publicDisplayNamePrompt';
+} from '#lib/stores/publicDisplayNamePrompt.js';
 import {
     COLLECTION_REACTION_BINOMES,
     COLLECTION_USER_DATA,
@@ -44,27 +44,27 @@ import {
     COLLECTION_YOUTUBE_CHANNEL_CLAIMS,
     COLLECTION_YOUTUBE_CHANNEL_VERIFICATIONS,
     app, db, auth, database
-} from "$lib/constants/firebase";
+} from "#lib/constants/firebase.js";
 export { app, db, auth, database };
-import { showToast } from '$lib/stores/toast';
-import { sendAccountVerificationEmail as deliverVerificationEmail } from '$lib/helpers/verificationEmail';
-import { SORTINGS } from '$lib/constants/sortings';
-import { FILTERS } from '$lib/constants/filters';
+import { showToast } from '#lib/stores/toast.js';
+import { sendAccountVerificationEmail as deliverVerificationEmail } from '#lib/helpers/verificationEmail.js';
+import { SORTINGS } from '#lib/constants/sortings.js';
+import { FILTERS } from '#lib/constants/filters.js';
 import {
     assignReactionToSequenceIndex,
     createPlaylistDocumentPayload,
     getPlaylistSequenceItems,
-} from '$lib/helpers/reactionSequence';
-import { generateOriginalVideoSlug, safeCreatorProfileHref } from '$lib/helpers/originalVideo';
-import { canonicalTikTokStorageFields, normalizeOriginalVideoPlatform } from '$lib/helpers/platform';
-import { normalizeTwitchChannel } from '$lib/helpers/twitchChannel';
-import { assertMomentReady } from '$lib/helpers/moments';
-import { affectsWatchDuration } from '$lib/helpers/watchDuration';
+} from '#lib/helpers/reactionSequence.js';
+import { generateOriginalVideoSlug, safeCreatorProfileHref } from '#lib/helpers/originalVideo.js';
+import { canonicalTikTokStorageFields, normalizeOriginalVideoPlatform } from '#lib/helpers/platform.js';
+import { normalizeTwitchChannel } from '#lib/helpers/twitchChannel.js';
+import { assertMomentReady } from '#lib/helpers/moments.js';
+import { affectsWatchDuration } from '#lib/helpers/watchDuration.js';
 import {
     syncPlaylistWatchDuration,
     syncReactionWatchDuration,
     watchDurationPatchChanged,
-} from '$lib/helpers/watchDurationSync';
+} from '#lib/helpers/watchDurationSync.js';
 
 const createCollection = (db, params, caller) => {
     return collection(db, params);
@@ -903,7 +903,7 @@ export const updateFirebaseDocument = async (dataToUpdate, documentId) => {
                     }
 
                     if (affectedMomentIds.size > 0) {
-                        const { recountMomentReactionCount } = await import('$lib/helpers/momentsFirestore');
+                        const { recountMomentReactionCount } = await import('#lib/helpers/momentsFirestore.js');
                         await Promise.all(
                             Array.from(affectedMomentIds).map((momentId) => recountMomentReactionCount(momentId))
                         );
