@@ -98,6 +98,7 @@
     "src/app.html",
     "src/hooks.server.js",
     "src/app.css",
+    "src/env.js",
     "src/lib/**",
     "src/routes/+layout.js",
     "src/routes/+layout.svelte",
