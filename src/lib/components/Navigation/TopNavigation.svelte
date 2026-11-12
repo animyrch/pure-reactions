@@ -42,10 +42,10 @@
 <header
   class={`nav-shell fixed inset-x-0 top-0 z-90 transition-transform duration-500 ease-cinematic ${isHidden ? "-translate-y-full" : "translate-y-0"}`}
 >
-  <nav class="relative mx-auto flex w-full items-center px-5 py-3 md:px-8">
+  <nav class="relative mx-auto flex w-full min-w-0 items-center gap-3 px-5 py-3 md:px-8">
     <a
       href="/"
-      class="relative z-10 flex shrink-0 items-center text-text-primary transition-opacity duration-subtle ease-cinematic hover:opacity-90 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      class="relative z-10 flex min-w-0 shrink items-center text-text-primary transition-opacity duration-subtle ease-cinematic hover:opacity-90 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       aria-label="Pure Reactions home"
     >
       <div class="logo-wrapper">
@@ -62,7 +62,7 @@
       </div>
     </div>
 
-    <div class="relative z-10 ml-auto hidden items-center gap-5 md:flex">
+    <div class="relative z-10 ml-auto hidden shrink-0 items-center gap-5 md:flex">
       <button
         type="button"
         class="inline-flex items-center gap-2 text-sm font-medium text-white transition-opacity hover:opacity-80 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
@@ -83,7 +83,7 @@
     </div>
 
     <!-- Mobile Menu Button and Search -->
-    <div class="relative z-10 ml-auto flex items-center gap-3 md:hidden">
+    <div class="relative z-10 ml-auto flex shrink-0 items-center gap-3 md:hidden">
       <button
         type="button"
         class="inline-flex h-9 w-9 items-center justify-center rounded-full text-text-primary transition-colors hover:bg-surface/50"
@@ -185,17 +185,31 @@
     opacity: 0.75;
   }
 
+  .logo-wrapper {
+    display: flex;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /*
+    enhanced-img renders an img with the SVG's 1500×200 box. At header height
+    the wordmark is about 240px wide, and the old rule only set height on svg,
+    so the phone bar kept that width and pushed React past the screen.
+    The home link is allowed to shrink; the image then scales down inside it.
+  */
+  .logo-wrapper :global(img),
   .logo-wrapper :global(svg) {
-    height: 40px;
+    display: block;
     width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 2rem;
+    object-fit: contain;
+    object-position: left center;
     transition: transform 320ms cubic-bezier(0.33, 1, 0.68, 1);
   }
 
   @media (max-width: 640px) {
-    .logo-wrapper :global(svg) {
-      height: 28px;
-    }
-
     .react-cta {
       font-size: 0.8125rem;
       padding-inline: 0.9rem;
