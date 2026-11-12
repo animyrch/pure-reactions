@@ -1,5 +1,5 @@
 <script>
-  import { useTwinPlayers } from "$lib/composables/useTwinPlayers";
+  import { useTwinPlayers } from "#lib/composables/useTwinPlayers.ts";
 
   const { actions } = useTwinPlayers({
     data: { slug: "", userId: null },

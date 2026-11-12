@@ -10,7 +10,7 @@ import {
   EyeSlashSolid,
   ListMusicSolid,
 } from "flowbite-svelte-icons";
-import { canPublishReactionMedia } from "$lib/helpers/reactionPublish";
+import { canPublishReactionMedia } from "#lib/helpers/reactionPublish.ts";
 
 /**
  * Contextual reaction actions that used to live on the speed dial.

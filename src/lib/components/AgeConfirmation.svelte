@@ -1,5 +1,5 @@
 <script>
-	import { ageConfirmationRequest, recordAgeConfirmation, settleAgeConfirmation } from '$lib/helpers/ageConfirmation';
+	import { ageConfirmationRequest, recordAgeConfirmation, settleAgeConfirmation } from '#lib/helpers/ageConfirmation.js';
 
 	let checked = false;
 	let saving = false;

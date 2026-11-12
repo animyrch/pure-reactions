@@ -1,4 +1,4 @@
-import type { TwinPlayersState } from '$lib/helpers/twinPlayersStateController';
+import type { TwinPlayersState } from '#lib/helpers/twinPlayersStateController.ts';
 
 type CreateTwinPlayersControlSurfaceControllerOptions = {
   getSnapshot: () => TwinPlayersState;

@@ -2,11 +2,11 @@ import {
   getCurrentPlaybackRateFromConfigs,
   getCurrentStateFromStateConfigs,
   getCurrentVolumeFromVolumeConfigs
-} from '$lib/helpers/reaction';
-import { normalizeOriginalVideoPlatform } from '$lib/helpers/platform';
-import { normalizeOriginalVideoMetadata } from '$lib/helpers/originalVideo';
-import { deriveTimelines } from '$lib/helpers/reactionPlayer';
-import { buildPlayerEventTimeline } from '$lib/helpers/twinPlayersTimeline';
+} from '#lib/helpers/reaction.js';
+import { normalizeOriginalVideoPlatform } from '#lib/helpers/platform.js';
+import { normalizeOriginalVideoMetadata } from '#lib/helpers/originalVideo.js';
+import { deriveTimelines } from '#lib/helpers/reactionPlayer.ts';
+import { buildPlayerEventTimeline } from '#lib/helpers/twinPlayersTimeline.ts';
 
 export type FullscreenPrimaryVideo = 'original' | 'reaction';
 export type FullscreenOverlayCorner = 'top-left' | 'top-center' | 'top-right' | 'middle-left' | 'middle-right' | 'bottom-left' | 'bottom-center' | 'bottom-right';

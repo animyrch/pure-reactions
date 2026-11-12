@@ -1,22 +1,23 @@
 <script>
     import { goto } from "$app/navigation";
-    import { FILTERS, TYPE_FILTERS } from "$lib/constants/filters";
-    import { page } from "$app/stores";
+    import { FILTERS, TYPE_FILTERS } from "#lib/constants/filters.js";
+    import { pageStore } from "#lib/helpers/pageStore.js";
+const page = pageStore();
 
     const setFilter = (filterType, value) => {
         const currentParams = new URLSearchParams($page.url.searchParams);
         currentParams.set(filterType, value);
         // Replace the current entry so Back returns to the page that opened My Reactions.
         goto(`?${currentParams.toString()}`, {
-            replaceState: true,
-            keepFocus: true,
-            noScroll: true
+            replace: true,
+            reset: false
         });
     };
 
     $: publishedFilter = $page.url.searchParams.get("published") || FILTERS.ALL;
     $: typeFilter = $page.url.searchParams.get("type") || TYPE_FILTERS.ALL;
 </script>
+
 
 <div class="filters-container">
     <div class="filter-group">

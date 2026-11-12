@@ -1,6 +1,6 @@
 <script>
-  import ReactionsList from "$lib/components/ReactionsList.svelte";
-  import { goToRoute } from "$lib/helpers/routing";
+  import ReactionsList from "#lib/components/ReactionsList.svelte";
+  import { goToRoute } from "#lib/helpers/routing.js";
 
   export let reactions = [];
   export let loading = false;

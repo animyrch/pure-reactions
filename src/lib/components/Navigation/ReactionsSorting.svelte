@@ -1,9 +1,9 @@
 <script>
-    import ReactionSortingOption from "$lib/components/Navigation/ReactionSortingOption.svelte";
-    import { SORTINGS } from "$lib/constants/sortings";
-    import { page } from "$app/stores";
-    import { goToRoute, handlePrivateRoute } from "$lib/helpers/routing";
-    import { isLoggedIn } from "$lib/stores/user";
+    import ReactionSortingOption from "#lib/components/Navigation/ReactionSortingOption.svelte";
+    import { SORTINGS } from "#lib/constants/sortings.js";
+    import { page } from '$app/state';
+    import { goToRoute, handlePrivateRoute } from "#lib/helpers/routing.js";
+    import { isLoggedIn } from "#lib/stores/user.js";
 
     const setSorting = (newSorting) => {
         if (newSorting === SORTINGS.FOLLOWING && !$isLoggedIn) {
@@ -21,8 +21,7 @@
     >
         <ReactionSortingOption
             on:change={() => setSorting(SORTINGS.NEW)}
-            isSelected={$page.url.searchParams.get("sortBy") !==
-                SORTINGS.FOLLOWING}
+            isSelected={page.url.searchParams.get("sortBy") !== SORTINGS.FOLLOWING}
             sortText="New"
         />
         <!-- <button type="button" class="px-5 py-1.5 text-xs font-medium rounded-lg">
@@ -30,8 +29,7 @@
         </button> -->
         <ReactionSortingOption
             on:change={() => setSorting(SORTINGS.FOLLOWING)}
-            isSelected={$page.url.searchParams.get("sortBy") ===
-                SORTINGS.FOLLOWING}
+            isSelected={page.url.searchParams.get("sortBy") === SORTINGS.FOLLOWING}
             sortText="Following"
         />
     </div>

@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { getReactionsByUserId } from '$lib/helpers/firebase';
+import { getReactionsByUserId } from '#lib/helpers/firebase.js';
 
 /** @type {import('./$types').PageLoad} */
 export async function load({ params }) {

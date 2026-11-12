@@ -1,22 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('$lib/helpers/firebase', () => ({
+vi.mock('#lib/helpers/firebase.js', () => ({
   firestoreDeleteField: vi.fn(),
   requestReactionEnrichment: vi.fn(),
   updateFirebaseDocument: vi.fn()
 }));
 
-vi.mock('$lib/helpers/youtube', async () => {
-  const actual = await vi.importActual('$lib/helpers/youtube');
+vi.mock('#lib/helpers/youtube.js', async () => {
+  const actual = await vi.importActual('#lib/helpers/youtube.js');
   return {
     ...actual,
     downloadBasicVideoDetails: vi.fn()
   };
 });
 
-import { updateFirebaseDocument } from '$lib/helpers/firebase';
-import { createTwinPlayersEditorController } from '$lib/helpers/twinPlayersEditorController';
-import { downloadBasicVideoDetails } from '$lib/helpers/youtube';
+import { updateFirebaseDocument } from '#lib/helpers/firebase.js';
+import { createTwinPlayersEditorController } from '#lib/helpers/twinPlayersEditorController.ts';
+import { downloadBasicVideoDetails } from '#lib/helpers/youtube.js';
 
 const VERITASIUM_URL = 'https://www.youtube.com/watch?v=KfODG5REyss';
 const VERITASIUM_ID = 'KfODG5REyss';

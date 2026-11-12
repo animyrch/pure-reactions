@@ -1,18 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { COLLECTION_TIKTOK_METADATA_CACHE } from '$lib/constants/firebase';
+import { COLLECTION_TIKTOK_METADATA_CACHE } from '#lib/constants/firebase.js';
 import {
   TIKTOK_METADATA_CACHE_LOCK_TTL_MS,
   TIKTOK_METADATA_FRESH_MS,
   buildTikTokMetadataSnapshot,
   isFreshTikTokMetadataSnapshot,
   resolveCachedTikTokMetadata,
-} from '$lib/helpers/tiktokMetadataCache';
-import { fetchTikTokOriginalVideoMetadata } from '$lib/server/originalVideoMetadata';
-import { createFirestoreTikTokMetadataCacheStore } from '$lib/server/tiktokMetadataCache';
+} from '#lib/helpers/tiktokMetadataCache.js';
+import { fetchTikTokOriginalVideoMetadata } from '#lib/server/originalVideoMetadata.js';
+import { createFirestoreTikTokMetadataCacheStore } from '#lib/server/tiktokMetadataCache.js';
 
 const adminState = vi.hoisted(() => ({ adminDb: null }));
 
-vi.mock('$lib/server/firebaseAdmin', () => ({
+vi.mock('#lib/server/firebaseAdmin.js', () => ({
   initializeFirebaseAdmin: vi.fn(async () => ({ adminDb: adminState.adminDb })),
 }));
 

@@ -1,6 +1,6 @@
 <script>
-  import ReactionsList from '$lib/components/ReactionsList.svelte';
-  import SEO from '$lib/components/SEO.svelte';
+  import ReactionsList from '#lib/components/ReactionsList.svelte';
+  import SEO from '#lib/components/SEO.svelte';
 
   export let data;
 

@@ -34,13 +34,13 @@ vi.mock('firebase/database', () => ({
     }))
 }));
 
-vi.mock('$lib/constants/firebase', () => ({
+vi.mock('#lib/constants/firebase.js', () => ({
     auth: authState,
     database: { name: 'test-db' }
 }));
 
 import { remove, set } from 'firebase/database';
-import { cleanupInactiveSessions, joinSharedSession, leaveSharedSession } from '$lib/helpers/sharedSession';
+import { cleanupInactiveSessions, joinSharedSession, leaveSharedSession } from '#lib/helpers/sharedSession.js';
 
 const permissionDenied = () => {
     const error = new Error('permission_denied at /sessionViewerOwners');

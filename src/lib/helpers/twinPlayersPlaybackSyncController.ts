@@ -4,31 +4,31 @@ import {
   getCurrentStateFromStateConfigs,
   getCurrentVolumeFromVolumeConfigs,
   integratePlaybackRate
-} from '$lib/helpers/reaction';
-import { applyTwinPlayersSyncActions } from '$lib/helpers/twinPlayersSyncApply';
+} from '#lib/helpers/reaction.js';
+import { applyTwinPlayersSyncActions } from '#lib/helpers/twinPlayersSyncApply.ts';
 import {
   computeNextSyncDelayMs,
   getNextTimelineEventReactionTime
-} from '$lib/helpers/twinPlayersSyncScheduling';
+} from '#lib/helpers/twinPlayersSyncScheduling.ts';
 import {
   computeTwinPlayersSyncTick,
   type TwinPlayersPlayerState,
   type TwinPlayersSyncTracking
-} from '$lib/helpers/twinPlayersSyncTick';
+} from '#lib/helpers/twinPlayersSyncTick.ts';
 import {
   createSyncEngineV2,
   type SyncEngineV2
-} from '$lib/helpers/twinPlayersSyncEngineV2';
+} from '#lib/helpers/twinPlayersSyncEngineV2.ts';
 import type {
   SyncDecision,
   PlayerObservation
-} from '$lib/helpers/twinPlayersSyncReconcileV2';
+} from '#lib/helpers/twinPlayersSyncReconcileV2.ts';
 import {
   compileSyncPlan,
   syncPlanTimeMsToSeconds
-} from '$lib/helpers/twinPlayersSyncPlanV2';
-import type { TwinPlayersState } from '$lib/helpers/twinPlayersStateController';
-import { planRemixTransport, remixPlaybackStartSeconds } from '$lib/helpers/remixPlayback';
+} from '#lib/helpers/twinPlayersSyncPlanV2.ts';
+import type { TwinPlayersState } from '#lib/helpers/twinPlayersStateController.ts';
+import { planRemixTransport, remixPlaybackStartSeconds } from '#lib/helpers/remixPlayback.ts';
 
 declare const YT: any;
 

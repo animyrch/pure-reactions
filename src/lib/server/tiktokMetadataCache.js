@@ -1,9 +1,9 @@
-import { COLLECTION_TIKTOK_METADATA_CACHE } from '$lib/constants/firebase';
+import { COLLECTION_TIKTOK_METADATA_CACHE } from '#lib/constants/firebase.js';
 import {
   TIKTOK_METADATA_CACHE_LOCK_TTL_MS,
   isFreshTikTokMetadataSnapshot,
   resolveCachedTikTokMetadata,
-} from '$lib/helpers/tiktokMetadataCache';
+} from '#lib/helpers/tiktokMetadataCache.js';
 
 /**
  * Firestore snapshot for TikTok oEmbed answers.

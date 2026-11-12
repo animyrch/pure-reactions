@@ -1,6 +1,6 @@
 <script>
-    import { hideToast } from '$lib/stores/toast';
-    import { TOASTS } from '$lib/constants/toasts';
+    import { hideToast } from '#lib/stores/toast.js';
+    import { TOASTS } from '#lib/constants/toasts.js';
   
     export let toast;
     export let key;

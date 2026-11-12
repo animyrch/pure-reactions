@@ -1,19 +1,20 @@
 import { json } from '@sveltejs/kit';
-import { env } from '$env/dynamic/private';
-import { initializeFirebaseAdmin } from '$lib/server/firebaseAdmin';
-import { deleteOwnedContent } from '$lib/server/deleteOwnedContent';
-import { RATE_LIMITS, enforceRateLimit } from '$lib/server/rateLimit';
+import { ALGOLIA_ADMIN_KEY } from '$app/env/private';
+import { PUBLIC_ALGOLIA_APP_ID, PUBLIC_ALGOLIA_REACTIONS_INDEX } from '$app/env/public';
+import { initializeFirebaseAdmin } from '#lib/server/firebaseAdmin.js';
+import { deleteOwnedContent } from '#lib/server/deleteOwnedContent.js';
+import { RATE_LIMITS, enforceRateLimit } from '#lib/server/rateLimit.js';
 import {
 	COLLECTION_MOMENTS,
 	COLLECTION_PLAYLISTS,
 	COLLECTION_QUEUES,
 	COLLECTION_REACTION_BINOMES,
 	COLLECTION_USER_DATA
-} from '$lib/constants/firebase';
+} from '#lib/constants/firebase.js';
 
-const readEnv = (name) => {
-	const fromPrivate = env?.[name];
-	if (typeof fromPrivate === 'string' && fromPrivate.trim()) return fromPrivate.trim();
+const readEnv = (kitValue, name) => {
+	const fromKit = typeof kitValue === 'string' ? kitValue.trim() : '';
+	if (fromKit) return fromKit;
 	const fromProcess = process.env[name];
 	return typeof fromProcess === 'string' ? fromProcess.trim() : '';
 };
@@ -22,9 +23,9 @@ async function removeDeletedReactionsFromSearch(reactionIds) {
 	const ids = (reactionIds || []).filter((id) => typeof id === 'string' && id.trim());
 	if (!ids.length) return;
 
-	const appId = readEnv('PUBLIC_ALGOLIA_APP_ID');
-	const adminKey = readEnv('ALGOLIA_ADMIN_KEY');
-	const indexName = readEnv('PUBLIC_ALGOLIA_REACTIONS_INDEX');
+	const appId = readEnv(PUBLIC_ALGOLIA_APP_ID, 'PUBLIC_ALGOLIA_APP_ID');
+	const adminKey = readEnv(ALGOLIA_ADMIN_KEY, 'ALGOLIA_ADMIN_KEY');
+	const indexName = readEnv(PUBLIC_ALGOLIA_REACTIONS_INDEX, 'PUBLIC_ALGOLIA_REACTIONS_INDEX');
 	if (!appId || !adminKey || !indexName) return;
 
 	try {
@@ -44,7 +45,7 @@ export const POST = async ({ request }) => {
 			return json({ error: 'Unauthorized' }, { status: 401 });
 		}
 
-		const idToken = authHeader.slice('Bearer '.length).trim();
+		const idToken = authHeader.slice(('Bearer ').length).trim();
 		if (!adminAuth || !adminDb) {
 			console.error('Firebase Admin not initialized');
 			return json({ error: 'Server configuration error' }, { status: 500 });

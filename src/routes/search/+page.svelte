@@ -1,12 +1,13 @@
 <script>
     import { onMount, onDestroy } from 'svelte';
-    import { page } from '$app/stores';
+    import { pageStore } from "#lib/helpers/pageStore.js";
+const page = pageStore();
     import { goto } from '$app/navigation';
     import { SearchOutline as SearchIcon } from 'flowbite-svelte-icons';
-    import { getSearchProvider, normalizeQuery } from '$lib/services/search';
-    import SearchHit from '$lib/components/Search/SearchHit.svelte';
-    import SEO from '$lib/components/SEO.svelte';
-    import { ALGOLIA_REACTIONS_INDEX } from '$lib/constants/algolia';
+    import { getSearchProvider, normalizeQuery } from '#lib/services/search/index.js';
+    import SearchHit from '#lib/components/Search/SearchHit.svelte';
+    import SEO from '#lib/components/SEO.svelte';
+    import { ALGOLIA_REACTIONS_INDEX } from '#lib/constants/algolia.js';
 
     const HITS_PER_PAGE = 12;
     const DEBOUNCE_DELAY = 1000;
@@ -61,9 +62,9 @@
 
     function triggerSearch(newQuery) {
         if (newQuery) {
-            goto(`/search?q=${encodeURIComponent(newQuery)}`, { replaceState: true });
+            goto(`/search?q=${encodeURIComponent(newQuery)}`, { replace: true });
         } else {
-            goto('/search', { replaceState: true });
+            goto('/search', { replace: true });
         }
         currentPage = 0;
         loadResults(0);
@@ -92,7 +93,7 @@
             if (pageNum === 0) {
                 results = searchResult.hits || [];
             } else {
-                results = [...results, ...(searchResult.hits || [])];
+                results = [...results, ...searchResult.hits || []];
             }
 
             currentPage = searchResult.page;
@@ -132,6 +133,7 @@
         triggerSearch(normalizeQuery(query));
     }
 </script>
+
 
 <SEO
     title={query ? `Search: ${query}` : 'Search Reactions'}
@@ -198,7 +200,7 @@
             </div>
             <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {#each results as hit (hit.objectID)}
-                    <SearchHit {hit} />
+                    <SearchHit hit={hit} />
                 {/each}
             </div>
 

@@ -3,18 +3,18 @@
     import { ArrowLeftOutline } from 'flowbite-svelte-icons';
     import { fade } from 'svelte/transition';
     import { tick } from 'svelte';
-    import { createPlaylistDocument, auth } from '$lib/helpers/firebase';
-    import { fetchOriginalVideoMetadata } from '$lib/helpers/originalVideo';
-    import { goToRoute, handlePrivateRoute } from '$lib/helpers/routing';
-    import { fetchAllPlaylistVideos, fetchPlaylistPreviewMetadata } from '$lib/helpers/youtube';
+    import { createPlaylistDocument, auth } from '#lib/helpers/firebase.js';
+    import { fetchOriginalVideoMetadata } from '#lib/helpers/originalVideo.js';
+    import { goToRoute, handlePrivateRoute } from '#lib/helpers/routing.js';
+    import { fetchAllPlaylistVideos, fetchPlaylistPreviewMetadata } from '#lib/helpers/youtube.js';
     import {
         REACTION_SOURCE_TYPES,
         buildSequenceItemsFromSources,
         parseReactionSourceInput,
         shouldCreatePlaylistDocumentForSequence,
-    } from '$lib/helpers/reactionSequence';
-    import HelpfulTip from '$lib/components/design-system/HelpfulTip.svelte';
-    import { isLoggedIn } from '$lib/stores/user';
+    } from '#lib/helpers/reactionSequence.js';
+    import HelpfulTip from '#lib/components/design-system/HelpfulTip.svelte';
+    import { isLoggedIn } from '#lib/stores/user.js';
 
     const REACT_ORIGINAL_VIDEO_TIP_STORAGE_KEY = 'pureReactions:helpfulTip:react-original-video';
 

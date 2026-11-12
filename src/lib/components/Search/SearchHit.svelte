@@ -1,6 +1,6 @@
 <script>
     import { createEventDispatcher, onMount } from 'svelte';
-    import ReactionsListElement from "$lib/components/ReactionsListElement.svelte";
+    import ReactionsListElement from "#lib/components/ReactionsListElement.svelte";
 
     export let hit;
     export let tabIndex = -1;

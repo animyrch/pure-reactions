@@ -5,7 +5,7 @@ import {
   DEFAULT_FULLSCREEN_PRIMARY_VIDEO,
   type FullscreenOverlayCorner,
   type FullscreenPrimaryVideo
-} from '$lib/helpers/twinPlayersReactionData';
+} from '#lib/helpers/twinPlayersReactionData.ts';
 
 export type TwinPlayersState = {
   isLoading: boolean;

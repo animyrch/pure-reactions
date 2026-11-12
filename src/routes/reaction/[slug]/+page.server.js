@@ -1,4 +1,4 @@
-import { getReactionBySlug } from '$lib/server/firebaseAdmin';
+import { getReactionBySlug } from '#lib/server/firebaseAdmin.js';
 
 /** @type {import('./$types').PageServerLoad} */
 export async function load({ params }) {

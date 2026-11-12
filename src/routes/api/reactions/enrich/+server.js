@@ -1,8 +1,8 @@
 import { json } from '@sveltejs/kit';
-import { COLLECTION_REACTION_BINOMES } from '$lib/constants/firebase';
-import { initializeFirebaseAdmin } from '$lib/server/firebaseAdmin';
-import { RATE_LIMITS, enforceRateLimit } from '$lib/server/rateLimit';
-import { enrichReactionDocument } from '$lib/server/reactionEnrichment';
+import { COLLECTION_REACTION_BINOMES } from '#lib/constants/firebase.js';
+import { initializeFirebaseAdmin } from '#lib/server/firebaseAdmin.js';
+import { RATE_LIMITS, enforceRateLimit } from '#lib/server/rateLimit.js';
+import { enrichReactionDocument } from '#lib/server/reactionEnrichment.js';
 
 const reactionIdFromBody = (body) => {
   const reactionId = typeof body?.reactionId === 'string' ? body.reactionId.trim() : '';

@@ -1,5 +1,5 @@
 <script>
-    import { queueCoverImageUrl, queueCoverPresentation } from '$lib/helpers/queueCover';
+    import { queueCoverImageUrl, queueCoverPresentation } from '#lib/helpers/queueCover.js';
 
     export let videoIds = [];
 

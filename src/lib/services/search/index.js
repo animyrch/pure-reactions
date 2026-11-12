@@ -1,4 +1,9 @@
-import { env } from '$env/dynamic/public';
+import {
+	PUBLIC_ALGOLIA_APP_ID,
+	PUBLIC_ALGOLIA_SEARCH_API_KEY,
+	PUBLIC_ALGOLIA_REACTIONS_INDEX
+} from '$app/env/public';
+
 import { AlgoliaSearchProvider } from './AlgoliaSearchProvider.js';
 import { LocalSearchProvider } from './LocalSearchProvider.js';
 import { LOCAL_SEARCH_FIXTURES } from './local-search-fixtures.js';
@@ -29,9 +34,9 @@ const SEARCH_CONFIG = {
 	
 	// Provider-specific config
 	algolia: {
-		appId: env.PUBLIC_ALGOLIA_APP_ID,
-		searchKey: env.PUBLIC_ALGOLIA_SEARCH_API_KEY,
-		defaultIndex: env.PUBLIC_ALGOLIA_REACTIONS_INDEX
+		appId: PUBLIC_ALGOLIA_APP_ID,
+		searchKey: PUBLIC_ALGOLIA_SEARCH_API_KEY,
+		defaultIndex: PUBLIC_ALGOLIA_REACTIONS_INDEX
 	}
 };
 

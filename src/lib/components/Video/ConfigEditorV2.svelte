@@ -1,7 +1,8 @@
 <script>
   import { createEventDispatcher } from "svelte";
-  import { page } from "$app/stores";
-  import { getSortedFiniteTimelineByT } from "$lib/helpers/twinPlayersTimeline";
+  import { pageStore } from "#lib/helpers/pageStore.js";
+const page = pageStore();
+  import { getSortedFiniteTimelineByT } from "#lib/helpers/twinPlayersTimeline.ts";
   import DebugConfigs from "./DebugConfigs.svelte";
   import InteractiveSynchronizer from "./InteractiveSynchronizer.svelte";
   const dispatch = createEventDispatcher();
@@ -85,34 +86,34 @@
     if (Array.isArray(timeline) && timeline.length) {
       return timeline
         .map((event, index) => {
-          const timeInReaction = parseSeconds(event?.t);
-          const volume = Number.parseFloat(event?.volume);
+        const timeInReaction = parseSeconds(event?.t);
+        const volume = Number.parseFloat(event?.volume);
           if (!Number.isFinite(timeInReaction) || Number.isNaN(volume))
             return null;
-          return {
-            id: `volume-array-${trackId}-${index}-${timeInReaction}`,
-            type: "volume",
-            trackId,
-            timeInReaction,
-            volume,
-          };
+        return {
+          id: `volume-array-${trackId}-${index}-${timeInReaction}`,
+          type: "volume",
+          trackId,
+          timeInReaction,
+          volume,
+        };
         })
         .filter(Boolean);
     }
 
     return Object.entries(configs ?? {})
       .map(([timeKey, value], index) => {
-        const timeInReaction = parseSeconds(timeKey);
-        const volume = Number.parseFloat(value?.volume ?? value);
+      const timeInReaction = parseSeconds(timeKey);
+      const volume = Number.parseFloat(value?.volume ?? value);
         if (!Number.isFinite(timeInReaction) || Number.isNaN(volume))
           return null;
-        return {
-          id: `volume-map-${trackId}-${index}-${timeInReaction}`,
-          type: "volume",
-          trackId,
-          timeInReaction,
+      return {
+        id: `volume-map-${trackId}-${index}-${timeInReaction}`,
+        type: "volume",
+        trackId,
+        timeInReaction,
           volume,
-        };
+      };
       })
       .filter(Boolean);
   };
@@ -121,38 +122,38 @@
     if (Array.isArray(timeline) && timeline.length) {
       return timeline
         .map((event, index) => {
-          const timeInReaction = parseSeconds(event?.t);
-          const state = Number.parseFloat(event?.state);
-          const targetTime = parseSeconds(event?.targetTime);
+        const timeInReaction = parseSeconds(event?.t);
+        const state = Number.parseFloat(event?.state);
+        const targetTime = parseSeconds(event?.targetTime);
           if (!Number.isFinite(timeInReaction) || Number.isNaN(state))
             return null;
-          return {
-            id: `player-array-${index}-${timeInReaction}`,
-            type: "player",
-            trackId: "player",
-            timeInReaction,
-            state,
-            targetTime,
-          };
-        })
-        .filter(Boolean);
-    }
-
-    return Object.entries(configs ?? {})
-      .map(([timeKey, value], index) => {
-        const timeInReaction = parseSeconds(timeKey);
-        const state = Number.parseFloat(value?.state ?? value);
-        const targetTime = parseSeconds(value?.time);
-        if (!Number.isFinite(timeInReaction) || Number.isNaN(state))
-          return null;
         return {
-          id: `player-map-${index}-${timeInReaction}`,
+          id: `player-array-${index}-${timeInReaction}`,
           type: "player",
           trackId: "player",
           timeInReaction,
           state,
           targetTime,
         };
+        })
+        .filter(Boolean);
+    }
+
+    return Object.entries(configs ?? {})
+      .map(([timeKey, value], index) => {
+      const timeInReaction = parseSeconds(timeKey);
+      const state = Number.parseFloat(value?.state ?? value);
+      const targetTime = parseSeconds(value?.time);
+        if (!Number.isFinite(timeInReaction) || Number.isNaN(state))
+          return null;
+      return {
+        id: `player-map-${index}-${timeInReaction}`,
+        type: "player",
+        trackId: "player",
+        timeInReaction,
+        state,
+          targetTime,
+      };
       })
       .filter(Boolean);
   };
@@ -161,33 +162,33 @@
     if (Array.isArray(timeline) && timeline.length) {
       return timeline
         .map((event, index) => {
-          const timeInReaction = parseSeconds(event?.t);
-          const rate = Number.parseFloat(event?.rate);
+        const timeInReaction = parseSeconds(event?.t);
+        const rate = Number.parseFloat(event?.rate);
           if (!Number.isFinite(timeInReaction) || Number.isNaN(rate))
             return null;
-          return {
-            id: `speed-array-${index}-${timeInReaction}`,
-            type: "speed",
-            trackId: "speed",
-            timeInReaction,
-            rate,
-          };
+        return {
+          id: `speed-array-${index}-${timeInReaction}`,
+          type: "speed",
+          trackId: "speed",
+          timeInReaction,
+          rate,
+        };
         })
         .filter(Boolean);
     }
 
     return Object.entries(configs ?? {})
       .map(([timeKey, value], index) => {
-        const timeInReaction = parseSeconds(timeKey);
-        const rate = Number.parseFloat(value?.rate ?? value);
-        if (!Number.isFinite(timeInReaction) || Number.isNaN(rate)) return null;
-        return {
-          id: `speed-map-${index}-${timeInReaction}`,
-          type: "speed",
-          trackId: "speed",
-          timeInReaction,
+      const timeInReaction = parseSeconds(timeKey);
+      const rate = Number.parseFloat(value?.rate ?? value);
+      if (!Number.isFinite(timeInReaction) || Number.isNaN(rate)) return null;
+      return {
+        id: `speed-map-${index}-${timeInReaction}`,
+        type: "speed",
+        trackId: "speed",
+        timeInReaction,
           rate,
-        };
+      };
       })
       .filter(Boolean);
   };
@@ -200,19 +201,19 @@
       fullscreenPrimaryVideoDefault === "reaction" ? "reaction" : "original";
     return timeline
       .map((event, index) => {
-        const timeInReaction = parseSeconds(event?.t);
-        const visible = typeof event?.visible === 'boolean' ? event.visible : true;
-        const primary = (event?.primary === "reaction" || event?.primary === "original") ? event.primary : previousPrimary;
-        if (!Number.isFinite(timeInReaction)) return null;
-        previousPrimary = primary;
-        return {
-          id: `overlay-visibility-array-${index}-${timeInReaction}`,
-          type: "overlayVisibility",
-          trackId: "overlayVisibility",
-          timeInReaction,
-          visible,
+      const timeInReaction = parseSeconds(event?.t);
+      const visible = typeof event?.visible === 'boolean' ? event.visible : true;
+      const primary = event?.primary === "reaction" || event?.primary === "original" ? event.primary : previousPrimary;
+      if (!Number.isFinite(timeInReaction)) return null;
+      previousPrimary = primary;
+      return {
+        id: `overlay-visibility-array-${index}-${timeInReaction}`,
+        type: "overlayVisibility",
+        trackId: "overlayVisibility",
+        timeInReaction,
+        visible,
           primary,
-        };
+      };
       })
       .filter(Boolean);
   };
@@ -307,54 +308,40 @@
   }
 </script>
 
+
 <div class="flex flex-col gap-6">
   <div class="rounded-2xl border border-border-subtle/80 bg-surface/60 p-4">
     <InteractiveSynchronizer
       currentTime={reactionCurrentTime}
       duration={reactionDuration}
-      {seekMin}
-      {seekMax}
-      {playerEvents}
-      {volumeEvents}
-      {reactionVolumeEvents}
+      seekMin={seekMin}
+      seekMax={seekMax}
+      playerEvents={playerEvents}
+      volumeEvents={volumeEvents}
+      reactionVolumeEvents={reactionVolumeEvents}
       playbackRateEvents={playbackEvents}
       overlayVisibilityEvents={overlayVisibilityEvents}
       overlayPrimaryDefault={fullscreenPrimaryVideoDefault}
-      {allowPlaybackRate}
-      {timeAxis}
-      {showReactionVolumeTrack}
-      {showOverlayTrack}
-      {offsetStartTime}
-      on:createPlayerConfig={(event) =>
-        dispatch("createPlayerConfig", event.detail)}
-      on:createVolumeConfig={(event) =>
-        dispatch("createVolumeConfig", event.detail)}
-      on:createReactionVolumeConfig={(event) =>
-        dispatch("createReactionVolumeConfig", event.detail)}
-      on:createPlaybackRateConfig={(event) =>
-        dispatch("createPlaybackRateConfig", event.detail)}
-      on:createOverlayVisibilityConfig={(event) =>
-        dispatch("createOverlayVisibilityConfig", event.detail)}
-      on:updatePlayerConfig={(event) =>
-        dispatch("updatePlayerConfig", event.detail)}
-      on:deletePlayerConfig={(event) =>
-        dispatch("deletePlayerConfig", event.detail)}
-      on:updateVolumeConfig={(event) =>
-        dispatch("updateVolumeConfig", event.detail)}
-      on:deleteVolumeConfig={(event) =>
-        dispatch("deleteVolumeConfig", event.detail)}
-      on:updateReactionVolumeConfig={(event) =>
-        dispatch("updateReactionVolumeConfig", event.detail)}
-      on:deleteReactionVolumeConfig={(event) =>
-        dispatch("deleteReactionVolumeConfig", event.detail)}
-      on:updatePlaybackRateConfig={(event) =>
-        dispatch("updatePlaybackRateConfig", event.detail)}
-      on:deletePlaybackRateConfig={(event) =>
-        dispatch("deletePlaybackRateConfig", event.detail)}
-      on:updateOverlayVisibilityConfig={(event) =>
-        dispatch("updateOverlayVisibilityConfig", event.detail)}
-      on:deleteOverlayVisibilityConfig={(event) =>
-        dispatch("deleteOverlayVisibilityConfig", event.detail)}
+      allowPlaybackRate={allowPlaybackRate}
+      timeAxis={timeAxis}
+      showReactionVolumeTrack={showReactionVolumeTrack}
+      showOverlayTrack={showOverlayTrack}
+      offsetStartTime={offsetStartTime}
+      on:createPlayerConfig={(event) => dispatch("createPlayerConfig", event.detail)}
+      on:createVolumeConfig={(event) => dispatch("createVolumeConfig", event.detail)}
+      on:createReactionVolumeConfig={(event) => dispatch("createReactionVolumeConfig", event.detail)}
+      on:createPlaybackRateConfig={(event) => dispatch("createPlaybackRateConfig", event.detail)}
+      on:createOverlayVisibilityConfig={(event) => dispatch("createOverlayVisibilityConfig", event.detail)}
+      on:updatePlayerConfig={(event) => dispatch("updatePlayerConfig", event.detail)}
+      on:deletePlayerConfig={(event) => dispatch("deletePlayerConfig", event.detail)}
+      on:updateVolumeConfig={(event) => dispatch("updateVolumeConfig", event.detail)}
+      on:deleteVolumeConfig={(event) => dispatch("deleteVolumeConfig", event.detail)}
+      on:updateReactionVolumeConfig={(event) => dispatch("updateReactionVolumeConfig", event.detail)}
+      on:deleteReactionVolumeConfig={(event) => dispatch("deleteReactionVolumeConfig", event.detail)}
+      on:updatePlaybackRateConfig={(event) => dispatch("updatePlaybackRateConfig", event.detail)}
+      on:deletePlaybackRateConfig={(event) => dispatch("deletePlaybackRateConfig", event.detail)}
+      on:updateOverlayVisibilityConfig={(event) => dispatch("updateOverlayVisibilityConfig", event.detail)}
+      on:deleteOverlayVisibilityConfig={(event) => dispatch("deleteOverlayVisibilityConfig", event.detail)}
       on:seek={(event) => dispatch("seek", event.detail)}
     />
   </div>
@@ -376,43 +363,35 @@
 
   {#if showDebugConfigs}
     <DebugConfigs
-      {summary}
-      {timelineEntries}
+      summary={summary}
+      timelineEntries={timelineEntries}
       typeMeta={TYPE_META}
-      {formatSeconds}
-      {resolveStateLabel}
-      {formatPercent}
-      {formatRate}
-      {seekMin}
-      {seekMax}
-      on:deletePlayerConfig={(event) =>
-        dispatch("deletePlayerConfig", event.detail)}
-      on:deleteVolumeConfig={(event) =>
-        dispatch("deleteVolumeConfig", event.detail)}
-      on:deleteReactionVolumeConfig={(event) =>
-        dispatch("deleteReactionVolumeConfig", event.detail)}
-      on:deletePlaybackRateConfig={(event) =>
-        dispatch("deletePlaybackRateConfig", event.detail)}
+      formatSeconds={formatSeconds}
+      resolveStateLabel={resolveStateLabel}
+      formatPercent={formatPercent}
+      formatRate={formatRate}
+      seekMin={seekMin}
+      seekMax={seekMax}
+      on:deletePlayerConfig={(event) => dispatch("deletePlayerConfig", event.detail)}
+      on:deleteVolumeConfig={(event) => dispatch("deleteVolumeConfig", event.detail)}
+      on:deleteReactionVolumeConfig={(event) => dispatch("deleteReactionVolumeConfig", event.detail)}
+      on:deletePlaybackRateConfig={(event) => dispatch("deletePlaybackRateConfig", event.detail)}
     />
   {:else if showIgnoredConfigs && ignoredTimelineEntries.length}
     <DebugConfigs
       summary={ignoredSummary}
       timelineEntries={ignoredTimelineEntries}
       typeMeta={TYPE_META}
-      {formatSeconds}
-      {resolveStateLabel}
-      {formatPercent}
-      {formatRate}
-      {seekMin}
-      {seekMax}
-      on:deletePlayerConfig={(event) =>
-        dispatch("deletePlayerConfig", event.detail)}
-      on:deleteVolumeConfig={(event) =>
-        dispatch("deleteVolumeConfig", event.detail)}
-      on:deleteReactionVolumeConfig={(event) =>
-        dispatch("deleteReactionVolumeConfig", event.detail)}
-      on:deletePlaybackRateConfig={(event) =>
-        dispatch("deletePlaybackRateConfig", event.detail)}
+      formatSeconds={formatSeconds}
+      resolveStateLabel={resolveStateLabel}
+      formatPercent={formatPercent}
+      formatRate={formatRate}
+      seekMin={seekMin}
+      seekMax={seekMax}
+      on:deletePlayerConfig={(event) => dispatch("deletePlayerConfig", event.detail)}
+      on:deleteVolumeConfig={(event) => dispatch("deleteVolumeConfig", event.detail)}
+      on:deleteReactionVolumeConfig={(event) => dispatch("deleteReactionVolumeConfig", event.detail)}
+      on:deletePlaybackRateConfig={(event) => dispatch("deletePlaybackRateConfig", event.detail)}
     />
   {/if}
 </div>

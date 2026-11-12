@@ -1,23 +1,24 @@
 <script>
   import { onMount } from 'svelte';
-  import { browser } from '$app/environment';
+  import { browser } from '$app/env';
   import { goto } from '$app/navigation';
-  import { page } from '$app/stores';
+  import { pageStore } from "#lib/helpers/pageStore.js";
+const page = pageStore();
   import { get } from 'svelte/store';
-  import SEO from '$lib/components/SEO.svelte';
-  import QueueBinomeCard from '$lib/components/QueueBinomeCard.svelte';
-  import SubtleLoader from '$lib/components/design-system/SubtleLoader.svelte';
-  import { handlePrivateRoute } from '$lib/helpers/routing';
-  import { currentUser } from '$lib/stores/user';
+  import SEO from '#lib/components/SEO.svelte';
+  import QueueBinomeCard from '#lib/components/QueueBinomeCard.svelte';
+  import SubtleLoader from '#lib/components/design-system/SubtleLoader.svelte';
+  import { handlePrivateRoute } from '#lib/helpers/routing.js';
+  import { currentUser } from '#lib/stores/user.js';
   import {
     buildMomentReactionPath,
     getMoment,
     getPublishedMomentReactions,
     startMomentReactionDraft
-  } from '$lib/helpers/momentsFirestore';
-  import { reactionThumbnailSourceTitle } from '$lib/helpers/reactionListItem';
-  import { showToast } from '$lib/stores/toast';
-  import { TOASTS } from '$lib/constants/toasts';
+  } from '#lib/helpers/momentsFirestore.js';
+  import { reactionThumbnailSourceTitle } from '#lib/helpers/reactionListItem.js';
+  import { showToast } from '#lib/stores/toast.js';
+  import { TOASTS } from '#lib/constants/toasts.js';
 
   let moment = null;
   let momentId = '';
@@ -37,7 +38,7 @@
   function formatTime(seconds) {
     if (!Number.isFinite(seconds) || seconds < 0) return '';
     const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
+    const minutes = Math.floor(seconds % 3600 / 60);
     const remainingSeconds = Math.floor(seconds % 60);
     if (hours > 0) {
       return `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
@@ -123,6 +124,7 @@
     }
   };
 </script>
+
 
 <SEO
   title={moment?.title || 'Moment'}
@@ -223,12 +225,8 @@
               >
                 <QueueBinomeCard
                   linkless
-                  item={{
-                    type: 'reaction',
-                    id: reaction.id,
-                    reaction
-                  }}
-                  {index}
+                  item={{ type: 'reaction', id: reaction.id, reaction }}
+                  index={index}
                 />
               </a>
             </li>

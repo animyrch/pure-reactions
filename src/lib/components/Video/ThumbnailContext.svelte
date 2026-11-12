@@ -4,15 +4,16 @@
 	import { DotsVerticalOutline } from 'flowbite-svelte-icons';
 	import { slide } from 'svelte/transition';
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { pageStore } from "#lib/helpers/pageStore.js";
+const page = pageStore();
 
-	import ReactionAction from '$lib/components/ReactionAction.svelte';
+	import ReactionAction from '#lib/components/ReactionAction.svelte';
 	import BookmarkManagement from '../BookmarkManagement.svelte';
-	import { TOASTS } from '$lib/constants/toasts';
-	import { getUserQueues, upsertReactionIntoQueue, removeReactionFromQueue } from '$lib/helpers/firebase';
-	import { handlePrivateRoute } from '$lib/helpers/routing';
-	import { showToast } from '$lib/stores/toast';
-	import { currentUser } from '$lib/stores/user';
+	import { TOASTS } from '#lib/constants/toasts.js';
+	import { getUserQueues, upsertReactionIntoQueue, removeReactionFromQueue } from '#lib/helpers/firebase.js';
+	import { handlePrivateRoute } from '#lib/helpers/routing.js';
+	import { showToast } from '#lib/stores/toast.js';
+	import { currentUser } from '#lib/stores/user.js';
 
 	export let reactionPageId;
 	export let reactionVideoAuthor;
@@ -227,6 +228,7 @@
 	});
 </script>
 
+
 <div class="context-wrapper" bind:this={menuEl}>
 	<Button
 		color="light"
@@ -247,112 +249,112 @@
 			aria-label="Thumbnail actions"
 		>
 			{#if !isQueueItem}
-			{#if reactionVideoAuthor}
-				<li>
-					<ReactionAction
-						buttonText="Open Youtube Page"
-						className="w-full justify-start rounded-xs px-sm py-1 text-left text-text-primary hover:text-accent-primary focus-visible:ring-0 focus-visible:outline-hidden focus-visible:text-accent-primary"
-						on:change={handleOpenYoutubePage}
-					/>
-				</li>
-				<li>
-					<ReactionAction
-						buttonText="Open Reactor Page"
-						className="w-full justify-start rounded-xs px-sm py-1 text-left text-text-primary hover:text-accent-primary focus-visible:ring-0 focus-visible:outline-hidden focus-visible:text-accent-primary"
-						on:change={handleOpenReactorPage}
-					/>
-				</li>
-			{/if}
+				{#if reactionVideoAuthor}
+					<li>
+						<ReactionAction
+							buttonText="Open Youtube Page"
+							className="w-full justify-start rounded-xs px-sm py-1 text-left text-text-primary hover:text-accent-primary focus-visible:ring-0 focus-visible:outline-hidden focus-visible:text-accent-primary"
+							on:change={handleOpenYoutubePage}
+						/>
+					</li>
+					<li>
+						<ReactionAction
+							buttonText="Open Reactor Page"
+							className="w-full justify-start rounded-xs px-sm py-1 text-left text-text-primary hover:text-accent-primary focus-visible:ring-0 focus-visible:outline-hidden focus-visible:text-accent-primary"
+							on:change={handleOpenReactorPage}
+						/>
+					</li>
+				{/if}
 			<li>
 				<BookmarkManagement slug={reactionPageId} isText={true} />
 			</li>
-			<li class="mt-1 border-t border-white/10 pt-2">
-				<button
-					type="button"
-					class="flex w-full items-center justify-between rounded-xs px-2 py-1 text-left text-sm font-semibold uppercase tracking-[0.2em] text-text-muted hover:text-text-primary"
-					on:click={() => (isQueuesSectionOpen = !isQueuesSectionOpen)}
-					aria-expanded={isQueuesSectionOpen}
-					aria-controls={`sets-panel-${buttonId}`}
-				>
-					<span>Queues</span>
-					<span class="text-base">{isQueuesSectionOpen ? '▾' : '▸'}</span>
-				</button>
+				<li class="mt-1 border-t border-white/10 pt-2">
+					<button
+						type="button"
+						class="flex w-full items-center justify-between rounded-xs px-2 py-1 text-left text-sm font-semibold uppercase tracking-[0.2em] text-text-muted hover:text-text-primary"
+						on:click={() => isQueuesSectionOpen = !isQueuesSectionOpen}
+						aria-expanded={isQueuesSectionOpen}
+						aria-controls={`sets-panel-${buttonId}`}
+					>
+						<span>Queues</span>
+						<span class="text-base">{isQueuesSectionOpen ? '▾' : '▸'}</span>
+					</button>
 
-				{#if isQueuesSectionOpen}
+					{#if isQueuesSectionOpen}
 					<div id={`sets-panel-${buttonId}`} class="mt-2" transition:slide>
 						<div class="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.2em] text-text-muted">
-							<span>Add to queue</span>
-							{#if !hasLoadedQueues && !isLoadingQueues}
+								<span>Add to queue</span>
+								{#if !hasLoadedQueues && !isLoadingQueues}
 								<button class="text-[11px] font-semibold text-accent-primary" type="button" on:click={() => loadUserQueues(true)}>
 									Load
 								</button>
+								{/if}
+							</div>
+
+							{#if statusMessage}
+								<p class="mt-2 text-xs text-warning">{statusMessage}</p>
 							{/if}
-						</div>
 
-						{#if statusMessage}
-							<p class="mt-2 text-xs text-warning">{statusMessage}</p>
-						{/if}
-
-						{#if isLoadingQueues}
-							<p class="mt-2 text-xs text-text-muted">Loading your queues…</p>
-						{:else}
-							{#if authedUserId}
-								<div class="mt-2 flex items-center justify-between">
-									<p class="text-xs text-text-muted">Your queues</p>
+							{#if isLoadingQueues}
+								<p class="mt-2 text-xs text-text-muted">Loading your queues…</p>
+							{:else}
+								{#if authedUserId}
+									<div class="mt-2 flex items-center justify-between">
+										<p class="text-xs text-text-muted">Your queues</p>
 									<button class="text-[11px] font-semibold text-accent-primary" type="button" on:click={() => loadUserQueues(false)} disabled={isLoadingQueues}>
 										Refresh
 									</button>
-								</div>
-
-								{#if queuesWithReaction?.length}
-									<div class="mt-1 space-y-1">
-										{#each queuesWithReaction as queue}
-											<button
-												type="button"
-												class="flex w-full items-center justify-between rounded-xs px-2 py-1.5 text-left text-sm text-text-primary transition-colors hover:bg-white/5"
-												on:click={() => handleToggleQueueMembership(queue.id, queue.hasReaction)}
-												disabled={isSavingQueue}
-											>
-												<span class="truncate">{queue?.data?.title || queue.id}</span>
-												<span class="ml-2 shrink-0">
-													{#if queue.hasReaction}
-														<span class="text-accent-primary">✓</span>
-													{:else}
-														<span class="text-text-muted">+</span>
-													{/if}
-												</span>
-											</button>
-										{/each}
 									</div>
-								{:else}
-									<p class="mt-2 text-xs text-text-muted">No queues yet. Create one below.</p>
-								{/if}
+
+									{#if queuesWithReaction?.length}
+										<div class="mt-1 space-y-1">
+											{#each queuesWithReaction as queue}
+												<button
+													type="button"
+													class="flex w-full items-center justify-between rounded-xs px-2 py-1.5 text-left text-sm text-text-primary transition-colors hover:bg-white/5"
+													on:click={() => handleToggleQueueMembership(queue.id, queue.hasReaction)}
+													disabled={isSavingQueue}
+												>
+													<span class="truncate">{queue?.data?.title || queue.id}</span>
+													<span class="ml-2 shrink-0">
+														{#if queue.hasReaction}
+															<span class="text-accent-primary">✓</span>
+														{:else}
+															<span class="text-text-muted">+</span>
+														{/if}
+													</span>
+												</button>
+											{/each}
+										</div>
+									{:else}
+										<p class="mt-2 text-xs text-text-muted">No queues yet. Create one below.</p>
+									{/if}
 
 								<label class="mt-3 block text-xs text-text-muted" for={inputId}>Create new queue</label>
-								<input
-									id={inputId}
-									class="w-full rounded-xs border border-white/10 bg-white/5 p-2 text-sm text-text-primary"
-									placeholder="New queue name"
-									bind:value={newQueueName}
-								/>
+									<input
+										id={inputId}
+										class="w-full rounded-xs border border-white/10 bg-white/5 p-2 text-sm text-text-primary"
+										placeholder="New queue name"
+										bind:value={newQueueName}
+									/>
 
-								<button
-									class="mt-2 w-full rounded-xs bg-accent-primary px-3 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
-									type="button"
-									on:click={handleAddToQueue}
-									disabled={isSavingQueue || !newQueueName?.trim()}
+									<button
+										class="mt-2 w-full rounded-xs bg-accent-primary px-3 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+										type="button"
+										on:click={handleAddToQueue}
+										disabled={isSavingQueue || !newQueueName?.trim()}
 								>
 									{isSavingQueue ? 'Saving…' : 'Create & add to queue'}
 								</button>
-							{:else}
+								{:else}
 								<button class="mt-2 w-full rounded-xs bg-accent-primary px-3 py-2 text-sm font-semibold text-white" type="button" on:click={() => handlePrivateRoute()}>
 									Sign in to save to a queue
 								</button>
+								{/if}
 							{/if}
-						{/if}
-					</div>
-				{/if}
-			</li>
+						</div>
+					{/if}
+				</li>
 			{/if}
 			{#if canDelete}
 				<li class={isQueueItem ? '' : 'mt-1 border-t border-white/10 pt-2'}>

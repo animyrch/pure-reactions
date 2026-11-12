@@ -1,12 +1,12 @@
-import { firestoreDeleteField, requestReactionEnrichment, updateFirebaseDocument } from '$lib/helpers/firebase';
-import { publishNameWasDeclined } from '$lib/stores/publicDisplayNamePrompt';
+import { firestoreDeleteField, requestReactionEnrichment, updateFirebaseDocument } from '#lib/helpers/firebase.js';
+import { publishNameWasDeclined } from '#lib/stores/publicDisplayNamePrompt.js';
 import {
   normalizeFullscreenOverlayCorner,
   normalizeFullscreenOverlayWidthPercent,
   normalizeFullscreenPrimaryVideo,
   type FullscreenOverlayCorner,
   type FullscreenPrimaryVideo
-} from '$lib/helpers/twinPlayersReactionData';
+} from '#lib/helpers/twinPlayersReactionData.ts';
 import {
   buildPlayerEventTimeline,
   overlayVisibilityTimelineArrayToMap,
@@ -18,15 +18,15 @@ import {
   roundVolume,
   timelineArrayToMap,
   volumeTimelineArrayToMap
-} from '$lib/helpers/twinPlayersTimeline';
-import type { TwinPlayersState } from '$lib/helpers/twinPlayersStateController';
-import { downloadBasicVideoDetails, parseYouTubeUrl } from '$lib/helpers/youtube';
-import { validateMomentReaction } from '$lib/helpers/momentReactionValidation';
-import { canPublishReactionMedia } from '$lib/helpers/reactionPublish';
-import { nextPlayTargetAfterStartMove } from '$lib/helpers/remixCueForm';
-import { shiftCueTimelinesByLeadIn } from '$lib/helpers/shiftCueTimelines';
-import { showToast } from '$lib/stores/toast';
-import { TOASTS } from '$lib/constants/toasts';
+} from '#lib/helpers/twinPlayersTimeline.ts';
+import type { TwinPlayersState } from '#lib/helpers/twinPlayersStateController.ts';
+import { downloadBasicVideoDetails, parseYouTubeUrl } from '#lib/helpers/youtube.js';
+import { validateMomentReaction } from '#lib/helpers/momentReactionValidation.ts';
+import { canPublishReactionMedia } from '#lib/helpers/reactionPublish.ts';
+import { nextPlayTargetAfterStartMove } from '#lib/helpers/remixCueForm.ts';
+import { shiftCueTimelinesByLeadIn } from '#lib/helpers/shiftCueTimelines.ts';
+import { showToast } from '#lib/stores/toast.js';
+import { TOASTS } from '#lib/constants/toasts.js';
 
 type CreatePlayerConfigParams = {
   timeInReaction: number;

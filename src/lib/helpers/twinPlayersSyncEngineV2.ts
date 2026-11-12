@@ -2,14 +2,14 @@ import {
   ExperienceClock,
   createExperienceClock,
   type ExperienceClockSnapshot
-} from '$lib/helpers/twinPlayersExperienceClock';
+} from '#lib/helpers/twinPlayersExperienceClock.ts';
 import {
   computeDesiredTwinPlayersState,
   type CompileSyncPlanInput,
   compileSyncPlan,
   type DesiredTwinPlayersState,
   type SyncPlan
-} from '$lib/helpers/twinPlayersSyncPlanV2';
+} from '#lib/helpers/twinPlayersSyncPlanV2.ts';
 import {
   createIframeLatencyEstimate,
   DEFAULT_SYNC_ENGINE_V2_POLICY,
@@ -20,7 +20,7 @@ import {
   type PlayerObservation,
   type SyncDecision,
   type SyncEngineV2Policy
-} from '$lib/helpers/twinPlayersSyncReconcileV2';
+} from '#lib/helpers/twinPlayersSyncReconcileV2.ts';
 
 export type SyncEngineV2Diagnostics = {
   activeConfigId: string;

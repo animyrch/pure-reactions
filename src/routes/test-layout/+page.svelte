@@ -1,6 +1,7 @@
 <script>
-    import { page } from "$app/stores";
-    import ReactionStage from "$lib/components/reaction/ReactionStage.svelte";
+    import { pageStore } from "#lib/helpers/pageStore.js";
+const page = pageStore();
+    import ReactionStage from "#lib/components/reaction/ReactionStage.svelte";
 
     // Mock props
     let isFullscreen = false;
@@ -16,32 +17,35 @@
     $: remixMode = $page.url.searchParams.get("remix") === "1";
 </script>
 
-<div class="test-container" style="background: #333; min-height: 100vh;">
+
+<div
+    class="test-container"
+    style="background: #333; min-height: 100vh;"
+>
     <h1>ReactionStage Layout Test</h1>
     <p>Toggle controls bellow to simulate states.</p>
     <button
         class="bg-white p-2 text-black"
-        on:click={() => (isFullscreen = !isFullscreen)}
-        >Toggle Fullscreen (Prop)</button
-    >
+        on:click={() => isFullscreen = !isFullscreen}
+    >Toggle Fullscreen (Prop)</button>
+
     <button
         class="bg-white p-2 text-black"
-        on:click={() => (isReactionMissing = !isReactionMissing)}
-        >Toggle Missing Reaction</button
-    >
+        on:click={() => isReactionMissing = !isReactionMissing}
+    >Toggle Missing Reaction</button>
 
     <div style="margin-top: 20px;">
         <ReactionStage
             bind:isFullscreen
             bind:isControlSurfaceVisible
             isReactionMissing={remixMode || isReactionMissing}
-            {remixMode}
-            {playerOriginal}
-            {playerReaction}
-            {bothVideosStarted}
-            {reactionCurrentTime}
-            {reactionDuration}
-            {itemType}
+            remixMode={remixMode}
+            playerOriginal={playerOriginal}
+            playerReaction={playerReaction}
+            bothVideosStarted={bothVideosStarted}
+            reactionCurrentTime={reactionCurrentTime}
+            reactionDuration={reactionDuration}
+            itemType={itemType}
             alwaysShowMissingPlaceholder={true}
         />
     </div>

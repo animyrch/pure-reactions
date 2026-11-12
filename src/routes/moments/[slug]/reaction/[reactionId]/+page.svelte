@@ -1,29 +1,30 @@
 <script>
   import { onDestroy } from 'svelte';
-  import { browser } from '$app/environment';
+  import { browser } from '$app/env';
   import { goto } from '$app/navigation';
-  import SEO from '$lib/components/SEO.svelte';
-  import SubtleLoader from '$lib/components/design-system/SubtleLoader.svelte';
-  import ReactionView from '$lib/components/reaction/ReactionView.svelte';
-  import ReactionDetailsSection from '$lib/components/reaction/ReactionDetailsSection.svelte';
-  import { useTwinPlayers } from '$lib/composables/useTwinPlayers';
-  import { reactionDial } from '$lib/stores/reactionDial';
-  import { handlePrivateRoute } from '$lib/helpers/routing';
-  import { currentUser } from '$lib/stores/user';
+  import SEO from '#lib/components/SEO.svelte';
+  import SubtleLoader from '#lib/components/design-system/SubtleLoader.svelte';
+  import ReactionView from '#lib/components/reaction/ReactionView.svelte';
+  import ReactionDetailsSection from '#lib/components/reaction/ReactionDetailsSection.svelte';
+  import { useTwinPlayers } from '#lib/composables/useTwinPlayers.ts';
+  import { reactionDial } from '#lib/stores/reactionDial.js';
+  import { handlePrivateRoute } from '#lib/helpers/routing.js';
+  import { currentUser } from '#lib/stores/user.js';
   import {
     buildMomentReactionPath,
     getMoment,
     getPublishedMomentReactions,
     startMomentReactionDraft
-  } from '$lib/helpers/momentsFirestore';
-  import { showToast } from '$lib/stores/toast';
-  import { TOASTS } from '$lib/constants/toasts';
-  import { page } from '$app/stores';
+  } from '#lib/helpers/momentsFirestore.js';
+  import { showToast } from '#lib/stores/toast.js';
+  import { TOASTS } from '#lib/constants/toasts.js';
+  import { pageStore } from "#lib/helpers/pageStore.js";
+const page = pageStore();
   import { get } from 'svelte/store';
   import {
     buildMomentReactionEditHref,
     syncMomentReactionDial
-  } from '$lib/helpers/momentReactionDial';
+  } from '#lib/helpers/momentReactionDial.js';
 
   export let data;
 
@@ -210,6 +211,7 @@
     reactionDial.reset();
   });
 </script>
+
 
 <SEO
   title={moment?.title || 'Moment'}

@@ -5,8 +5,8 @@ import {
   resolveTikTokAuthorUrl,
   resolveTikTokWatchUrl,
   sanitizeTikTokHandle,
-} from '$lib/helpers/platform';
-import { downloadBasicVideoDetails } from '$lib/helpers/youtube';
+} from '#lib/helpers/platform.js';
+import { downloadBasicVideoDetails } from '#lib/helpers/youtube.js';
 
 const trimString = (value) =>
   typeof value === 'string' && value.trim() ? value.trim() : undefined;

@@ -1,20 +1,21 @@
 <script>
-  import { page } from "$app/stores";
-  import { browser } from "$app/environment";
+  import { pageStore } from "#lib/helpers/pageStore.js";
+const page = pageStore();
+  import { browser } from '$app/env';
   import { onDestroy, onMount } from "svelte";
-  import SEO from "$lib/components/SEO.svelte";
-  import SubtleLoader from "$lib/components/design-system/SubtleLoader.svelte";
-  import ReactionStage from "$lib/components/reaction/ReactionStage.svelte";
-  import ReactionDetailsSection from "$lib/components/reaction/ReactionDetailsSection.svelte";
+  import SEO from "#lib/components/SEO.svelte";
+  import SubtleLoader from "#lib/components/design-system/SubtleLoader.svelte";
+  import ReactionStage from "#lib/components/reaction/ReactionStage.svelte";
+  import ReactionDetailsSection from "#lib/components/reaction/ReactionDetailsSection.svelte";
   import {
     useTwinPlayers,
     CONTROLS_FADE_CLASS,
-  } from "$lib/composables/useTwinPlayers";
-  import { reactionDial } from "$lib/stores/reactionDial";
-  import { showToast } from "$lib/stores/toast";
-  import { TOASTS } from "$lib/constants/toasts";
-  import { getPlaylist } from "$lib/helpers/firebase";
-  import { reactionPageTitle } from "$lib/helpers/reactionListItem";
+  } from "#lib/composables/useTwinPlayers.ts";
+  import { reactionDial } from "#lib/stores/reactionDial.js";
+  import { showToast } from "#lib/stores/toast.js";
+  import { TOASTS } from "#lib/constants/toasts.js";
+  import { getPlaylist } from "#lib/helpers/firebase.js";
+  import { reactionPageTitle } from "#lib/helpers/reactionListItem.js";
 
   export let data;
 
@@ -29,11 +30,11 @@
     playlist?.thumbnailUrl ||
     playlist?.firstReactionThumbnailUrl ||
     (playlist?.firstReactionVideoId
-      ? `https://i.ytimg.com/vi/${playlist.firstReactionVideoId}/hqdefault.jpg`
+    ? `https://i.ytimg.com/vi/${playlist.firstReactionVideoId}/hqdefault.jpg`
       : null) ||
     (playlist?.firstOriginalVideoId
-      ? `https://i.ytimg.com/vi/${playlist.firstOriginalVideoId}/hqdefault.jpg`
-      : undefined);
+    ? `https://i.ytimg.com/vi/${playlist.firstOriginalVideoId}/hqdefault.jpg`
+    : undefined);
 
   // We start with an empty reaction slug and load the selected one client-side.
   const { state, actions } = useTwinPlayers({
@@ -219,6 +220,7 @@
   };
 </script>
 
+
 <SEO
   title={seoTitle}
   description={seoDescription}
@@ -252,7 +254,7 @@
     isUsersOwnVideo={isPlaylistOwner}
     playerOriginal={$state.playerOriginal}
     playerReaction={$state.playerReaction}
-    {stickyControlsClass}
+    stickyControlsClass={stickyControlsClass}
     bothVideosStarted={$state.bothVideosStarted}
     isPlaylist={true}
     isPlaylistAutoPlay={$state.isPlaylistAutoPlay}

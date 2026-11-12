@@ -1,5 +1,5 @@
 <script>
-    import PlaylistsListElement from "$lib/components/PlaylistsListElement.svelte";
+    import PlaylistsListElement from "#lib/components/PlaylistsListElement.svelte";
 
     export let playlists;
 </script>

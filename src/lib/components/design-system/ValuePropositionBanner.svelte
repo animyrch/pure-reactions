@@ -1,7 +1,3 @@
-<script>
-    import { page } from "$app/stores";
-</script>
-
 <div class="value-banner mx-auto max-w-5xl px-4 py-8 md:py-12">
     <div
         class="rounded-lg border border-accent-primary/30 bg-linear-to-r from-accent-primary/5 to-accent-secondary/5 p-6 md:p-8"

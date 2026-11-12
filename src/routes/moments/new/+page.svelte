@@ -2,16 +2,16 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { ArrowLeftOutline } from 'flowbite-svelte-icons';
-  import SEO from '$lib/components/SEO.svelte';
-  import CinematicButton from '$lib/components/design-system/CinematicButton.svelte';
-  import { auth } from '$lib/constants/firebase';
-  import { handlePrivateRoute } from '$lib/helpers/routing';
-  import { fetchOriginalVideoMetadata, originalVideoMetadataToFirestoreFields } from '$lib/helpers/originalVideo';
-  import { parseReactionSourceInput } from '$lib/helpers/reactionSequence';
-  import { createMomentWithSlug, buildMomentPagePath, updateMomentDocument } from '$lib/helpers/momentsFirestore';
-  import { assertMomentReady } from '$lib/helpers/moments';
-  import { showToast } from '$lib/stores/toast';
-  import { TOASTS } from '$lib/constants/toasts';
+  import SEO from '#lib/components/SEO.svelte';
+  import CinematicButton from '#lib/components/design-system/CinematicButton.svelte';
+  import { auth } from '#lib/constants/firebase.js';
+  import { handlePrivateRoute } from '#lib/helpers/routing.js';
+  import { fetchOriginalVideoMetadata, originalVideoMetadataToFirestoreFields } from '#lib/helpers/originalVideo.js';
+  import { parseReactionSourceInput } from '#lib/helpers/reactionSequence.js';
+  import { createMomentWithSlug, buildMomentPagePath, updateMomentDocument } from '#lib/helpers/momentsFirestore.js';
+  import { assertMomentReady } from '#lib/helpers/moments.js';
+  import { showToast } from '#lib/stores/toast.js';
+  import { TOASTS } from '#lib/constants/toasts.js';
 
   let originalVideoInput = '';
   let title = '';

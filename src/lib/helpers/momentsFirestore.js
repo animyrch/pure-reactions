@@ -12,10 +12,10 @@ import {
   increment,
   serverTimestamp
 } from 'firebase/firestore/lite';
-import { db, auth } from '$lib/constants/firebase';
-import { COLLECTION_MOMENTS, COLLECTION_REACTION_BINOMES } from '$lib/constants/firebase';
-import { MOMENT_SORT_OPTIONS } from '$lib/constants/moments';
-import { slugifyMomentTitle } from '$lib/helpers/moments';
+import { db, auth } from '#lib/constants/firebase.js';
+import { COLLECTION_MOMENTS, COLLECTION_REACTION_BINOMES } from '#lib/constants/firebase.js';
+import { MOMENT_SORT_OPTIONS } from '#lib/constants/moments.js';
+import { slugifyMomentTitle } from '#lib/helpers/moments.js';
 
 const createMomentsCollection = () => collection(db, COLLECTION_MOMENTS);
 const createReactionsCollection = () => collection(db, COLLECTION_REACTION_BINOMES);
@@ -184,7 +184,7 @@ export const decrementMomentReactionCount = async (momentId) =>
   adjustMomentReactionCount(momentId, -1);
 
 export const createMomentWithSlug = async (payload) => {
-  const { createMomentDocument } = await import('$lib/helpers/firebase');
+  const { createMomentDocument } = await import('#lib/helpers/firebase.js');
   const slug = slugifyMomentTitle(payload.title) || `moment-${Date.now()}`;
   const momentId = await createMomentDocument({ ...payload, slug, reactionCount: 0 });
   return { momentId, slug };
@@ -234,7 +234,7 @@ export const startMomentReactionDraft = async ({
     throw new Error('Sign in to add a moment reaction.');
   }
 
-  const { createMomentReactionDocument } = await import('$lib/helpers/firebase');
+  const { createMomentReactionDocument } = await import('#lib/helpers/firebase.js');
   return createMomentReactionDocument({
     momentId,
     momentOriginalTimeSeconds,

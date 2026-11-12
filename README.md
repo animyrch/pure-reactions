@@ -207,7 +207,7 @@ Key test fixtures for twin-player synchronization are in `tests/fixtures/reactio
 
 ## Deployment
 
-This project is configured for Netlify deployment (see `netlify.toml` and `svelte.config.js`). You may redeploy the platform under your own domain for **personal or community (non-commercial) use** by following the steps below.
+This project is configured for Netlify deployment (see `netlify.toml` and `vite.config.js`). You may redeploy the platform under your own domain for **personal or community (non-commercial) use** by following the steps below.
 
 ### Firebase for Deployment
 

@@ -2,11 +2,11 @@
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
     import { get } from 'svelte/store';
-    import { currentUser } from '$lib/stores/user';
-    import { handlePrivateRoute } from '$lib/helpers/routing';
-    import { createQueueDocument } from '$lib/helpers/firebase';
-    import { showToast } from '$lib/stores/toast';
-    import { TOASTS } from '$lib/constants/toasts';
+    import { currentUser } from '#lib/stores/user.js';
+    import { handlePrivateRoute } from '#lib/helpers/routing.js';
+    import { createQueueDocument } from '#lib/helpers/firebase.js';
+    import { showToast } from '#lib/stores/toast.js';
+    import { TOASTS } from '#lib/constants/toasts.js';
 
     export let data;
 

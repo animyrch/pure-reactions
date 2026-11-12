@@ -1,15 +1,15 @@
 /** @type {import('./$types').PageLoad} */
-import { browser } from '$app/environment';
-import { env } from '$env/dynamic/public';
+import { browser } from '$app/env';
+import { PUBLIC_FIREBASE_USE_EMULATORS } from '$app/env/public';
 import { invalidate } from '$app/navigation';
-import { checkUserSignInStatusWrapper, signOutWrapper, signInWithEmailAndPasswordWrapper } from '$lib/helpers/firebase.js';
+import { checkUserSignInStatusWrapper, signOutWrapper, signInWithEmailAndPasswordWrapper } from '#lib/helpers/firebase.js';
 import { createUserWithEmailAndPasswordWrapper } from '../lib/helpers/firebase.js';
-import { showToast } from '$lib/stores/toast';
-import { goToRoute, setLogoutRedirectInProgress } from '$lib/helpers/routing';
-import { TOASTS } from '$lib/constants/toasts';
-import { currentUser } from '$lib/stores/user';
-import { userExtraDataStore } from '$lib/stores/userExtraData';
-import { recordAgeConfirmation } from '$lib/helpers/ageConfirmation';
+import { showToast } from '#lib/stores/toast.js';
+import { goToRoute, setLogoutRedirectInProgress } from '#lib/helpers/routing.js';
+import { TOASTS } from '#lib/constants/toasts.js';
+import { currentUser } from '#lib/stores/user.js';
+import { userExtraDataStore } from '#lib/stores/userExtraData.js';
+import { recordAgeConfirmation } from '#lib/helpers/ageConfirmation.js';
 
 export async function load({ depends }) {
     depends('app:auth');
@@ -45,7 +45,7 @@ export async function load({ depends }) {
         if (action === 'signup' && email && password) {
             const { successful, error } = await createUserWithEmailAndPasswordWrapper(email, password);
             if (successful) {
-                const signupMessage = env.PUBLIC_FIREBASE_USE_EMULATORS === 'true'
+                const signupMessage = PUBLIC_FIREBASE_USE_EMULATORS === 'true'
                     ? 'Success! Open the verification link printed by the Firebase Auth emulator, then verify your account to continue.'
                     : 'Success! Check your email to confirm your account.';
                 showToast(signupMessage, TOASTS.SUCCESS, 12000);

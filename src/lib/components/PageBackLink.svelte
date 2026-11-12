@@ -1,7 +1,7 @@
 <script>
   import { afterNavigate } from "$app/navigation";
   import { ArrowLeftOutline } from "flowbite-svelte-icons";
-  import { isLoggedIn } from "$lib/stores/user";
+  import { isLoggedIn } from "#lib/stores/user.js";
 
   /** Pathname this link belongs to, such as `/bookmark`. */
   export let path;
@@ -9,7 +9,8 @@
 
   let backHref = fallback;
 
-  afterNavigate(({ from, to, type }) => {
+  afterNavigate(({ from, to, type, shallow }) => {
+    if (shallow && type === 'goto') return;
     if (type === "popstate") return;
 
     const toPath = to?.url?.pathname || "";

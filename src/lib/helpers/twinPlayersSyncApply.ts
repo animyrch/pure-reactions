@@ -1,4 +1,4 @@
-import type { TwinPlayersSyncAction } from '$lib/helpers/twinPlayersSyncTick';
+import type { TwinPlayersSyncAction } from '#lib/helpers/twinPlayersSyncTick.ts';
 
 export type TwinPlayersSyncApplyGuards = {
   changingVolume: boolean;

@@ -1,4 +1,4 @@
-import { COLLECTION_YOUTUBE_PLAYLIST_CACHE } from '$lib/constants/firebase';
+import { COLLECTION_YOUTUBE_PLAYLIST_CACHE } from '#lib/constants/firebase.js';
 import {
   YOUTUBE_PLAYLIST_CACHE_LOCK_TTL_MS,
   buildYouTubePlaylistItemsUrl,
@@ -10,8 +10,8 @@ import {
   resolveCachedYouTubePlaylist,
   YouTubePlaylistRequestError,
   youtubePlaylistPageDocId,
-} from '$lib/helpers/youtubePlaylistCache';
-import { initializeFirebaseAdmin } from '$lib/server/firebaseAdmin';
+} from '#lib/helpers/youtubePlaylistCache.js';
+import { initializeFirebaseAdmin } from '#lib/server/firebaseAdmin.js';
 
 const inflight = new Map();
 const WAIT_SLICE_MS = 200;

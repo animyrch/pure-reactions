@@ -1,9 +1,9 @@
 <script>
   import { onMount } from "svelte";
   import { onAuthStateChanged } from "firebase/auth";
-  import { auth } from "$lib/helpers/firebase";
-  import { handlePrivateRoute } from "$lib/helpers/routing";
-  import { isLoggedIn } from "$lib/stores/user";
+  import { auth } from "#lib/helpers/firebase.js";
+  import { handlePrivateRoute } from "#lib/helpers/routing.js";
+  import { isLoggedIn } from "#lib/stores/user.js";
 
   let authChecked = false;
 
