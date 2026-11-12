@@ -646,6 +646,7 @@ const docRef = await addDoc(collection(db, 'reactions'), {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.31 | 2026-11-12 | `GET /api/admin/stats` leaves out `emirtablet@outlook.com` |
 | 1.30 | 2026-11-12 | `GET /api/admin/stats` leaves out accounts whose email contains `purereactions` |
 | 1.29 | 2026-11-12 | `GET /api/admin/stats` includes `outside_reactions_published_ids` and `outside_reactions_unpublished_ids` only when `ids` asks for `published`, `unpublished`, or both |
 | 1.28 | 2026-11-12 | `GET /api/admin/stats` leaves out accounts and reactions named Animy… or Demo by Admin. Those are owner channels, not outside reactions |
