@@ -14,7 +14,9 @@ export default defineConfig({
 				globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff,woff2}'],
 				cleanupOutdatedCaches: true,
 				clientsClaim: true,
-				skipWaiting: true
+				skipWaiting: true,
+				// null is required. Omitting this key makes the plugin use "/".
+				navigateFallback: null
 			},
 			devOptions: {
 				enabled: false,
