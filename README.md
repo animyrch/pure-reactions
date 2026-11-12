@@ -244,6 +244,9 @@ Ensure these are set in your Netlify dashboard:
 - `PUBLIC_FIREBASE_USE_EMULATORS=false`
 - `YOUTUBE_API_KEY` (server-side only)
 - Firebase Admin SDK credentials (if needed for server functions)
+- `STATS_API_TOKEN` (server-side only) — bearer token for `GET /api/admin/stats`, at least 32 random bytes
+- `STATS_EXCLUDED_UIDS` (server-side only) — comma-separated UIDs left out of those counts
+- `STATS_ADMIN_UIDS` (server-side only, optional) — Firebase UIDs allowed to call that route with an ID token
 
 ## License
 
