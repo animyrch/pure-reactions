@@ -1,6 +1,6 @@
 <script>
-  import { buildYouTubeThumbnailUrl } from '$lib/helpers/originalVideo';
-  import { buildMomentPagePath } from '$lib/helpers/momentsFirestore';
+  import { buildYouTubeThumbnailUrl } from '#lib/helpers/originalVideo.js';
+  import { buildMomentPagePath } from '#lib/helpers/momentsFirestore.js';
   import { createEventDispatcher } from 'svelte';
   import { PlusOutline } from 'flowbite-svelte-icons';
 

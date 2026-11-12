@@ -1,4 +1,4 @@
-import { COLLECTION_REACTION_BINOMES, COLLECTION_YOUTUBE_COMMENT_CACHE } from '$lib/constants/firebase';
+import { COLLECTION_REACTION_BINOMES, COLLECTION_YOUTUBE_COMMENT_CACHE } from '#lib/constants/firebase.js';
 import {
   YOUTUBE_COMMENT_CACHE_LOCK_TTL_MS,
   YOUTUBE_COMMENT_FETCH_TIMEOUT_MS,
@@ -8,8 +8,8 @@ import {
   isFreshCommentSnapshot,
   reactionGrantsCommentLookup,
   resolveCachedYouTubeComments,
-} from '$lib/helpers/youtubeCommentsCache';
-import { initializeFirebaseAdmin } from '$lib/server/firebaseAdmin';
+} from '#lib/helpers/youtubeCommentsCache.js';
+import { initializeFirebaseAdmin } from '#lib/server/firebaseAdmin.js';
 
 /**
  * Firestore snapshot and YouTube HTTP for comment previews.

@@ -1,14 +1,14 @@
 <script>
   import { goto } from '$app/navigation';
-  import { browser } from '$app/environment';
-  import { copyToClipboard } from '$lib/helpers/system';
+  import { browser } from '$app/env';
+  import { copyToClipboard } from '#lib/helpers/system.js';
   import {
     createYoutubeChannelClaim,
     getYoutubeChannelClaim,
     getYoutubeChannelVerification
-  } from '$lib/helpers/firebase';
-  import { showToast } from '$lib/stores/toast';
-  import { TOASTS } from '$lib/constants/toasts';
+  } from '#lib/helpers/firebase.js';
+  import { showToast } from '#lib/stores/toast.js';
+  import { TOASTS } from '#lib/constants/toasts.js';
   import { onDestroy } from 'svelte';
   import AttributionPrimaryInfo from './AttributionPrimaryInfo.svelte';
   import AttributionClaimControls from './AttributionClaimControls.svelte';
@@ -22,7 +22,7 @@
     generateVerificationToken,
     getClaimDraftError,
     getClaimDraftState
-  } from '$lib/helpers/reactionAttribution';
+  } from '#lib/helpers/reactionAttribution.js';
 
   export let isVerifiedCreator = false;
   export let reactionVideoAuthor;

@@ -1,20 +1,21 @@
 <script>
   /** @type {import('./$types').PageData} */
-  import "../app.pcss";
-  import { toasts } from "$lib/stores/toast";
-  import Toast from "$lib/components/Toasts/Toast.svelte";
+  import "../app.css";
+  import { toasts } from "#lib/stores/toast.js";
+  import Toast from "#lib/components/Toasts/Toast.svelte";
   import { onNavigate } from "$app/navigation";
   import { onMount } from "svelte";
-  import { page } from "$app/stores";
+  import { pageStore } from "#lib/helpers/pageStore.js";
+const page = pageStore();
   import { fade } from "svelte/transition";
-  import TopNavigation from "$lib/components/Navigation/TopNavigation.svelte";
-  import Footer from "$lib/components/Footer.svelte";
-  import { prefersReducedMotion } from "$lib/stores/motion";
-  import AnalyticsConsent from "$lib/components/AnalyticsConsent.svelte";
-  import GoogleAnalytics from "$lib/components/Analytics/GoogleAnalytics.svelte";
-  import AgeConfirmation from "$lib/components/AgeConfirmation.svelte";
-  import PublicDisplayNamePrompt from "$lib/components/PublicDisplayNamePrompt.svelte";
-  import ArticleHeadingAnchors from "$lib/components/ArticleHeadingAnchors.svelte";
+  import TopNavigation from "#lib/components/Navigation/TopNavigation.svelte";
+  import Footer from "#lib/components/Footer.svelte";
+  import { prefersReducedMotion } from "#lib/stores/motion.js";
+  import AnalyticsConsent from "#lib/components/AnalyticsConsent.svelte";
+  import GoogleAnalytics from "#lib/components/Analytics/GoogleAnalytics.svelte";
+  import AgeConfirmation from "#lib/components/AgeConfirmation.svelte";
+  import PublicDisplayNamePrompt from "#lib/components/PublicDisplayNamePrompt.svelte";
+  import ArticleHeadingAnchors from "#lib/components/ArticleHeadingAnchors.svelte";
 
   $: currentToasts = $toasts; // Access the store value
 
@@ -31,7 +32,7 @@
 
     // Register service worker
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(err => {
+      navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch((err) => {
         console.error('Service worker registration failed:', err);
       });
     }
@@ -47,6 +48,7 @@
   });
 
   onNavigate((navigation) => {
+    if (navigation.shallow && navigation.type === 'goto') return;
     if (reduceMotion || !document.startViewTransition) return;
 
     // Skip view transitions for reaction routes to prevent DOM instability during YouTube player initialization
@@ -84,7 +86,7 @@
 </header>
 
 {#each currentToasts as toast (toast.id)}
-  <Toast {toast} key={toast.id} />
+  <Toast toast={toast} key={toast.id} />
 {/each}
 
 <div class="app-container w-full safe-padding-x safe-padding-top">

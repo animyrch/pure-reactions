@@ -71,7 +71,7 @@ The agent should behave like a calm, experienced art director who also understan
 * Lazy-load below-the-fold thumbnails.
 
 ## Core Architecture
-- SvelteKit app targeting Netlify (`svelte.config.js`, `netlify.toml`); `vite.config.js` enables `enhancedImages` for responsive <img> markup.
+- SvelteKit 3 app targeting Netlify (`netlify.toml`). Adapter, CSP, and preprocess options live in the `sveltekit()` plugin in `vite.config.js`, which also enables `enhancedImages`. Import app code with the `#lib` package import, not `$lib`.
 - Global layout lives in `src/routes/+layout.svelte`, wiring top navigation, toast host, reduced-motion class toggling, and per-route view transitions.
 - Auth handshake happens in `src/routes/+layout.js` load: wraps Firebase auth helpers, populates `currentUser`, exposes `handleUserAction` to child pages.
 - Routing follows SvelteKit filesystem; key feature pages: `routes/backend/+page.svelte` (recording), `routes/reaction/[slug]/+page.svelte` (playback), `routes/shared/[sessionId]/+page.svelte` (co-watch).
@@ -103,7 +103,7 @@ The agent should behave like a calm, experienced art director who also understan
 ## UI System & Accessibility
 - Tailwind theme extends `designTokens` (`lib/constants/designTokens.js`); stick to tokenized colors (`bg-surface`, `text-text-muted`) to honor contrast rules.
 - Cinematic cards/buttons in `lib/components/design-system` bake in hover/motion defaults; prefer composing these over ad-hoc Tailwind stacks.
-- Global styles in `app.pcss` enforce reduced-motion; respect `prefersReducedMotion` store before adding transitions or animations.
+- Global styles in `app.css` enforce reduced-motion; respect `prefersReducedMotion` store before adding transitions or animations.
 - Toasts use `lib/stores/toast`; to show feedback call `showToast(message, type, duration)` and let `routes/+layout.svelte` render them.
 - Flowbite-Svelte components are available but override their palettes with Tailwind classes so they match the Cinematic Authentic palette.
 ## External Integrations

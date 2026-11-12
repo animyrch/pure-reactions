@@ -4,7 +4,7 @@ import {
   mergeUnindexedMomentHits,
   momentMatchesQuery,
   shouldListMomentsFromFirestore
-} from '$lib/helpers/moments';
+} from '#lib/helpers/moments.js';
 
 describe('moment readiness', () => {
   it('accepts an original URL, title, and time with zero reactions', () => {

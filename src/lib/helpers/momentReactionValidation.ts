@@ -1,8 +1,8 @@
 import {
   getCurrentStateFromStateConfigs,
   integratePlaybackRate
-} from '$lib/helpers/reaction';
-import { deriveTimelines } from '$lib/helpers/reactionPlayer';
+} from '#lib/helpers/reaction.js';
+import { deriveTimelines } from '#lib/helpers/reactionPlayer.ts';
 
 /** Maximum allowed reaction subsection length for a moment reaction (seconds). */
 export const MOMENT_REACTION_MAX_DURATION_SECONDS = 60;

@@ -1,9 +1,9 @@
 <script>
-  import CreatorDetails from "$lib/components/Video/CreatorDetails.svelte";
-  import PlaylistQueue from "$lib/components/Video/PlaylistQueue.svelte";
-  import OtherReactions from "$lib/components/Video/OtherReactions.svelte";
-  import YouTubeDiscussion from "$lib/components/Video/YouTubeDiscussion.svelte";
-  import AttributionBlock from "$lib/components/reaction/AttributionBlock.svelte";
+  import CreatorDetails from "#lib/components/Video/CreatorDetails.svelte";
+  import PlaylistQueue from "#lib/components/Video/PlaylistQueue.svelte";
+  import OtherReactions from "#lib/components/Video/OtherReactions.svelte";
+  import YouTubeDiscussion from "#lib/components/Video/YouTubeDiscussion.svelte";
+  import AttributionBlock from "#lib/components/reaction/AttributionBlock.svelte";
 
   export let reactionState = {};
   export let viewerId = undefined;

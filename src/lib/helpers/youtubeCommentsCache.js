@@ -1,4 +1,4 @@
-import { normalizeOriginalVideoPlatform, ORIGINAL_VIDEO_PLATFORMS } from '$lib/helpers/platform';
+import { normalizeOriginalVideoPlatform, ORIGINAL_VIDEO_PLATFORMS } from '#lib/helpers/platform.js';
 
 /**
  * Pure YouTube comment snapshot rules.

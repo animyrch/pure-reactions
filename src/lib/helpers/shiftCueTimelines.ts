@@ -4,7 +4,7 @@ import {
   roundTargetTime,
   roundVolume,
   type OverlayPrimaryVideo
-} from '$lib/helpers/twinPlayersTimeline';
+} from '#lib/helpers/twinPlayersTimeline.ts';
 
 type StateCue = { t: number; state: number; targetTime: number };
 type VolumeCue = { t: number; volume: number };

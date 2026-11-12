@@ -1,16 +1,17 @@
 <script>
     import { onMount } from "svelte";
-    import { browser, dev } from "$app/environment";
-    import { page } from "$app/stores";
-    import { env } from "$env/dynamic/public";
+    import { browser, dev } from '$app/env';
+    import { pageStore } from "#lib/helpers/pageStore.js";
+const page = pageStore();
+    import { PUBLIC_GA_MEASUREMENT_ID } from '$app/env/public';
     import {
         ANALYTICS_CONSENT_KEY,
         analyticsConsent,
         loadAnalyticsConsent,
-    } from "$lib/helpers/analyticsConsent";
+    } from "#lib/helpers/analyticsConsent.js";
 
     // Use dynamic public env to ensure it's picked up on Netlify
-    const GA_MEASUREMENT_ID = env.PUBLIC_GA_MEASUREMENT_ID;
+    const GA_MEASUREMENT_ID = PUBLIC_GA_MEASUREMENT_ID;
 
     /**
      * Track a page view to Google Analytics
@@ -111,3 +112,4 @@
         trackPageView($page.url.pathname);
     }
 </script>
+

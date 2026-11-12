@@ -1,15 +1,15 @@
 import {
     buildYouTubeThumbnailUrl,
     buildYouTubeVideoUrl,
-} from '$lib/helpers/originalVideo';
+} from '#lib/helpers/originalVideo.js';
 import {
     ORIGINAL_VIDEO_PLATFORMS,
     extractTikTokVideoId,
     normalizeOriginalVideoPlatform,
     parseTikTokVideoUrl,
     resolveTikTokWatchUrl,
-} from '$lib/helpers/platform';
-import { parseYouTubeUrl, isYouTubeInput, extractYoutubePlaylistId } from '$lib/helpers/youtube';
+} from '#lib/helpers/platform.js';
+import { parseYouTubeUrl, isYouTubeInput, extractYoutubePlaylistId } from '#lib/helpers/youtube.js';
 
 export const REACTION_SOURCE_TYPES = /** @type {const} */ ({
     YOUTUBE_VIDEO: 'youtube-video',

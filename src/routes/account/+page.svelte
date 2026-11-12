@@ -1,501 +1,525 @@
 <script>
-    import { onDestroy, onMount } from 'svelte';
-    import { goto } from '$app/navigation';
-    import {
-      EmailAuthProvider,
-      GoogleAuthProvider,
-      reauthenticateWithCredential,
-      reauthenticateWithPopup
-    } from 'firebase/auth';
-    import { auth } from '$lib/helpers/firebase';
-    import { handlePrivateRoute, isLogoutRedirectInProgress } from '$lib/helpers/routing';
-    import { isLoggedIn, currentUser } from '$lib/stores/user';
-    import { onAuthStateChanged } from 'firebase/auth';
-    import { Button, Modal } from 'flowbite-svelte';
-    import { showToast } from '$lib/stores/toast';
-    import { TOASTS } from '$lib/constants/toasts';
-    import { browser } from '$app/environment';
+  import { onDestroy, onMount } from 'svelte';
+  import { goto } from '$app/navigation';
+  import {
+    EmailAuthProvider,
+    GoogleAuthProvider,
+    reauthenticateWithCredential,
+    reauthenticateWithPopup
+  } from 'firebase/auth';
+  import { auth } from '#lib/helpers/firebase.js';
+  import { handlePrivateRoute, isLogoutRedirectInProgress } from '#lib/helpers/routing.js';
+  import { isLoggedIn, currentUser } from '#lib/stores/user.js';
+  import { onAuthStateChanged } from 'firebase/auth';
+  import { Button, Modal } from 'flowbite-svelte';
+  import { showToast } from '#lib/stores/toast.js';
+  import { TOASTS } from '#lib/constants/toasts.js';
+  import { browser } from '$app/env';
 
-    export let data;
+  export let data;
 
-    onMount(() => {
-      // Ensure the user is signed in
-      const unsubscribe = onAuthStateChanged(auth, (u) => {
-        user = u;
-        if (!u && browser && !isLogoutRedirectInProgress()) {
-          handlePrivateRoute();
-        }
-      });
-      return unsubscribe;
+  onMount(() => {
+    // Ensure the user is signed in
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      user = u;
+      if (!u && browser && !isLogoutRedirectInProgress()) {
+        handlePrivateRoute();
+      }
     });
+    return unsubscribe;
+  });
 
-    let user;
-    let showDeleteModal = false;
-    let isDeleting = false;
-    let deleteStep = 'confirm';
-    let deletePassword = '';
-    let deleteError = '';
-    let exportStatus = 'idle';
-    let exportError = '';
-    let exportPayload = null;
-    let exportFileName = '';
-    let exportGeneratedAt = '';
-    let exportRetryAt = '';
-    let exportBlobUrl = '';
+  let user;
+  let showDeleteModal = false;
+  let isDeleting = false;
+  let deleteStep = 'confirm';
+  let deletePassword = '';
+  let deleteError = '';
+  let exportStatus = 'idle';
+  let exportError = '';
+  let exportPayload = null;
+  let exportFileName = '';
+  let exportGeneratedAt = '';
+  let exportRetryAt = '';
+  let exportBlobUrl = '';
 
     const providerLabels = {
       password: 'Email and password',
       'google.com': 'Google'
     };
 
-    const getPrimaryProviderId = (currentUser) => {
-      if (!currentUser?.providerData?.length) {
-        return 'password';
+  const getPrimaryProviderId = (currentUser) => {
+    if (!currentUser?.providerData?.length) {
+      return 'password';
+    }
+
+    const passwordProvider = currentUser.providerData.find((provider) => provider.providerId === 'password');
+
+    return passwordProvider ? 'password' : currentUser.providerData[0].providerId;
+  };
+
+  $: providerId = getPrimaryProviderId(user);
+  $: providerLabel = providerLabels[providerId] || 'your sign-in provider';
+  $: isPasswordProvider = providerId === 'password';
+  $: isGoogleProvider = providerId === 'google.com';
+
+  const resetDeleteState = () => {
+    deleteStep = 'confirm';
+    deletePassword = '';
+    deleteError = '';
+    isDeleting = false;
+  };
+
+  const openDeleteModal = () => {
+    resetDeleteState();
+    showDeleteModal = true;
+  };
+
+  const closeDeleteModal = () => {
+    showDeleteModal = false;
+    resetDeleteState();
+  };
+
+  const goToReauthStep = () => {
+    deleteStep = 'reauth';
+    deleteError = '';
+  };
+
+  const goToConfirmStep = () => {
+    deleteStep = 'confirm';
+    deletePassword = '';
+    deleteError = '';
+  };
+
+  const getReauthErrorMessage = (error) => {
+    const code = error?.code;
+
+    if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+      return 'Incorrect password. Please try again.';
+    }
+    if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+      return 'Reauthentication was canceled.';
+    }
+    if (code === 'auth/popup-blocked') {
+      return 'Popup was blocked. Please allow popups and try again.';
+    }
+    if (code === 'auth/network-request-failed') {
+      return 'Network error. Please try again.';
+    }
+
+    return error?.message || 'Failed to reauthenticate. Please try again.';
+  };
+
+  const requestExport = async () => {
+    exportError = '';
+    exportRetryAt = '';
+    exportStatus = 'loading';
+    exportPayload = null;
+
+    if (exportBlobUrl) {
+      URL.revokeObjectURL(exportBlobUrl);
+      exportBlobUrl = '';
+    }
+
+    try {
+      if (!auth.currentUser) {
+        showToast('You must be logged in to export your data.', TOASTS.ERROR);
+        exportStatus = 'error';
+        return;
       }
 
-      const passwordProvider = currentUser.providerData.find(
-        provider => provider.providerId === 'password'
-      );
-
-      return passwordProvider ? 'password' : currentUser.providerData[0].providerId;
-    };
-
-    $: providerId = getPrimaryProviderId(user);
-    $: providerLabel = providerLabels[providerId] || 'your sign-in provider';
-    $: isPasswordProvider = providerId === 'password';
-    $: isGoogleProvider = providerId === 'google.com';
-
-    const resetDeleteState = () => {
-      deleteStep = 'confirm';
-      deletePassword = '';
-      deleteError = '';
-      isDeleting = false;
-    };
-
-    const openDeleteModal = () => {
-      resetDeleteState();
-      showDeleteModal = true;
-    };
-
-    const closeDeleteModal = () => {
-      showDeleteModal = false;
-      resetDeleteState();
-    };
-
-    const goToReauthStep = () => {
-      deleteStep = 'reauth';
-      deleteError = '';
-    };
-
-    const goToConfirmStep = () => {
-      deleteStep = 'confirm';
-      deletePassword = '';
-      deleteError = '';
-    };
-
-    const getReauthErrorMessage = (error) => {
-      const code = error?.code;
-
-      if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
-        return 'Incorrect password. Please try again.';
-      }
-      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
-        return 'Reauthentication was canceled.';
-      }
-      if (code === 'auth/popup-blocked') {
-        return 'Popup was blocked. Please allow popups and try again.';
-      }
-      if (code === 'auth/network-request-failed') {
-        return 'Network error. Please try again.';
-      }
-
-      return error?.message || 'Failed to reauthenticate. Please try again.';
-    };
-
-    const requestExport = async () => {
-      exportError = '';
-      exportRetryAt = '';
-      exportStatus = 'loading';
-      exportPayload = null;
-
-      if (exportBlobUrl) {
-        URL.revokeObjectURL(exportBlobUrl);
-        exportBlobUrl = '';
-      }
-
-      try {
-        if (!auth.currentUser) {
-          showToast('You must be logged in to export your data.', TOASTS.ERROR);
-          exportStatus = 'error';
-          return;
-        }
-
-        const idToken = await auth.currentUser.getIdToken(true);
-        const response = await fetch('/api/account/export', {
-          method: 'POST',
+      const idToken = await auth.currentUser.getIdToken(true);
+      const response = await fetch('/api/account/export', {
+        method: 'POST',
           headers: {
             Authorization: `Bearer ${idToken}`
           }
-        });
+      });
 
-        const result = await response.json();
+      const result = await response.json();
 
-        if (!response.ok) {
-          exportError = result.error || 'Failed to generate export.';
-          exportRetryAt = result.nextAllowedAt || '';
-          exportStatus = 'error';
-          return;
-        }
+      if (!response.ok) {
+        exportError = result.error || 'Failed to generate export.';
+        exportRetryAt = result.nextAllowedAt || '';
+        exportStatus = 'error';
+        return;
+      }
 
-        exportPayload = result.export;
-        exportFileName = result.fileName || 'pure-reactions-export.json';
-        exportGeneratedAt = result.generatedAt || exportPayload?.meta?.generatedAt || '';
+      exportPayload = result.export;
+      exportFileName = result.fileName || 'pure-reactions-export.json';
+      exportGeneratedAt = result.generatedAt || exportPayload?.meta?.generatedAt || '';
 
-        const jsonText = JSON.stringify(exportPayload, null, 2);
+      const jsonText = JSON.stringify(exportPayload, null, 2);
         exportBlobUrl = URL.createObjectURL(
           new Blob([jsonText], { type: 'application/json' })
         );
-        exportStatus = 'ready';
-        showToast('Your data export is ready to download.', TOASTS.SUCCESS);
+      exportStatus = 'ready';
+      showToast('Your data export is ready to download.', TOASTS.SUCCESS);
       } catch (error) {
-        console.error('Error generating export:', error);
-        exportError = 'An unexpected error occurred. Please try again.';
-        exportStatus = 'error';
+      console.error('Error generating export:', error);
+      exportError = 'An unexpected error occurred. Please try again.';
+      exportStatus = 'error';
+    }
+  };
+
+  const deleteAccount = async () => {
+    deleteError = '';
+    isDeleting = true;
+
+    try {
+      if (!auth.currentUser) {
+        showToast('You must be logged in to delete your account', TOASTS.ERROR);
+        return;
       }
-    };
 
-    const deleteAccount = async () => {
-      deleteError = '';
-      isDeleting = true;
+      const currentUser = auth.currentUser;
+      const currentProviderId = getPrimaryProviderId(currentUser);
 
-      try {
-        if (!auth.currentUser) {
-          showToast('You must be logged in to delete your account', TOASTS.ERROR);
+      if (currentProviderId === 'password') {
+        if (!deletePassword) {
+          deleteError = 'Please enter your password.';
           return;
         }
 
-        const currentUser = auth.currentUser;
-        const currentProviderId = getPrimaryProviderId(currentUser);
-
-        if (currentProviderId === 'password') {
-          if (!deletePassword) {
-            deleteError = 'Please enter your password.';
-            return;
-          }
-
-          const email = currentUser.email;
-          if (!email) {
-            deleteError = 'Email address is unavailable. Please contact support.';
-            return;
-          }
-
-          const credential = EmailAuthProvider.credential(email, deletePassword);
-          await reauthenticateWithCredential(currentUser, credential);
-        } else if (currentProviderId === 'google.com') {
-          const provider = new GoogleAuthProvider();
-          await reauthenticateWithPopup(currentUser, provider);
-        } else {
-          deleteError = 'This sign-in method is not supported for deletion yet.';
+        const email = currentUser.email;
+        if (!email) {
+          deleteError = 'Email address is unavailable. Please contact support.';
           return;
         }
 
-        const idToken = await currentUser.getIdToken(true);
-        const response = await fetch('/api/account/delete', {
-          method: 'POST',
+        const credential = EmailAuthProvider.credential(email, deletePassword);
+        await reauthenticateWithCredential(currentUser, credential);
+      } else if (currentProviderId === 'google.com') {
+        const provider = new GoogleAuthProvider();
+        await reauthenticateWithPopup(currentUser, provider);
+      } else {
+        deleteError = 'This sign-in method is not supported for deletion yet.';
+        return;
+      }
+
+      const idToken = await currentUser.getIdToken(true);
+      const response = await fetch('/api/account/delete', {
+        method: 'POST',
           headers: {
             Authorization: `Bearer ${idToken}`
           }
-        });
+      });
 
-        const result = await response.json();
+      const result = await response.json();
 
-        if (!response.ok) {
-          deleteError = result.error || 'Failed to delete account. Please try again.';
-          return;
-        }
+      if (!response.ok) {
+        deleteError = result.error || 'Failed to delete account. Please try again.';
+        return;
+      }
 
-        showToast(result.message || 'Your account has been permanently deleted.', TOASTS.SUCCESS, 10000);
-        await auth.signOut();
-        closeDeleteModal();
-        goto('/');
+      showToast(result.message || 'Your account has been permanently deleted.', TOASTS.SUCCESS, 10000);
+      await auth.signOut();
+      closeDeleteModal();
+      goto('/');
       } catch (error) {
-        console.error('Error deleting account:', error);
-        if (error?.code?.startsWith?.('auth/')) {
-          deleteError = getReauthErrorMessage(error);
-        } else {
-          deleteError = 'An unexpected error occurred. Please try again.';
-        }
-      } finally {
-        isDeleting = false;
+      console.error('Error deleting account:', error);
+      if (error?.code?.startsWith?.('auth/')) {
+        deleteError = getReauthErrorMessage(error);
+      } else {
+        deleteError = 'An unexpected error occurred. Please try again.';
       }
-    };
+    } finally {
+      isDeleting = false;
+    }
+  };
 
-    onMount(async () => {
-      // Ensure the user is signed in
-      user = auth.currentUser;
-    });
+  onMount(async () => {
+    // Ensure the user is signed in
+    user = auth.currentUser;
+  });
 
-    onDestroy(() => {
-      if (exportBlobUrl) {
-        URL.revokeObjectURL(exportBlobUrl);
-      }
-    });
+  onDestroy(() => {
+    if (exportBlobUrl) {
+      URL.revokeObjectURL(exportBlobUrl);
+    }
+  });
   
-  </script>
-  
-  <div class="m-auto max-w-5xl px-4">
-    <h1 class="text-3xl font-bold mb-8 text-text">Account Settings</h1>
+</script>
 
-    <div class="divide-y divide-gray-700/40">
-      <section class="py-6">
+<div class="m-auto max-w-5xl px-4">
+  <h1 class="text-3xl font-bold mb-8 text-text">Account Settings</h1>
+
+  <div class="divide-y divide-gray-700/40">
+    <section class="py-6">
         <p class="text-xs font-semibold tracking-[0.2em] uppercase text-text-muted mb-4">
           Account
         </p>
-        <div class="grid gap-3 md:grid-cols-2">
-          <Button
-            href="/account/edit"
-            color="alternative"
-            class="w-full h-12 rounded-lg justify-start text-left border border-gray-500 bg-surface text-text font-semibold text-sm tracking-wide hover:bg-surface-dark hover:border-gray-300"
+      <div class="grid gap-3 md:grid-cols-2">
+        <Button
+          href="/account/edit"
+          color="alternative"
+          class="w-full h-12 rounded-lg justify-start text-left border border-gray-500 bg-surface text-text font-semibold text-sm tracking-wide hover:bg-surface-dark hover:border-gray-300"
           >
             <span>Edit Personal Information</span>
           </Button>
-        </div>
-      </section>
+      </div>
+    </section>
 
-      <section class="py-6">
+    <section class="py-6">
         <p class="text-xs font-semibold tracking-[0.2em] uppercase text-text-muted mb-4">
           Activity
         </p>
-        <div class="grid gap-3 md:grid-cols-2">
-          <Button
-            href="/my-reactions"
-            color="alternative"
-            class="w-full h-12 rounded-lg justify-start text-left border border-gray-500 bg-surface text-text font-semibold text-sm tracking-wide hover:bg-surface-dark hover:border-gray-300"
+      <div class="grid gap-3 md:grid-cols-2">
+        <Button
+          href="/my-reactions"
+          color="alternative"
+          class="w-full h-12 rounded-lg justify-start text-left border border-gray-500 bg-surface text-text font-semibold text-sm tracking-wide hover:bg-surface-dark hover:border-gray-300"
           >
             <span>See Your Pure Reactions</span>
           </Button>
-          <Button
-            href="/bookmark"
-            color="alternative"
-            class="w-full h-12 rounded-lg justify-start text-left border border-gray-500 bg-surface text-text font-semibold text-sm tracking-wide hover:bg-surface-dark hover:border-gray-300"
+        <Button
+          href="/bookmark"
+          color="alternative"
+          class="w-full h-12 rounded-lg justify-start text-left border border-gray-500 bg-surface text-text font-semibold text-sm tracking-wide hover:bg-surface-dark hover:border-gray-300"
           >
             <span>See Your Bookmarks</span>
           </Button>
-        </div>
-      </section>
+      </div>
+    </section>
 
-      <section class="py-6">
+    <section class="py-6">
         <p class="text-xs font-semibold tracking-[0.2em] uppercase text-text-muted mb-4">
           Security
         </p>
-        <div class="grid gap-3 md:grid-cols-2">
-          <Button
-            color="alternative"
-            onclick={() => data.handleUserAction('logout')}
-            class="w-full h-12 rounded-lg justify-start text-left border border-gray-600 bg-transparent font-medium text-sm text-text-muted tracking-wide hover:bg-surface-dark hover:border-gray-400"
+      <div class="grid gap-3 md:grid-cols-2">
+        <Button
+          color="alternative"
+          onclick={() => data.handleUserAction('logout')}
+          class="w-full h-12 rounded-lg justify-start text-left border border-gray-600 bg-transparent font-medium text-sm text-text-muted tracking-wide hover:bg-surface-dark hover:border-gray-400"
           >
             <span>Logout</span>
           </Button>
-        </div>
-      </section>
+      </div>
+    </section>
 
-      <section class="py-6">
+    <section class="py-6">
         <p class="text-xs font-semibold tracking-[0.2em] uppercase text-text-muted mb-4">
           Privacy
         </p>
         <div class="border border-gray-600/50 rounded-lg p-5 bg-surface-dark">
-          <h2 class="text-lg font-semibold text-text mb-2">Download your data</h2>
-          <p class="text-sm text-text-muted mb-4">
+        <h2 class="text-lg font-semibold text-text mb-2">Download your data</h2>
+        <p class="text-sm text-text-muted mb-4">
             Request a machine-readable export of the personal data tied to your account. The export is a JSON file you
             can download and keep for your records.
-          </p>
-          <p class="text-xs text-text-muted mb-4">Exports are limited to one request every 24 hours.</p>
-          <div class="space-y-3 text-sm text-text-muted">
-            <div>
-              <p class="font-medium text-text">Included</p>
-              <ul class="list-disc list-inside space-y-1">
-                <li>Account profile details (email, display name, providers, Twitch channel)</li>
-                <li>Your reactions and playback timelines</li>
-                <li>Playlists, queues, and bookmarks/follows</li>
-                <li>YouTube channel claim data (if submitted)</li>
-                <li>Search index entries for your published reactions</li>
-              </ul>
-            </div>
-            <div>
-              <p class="font-medium text-text">Not included</p>
-              <ul class="list-disc list-inside space-y-1">
-                <li>Infrastructure or transient logs (server logs, analytics)</li>
-                <li>Real-time co-watch session state</li>
-                <li>Deleted data that no longer exists in our systems</li>
-              </ul>
-            </div>
+        </p>
+        <p class="text-xs text-text-muted mb-4">Exports are limited to one request every 24 hours.</p>
+        <div class="space-y-3 text-sm text-text-muted">
+          <div>
+            <p class="font-medium text-text">Included</p>
+            <ul class="list-disc list-inside space-y-1">
+              <li>Account profile details (email, display name, providers, Twitch channel)</li>
+              <li>Your reactions and playback timelines</li>
+              <li>Playlists, queues, and bookmarks/follows</li>
+              <li>YouTube channel claim data (if submitted)</li>
+              <li>Search index entries for your published reactions</li>
+            </ul>
           </div>
+          <div>
+            <p class="font-medium text-text">Not included</p>
+            <ul class="list-disc list-inside space-y-1">
+              <li>Infrastructure or transient logs (server logs, analytics)</li>
+              <li>Real-time co-watch session state</li>
+              <li>Deleted data that no longer exists in our systems</li>
+            </ul>
+          </div>
+        </div>
           <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Button
-              color="alternative"
-              onclick={requestExport}
-              disabled={exportStatus === 'loading'}
-              class="h-12 rounded-lg border border-gray-500 bg-surface text-text font-semibold text-sm tracking-wide hover:bg-surface-dark hover:border-gray-300"
-            >
-              {#if exportStatus === 'loading'}
-                Preparing export...
-              {:else}
-                Request data export
-              {/if}
-            </Button>
-            {#if exportStatus === 'ready' && exportBlobUrl}
-              <a
-                class="inline-flex items-center justify-center h-12 rounded-lg bg-accent-primary text-text-primary font-semibold text-sm tracking-wide hover:bg-accent-primary/90"
-                href={exportBlobUrl}
-                download={exportFileName}
+          <Button
+            color="alternative"
+            onclick={requestExport}
+            disabled={exportStatus === 'loading'}
+            class="h-12 rounded-lg border border-gray-500 bg-surface text-text font-semibold text-sm tracking-wide hover:bg-surface-dark hover:border-gray-300"
+          >
+            {#if exportStatus === 'loading'}
+              Preparing export...
+            {:else}
+              Request data export
+            {/if}
+          </Button>
+          {#if exportStatus === 'ready' && exportBlobUrl}
+            <a
+              class="inline-flex items-center justify-center h-12 rounded-lg bg-accent-primary text-text-primary font-semibold text-sm tracking-wide hover:bg-accent-primary/90"
+              href={exportBlobUrl}
+              download={exportFileName}
               >
                 Download export
               </a>
-            {/if}
-          </div>
-          {#if exportGeneratedAt}
+          {/if}
+        </div>
+        {#if exportGeneratedAt}
             <p class="mt-3 text-xs text-text-muted" aria-live="polite">
               Export generated at {new Date(exportGeneratedAt).toLocaleString()}.
             </p>
-          {/if}
-          {#if exportRetryAt}
+        {/if}
+        {#if exportRetryAt}
             <p class="mt-2 text-xs text-text-muted" aria-live="polite">
               Next export available after {new Date(exportRetryAt).toLocaleString()}.
             </p>
-          {/if}
-          {#if exportError}
+        {/if}
+        {#if exportError}
             <p class="mt-3 text-sm text-red-400" aria-live="polite">{exportError}</p>
-          {/if}
-        </div>
-      </section>
+        {/if}
+      </div>
+    </section>
 
-      <section class="py-6">
+    <section class="py-6">
         <p class="text-xs font-semibold tracking-[0.2em] uppercase text-text-muted mb-4">
           Danger Zone
         </p>
         <div class="border border-red-600/60 rounded-lg p-5 bg-surface-dark">
           <h2 class="text-lg font-semibold text-red-400 mb-3 flex items-center gap-2">
-            <span aria-hidden="true">⚠️</span>
-            <span>Delete my account</span>
-          </h2>
-          <div class="space-y-3">
+          <span aria-hidden="true">⚠️</span>
+          <span>Delete my account</span>
+        </h2>
+        <div class="space-y-3">
             <p class="text-sm text-text-muted">
               Deleting your account will permanently remove:
             </p>
             <ul class="list-disc list-inside text-sm text-text-muted space-y-1">
-              <li>Your reactions</li>
-              <li>Your bookmarks</li>
-              <li>Your profile</li>
-            </ul>
-            <p class="text-sm text-text-muted font-medium">
-              This action cannot be undone.
-            </p>
-            <Button
-              color="red"
-              onclick={openDeleteModal}
-              class="w-full h-12 rounded-lg bg-red-600 hover:bg-red-700"
-            >
-              <span class="inline-flex items-center gap-2">
-                <span aria-hidden="true">🗑</span>
-                <span>Delete my account</span>
-              </span>
-            </Button>
-          </div>
-        </div>
-      </section>
-    </div>
-  </div>
-
-  <!-- Delete Confirmation Modal -->
-  <Modal bind:open={showDeleteModal} size="md" autoclose={false} outsideclose={false}>
-    {#if deleteStep === 'confirm'}
-      <div class="text-center">
-        <svg class="mx-auto mb-4 text-red-500 w-12 h-12" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
-          <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 11V6m0 8h.01M19 10a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-        </svg>
-        <h3 class="mb-4 text-lg font-normal text-text">
-          Delete your account permanently?
-        </h3>
-        <div class="text-left mb-6 space-y-3 text-text-muted text-sm">
-          <p class="font-semibold text-red-400">⚠️ This action cannot be undone</p>
-          <p>Deleting your account will permanently remove:</p>
-          <ul class="list-disc list-inside space-y-2">
             <li>Your reactions</li>
             <li>Your bookmarks</li>
             <li>Your profile</li>
           </ul>
+            <p class="text-sm text-text-muted font-medium">
+              This action cannot be undone.
+            </p>
+          <Button
+            color="red"
+            onclick={openDeleteModal}
+            class="w-full h-12 rounded-lg bg-red-600 hover:bg-red-700"
+          >
+            <span class="inline-flex items-center gap-2">
+              <span aria-hidden="true">🗑</span>
+              <span>Delete my account</span>
+            </span>
+          </Button>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+  <Modal bind:open={showDeleteModal} size="md" autoclose={false} outsideclose={false}>
+  {#if deleteStep === 'confirm'}
+    <div class="text-center">
+      <svg
+        class="mx-auto mb-4 text-red-500 w-12 h-12"
+        aria-hidden="true"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 20 20"
+      >
+        <path
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M10 11V6m0 8h.01M19 10a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+        ></path>
+      </svg>
+        <h3 class="mb-4 text-lg font-normal text-text">
+          Delete your account permanently?
+        </h3>
+        <div class="text-left mb-6 space-y-3 text-text-muted text-sm">
+        <p class="font-semibold text-red-400">⚠️ This action cannot be undone</p>
+        <p>Deleting your account will permanently remove:</p>
+        <ul class="list-disc list-inside space-y-2">
+          <li>Your reactions</li>
+          <li>Your bookmarks</li>
+          <li>Your profile</li>
+        </ul>
           <p class="mt-4 font-medium">
             You will confirm your identity in the next step to complete deletion.
           </p>
-        </div>
-        <div class="flex justify-center gap-4">
+      </div>
+      <div class="flex justify-center gap-4">
           <Button color="alternative" onclick={closeDeleteModal}>
             Cancel
           </Button>
           <Button color="red" onclick={goToReauthStep}>
             Continue
           </Button>
-        </div>
       </div>
-    {:else if deleteStep === 'reauth'}
-      <div class="text-center">
-        <svg class="mx-auto mb-4 text-red-500 w-12 h-12" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
-          <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 11V6m0 8h.01M19 10a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-        </svg>
+    </div>
+  {:else if deleteStep === 'reauth'}
+    <div class="text-center">
+      <svg
+        class="mx-auto mb-4 text-red-500 w-12 h-12"
+        aria-hidden="true"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 20 20"
+      >
+        <path
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M10 11V6m0 8h.01M19 10a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+        ></path>
+      </svg>
         <h3 class="mb-2 text-lg font-normal text-text">
           Confirm your identity
         </h3>
         <p class="text-sm text-text-muted mb-6">
           Signed in with {providerLabel}. Reauthenticate to proceed.
         </p>
-        {#if isPasswordProvider}
-          <div class="text-left mb-6 space-y-2">
+      {#if isPasswordProvider}
+        <div class="text-left mb-6 space-y-2">
             <label class="block text-sm font-medium text-text" for="delete-password">
               Password
             </label>
-            <input
-              id="delete-password"
-              type="password"
-              class="w-full p-3 border border-gray-300 rounded-sm bg-surface text-text"
-              placeholder="Enter your password"
-              bind:value={deletePassword}
-            />
-          </div>
-        {:else if isGoogleProvider}
+          <input
+            id="delete-password"
+            type="password"
+            class="w-full p-3 border border-gray-300 rounded-sm bg-surface text-text"
+            placeholder="Enter your password"
+            bind:value={deletePassword}
+          />
+        </div>
+      {:else if isGoogleProvider}
           <div class="mb-6">
             <p class="text-sm text-text-muted">
               Continue with Google to confirm deletion.
             </p>
           </div>
-        {:else}
-          <div class="mb-6">
+      {:else}
+        <div class="mb-6">
             <p class="text-sm text-text-muted">
               This sign-in method is not supported for account deletion yet.
             </p>
-          </div>
-        {/if}
-        {#if deleteError}
-          <p class="text-sm text-red-400 mb-4">{deleteError}</p>
-        {/if}
-        <div class="flex justify-center gap-4">
-          <Button color="alternative" onclick={goToConfirmStep} disabled={isDeleting}>
-            Back
-          </Button>
-          <Button
-            color="red"
-            onclick={deleteAccount}
-            disabled={isDeleting || (isPasswordProvider && !deletePassword) || (!isPasswordProvider && !isGoogleProvider)}
-          >
-            {#if isDeleting}
-              Processing...
-            {:else if isGoogleProvider}
-              Continue with Google
-            {:else}
-              Delete account
-            {/if}
-          </Button>
         </div>
+      {/if}
+      {#if deleteError}
+        <p class="text-sm text-red-400 mb-4">{deleteError}</p>
+      {/if}
+      <div class="flex justify-center gap-4">
+        <Button
+          color="alternative"
+          onclick={goToConfirmStep}
+          disabled={isDeleting}
+        >Back</Button>
+
+        <Button
+          color="red"
+          onclick={deleteAccount}
+          disabled={isDeleting || isPasswordProvider && !deletePassword || !isPasswordProvider && !isGoogleProvider}
+        >
+          {#if isDeleting}
+            Processing...
+          {:else if isGoogleProvider}
+            Continue with Google
+          {:else}
+            Delete account
+          {/if}
+        </Button>
       </div>
-    {/if}
-  </Modal>
-  
+    </div>
+  {/if}
+</Modal>  

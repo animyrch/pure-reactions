@@ -1,8 +1,8 @@
-import { canonicalTikTokStorageFields, normalizeOriginalVideoPlatform } from '$lib/helpers/platform';
-import { originalVideoMetadataToFirestoreFields } from '$lib/helpers/originalVideo';
-import { hasStoredWatchDuration } from '$lib/helpers/watchDuration';
-import { fetchTikTokOriginalVideoMetadata } from '$lib/server/originalVideoMetadata';
-import { persistReactionWatchDurationAdmin } from '$lib/server/watchDurationAdmin';
+import { canonicalTikTokStorageFields, normalizeOriginalVideoPlatform } from '#lib/helpers/platform.js';
+import { originalVideoMetadataToFirestoreFields } from '#lib/helpers/originalVideo.js';
+import { hasStoredWatchDuration } from '#lib/helpers/watchDuration.js';
+import { fetchTikTokOriginalVideoMetadata } from '#lib/server/originalVideoMetadata.js';
+import { persistReactionWatchDurationAdmin } from '#lib/server/watchDurationAdmin.js';
 
 const ENRICHMENT_TTL_MS = 1000 * 60 * 60 * 24 * 7;
 const YOUTUBE_API_URL = 'https://www.googleapis.com/youtube/v3/videos';

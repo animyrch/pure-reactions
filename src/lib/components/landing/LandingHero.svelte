@@ -1,5 +1,5 @@
 <script>
-  import { goToRoute } from "$lib/helpers/routing";
+  import { goToRoute } from "#lib/helpers/routing.js";
   import { onMount, onDestroy } from "svelte";
 
   const creatorTypes = [

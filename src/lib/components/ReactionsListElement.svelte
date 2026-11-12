@@ -1,10 +1,10 @@
 <script>
-    import ReactionThumbnail from '$lib/components/ReactionThumbnail.svelte';
+    import ReactionThumbnail from '#lib/components/ReactionThumbnail.svelte';
     import {
         momentIdFromReactionData,
         resolveReactionListItemType
-    } from '$lib/helpers/reactionListItem';
-    import { displayedWatchDurationSeconds } from '$lib/helpers/watchDuration';
+    } from '#lib/helpers/reactionListItem.js';
+    import { displayedWatchDurationSeconds } from '#lib/helpers/watchDuration.js';
 
     export let reaction;
     export let onDelete = null;

@@ -1,10 +1,10 @@
 <script>
     import { onMount } from "svelte";
-    import VideoAuthor from "$lib/components/VideoAuthor.svelte";
-    import ThumbnailContext from "$lib/components/Video/ThumbnailContext.svelte";
-    import QueueCover from "$lib/components/QueueCover.svelte";
-    import { buildReactionCardHref, reactionThumbnailSourceTitle } from "$lib/helpers/reactionListItem";
-    import { formatWatchDuration } from "$lib/helpers/watchDuration";
+    import VideoAuthor from "#lib/components/VideoAuthor.svelte";
+    import ThumbnailContext from "#lib/components/Video/ThumbnailContext.svelte";
+    import QueueCover from "#lib/components/QueueCover.svelte";
+    import { buildReactionCardHref, reactionThumbnailSourceTitle } from "#lib/helpers/reactionListItem.js";
+    import { formatWatchDuration } from "#lib/helpers/watchDuration.js";
 
     export let reactionPageId;
     export let reactionVideoId;

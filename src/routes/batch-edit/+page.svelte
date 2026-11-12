@@ -1,27 +1,27 @@
 <script>
     import { onMount } from "svelte";
-    import { page } from "$app/stores";
+    import { page } from '$app/state';
     import { goto } from "$app/navigation";
     import {
         getPlaylist,
         getReactionsByIds,
         updateFirebaseDocument,
-    } from "$lib/helpers/firebase";
-    import { publishNameWasDeclined } from "$lib/stores/publicDisplayNamePrompt";
+    } from "#lib/helpers/firebase.js";
+    import { publishNameWasDeclined } from "#lib/stores/publicDisplayNamePrompt.js";
     import {
         parseYouTubeUrl,
         downloadBasicVideoDetails,
-    } from "$lib/helpers/youtube";
-    import { showToast } from "$lib/stores/toast";
-    import { TOASTS } from "$lib/constants/toasts";
+    } from "#lib/helpers/youtube.js";
+    import { showToast } from "#lib/stores/toast.js";
+    import { TOASTS } from "#lib/constants/toasts.js";
     import {
         CheckCircleSolid,
         ExclamationCircleSolid,
         ArrowRightAltSolid,
         FilePenOutline,
     } from "flowbite-svelte-icons";
-    import SubtleLoader from "$lib/components/design-system/SubtleLoader.svelte";
-    import { canPublishReactionMedia } from "$lib/helpers/reactionPublish";
+    import SubtleLoader from "#lib/components/design-system/SubtleLoader.svelte";
+    import { canPublishReactionMedia } from "#lib/helpers/reactionPublish.ts";
 
     let isLoading = true;
     let playlistId = "";
@@ -35,7 +35,7 @@
 
     // Load data on mount
     onMount(async () => {
-        playlistId = $page.url.searchParams.get("playlistDocumentId");
+        playlistId = page.url.searchParams.get("playlistDocumentId");
         if (!playlistId) {
             showToast("Missing playlist ID", TOASTS.ERROR);
             goto("/");
@@ -55,7 +55,7 @@
                 id: doc.id,
                 ...doc.data,
                 // Local state for UI
-                isSelected: true, // Default to all selected
+                isSelected: true // Default to all selected
             }));
 
             // Initialize selection set

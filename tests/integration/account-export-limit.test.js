@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { COLLECTION_RATE_LIMITS, COLLECTION_USER_DATA } from '$lib/constants/firebase';
+import { COLLECTION_RATE_LIMITS, COLLECTION_USER_DATA } from '#lib/constants/firebase.js';
 
 const initializeFirebaseAdmin = vi.hoisted(() => vi.fn());
 
-vi.mock('$lib/server/firebaseAdmin', () => ({
+vi.mock('#lib/server/firebaseAdmin.js', () => ({
   initializeFirebaseAdmin,
 }));
 

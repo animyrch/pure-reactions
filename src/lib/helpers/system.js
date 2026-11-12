@@ -1,4 +1,4 @@
-import { browser } from '$app/environment';
+import { browser } from '$app/env';
 
 /**
  * Escapes HTML special characters to prevent XSS when using {@html}.
@@ -34,19 +34,19 @@ export function linkifyText(text) {
         // Escape and append the text before this URL
         result += escapeHtml(text.slice(lastIndex, match.index));
 
-        const rawUrl = match[1];
-        // Ensure the href is always a full URL
-        const href = rawUrl.startsWith('www.') ? `https://${rawUrl}` : rawUrl;
-        const escapedDisplay = escapeHtml(rawUrl);
-        const escapedHref = escapeHtml(href);
+    const rawUrl = match[1];
+    // Ensure the href is always a full URL
+    const href = rawUrl.startsWith('www.') ? `https://${rawUrl}` : rawUrl;
+    const escapedDisplay = escapeHtml(rawUrl);
+    const escapedHref = escapeHtml(href);
 
-        result += `<a href="${escapedHref}" target="_blank" rel="noopener noreferrer">${escapedDisplay}</a>`;
-        lastIndex = match.index + match[0].length;
-    }
+    result += `<a href="${escapedHref}" target="_blank" rel="noopener noreferrer">${escapedDisplay}</a>`;
+    lastIndex = match.index + match[0].length;
+  }
 
-    // Append remaining text after the last URL
-    result += escapeHtml(text.slice(lastIndex));
-    return result;
+  // Append remaining text after the last URL
+  result += escapeHtml(text.slice(lastIndex));
+  return result;
 }
 
 export function isMobileDevice() {

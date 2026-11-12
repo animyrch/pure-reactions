@@ -1,10 +1,10 @@
 <script>
-  import CinematicButton from "$lib/components/design-system/CinematicButton.svelte";
-  import HelpfulTip from "$lib/components/design-system/HelpfulTip.svelte";
-  import TimeStepper from "$lib/components/reaction/TimeStepper.svelte";
-  import ConfigEditorV2 from "$lib/components/Video/ConfigEditorV2.svelte";
-  import { showToast } from "$lib/stores/toast";
-  import { TOASTS } from "$lib/constants/toasts";
+  import CinematicButton from "#lib/components/design-system/CinematicButton.svelte";
+  import HelpfulTip from "#lib/components/design-system/HelpfulTip.svelte";
+  import TimeStepper from "#lib/components/reaction/TimeStepper.svelte";
+  import ConfigEditorV2 from "#lib/components/Video/ConfigEditorV2.svelte";
+  import { showToast } from "#lib/stores/toast.js";
+  import { TOASTS } from "#lib/constants/toasts.js";
 
   export let isReactionMissing = false;
   export let isEditModeOn = false;
@@ -1180,7 +1180,7 @@
 </div>
 
 <style>
-  @reference "../../../app.pcss";
+  @reference "../../../app.css";
 
   .editor-config {
     container-type: inline-size;

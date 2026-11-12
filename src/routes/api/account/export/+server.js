@@ -5,7 +5,7 @@ import {
 	serializeFirestoreDoc,
 	sortById,
 	sortByObjectId
-} from '$lib/helpers/dataExport';
+} from '#lib/helpers/dataExport.js';
 import {
 	COLLECTION_REACTION_BINOMES,
 	COLLECTION_USER_DATA,
@@ -13,14 +13,14 @@ import {
 	COLLECTION_QUEUES,
 	COLLECTION_YOUTUBE_CHANNEL_CLAIMS,
 	COLLECTION_YOUTUBE_CHANNEL_VERIFICATIONS
-} from '$lib/constants/firebase';
-import { initializeFirebaseAdmin } from '$lib/server/firebaseAdmin';
+} from '#lib/constants/firebase.js';
+import { initializeFirebaseAdmin } from '#lib/server/firebaseAdmin.js';
 import {
 	claimAccountExportLimit,
 	createFirestoreRateLimitStore,
 	completeAccountExportLimit,
 	releaseAccountExportLimit
-} from '$lib/server/rateLimit';
+} from '#lib/server/rateLimit.js';
 
 const ALGOLIA_BATCH_LIMIT = 1000;
 const USER_EXTRA_DATA_COLLECTION = 'userExtraData';

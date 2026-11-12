@@ -1,7 +1,7 @@
 <script>
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { goToRoute } from "$lib/helpers/routing";
+  import { goToRoute } from "#lib/helpers/routing.js";
   import PurePureactionsLogo from "../PurePureactionsLogo.svelte";
   import AppActionsMenu from "./AppActionsMenu.svelte";
   import { SearchOutline as SearchIcon } from "flowbite-svelte-icons";

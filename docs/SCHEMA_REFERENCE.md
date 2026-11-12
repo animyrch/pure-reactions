@@ -598,7 +598,7 @@ const snapshot = await getDocs(q);
 ### Searching Reactions (Algolia)
 
 ```javascript
-import { getSearchProvider } from '$lib/services/search';
+import { getSearchProvider } from '#lib/services/search/index.js';
 
 const provider = getSearchProvider();
 const results = await provider.search('metal reaction', {

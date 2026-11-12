@@ -1,11 +1,11 @@
 <script>
-    import PersonalPage from "$lib/components/PersonalPage.svelte";
-    import PersonalListSection from "$lib/components/PersonalListSection.svelte";
-    import SEO from "$lib/components/SEO.svelte";
-    import { userExtraDataStore } from "$lib/stores/userExtraData";
-    import { isLoggedIn } from "$lib/stores/user";
-    import { getAllReactions } from "$lib/helpers/firebase";
-    import { SORTINGS } from "$lib/constants/sortings";
+    import PersonalPage from "#lib/components/PersonalPage.svelte";
+    import PersonalListSection from "#lib/components/PersonalListSection.svelte";
+    import SEO from "#lib/components/SEO.svelte";
+    import { userExtraDataStore } from "#lib/stores/userExtraData.js";
+    import { isLoggedIn } from "#lib/stores/user.js";
+    import { getAllReactions } from "#lib/helpers/firebase.js";
+    import { SORTINGS } from "#lib/constants/sortings.js";
 
     let reactions = [];
     let isLoading = false;

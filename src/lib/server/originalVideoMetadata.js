@@ -5,10 +5,10 @@ import {
   resolveTikTokWatchUrl,
   sanitizeTikTokHandle,
   sanitizeTikTokVideoId,
-} from '$lib/helpers/platform';
-import { normalizeOriginalVideoMetadata } from '$lib/helpers/originalVideo';
-import { initializeFirebaseAdmin } from '$lib/server/firebaseAdmin';
-import { resolveStoredTikTokMetadata } from '$lib/server/tiktokMetadataCache';
+} from '#lib/helpers/platform.js';
+import { normalizeOriginalVideoMetadata } from '#lib/helpers/originalVideo.js';
+import { initializeFirebaseAdmin } from '#lib/server/firebaseAdmin.js';
+import { resolveStoredTikTokMetadata } from '#lib/server/tiktokMetadataCache.js';
 
 const TIKTOK_OEMBED_URL = 'https://www.tiktok.com/oembed';
 const TIKTOK_TIMEOUT_MS = 8000;

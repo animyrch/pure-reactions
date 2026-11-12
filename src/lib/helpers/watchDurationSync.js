@@ -6,7 +6,7 @@ import {
     reactionWindowSeconds,
     sumPlaylistReactionWindows,
     trimmed,
-} from '$lib/helpers/watchDuration';
+} from '#lib/helpers/watchDuration.js';
 
 const roundContribution = (data) => {
     const windowSeconds = reactionWindowSeconds(data);

@@ -1,6 +1,6 @@
 <script>
 	import { onMount } from 'svelte';
-	import { analyticsConsent, loadAnalyticsConsent, storeAnalyticsConsent } from '$lib/helpers/analyticsConsent';
+	import { analyticsConsent, loadAnalyticsConsent, storeAnalyticsConsent } from '#lib/helpers/analyticsConsent.js';
 
 	let ready = false;
 

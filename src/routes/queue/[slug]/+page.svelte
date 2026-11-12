@@ -1,15 +1,16 @@
 <script>
     import { onMount } from 'svelte';
-    import { page } from '$app/stores';
+    import { pageStore } from "#lib/helpers/pageStore.js";
+const page = pageStore();
     import { goto } from '$app/navigation';
-    import QueueBinomeCard from '$lib/components/QueueBinomeCard.svelte';
-    import QueueCover from '$lib/components/QueueCover.svelte';
-    import SEO from '$lib/components/SEO.svelte';
-    import { getReactionsByIds, getPlaylist, getQueueBySlug, updateQueueDocument } from '$lib/helpers/firebase';
-    import { handlePrivateRoute } from '$lib/helpers/routing';
-    import { readQueueProgress } from '$lib/helpers/queueProgress';
-    import { coverVideoIdsForItems } from '$lib/helpers/queueCover';
-    import { reactionThumbnailSourceTitle } from '$lib/helpers/reactionListItem';
+    import QueueBinomeCard from '#lib/components/QueueBinomeCard.svelte';
+    import QueueCover from '#lib/components/QueueCover.svelte';
+    import SEO from '#lib/components/SEO.svelte';
+    import { getReactionsByIds, getPlaylist, getQueueBySlug, updateQueueDocument } from '#lib/helpers/firebase.js';
+    import { handlePrivateRoute } from '#lib/helpers/routing.js';
+    import { readQueueProgress } from '#lib/helpers/queueProgress.ts';
+    import { coverVideoIdsForItems } from '#lib/helpers/queueCover.js';
+    import { reactionThumbnailSourceTitle } from '#lib/helpers/reactionListItem.js';
 
     export let data;
 
@@ -39,7 +40,7 @@
     $: currentSetIndex = Number.isFinite(currentSetIndexParam) ? currentSetIndexParam : 0;
     $: currentSetReactionId = $page.url?.searchParams?.get('queueReactionId') || '';
 
-    const asArray = (value) => (Array.isArray(value) ? value : []);
+    const asArray = (value) => Array.isArray(value) ? value : [];
 
     const buildQueueWatchUrl = (reactionId, index, { autoplay = true, fullscreen = false } = {}) => {
         const params = new URLSearchParams();
@@ -111,14 +112,13 @@
         ownerId = queueDefinition?.data?.ownerId || '';
         isOwner = Boolean(ownerId && ownerId === authedUserId);
         isPublished = queueDefinition?.data?.isPublished ?? false;
-        ownerName = (isOwner ? ($page.data?.displayName || '') : (queueDefinition?.data?.ownerName || '')).trim();
 
-        const reactionIds = queueDefinition.data?.items
-            ?.filter((item) => item?.type === 'reaction' && item?.id)
-            .map((item) => item.id) ?? [];
-        const playlistIds = queueDefinition.data?.items
-            ?.filter((item) => item?.type === 'playlist' && item?.id)
-            .map((item) => item.id) ?? [];
+        ownerName = (isOwner
+            ? $page.data?.displayName || ''
+            : queueDefinition?.data?.ownerName || '').trim();
+
+        const reactionIds = queueDefinition.data?.items?.filter((item) => item?.type === 'reaction' && item?.id).map((item) => item.id) ?? [];
+        const playlistIds = queueDefinition.data?.items?.filter((item) => item?.type === 'playlist' && item?.id).map((item) => item.id) ?? [];
 
         const [reactionResults, playlistPayloads] = await Promise.all([
             reactionIds.length ? getReactionsByIds(reactionIds) : [],
@@ -169,7 +169,7 @@
         queueStatusMessage = '';
         try {
             const nextEntries = [];
-            for (const item of (queueDefinition.data?.items ?? [])) {
+            for (const item of queueDefinition.data?.items ?? []) {
                 if (item?.type === 'reaction' && item?.id) {
                     nextEntries.push({ sourceType: 'reaction', sourceId: item.id, reactionId: item.id, label: item?.label || '' });
                     continue;
@@ -254,6 +254,7 @@
     onMount(hydrateQueueItems);
 </script>
 
+
 <SEO
     title={queueDefinition?.data?.title ? `${queueDefinition.data.title} Queue` : 'Queue'}
     description={queueDefinition?.data?.description || 'Watch this curated queue of synchronized reaction videos on Pure Reactions.'}
@@ -272,83 +273,92 @@
             <div class="min-w-0 flex-1 space-y-3">
             <p class="text-xs uppercase tracking-[0.35em] text-text-muted">Queue</p>
             <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-                <div class="space-y-2">
-                    <h1 class="text-3xl font-semibold md:text-4xl">{queueTitle}</h1>
-                    {#if queueDefinition?.data?.description}
-                        <p class="max-w-3xl text-sm text-text-muted">{queueDefinition.data.description}</p>
-                    {/if}
-                </div>
+                    <div class="space-y-2">
+                        <h1 class="text-3xl font-semibold md:text-4xl">{queueTitle}</h1>
+                        {#if queueDefinition?.data?.description}
+                            <p class="max-w-3xl text-sm text-text-muted">{queueDefinition.data.description}</p>
+                        {/if}
+                    </div>
                 <div class="flex items-center gap-3 text-sm text-text-muted">
                     <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 backdrop-blur-sm">
                         {queueEntries.length} reaction{queueEntries.length === 1 ? '' : 's'} in queue
                     </span>
-                    {#if isOwner}
-                         <button 
-                            type="button"
-                            role="switch"
-                            aria-checked={isPublished}
-                            on:click={handleTogglePublish}
-                            disabled={updatingPublishState}
-                            class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 backdrop-blur-sm transition-colors hover:bg-white/10 disabled:opacity-50"
-                        >
+                        {#if isOwner}
+                            <button
+                                type="button"
+                                role="switch"
+                                aria-checked={isPublished}
+                                on:click={handleTogglePublish}
+                                disabled={updatingPublishState}
+                                class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 backdrop-blur-sm transition-colors hover:bg-white/10 disabled:opacity-50"
+                            >
                             <span class={`h-2 w-2 rounded-full ${isPublished ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-white/20'}`}></span>
-                            <span>{isPublished ? 'Public' : 'Private'}</span>
-                        </button>
-                    {/if}
-                    {#if ownerId}
+                                <span>{isPublished ? 'Public' : 'Private'}</span>
+                            </button>
+                        {/if}
+                        {#if ownerId}
                         <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 backdrop-blur-sm">
-                            {#if isOwner}
-                                Your queue
-                            {:else}
-                                Owner: {ownerName || 'Unknown user'}
-                            {/if}
-                        </span>
-                    {/if}
-                </div>
-            </div>
-
-            {#if !isLoading && queueDefinition}
-                <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div class="text-sm text-text-muted">
-                        {#if queueIsLoading}
-                            Preparing watch queue
-                        {:else if queueStatusMessage}
-                            {queueStatusMessage}
+                                {#if isOwner}
+                                    Your queue
+                                {:else}
+                                    Owner: {ownerName || 'Unknown user'}
+                                {/if}
+                            </span>
                         {/if}
                     </div>
+                </div>
+
+                {#if !isLoading && queueDefinition}
+                <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div class="text-sm text-text-muted">
+                            {#if queueIsLoading}
+                                Preparing watch queue
+                            {:else if queueStatusMessage}
+                                {queueStatusMessage}
+                            {/if}
+                        </div>
                     <div class="flex flex-col gap-2 sm:flex-row sm:items-center" aria-label="Queue playback controls">
-                        <button
-                            class="btn-primary"
-                            type="button"
-                            on:click={handlePlayFromStart}
-                            disabled={queueIsLoading || !queueEntries.length}
-                            aria-label="Play this queue from the beginning"
+                            <button
+                                class="btn-primary"
+                                type="button"
+                                on:click={handlePlayFromStart}
+                                disabled={queueIsLoading || !queueEntries.length}
+                                aria-label="Play this queue from the beginning"
                         >
                             Play queue
                         </button>
-                        <button
-                            class="btn-secondary"
-                            type="button"
-                            on:click={handleResume}
-                            disabled={queueIsLoading || !queueEntries.length || !canResume}
-                            aria-label={canResume
-                                ? `Resume this queue from item ${resumeIndex + 1}`
-                                : 'Resume is available after you start watching this queue'}
-                        >
+                            <button
+                                class="btn-secondary"
+                                type="button"
+                                on:click={handleResume}
+                                disabled={queueIsLoading || !queueEntries.length || !canResume}
+                                aria-label={canResume
+                                    ? `Resume this queue from item ${resumeIndex + 1}`
+                                    : 'Resume is available after you start watching this queue'}
+                            >
                             Resume{#if canResume} • #{resumeIndex + 1}{/if}
-                        </button>
+                            </button>
+                        </div>
                     </div>
-                </div>
-            {/if}
+                {/if}
             </div>
         </div>
 
         {#if isLoading}
             <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {#each Array(6) as _, _index}
-                    <div class="animate-pulse rounded-xl border border-white/5 bg-white/5 p-6">
-                        <div class="mb-4 h-3 w-20 rounded-full bg-white/10" aria-hidden="true" />
-                        <div class="aspect-video rounded-lg bg-white/10" aria-hidden="true" />
+                    <div
+                        class="animate-pulse rounded-xl border border-white/5 bg-white/5 p-6"
+                    >
+                        <div
+                            class="mb-4 h-3 w-20 rounded-full bg-white/10"
+                            aria-hidden="true"
+                        ></div>
+
+                        <div
+                            class="aspect-video rounded-lg bg-white/10"
+                            aria-hidden="true"
+                        ></div>
                     </div>
                 {/each}
             </div>
@@ -515,7 +525,7 @@
         outline-offset: 3px;
     }
 
-    .queue-item[aria-current='true'] {
+    .queue-item[aria-current="true"] {
         outline: 2px solid rgba(67, 217, 173, 0.55);
         outline-offset: 4px;
     }

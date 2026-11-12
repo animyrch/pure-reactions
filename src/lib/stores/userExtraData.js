@@ -6,8 +6,8 @@ import {
     removeBookmarkWrapper,
     addFollowWrapper,
     removeFollowWrapper
-} from '$lib/helpers/firebase';
-import { handlePrivateRoute } from '$lib/helpers/routing';
+} from '#lib/helpers/firebase.js';
+import { handlePrivateRoute } from '#lib/helpers/routing.js';
 
 const createUserExtraDataStore = () => {
   const { subscribe, set } = writable({

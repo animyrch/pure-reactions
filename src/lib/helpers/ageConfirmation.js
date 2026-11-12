@@ -1,6 +1,6 @@
 import { writable } from 'svelte/store';
 import { doc, getDoc } from 'firebase/firestore/lite';
-import { auth, COLLECTION_USER_DATA, db } from '$lib/constants/firebase';
+import { auth, COLLECTION_USER_DATA, db } from '#lib/constants/firebase.js';
 
 export const ageConfirmationRequest = writable(null);
 

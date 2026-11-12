@@ -1,15 +1,15 @@
 import { goto } from '$app/navigation';
-import { nextAdHocQueueIndex } from '$lib/helpers/adHocQueue';
-import { getPlaylist, getQueueBySlug, getReaction } from '$lib/helpers/firebase';
-import { writeQueueProgress } from '$lib/helpers/queueProgress';
+import { nextAdHocQueueIndex } from '#lib/helpers/adHocQueue.js';
+import { getPlaylist, getQueueBySlug, getReaction } from '#lib/helpers/firebase.js';
+import { writeQueueProgress } from '#lib/helpers/queueProgress.ts';
 import {
   findPlaylistCurrentIndex,
   getPlaylistSequenceItems,
   toPlaylistQueueItem,
-} from '$lib/helpers/reactionSequence';
-import { writeAutoPlayCookie } from '$lib/helpers/reactionPlayer';
-import type { TwinPlayersState } from '$lib/helpers/twinPlayersStateController';
-import { fetchFirstPlaylistVideos } from '$lib/helpers/youtube';
+} from '#lib/helpers/reactionSequence.js';
+import { writeAutoPlayCookie } from '#lib/helpers/reactionPlayer.ts';
+import type { TwinPlayersState } from '#lib/helpers/twinPlayersStateController.ts';
+import { fetchFirstPlaylistVideos } from '#lib/helpers/youtube.js';
 
 type LoadReactionInPlaceOptions = {
   preserveReactionTime?: boolean;

@@ -1,9 +1,9 @@
 <script>
-    import ReactionsListElement from "$lib/components/ReactionsListElement.svelte";
+    import ReactionsListElement from "#lib/components/ReactionsListElement.svelte";
     import { onMount } from "svelte";
     import { goto } from "$app/navigation";
-    import { getReactionsToOriginalVideo } from "$lib/helpers/firebase";
-    import { generateOriginalVideoSlug } from "$lib/helpers/originalVideo";
+    import { getReactionsToOriginalVideo } from "#lib/helpers/firebase.js";
+    import { generateOriginalVideoSlug } from "#lib/helpers/originalVideo.js";
     import { UserSolid } from "flowbite-svelte-icons";
 
     export let originalVideoId;

@@ -1,6 +1,6 @@
 <script>
   import { createEventDispatcher, onMount, tick } from 'svelte';
-  import { placeTooltip } from '$lib/helpers/tooltipPlacement.js';
+  import { placeTooltip } from '#lib/helpers/tooltipPlacement.js';
 
   export let title = 'Tip';
   export let variant = 'callout';

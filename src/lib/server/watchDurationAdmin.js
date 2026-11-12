@@ -1,10 +1,10 @@
-import { COLLECTION_PLAYLISTS, COLLECTION_REACTION_BINOMES } from '$lib/constants/firebase';
-import { buildWatchDurationPatch } from '$lib/helpers/watchDuration';
+import { COLLECTION_PLAYLISTS, COLLECTION_REACTION_BINOMES } from '#lib/constants/firebase.js';
+import { buildWatchDurationPatch } from '#lib/helpers/watchDuration.js';
 import {
     ensureReactionWatchDuration,
     syncReactionWatchDuration,
     watchDurationPatchChanged,
-} from '$lib/helpers/watchDurationSync';
+} from '#lib/helpers/watchDurationSync.js';
 
 const chunk = (values, size) => {
     const groups = [];

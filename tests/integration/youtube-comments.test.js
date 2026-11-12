@@ -3,7 +3,7 @@ import {
   resolveDiscussionSections,
   formatCommentAge,
   formatLikeCount,
-} from '$lib/helpers/youtubeComments';
+} from '#lib/helpers/youtubeComments.js';
 
 describe('resolveDiscussionSections', () => {
   it('returns two sections when both videos are YouTube with different IDs', () => {

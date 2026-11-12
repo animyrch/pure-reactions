@@ -1,20 +1,21 @@
 <script>
-	import { browser } from "$app/environment";
-	import { getReactionsByPage } from "$lib/helpers/firebase";
-	import SEO from "$lib/components/SEO.svelte";
-	import { page } from "$app/stores";
-	import { SORTINGS } from "$lib/constants/sortings";
-	import { userExtraDataStore } from "$lib/stores/userExtraData";
+	import { browser } from '$app/env';
+	import { getReactionsByPage } from "#lib/helpers/firebase.js";
+	import SEO from "#lib/components/SEO.svelte";
+	import { pageStore } from "#lib/helpers/pageStore.js";
+const page = pageStore();
+	import { SORTINGS } from "#lib/constants/sortings.js";
+	import { userExtraDataStore } from "#lib/stores/userExtraData.js";
 	import { onMount, onDestroy } from "svelte";
 	import { fade } from "svelte/transition";
-	import { isLoggedIn } from "$lib/stores/user";
+	import { isLoggedIn } from "#lib/stores/user.js";
 	import { goto } from "$app/navigation";
 
-	import LandingHero from "$lib/components/landing/LandingHero.svelte";
-	import LandingSyncExplainer from "$lib/components/landing/LandingSyncExplainer.svelte";
-	import LandingWorkflow from "$lib/components/landing/LandingWorkflow.svelte";
-	import LandingTrust from "$lib/components/landing/LandingTrust.svelte";
-	import LandingCreatorProof from "$lib/components/landing/LandingCreatorProof.svelte";
+	import LandingHero from "#lib/components/landing/LandingHero.svelte";
+	import LandingSyncExplainer from "#lib/components/landing/LandingSyncExplainer.svelte";
+	import LandingWorkflow from "#lib/components/landing/LandingWorkflow.svelte";
+	import LandingTrust from "#lib/components/landing/LandingTrust.svelte";
+	import LandingCreatorProof from "#lib/components/landing/LandingCreatorProof.svelte";
 
 	/** @type {import('./$types').PageData} */
 	export let data;
@@ -136,9 +137,7 @@
 		`<script type="application/ld+json">${appJsonLd}</` + `script>`;
 </script>
 
-<svelte:head>
-	{@html jsonLdScriptTag}
-</svelte:head>
+<svelte:head>{@html jsonLdScriptTag}</svelte:head>
 
 <SEO
 	title="Pure Reactions — Sync Your Transformative Content (Reaction, Commentary & Translation Videos)"
@@ -155,9 +154,21 @@
 		on:click={() => document.getElementById('creator-proof')?.scrollIntoView({ behavior: 'smooth' })}
 		aria-label="Scroll down to see what creators are making"
 	>
-		See what creators are making
-		<svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-			<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+		See what creators are making 
+
+		<svg
+			class="h-4 w-4 shrink-0"
+			fill="none"
+			viewBox="0 0 24 24"
+			stroke="currentColor"
+			stroke-width="2"
+			aria-hidden="true"
+		>
+			<path
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				d="M19 9l-7 7-7-7"
+			></path>
 		</svg>
 	</button>
 {/if}
@@ -168,7 +179,12 @@
 	<LandingSyncExplainer />
 	<LandingWorkflow />
 	<LandingTrust />
-	<LandingCreatorProof {reactions} loading={isLoading} hasLoaded={hasLoadedInitialResults} />
+
+	<LandingCreatorProof
+		reactions={reactions}
+		loading={isLoading}
+		hasLoaded={hasLoadedInitialResults}
+	/>
 </div>
 
 <style>

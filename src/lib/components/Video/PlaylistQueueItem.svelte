@@ -1,8 +1,8 @@
 <script>
     import { goto } from '$app/navigation'
-    import { buildYouTubeThumbnailUrl } from '$lib/helpers/originalVideo';
-    import { resolveTikTokWatchUrl } from '$lib/helpers/platform';
-    import { getCompensatedReactionTime } from '$lib/helpers/reaction';
+    import { buildYouTubeThumbnailUrl } from '#lib/helpers/originalVideo.js';
+    import { resolveTikTokWatchUrl } from '#lib/helpers/platform.js';
+    import { getCompensatedReactionTime } from '#lib/helpers/reaction.js';
 
     export let index = 0;
     export let playlistItem = {};

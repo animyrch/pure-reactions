@@ -1,36 +1,36 @@
 <script>
     /* global YT */
     import { onMount, onDestroy, tick } from 'svelte';
-    import { browser } from '$app/environment';
+    import { browser } from '$app/env';
     import { signInAnonymously } from 'firebase/auth';
-    import { page } from '$app/stores';
-    import { goToRoute } from '$lib/helpers/routing';
-    import { auth } from '$lib/constants/firebase';
-    import ReactionStage from '$lib/components/reaction/ReactionStage.svelte';
-    import SessionLayoutControls from '$lib/components/session/SessionLayoutControls.svelte';
-    import { reactionDial } from '$lib/stores/reactionDial';
+    import { pageStore } from "#lib/helpers/pageStore.js";
+const page = pageStore();
+    import { goToRoute } from '#lib/helpers/routing.js';
+    import { auth } from '#lib/constants/firebase.js';
+    import ReactionStage from '#lib/components/reaction/ReactionStage.svelte';
+    import SessionLayoutControls from '#lib/components/session/SessionLayoutControls.svelte';
+    import { reactionDial } from '#lib/stores/reactionDial.js';
     import {
         normalizeFullscreenOverlayCorner,
         normalizeFullscreenOverlayWidthPercent,
         normalizeFullscreenPrimaryVideo,
-    } from '$lib/helpers/twinPlayersReactionData.ts';
-    import {
-        readSessionLayout,
-        writeSessionLayout,
-    } from '$lib/helpers/sessionLayout';
+    } from '#lib/helpers/twinPlayersReactionData.ts';
+
+    import { readSessionLayout, writeSessionLayout } from '#lib/helpers/sessionLayout.js';
+
     import {
         getSessionData,
         listenToSession,
         joinSharedSession,
         leaveSharedSession,
         SESSION_STATES
-    } from '$lib/helpers/sharedSession';
-    import { fetchOriginalVideoMetadata } from '$lib/helpers/originalVideo';
+    } from '#lib/helpers/sharedSession.js';
+    import { fetchOriginalVideoMetadata } from '#lib/helpers/originalVideo.js';
     import {
         buildTwitchChatUrl,
         buildTwitchPlayerUrl,
         normalizeTwitchChannel
-    } from '$lib/helpers/twitchChannel';
+    } from '#lib/helpers/twitchChannel.js';
     import { UsersSolid, ArrowLeftOutline } from 'flowbite-svelte-icons';
 
     let sessionId = $page.params.sessionId;
@@ -448,9 +448,7 @@
     })();
 </script>
 
-<svelte:head>
-    <title>Watching: {originalVideoTitle || 'Shared Reaction'}</title>
-</svelte:head>
+<svelte:head><title>Watching: {originalVideoTitle || 'Shared Reaction'}</title></svelte:head>
 
 <div class="website-inner-container min-h-screen bg-background text-text-primary">
     <div class="flex min-h-screen flex-col py-6">
@@ -529,67 +527,67 @@
                             </aside>
                         {/if}
                         <div class="min-w-0 flex-1">
-                    <ReactionStage
-                        isFullscreen={isFullscreen}
-                        showCinematicBars={showCinematicBars}
-                        playerOriginal={stagePlayerSentinel}
-                        playerReaction={stagePlayerSentinel}
-                        {originalVideoPlatform}
-                        {stickyControlsClass}
-                        bothVideosStarted={true}
-                        hostControlled={true}
-                        customReactionPlayer={sessionHasStream}
-                        remixMode={!sessionHasStream}
-                        fullWidth={Boolean(twitchChatSrc)}
-                        {fullscreenPrimaryVideo}
-                        {fullscreenOverlayWidthPercent}
-                        {fullscreenOverlayCorner}
-                        {fullscreenOverlayVisible}
-                        on:enterFullscreen={enterSessionFullscreen}
-                        on:exitClick={exitSessionFullscreen}
-                        on:toggleCinematicBars={toggleCinematicBars}
-                    >
-                        <svelte:fragment slot="reaction-player">
-                            {#if twitchPlayerSrc}
-                                {#key twitchPlayerSrc}
-                                    <iframe
-                                        title="Twitch player for {twitchChannel}"
-                                        src={twitchPlayerSrc}
-                                        allowfullscreen
-                                        loading="lazy"
-                                        class="absolute inset-0 h-full w-full border-0"
-                                        data-testid="twitch-player"
-                                    ></iframe>
-                                {/key}
-                            {/if}
-                        </svelte:fragment>
-                        <svelte:fragment slot="dock-extra">
-                            {#if sessionHasStream}
-                                <SessionLayoutControls
-                                    {fullscreenPrimaryVideo}
-                                    {fullscreenOverlayWidthPercent}
-                                    {fullscreenOverlayCorner}
-                                    {fullscreenOverlayVisible}
-                                    onPrimaryChange={setPrimaryVideo}
-                                    onWidthChange={setOverlayWidth}
-                                    onCornerChange={setOverlayCorner}
-                                    onVisibleChange={setOverlayVisible}
-                                />
-                            {/if}
-                        </svelte:fragment>
-                    </ReactionStage>
+                            <ReactionStage
+                                isFullscreen={isFullscreen}
+                                showCinematicBars={showCinematicBars}
+                                playerOriginal={stagePlayerSentinel}
+                                playerReaction={stagePlayerSentinel}
+                                originalVideoPlatform={originalVideoPlatform}
+                                stickyControlsClass={stickyControlsClass}
+                                bothVideosStarted={true}
+                                hostControlled={true}
+                                customReactionPlayer={sessionHasStream}
+                                remixMode={!sessionHasStream}
+                                fullWidth={Boolean(twitchChatSrc)}
+                                fullscreenPrimaryVideo={fullscreenPrimaryVideo}
+                                fullscreenOverlayWidthPercent={fullscreenOverlayWidthPercent}
+                                fullscreenOverlayCorner={fullscreenOverlayCorner}
+                                fullscreenOverlayVisible={fullscreenOverlayVisible}
+                                on:enterFullscreen={enterSessionFullscreen}
+                                on:exitClick={exitSessionFullscreen}
+                                on:toggleCinematicBars
+                            >
+                                <svelte:fragment slot="reaction-player">
+                                    {#if twitchPlayerSrc}
+                                        {#key twitchPlayerSrc}
+                                            <iframe
+                                                title="Twitch player for {twitchChannel}"
+                                                src={twitchPlayerSrc}
+                                                allowfullscreen
+                                                loading="lazy"
+                                                class="absolute inset-0 h-full w-full border-0"
+                                                data-testid="twitch-player"
+                                            ></iframe>
+                                        {/key}
+                                    {/if}
+                                </svelte:fragment>
+                                <svelte:fragment slot="dock-extra">
+                                    {#if sessionHasStream}
+                                        <SessionLayoutControls
+                                            fullscreenPrimaryVideo={fullscreenPrimaryVideo}
+                                            fullscreenOverlayWidthPercent={fullscreenOverlayWidthPercent}
+                                            fullscreenOverlayCorner={fullscreenOverlayCorner}
+                                            fullscreenOverlayVisible={fullscreenOverlayVisible}
+                                            onPrimaryChange={setPrimaryVideo}
+                                            onWidthChange={setOverlayWidth}
+                                            onCornerChange={setOverlayCorner}
+                                            onVisibleChange={setOverlayVisible}
+                                        />
+                                    {/if}
+                                </svelte:fragment>
+                            </ReactionStage>
 
-                    {#if !isFullscreen}
+                            {#if !isFullscreen}
                         <div class="mx-auto mt-4 w-full max-w-3xl px-4 text-center sm:px-6">
-                            <h1 class="text-lg font-semibold text-white">{originalVideoTitle || 'Synced video'}</h1>
-                            {#if originalVideoAuthor}
-                                <p class="mt-1 text-sm text-slate-400">by {originalVideoAuthor}</p>
+                                    <h1 class="text-lg font-semibold text-white">{originalVideoTitle || 'Synced video'}</h1>
+                                    {#if originalVideoAuthor}
+                                        <p class="mt-1 text-sm text-slate-400">by {originalVideoAuthor}</p>
+                                    {/if}
+                                    {#if twitchChannel}
+                                        <p class="mt-1 text-sm text-slate-500">twitch.tv/{twitchChannel} · ~{TWITCH_DELAY_SECONDS}s behind the host</p>
+                                    {/if}
+                                </div>
                             {/if}
-                            {#if twitchChannel}
-                                <p class="mt-1 text-sm text-slate-500">twitch.tv/{twitchChannel} · ~{TWITCH_DELAY_SECONDS}s behind the host</p>
-                            {/if}
-                        </div>
-                    {/if}
                         </div>
                     </div>
                 </main>

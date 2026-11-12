@@ -2,19 +2,19 @@
   import { createEventDispatcher, onDestroy, onMount } from "svelte";
   import { PlaySolid, PauseSolid, EyeSolid, EyeSlashSolid } from "flowbite-svelte-icons";
   import AdvancedVolumeControl from "./AdvancedVolumeControl.svelte";
-  import { floorSkipToOriginalAt } from "$lib/helpers/remixCueForm";
+  import { floorSkipToOriginalAt } from "#lib/helpers/remixCueForm.ts";
   import {
     panZoomWindow,
     scrollProgressFromPointer,
     scrollThumbGeometry,
-  } from "$lib/helpers/timelineZoomPan";
+  } from "#lib/helpers/timelineZoomPan.ts";
   import {
     buildRemixDisabledSections,
     canPlaceRemixCue,
     mergeRemixDisabledSections,
     remixDisabledLabelAt,
     remixDisabledSectionLabel,
-  } from "$lib/helpers/remixDisabledSections";
+  } from "#lib/helpers/remixDisabledSections.ts";
 
   export let currentTime = 0;
   export let duration = 0;

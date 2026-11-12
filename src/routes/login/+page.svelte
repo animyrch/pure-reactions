@@ -1,6 +1,6 @@
 
 <script>
-  import { env } from '$env/dynamic/public';
+  import { PUBLIC_FIREBASE_USE_EMULATORS } from '$app/env/public';
   export let data;
 
   let email = '';
@@ -15,7 +15,7 @@
   let backendMissingRequirements = [];
   let backendFallbackMessage = '';
   let isSubmitting = false;
-  const isUsingFirebaseEmulators = env.PUBLIC_FIREBASE_USE_EMULATORS === 'true';
+  const isUsingFirebaseEmulators = PUBLIC_FIREBASE_USE_EMULATORS === 'true';
 
   const passwordRules = [
     {
@@ -26,17 +26,17 @@
     {
       id: 'upper',
       label: 'Password must contain a upper case character',
-      test: (value) => /[A-Z]/.test(value)
+      test: (value) => (/[A-Z]/).test(value)
     },
     {
       id: 'numeric',
       label: 'Password must contain a numeric character',
-      test: (value) => /[0-9]/.test(value)
+      test: (value) => (/[0-9]/).test(value)
     },
     {
       id: 'lower',
       label: 'Password must contain an lower case character',
-      test: (value) => /[a-z]/.test(value)
+      test: (value) => (/[a-z]/).test(value)
     }
   ];
 

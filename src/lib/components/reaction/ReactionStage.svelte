@@ -1,7 +1,7 @@
 <script>
-    import ControlDock from "$lib/components/reaction/ControlDock.svelte";
-    import MissingReactionPlaceholder from "$lib/components/reaction/MissingReactionPlaceholder.svelte";
-    import { PLAYBACK_FRAME_COLORS, playbackDockBorderColor } from "$lib/helpers/reactionListItem";
+    import ControlDock from "#lib/components/reaction/ControlDock.svelte";
+    import MissingReactionPlaceholder from "#lib/components/reaction/MissingReactionPlaceholder.svelte";
+    import { PLAYBACK_FRAME_COLORS, playbackDockBorderColor } from "#lib/helpers/reactionListItem.js";
     import { createEventDispatcher, onMount, onDestroy } from "svelte";
 
     export let isFullscreen = false;
