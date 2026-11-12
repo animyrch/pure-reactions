@@ -169,6 +169,9 @@ describe('outside stats rules', () => {
     expect(isExcludedStatsEmail('EmirGokhanOzcelik@gmail.com')).toBe(true);
     expect(isExcludedStatsEmail('emirgokhanozcelik.other@gmail.com')).toBe(false);
     expect(isExcludedStatsEmail('qa@test.com')).toBe(true);
+    expect(isExcludedStatsEmail('owner@purereactions.com')).toBe(true);
+    expect(isExcludedStatsEmail('Hello@PureReactions.com')).toBe(true);
+    expect(isExcludedStatsEmail('name+purereactions@gmail.com')).toBe(true);
     expect(isExcludedStatsEmail('qa@TEST.com')).toBe(true);
     expect(isExcludedStatsEmail('qa@test.com.example')).toBe(false);
     expect(isExcludedStatsEmail('person@example.com')).toBe(false);

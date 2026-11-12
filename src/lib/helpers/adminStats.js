@@ -10,6 +10,7 @@ import * as secrets from '#lib/helpers/secretEqual.js';
 
 export const STATS_EXCLUDED_EMAIL_PREFIXES = ['emirgokhanozcelik@', 'emirgokhanozcelik+'];
 export const STATS_EXCLUDED_EMAIL_SUFFIX = '@test.com';
+export const STATS_EXCLUDED_EMAIL_INCLUDES = 'purereactions';
 export const STATS_EXCLUDED_DISPLAY_NAME_PREFIX = 'animy';
 export const STATS_EXCLUDED_DISPLAY_NAMES = ['demo by admin'];
 export const MIN_STATS_API_TOKEN_BYTES = 32;
@@ -69,7 +70,8 @@ export function isExcludedStatsEmail(email) {
   if (!normalized) return false;
   return (
     STATS_EXCLUDED_EMAIL_PREFIXES.some((prefix) => normalized.startsWith(prefix)) ||
-    normalized.endsWith(STATS_EXCLUDED_EMAIL_SUFFIX)
+    normalized.endsWith(STATS_EXCLUDED_EMAIL_SUFFIX) ||
+    normalized.includes(STATS_EXCLUDED_EMAIL_INCLUDES)
   );
 }
 
