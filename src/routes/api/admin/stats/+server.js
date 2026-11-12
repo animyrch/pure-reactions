@@ -1,4 +1,5 @@
 import { json } from '@sveltejs/kit';
+import { parseStatsIdRequest } from '#lib/helpers/adminStats.js';
 import { authorizeStatsRequest, loadOutsideStats, presentedStatsBearer } from '#lib/server/adminStats.js';
 import { initializeFirebaseAdmin } from '#lib/server/firebaseAdmin.js';
 import { RATE_LIMITS, enforceRateLimit } from '#lib/server/rateLimit.js';
@@ -29,17 +30,22 @@ export const GET = async ({ request }) => {
   }
 
   try {
-    const counts = await loadOutsideStats({ adminAuth, adminDb });
-    return json(
-      {
-        outside_signups: counts.outsideSignups,
-        outside_reactions_published: counts.published,
-        outside_reactions_published_ids: counts.publishedIds,
-        outside_reactions_unpublished: counts.unpublished,
-        generated_at: new Date().toISOString(),
-      },
-      { headers: NO_STORE },
-    );
+    const idLists = parseStatsIdRequest(new URL(request.url).searchParams.getAll('ids'));
+    const counts = await loadOutsideStats({
+      adminAuth,
+      adminDb,
+      includePublishedIds: idLists.published,
+      includeUnpublishedIds: idLists.unpublished,
+    });
+    const body = {
+      outside_signups: counts.outsideSignups,
+      outside_reactions_published: counts.published,
+      outside_reactions_unpublished: counts.unpublished,
+      generated_at: new Date().toISOString(),
+    };
+    if (idLists.published) body.outside_reactions_published_ids = counts.publishedIds;
+    if (idLists.unpublished) body.outside_reactions_unpublished_ids = counts.unpublishedIds;
+    return json(body, { headers: NO_STORE });
   } catch (error) {
     console.error('Admin stats failed:', error);
     return json({ error: 'Could not load stats.' }, { status: 500, headers: NO_STORE });

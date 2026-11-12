@@ -16,6 +16,22 @@ export const MIN_STATS_API_TOKEN_BYTES = 32;
 
 const UNCONFIGURED_TOKEN = '0'.repeat(MIN_STATS_API_TOKEN_BYTES);
 
+export function parseStatsIdRequest(raw) {
+  const tokens = new Set();
+  const values = Array.isArray(raw) ? raw : [raw];
+  for (const value of values) {
+    if (typeof value !== 'string') continue;
+    for (const part of value.split(',')) {
+      const token = part.trim().toLowerCase();
+      if (token === 'published' || token === 'unpublished') tokens.add(token);
+    }
+  }
+  return {
+    published: tokens.has('published'),
+    unpublished: tokens.has('unpublished'),
+  };
+}
+
 export function parseStatsUidList(raw) {
   if (typeof raw !== 'string') return [];
   const uids = [];

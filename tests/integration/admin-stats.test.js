@@ -5,6 +5,7 @@ import {
   classifyStatsUser,
   isExcludedStatsDisplayName,
   isExcludedStatsEmail,
+  parseStatsIdRequest,
   statsBearerTokensMatch,
 } from '#lib/helpers/adminStats.js';
 import * as secrets from '#lib/helpers/secretEqual.js';
@@ -176,6 +177,9 @@ describe('outside stats rules', () => {
     expect(isExcludedStatsDisplayName(' animyrch ')).toBe(true);
     expect(isExcludedStatsDisplayName('Demo by Admin')).toBe(true);
     expect(isExcludedStatsDisplayName('Outside Person')).toBe(false);
+    expect(parseStatsIdRequest('')).toEqual({ published: false, unpublished: false });
+    expect(parseStatsIdRequest('published, unpublished')).toEqual({ published: true, unpublished: true });
+    expect(parseStatsIdRequest(['ids', 'unpublished'])).toEqual({ published: false, unpublished: true });
 
     const excluded = new Set(['uid-emir']);
     expect(classifyStatsUser({ uid: 'uid-emir', email: 'person@example.com' }, excluded).excluded).toBe(true);
@@ -328,7 +332,10 @@ describe('GET /api/admin/stats', () => {
       isPublished: true,
     });
 
-    const response = await statsRequest(bearer(TOKEN), 'http://localhost/api/admin/stats?since=2020-01-01');
+    const response = await statsRequest(
+      bearer(TOKEN),
+      'http://localhost/api/admin/stats?since=2020-01-01&ids=published,unpublished',
+    );
     const raw = await response.text();
     expect(response.status).toBe(200);
     expect(response.headers.get('cache-control')).toBe('no-store');
@@ -339,6 +346,7 @@ describe('GET /api/admin/stats', () => {
       'outside_reactions_published',
       'outside_reactions_published_ids',
       'outside_reactions_unpublished',
+      'outside_reactions_unpublished_ids',
       'outside_signups',
     ]);
     expect(body.outside_signups).toBe(3);
@@ -349,6 +357,12 @@ describe('GET /api/admin/stats', () => {
       'rx-unknown',
     ]);
     expect(body.outside_reactions_unpublished).toBe(4);
+    expect(body.outside_reactions_unpublished_ids).toEqual([
+      'rx-draft',
+      'rx-missing-flag',
+      'rx-no-owner',
+      'rx-string-true',
+    ]);
     expect(body.outside_reactions_published + body.outside_reactions_unpublished).toBe(7);
     expect(Number.isInteger(body.outside_signups)).toBe(true);
     expect(Number.isInteger(body.outside_reactions_published)).toBe(true);
@@ -365,7 +379,6 @@ describe('GET /api/admin/stats', () => {
       'uid-outside-secret',
       'uid-emir',
       'uid-plus',
-      'rx-draft',
       'rx-emir',
       'rx-no-plus',
       'rx-animy',
@@ -394,12 +407,13 @@ describe('GET /api/admin/stats', () => {
       });
     }
 
-    const response = await statsRequest(bearer(TOKEN));
+    const response = await statsRequest(bearer(TOKEN), 'http://localhost/api/admin/stats?ids=published');
     const body = await response.json();
     expect(response.status).toBe(200);
     expect(body.outside_signups).toBe(1);
     expect(body.outside_reactions_published + body.outside_reactions_unpublished).toBe(total);
     expect(body.outside_reactions_published).toBe(Math.ceil(total / 2));
+    expect(body.outside_reactions_unpublished_ids).toBeUndefined();
     expect(body.outside_reactions_published_ids).toHaveLength(body.outside_reactions_published);
     expect(body.outside_reactions_published_ids[0]).toBe('rx-0000');
     expect(body.outside_reactions_published_ids.at(-1)).toBe('rx-0500');
@@ -450,8 +464,9 @@ describe('GET /api/admin/stats', () => {
     const body = await response.json();
     expect(response.status).toBe(200);
     expect(body.outside_signups).toBe(1);
-    expect(Object.keys(body)).toHaveLength(5);
-    expect(body.outside_reactions_published_ids).toEqual([]);
+    expect(Object.keys(body)).toHaveLength(4);
+    expect(body.outside_reactions_published_ids).toBeUndefined();
+    expect(body.outside_reactions_unpublished_ids).toBeUndefined();
     expect(JSON.stringify(body)).not.toContain('admin-2@example.com');
     expect(adminState.adminAuth.verifyIdToken).toHaveBeenCalledOnce();
   });
