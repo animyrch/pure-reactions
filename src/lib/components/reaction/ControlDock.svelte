@@ -7,7 +7,6 @@
   export let isPlaylist = false;
   export let isPlaylistAutoPlay = false;
   export let showAutoPlayButton = true;
-  export let showCinematicBars = false;
   export let onNext = null;
   export let nextDisabled = false;
   export let nextAriaLabel = "Next reaction";
@@ -15,7 +14,6 @@
   export let onPlayStateChanged = () => {};
   export let onSyncVideos = () => {};
   export let onToggleAutoPlaylist = () => {};
-  export let onToggleBars = () => {};
   export let onEnterFullscreen = () => {};
   export let onExitClick = () => {};
 
@@ -41,7 +39,6 @@
       {isPlaylist}
       {isPlaylistAutoPlay}
       {showAutoPlayButton}
-      {showCinematicBars}
       {isFullscreen}
       {onNext}
       {nextDisabled}
@@ -56,7 +53,6 @@
       on:playStateChanged={onPlayStateChanged}
       on:syncVideos={onSyncVideos}
       on:toggleAutoPlaylist={onToggleAutoPlaylist}
-      on:toggleBars={onToggleBars}
       on:enterFullscreen={onEnterFullscreen}
       on:exitClick={onExitClick}
       on:seek={(e) => onSeek(e.detail.time)}

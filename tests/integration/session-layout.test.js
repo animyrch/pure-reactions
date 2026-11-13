@@ -26,7 +26,6 @@ describe('session watch layout', () => {
             fullscreenOverlayWidthPercent: 35,
             fullscreenOverlayCorner: 'top-right',
             fullscreenOverlayVisible: true,
-            showCinematicBars: false,
         });
     });
 
@@ -42,7 +41,6 @@ describe('session watch layout', () => {
             fullscreenOverlayWidthPercent: 35,
             fullscreenOverlayCorner: 'bottom-left',
             fullscreenOverlayVisible: false,
-            showCinematicBars: true,
         });
     });
 
@@ -68,7 +66,6 @@ describe('session watch layout', () => {
             fullscreenOverlayWidthPercent: 50,
             fullscreenOverlayCorner: 'top-left',
             fullscreenOverlayVisible: false,
-            showCinematicBars: true,
         });
     });
 
@@ -92,6 +89,7 @@ describe('session watch layout', () => {
         expect(body).toContain('Watch layout controls');
         expect(body).toContain('z-70');
         expect(body).toContain('Enter fullscreen');
+        expect(body).not.toContain('Enable cinematic bars');
         expect(body).not.toContain('Seek reaction video');
         expect(body).toContain('data-overlay-corner="bottom-left"');
         expect(body).toContain('--overlay-width: 50%');

@@ -8,7 +8,6 @@
         PlaySolid,
         ClockOutline,
         ArrowsRepeatOutline,
-        VideoCameraOutline,
         ExpandOutline,
         ForwardStepSolid,
     } from "flowbite-svelte-icons";
@@ -23,7 +22,6 @@
     export let isPlaylist;
     export let isPlaylistAutoPlay;
     export let showAutoPlayButton = true;
-    export let showCinematicBars = false;
     export let isFullscreen = false;
     export let onNext = null;
     export let nextDisabled = false;
@@ -344,9 +342,6 @@
     function toggleAutoPlaylist() {
         dispatch("toggleAutoPlaylist");
     }
-    function toggleBars() {
-        dispatch("toggleBars");
-    }
     function enterFullscreen() {
         if (blocksFullscreenInPortrait()) {
             const alreadyShowing = get(toasts).some(
@@ -585,23 +580,6 @@
                         </button>
                     </div>
                 {/if}
-
-                <div class="group relative">
-                    <button
-                        type="button"
-                        class={`${iconButtonBase} ${showCinematicBars ? "bg-accent-primary/20 text-accent-primary" : ""}`}
-                        on:click={toggleBars}
-                        aria-pressed={showCinematicBars}
-                        aria-label={showCinematicBars
-                            ? "Disable cinematic bars"
-                            : "Enable cinematic bars"}
-                    >
-                        <VideoCameraOutline class="h-4 w-4" />
-                        <span class="sr-only"
-                            >Toggle cinematic letterboxing</span
-                        >
-                    </button>
-                </div>
 
                 {#if !isFullscreen}
                     <div class="group relative">

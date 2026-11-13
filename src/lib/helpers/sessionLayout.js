@@ -14,7 +14,6 @@ export const defaultSessionLayout = () => ({
     fullscreenOverlayWidthPercent: DEFAULT_FULLSCREEN_OVERLAY_WIDTH_PERCENT,
     fullscreenOverlayCorner: DEFAULT_FULLSCREEN_OVERLAY_CORNER,
     fullscreenOverlayVisible: true,
-    showCinematicBars: false,
 });
 
 export const normalizeSessionLayout = (value) => {
@@ -26,7 +25,6 @@ export const normalizeSessionLayout = (value) => {
         ),
         fullscreenOverlayCorner: normalizeFullscreenOverlayCorner(source.fullscreenOverlayCorner),
         fullscreenOverlayVisible: source.fullscreenOverlayVisible !== false,
-        showCinematicBars: source.showCinematicBars === true,
     };
 };
 
