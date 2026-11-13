@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { json } from '@sveltejs/kit';
-import { COLLECTION_RATE_LIMITS } from '$lib/constants/firebase';
+import { COLLECTION_RATE_LIMITS } from '#lib/constants/firebase.js';
 import {
   ONE_DAY_MS,
   ONE_HOUR_MS,
@@ -10,8 +10,8 @@ import {
   exportLeaseDecision,
   rateLimitDecision,
   visitorKey,
-} from '$lib/helpers/rateLimit';
-import { initializeFirebaseAdmin } from '$lib/server/firebaseAdmin';
+} from '#lib/helpers/rateLimit.js';
+import { initializeFirebaseAdmin } from '#lib/server/firebaseAdmin.js';
 
 /**
  * Shared fixed-window counter. Each route passes its own bucket, limit, and window.
@@ -63,6 +63,12 @@ export const RATE_LIMITS = {
     limit: 1,
     windowMs: ONE_DAY_MS,
   },
+  // Lists every account and reaction. One shared token bucket, thirty calls an hour.
+  adminStats: {
+    bucket: 'admin-stats',
+    limit: 30,
+    windowMs: ONE_HOUR_MS,
+  },
 };
 
 let loggedMissingAdmin = false;
@@ -90,6 +96,7 @@ export const USER_RATE_LIMIT_BUCKETS = [
   RATE_LIMITS.accountDelete.bucket,
   RATE_LIMITS.ageConfirmation.bucket,
   RATE_LIMITS.accountExport.bucket,
+  RATE_LIMITS.adminStats.bucket,
 ];
 
 export function createFirestoreRateLimitStore(adminDb, collectionName = COLLECTION_RATE_LIMITS) {

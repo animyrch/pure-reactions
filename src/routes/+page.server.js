@@ -1,5 +1,5 @@
-import { getReactionsByPageServer } from '$lib/server/firebaseAdmin';
-import { SORTINGS } from '$lib/constants/sortings';
+import { getReactionsByPageServer } from '#lib/server/firebaseAdmin.js';
+import { SORTINGS } from '#lib/constants/sortings.js';
 
 /** Home features one fixed page of the latest published reactions. */
 const PAGE_SIZE = 15;

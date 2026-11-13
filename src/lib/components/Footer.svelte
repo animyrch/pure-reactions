@@ -1,5 +1,6 @@
 <script>
-  import { page } from '$app/stores';
+  import { pageStore } from "#lib/helpers/pageStore.js";
+const page = pageStore();
   
   // Don't show footer on certain routes
   $: isReactionRoute = $page.url.pathname?.startsWith('/reaction/');
@@ -20,12 +21,13 @@
   }
 </script>
 
+
 {#if !hideFooter}
   <footer class="footer-container safe-padding-bottom">
     <div class="footer-content mx-auto max-w-7xl px-4 py-12 md:py-16">
       <!-- Main Footer Content -->
       <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-        
+
         <!-- About Section -->
         <div>
           <h3 class="mb-4 text-sm font-semibold uppercase tracking-wider text-text-primary">
@@ -162,9 +164,7 @@
           </div>
           
           <!-- Copyright Row -->
-          <p class="text-center text-sm text-text-muted">
-            &copy; 2023 - {new Date().getFullYear()} Pure Reactions
-          </p>
+          <p class="text-center text-sm text-text-muted">© 2023 - {new Date().getFullYear()} Pure Reactions</p>
         </div>
       </div>
     </div>

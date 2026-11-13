@@ -1,46 +1,46 @@
 import { onDestroy, onMount, tick } from 'svelte';
-import { env } from '$env/dynamic/public';
+import { PUBLIC_SYNC_ENGINE_V2 } from '$app/env/public';
 import { get } from 'svelte/store';
-import { readAdHocQueueFromUrl } from '$lib/helpers/adHocQueue';
+import { readAdHocQueueFromUrl } from '#lib/helpers/adHocQueue.js';
 import {
   readAutoPlayCookie,
   readCinematicBarsCookie,
   toggleFullscreenBodyClass,
   writeCinematicBarsCookie
-} from '$lib/helpers/reactionPlayer';
+} from '#lib/helpers/reactionPlayer.ts';
 import {
   verifyAndSyncTwinPlayersMetadata,
   type VerifyAndSyncTwinPlayersMetadataParams
-} from '$lib/helpers/twinPlayersMetadata';
-import { createTikTokOriginalPlayerAdapter } from '$lib/helpers/twinPlayersTikTokOriginal';
+} from '#lib/helpers/twinPlayersMetadata.ts';
+import { createTikTokOriginalPlayerAdapter } from '#lib/helpers/twinPlayersTikTokOriginal.ts';
 import {
   injectYoutubeIframeApiScript,
   waitForTwinPlayerElements,
   waitForYoutubeIframeApiReady
-} from '$lib/helpers/twinPlayersBootstrap';
-import { runTwinPlayersBootstrapSequence } from '$lib/helpers/twinPlayersInitialization';
-import { createTwinPlayersLoadingController } from '$lib/helpers/twinPlayersLoadingController';
+} from '#lib/helpers/twinPlayersBootstrap.ts';
+import { runTwinPlayersBootstrapSequence } from '#lib/helpers/twinPlayersInitialization.ts';
+import { createTwinPlayersLoadingController } from '#lib/helpers/twinPlayersLoadingController.ts';
 import {
   createTwinPlayersFullscreenWindowBindings,
   createTwinPlayersGateWatchdog,
   destroyTwinPlayersPlayers
-} from '$lib/helpers/twinPlayersLifecycleController';
-import { createTwinPlayersInstanceController } from '$lib/helpers/twinPlayersInstanceController';
-import { createTwinPlayersControlSurfaceController } from '$lib/helpers/twinPlayersControlSurface';
-import { createTwinPlayersEditorController } from '$lib/helpers/twinPlayersEditorController';
-import { createTwinPlayersNavigationController } from '$lib/helpers/twinPlayersNavigationController';
+} from '#lib/helpers/twinPlayersLifecycleController.ts';
+import { createTwinPlayersInstanceController } from '#lib/helpers/twinPlayersInstanceController.ts';
+import { createTwinPlayersControlSurfaceController } from '#lib/helpers/twinPlayersControlSurface.ts';
+import { createTwinPlayersEditorController } from '#lib/helpers/twinPlayersEditorController.ts';
+import { createTwinPlayersNavigationController } from '#lib/helpers/twinPlayersNavigationController.ts';
 import {
   createTwinPlayersPlaybackSyncController,
   type TwinPlayersPlaybackProgressionHooks
-} from '$lib/helpers/twinPlayersPlaybackSyncController';
+} from '#lib/helpers/twinPlayersPlaybackSyncController.ts';
 import {
   createTwinPlayersOrchestrationController,
   type TwinPlayersOrchestrationNavigationHooks
-} from '$lib/helpers/twinPlayersOrchestrationController';
+} from '#lib/helpers/twinPlayersOrchestrationController.ts';
 import {
   createTwinPlayersStateController,
   type TwinPlayersState
-} from '$lib/helpers/twinPlayersStateController';
+} from '#lib/helpers/twinPlayersStateController.ts';
 
 declare const YT: any;
 
@@ -95,8 +95,8 @@ export function useTwinPlayers({
 
   const initialUrlState = getInitialUrlState();
   const lazySyncRequested = Boolean(initialUrlState.mobileLazySync);
-  const enableSyncEngineV2 = initialUrlState.syncEngine === 'v2'
-    || (initialUrlState.syncEngine !== 'v1' && env.PUBLIC_SYNC_ENGINE_V2 === 'true');
+  const enableSyncEngineV2 = initialUrlState.syncEngine === 'v2' || initialUrlState.syncEngine !== 'v1' && PUBLIC_SYNC_ENGINE_V2 === 'true';
+
   // console.log('Initial URL State:', initialUrlState);
   let initRetryCount = 0;
   const MAX_INIT_RETRIES = 3;
@@ -121,7 +121,7 @@ export function useTwinPlayers({
     pageSlug: slug,
     playlistDocumentId: initialUrlState.playlistId,
     queueSlug: initialUrlState.queueSlug,
-    queueIndex: Number.isFinite(initialUrlState.queueIndex as number) ? (initialUrlState.queueIndex as number) : 0,
+    queueIndex: Number.isFinite(initialUrlState.queueIndex as number) ? initialUrlState.queueIndex as number : 0,
     isQueueAutoPlay: Boolean(initialUrlState.queueAutoPlay),
     showCinematicBars: readCinematicBarsCookie(),
     isFullscreen: initialUrlState.isFullscreen,
@@ -265,13 +265,15 @@ export function useTwinPlayers({
 
       updateState({ playerOriginal: null, playerReaction: null });
       setTimeout(async () => {
-        if (isLiveInstance()) {
-          const slug = get(state).pageSlug;
-          if (slug) {
-            await buildInterface(slug, { isUpdate: true });
+          if (isLiveInstance()) {
+            const slug = get(state).pageSlug;
+            if (slug) {
+              await buildInterface(slug, { isUpdate: true });
+            }
           }
-        }
-      }, 500);
+        },
+        500
+      );
     },
     retryDelayMs: INIT_RETRY_DELAY,
   });
@@ -659,16 +661,16 @@ export function useTwinPlayers({
     initRetryCount++;
     console.log(`[TwinPlayers] ${message} (attempt ${initRetryCount}/${MAX_INIT_RETRIES})`);
     setTimeout(() => {
-      if (isLiveInstance()) {
-        init();
-      }
+        if (isLiveInstance()) {
+          init();
+        }
     }, INIT_RETRY_DELAY);
 
     return true;
   };
 
   const init = async () => {
-    const seq = (initSeq += 1);
+    const seq = initSeq += 1;
     log('init start', { seq, retryCount: initRetryCount, instanceId });
     debugClickGate('[TwinPlayers] init start', { seq, retryCount: initRetryCount }, true);
 

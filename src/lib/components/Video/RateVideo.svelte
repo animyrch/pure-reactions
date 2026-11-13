@@ -1,6 +1,6 @@
 <script>
     import { ThumbsUpOutline } from 'flowbite-svelte-icons';
-    import { resolveTikTokWatchUrl } from '$lib/helpers/platform';
+    import { resolveTikTokWatchUrl } from '#lib/helpers/platform.js';
 
     export let videoId;
     export let platform = 'youtube';

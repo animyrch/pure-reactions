@@ -1,8 +1,8 @@
 <script>
-  import SEO from '$lib/components/SEO.svelte';
-  import ReactionsList from '$lib/components/ReactionsList.svelte';
+  import SEO from '#lib/components/SEO.svelte';
+  import ReactionsList from '#lib/components/ReactionsList.svelte';
   import { goto } from '$app/navigation';
-  import { browser } from '$app/environment';
+  import { browser } from '$app/env';
 
   export let data = {};
 
@@ -33,7 +33,7 @@
     if (!Number.isFinite(total) || total <= 0) return '';
     const rounded = Math.round(total);
     const hours = Math.floor(rounded / 3600);
-    const minutes = Math.floor((rounded % 3600) / 60);
+    const minutes = Math.floor(rounded % 3600 / 60);
     const secs = rounded % 60;
     const paddedSeconds = String(secs).padStart(2, '0');
     if (hours > 0) {
@@ -149,23 +149,35 @@
       {/if}
 
       <div class="flex min-w-0 flex-1 flex-col">
-        <p class="text-xs font-semibold uppercase tracking-[0.3em] text-text-muted">
-          Reactions to Original Content
-        </p>
-        <h1 class="mt-2 text-2xl font-bold text-text-primary sm:text-3xl lg:text-4xl">
-          {originalVideo.title || 'Original Video'}
-        </h1>
+        <p
+          class="text-xs font-semibold uppercase tracking-[0.3em] text-text-muted"
+        >Reactions to Original Content</p>
+
+        <h1
+          class="mt-2 text-2xl font-bold text-text-primary sm:text-3xl lg:text-4xl"
+        >{originalVideo.title || 'Original Video'}</h1>
 
         {#if originalVideo.author || durationLabel}
           <p class="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-text-secondary">
             {#if originalVideo.platform === 'tiktok'}
-              <svg class="h-4 w-4 text-text-primary" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
-                <path d="M14.5 3c.4 2.4 1.8 4.1 4.2 4.4v2.7c-1.5 0-2.9-.5-4.1-1.3v6.7c0 3.4-2.7 6.1-6.2 6.1S2.2 19 2.2 15.5 4.9 9.4 8.4 9.4c.4 0 .8 0 1.2.1v2.8c-.4-.2-.8-.3-1.2-.3-1.9 0-3.4 1.5-3.4 3.5s1.5 3.5 3.4 3.5 3.4-1.5 3.4-3.5V3h2.7z" />
+              <svg
+                class="h-4 w-4 text-text-primary"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                fill="currentColor"
+              >
+                <path
+                  d="M14.5 3c.4 2.4 1.8 4.1 4.2 4.4v2.7c-1.5 0-2.9-.5-4.1-1.3v6.7c0 3.4-2.7 6.1-6.2 6.1S2.2 19 2.2 15.5 4.9 9.4 8.4 9.4c.4 0 .8 0 1.2.1v2.8c-.4-.2-.8-.3-1.2-.3-1.9 0-3.4 1.5-3.4 3.5s1.5 3.5 3.4 3.5 3.4-1.5 3.4-3.5V3h2.7z"
+                ></path>
               </svg>
             {:else}
-              <svg class="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
-                <rect width="24" height="24" rx="5" fill="#ff0033" />
-                <path d="M10 8.2v7.6l6.2-3.8L10 8.2z" fill="#fff" />
+              <svg
+                class="h-4 w-4"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <rect width="24" height="24" rx="5" fill="#ff0033"></rect>
+                <path d="M10 8.2v7.6l6.2-3.8L10 8.2z" fill="#fff"></path>
               </svg>
             {/if}
             {#if originalVideo.author}
@@ -184,13 +196,32 @@
           {heroDescription}
         </p>
 
-        <div class="mt-auto flex flex-col gap-4 pt-6 sm:flex-row sm:items-center sm:justify-between">
-          <p class="flex items-center gap-2 text-sm text-text-muted">
-            <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
-              <circle cx="9" cy="8" r="2.4" />
-              <circle cx="16" cy="9" r="2" />
-              <path stroke-linecap="round" d="M4.8 18.2c.5-2.4 2.3-3.7 4.2-3.7s3.7 1.3 4.2 3.7" />
-              <path stroke-linecap="round" d="M13.2 14.7c1.5-.3 3 .4 3.8 2.1" />
+        <div
+          class="mt-auto flex flex-col gap-4 pt-6 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <p
+            class="flex items-center gap-2 text-sm text-text-muted"
+          >
+            <svg
+              class="h-5 w-5 shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              aria-hidden="true"
+            >
+              <circle cx="9" cy="8" r="2.4"></circle>
+              <circle cx="16" cy="9" r="2"></circle>
+
+              <path
+                stroke-linecap="round"
+                d="M4.8 18.2c.5-2.4 2.3-3.7 4.2-3.7s3.7 1.3 4.2 3.7"
+              ></path>
+
+              <path
+                stroke-linecap="round"
+                d="M13.2 14.7c1.5-.3 3 .4 3.8 2.1"
+              ></path>
             </svg>
             <span>{creatorCountLabel}</span>
           </p>
@@ -201,12 +232,28 @@
               class="inline-flex items-center justify-center gap-3 rounded-full bg-accent-primary px-6 py-3 text-base font-semibold text-background transition hover:bg-accent-primary/90 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               aria-label={watchAllLabel}
             >
-              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M8 5.5v13l11-6.5-11-6.5z" />
-              </svg>
-              {watchAllLabel}
-              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 6l6 6-6 6" />
+              <svg
+                class="h-4 w-4"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                aria-hidden="true"
+              ><path d="M8 5.5v13l11-6.5-11-6.5z"></path></svg>
+
+              {watchAllLabel} 
+
+              <svg
+                class="h-4 w-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.2"
+                aria-hidden="true"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M9 6l6 6-6 6"
+                ></path>
               </svg>
             </button>
           {/if}

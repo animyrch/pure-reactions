@@ -1,4 +1,4 @@
-import { auth } from '$lib/helpers/firebase';
+import { auth } from '#lib/helpers/firebase.js';
 
 export const deleteOwnedContent = async ({ kind, id }) => {
 	const user = auth.currentUser;

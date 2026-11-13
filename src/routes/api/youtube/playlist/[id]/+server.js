@@ -1,9 +1,9 @@
 // src/routes/api/youtube/playlist/[id]/+server.js
 import { json } from '@sveltejs/kit';
-import { env } from '$env/dynamic/private';
-import { prepareYouTubePlaylistResponse } from '$lib/helpers/youtubePlaylistCache';
-import { RATE_LIMITS, consumeRateLimit } from '$lib/server/rateLimit';
-import { resolveStoredYouTubePlaylist } from '$lib/server/youtubePlaylistCache';
+import { YOUTUBE_API_KEY } from '$app/env/private';
+import { prepareYouTubePlaylistResponse } from '#lib/helpers/youtubePlaylistCache.js';
+import { RATE_LIMITS, consumeRateLimit } from '#lib/server/rateLimit.js';
+import { resolveStoredYouTubePlaylist } from '#lib/server/youtubePlaylistCache.js';
 
 /**
  * Deterministic sample playlist items returned when no YOUTUBE_API_KEY is configured.
@@ -66,7 +66,7 @@ export const GET = async ({ params, url, request }) => {
       includePlaylistTitle: url.searchParams.get('includePlaylistTitle') === '1',
       maxResults: url.searchParams.get('maxResults'),
       offset: url.searchParams.get('offset'),
-      apiKey: env.YOUTUBE_API_KEY || '',
+      apiKey: YOUTUBE_API_KEY || '',
       placeholderItems: PLACEHOLDER_PLAYLIST_ITEMS,
       resolve: (input) =>
         resolveStoredYouTubePlaylist({

@@ -1,14 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { FIREBASE_CONFIG } from '$lib/constants/firebase';
-import { pickOriginalVideoThumbnailFromReactions } from '$lib/helpers/originalVideo';
-import { canonicalTikTokStorageFields, normalizeOriginalVideoPlatform } from '$lib/helpers/platform';
-import { hasStoredWatchDuration } from '$lib/helpers/watchDuration';
-import {
-  createAdminWatchDurationIo,
-  ensureReactionWatchDurationAdmin,
-} from '$lib/server/watchDurationAdmin';
-import { env } from '$env/dynamic/private';
+import { FIREBASE_CONFIG } from '#lib/constants/firebase.js';
+import { pickOriginalVideoThumbnailFromReactions } from '#lib/helpers/originalVideo.js';
+import { canonicalTikTokStorageFields, normalizeOriginalVideoPlatform } from '#lib/helpers/platform.js';
+import { hasStoredWatchDuration } from '#lib/helpers/watchDuration.js';
+import { createAdminWatchDurationIo, ensureReactionWatchDurationAdmin } from '#lib/server/watchDurationAdmin.js';
+
+import { PUBLIC_FIREBASE_PROJECT_ID, PUBLIC_FIREBASE_USE_EMULATORS } from '$app/env/public';
+import { FIREBASE_SERVICE_ACCOUNT, GOOGLE_APPLICATION_CREDENTIALS } from '$app/env/private';
 
 let adminAuth = null;
 let adminDb = null;
@@ -17,24 +16,14 @@ let adminInitialized = false;
 let adminMissingConfigurationLogged = false;
 
 function isUsingEmulators() {
-  // Prefer SvelteKit private env imports when available, fall back to process.env
-  try {
-    if (env && typeof env.PUBLIC_FIREBASE_USE_EMULATORS !== 'undefined') {
-      return String(env.PUBLIC_FIREBASE_USE_EMULATORS) === 'true';
-    }
-  } catch (e) {
-    // ignore
+  if (PUBLIC_FIREBASE_USE_EMULATORS === 'true' || PUBLIC_FIREBASE_USE_EMULATORS === 'false') {
+    return PUBLIC_FIREBASE_USE_EMULATORS === 'true';
   }
   return process.env.PUBLIC_FIREBASE_USE_EMULATORS === 'true';
 }
 
 function getAdminProjectId() {
-  return (
-    FIREBASE_CONFIG.projectId ||
-    env.PUBLIC_FIREBASE_PROJECT_ID ||
-    process.env.PUBLIC_FIREBASE_PROJECT_ID ||
-    'demo-pure-reactions'
-  );
+  return FIREBASE_CONFIG.projectId || PUBLIC_FIREBASE_PROJECT_ID || process.env.PUBLIC_FIREBASE_PROJECT_ID || 'demo-pure-reactions';
 }
 
 function applyAdminEmulatorEnvironment() {
@@ -43,7 +32,7 @@ function applyAdminEmulatorEnvironment() {
 }
 
 function resolveServiceAccount() {
-  const raw = env.FIREBASE_SERVICE_ACCOUNT;
+  const raw = FIREBASE_SERVICE_ACCOUNT;
   if (raw?.trim()) {
     const trimmed = raw.trim();
     if (trimmed.startsWith('{')) {
@@ -56,7 +45,7 @@ function resolveServiceAccount() {
     }
   }
 
-  const credentialsPath = env.GOOGLE_APPLICATION_CREDENTIALS;
+  const credentialsPath = GOOGLE_APPLICATION_CREDENTIALS;
   if (credentialsPath?.trim()) {
     const absolutePath = path.resolve(process.cwd(), credentialsPath.trim());
     if (fs.existsSync(absolutePath)) {
@@ -141,7 +130,7 @@ export async function initializeFirebaseAdmin() {
  * Returns a plain object with the fields needed for SSR/SEO, or null if not found.
  */
 export async function getReactionBySlug(slug) {
-  const { COLLECTION_REACTION_BINOMES } = await import('$lib/constants/firebase');
+  const { COLLECTION_REACTION_BINOMES } = await import('#lib/constants/firebase.js');
   const { adminDb } = await initializeFirebaseAdmin();
   if (!adminDb) {
     console.error('[getReactionBySlug] Missing adminDb');
@@ -212,7 +201,7 @@ function serializeFirestoreValue(value) {
  * @returns {Promise<{ reactions: Array, lastCursorMs: number|null }>}
  */
 export async function getReactionsByPageServer(cursor, limitBy, _sort) {
-  const { COLLECTION_REACTION_BINOMES } = await import('$lib/constants/firebase');
+  const { COLLECTION_REACTION_BINOMES } = await import('#lib/constants/firebase.js');
   const { adminDb } = await initializeFirebaseAdmin();
 
   if (!adminDb) {
@@ -271,7 +260,7 @@ export async function getReactionsByPageServer(cursor, limitBy, _sort) {
  */
 export async function getReactionsByReactorServer(name) {
   if (!name) return [];
-  const { COLLECTION_REACTION_BINOMES } = await import('$lib/constants/firebase');
+  const { COLLECTION_REACTION_BINOMES } = await import('#lib/constants/firebase.js');
   const { adminDb } = await initializeFirebaseAdmin();
   if (!adminDb) return [];
 
@@ -302,7 +291,7 @@ export async function getReactionsByReactorServer(name) {
  */
 export async function getReactionsByCreatorServer(name) {
   if (!name) return [];
-  const { COLLECTION_REACTION_BINOMES } = await import('$lib/constants/firebase');
+  const { COLLECTION_REACTION_BINOMES } = await import('#lib/constants/firebase.js');
   const { adminDb } = await initializeFirebaseAdmin();
   if (!adminDb) return [];
 
@@ -347,7 +336,7 @@ function pickOriginalVideoDurationSeconds(data) {
  */
 export async function getReactionsByOriginalSlug(slug) {
   if (!slug) return null;
-  const { COLLECTION_REACTION_BINOMES } = await import('$lib/constants/firebase');
+  const { COLLECTION_REACTION_BINOMES } = await import('#lib/constants/firebase.js');
   const { adminDb } = await initializeFirebaseAdmin();
   if (!adminDb) {
     console.error('[getReactionsByOriginalSlug] Missing adminDb');
@@ -423,7 +412,7 @@ export async function getReactionsByOriginalSlug(slug) {
  * Returns a plain object with the fields needed for SSR/SEO, or null if not found.
  */
 export async function getPlaylistBySlug(slug) {
-  const { COLLECTION_PLAYLISTS, COLLECTION_REACTION_BINOMES } = await import('$lib/constants/firebase');
+  const { COLLECTION_PLAYLISTS, COLLECTION_REACTION_BINOMES } = await import('#lib/constants/firebase.js');
   const { adminDb } = await initializeFirebaseAdmin();
   if (!adminDb) {
     return null;
@@ -438,16 +427,14 @@ export async function getPlaylistBySlug(slug) {
     const data = docSnap.data();
 
     const firstItemThumbnail = Array.isArray(data.sequenceItems)
-      ? (data.sequenceItems.find((i) => i.thumbnailUrl)?.thumbnailUrl ?? null)
-      : null;
-    const firstOriginalVideoId = Array.isArray(data.originalVideoIds)
-      ? (data.originalVideoIds[0] ?? null)
+      ? data.sequenceItems.find((i) => i.thumbnailUrl)?.thumbnailUrl ?? null
       : null;
 
+    const firstOriginalVideoId = Array.isArray(data.originalVideoIds) ? data.originalVideoIds[0] ?? null : null;
+
     // Fetch the reaction video title from the first reaction document.
-    const firstReactionId = Array.isArray(data.reactionBinomeIds)
-      ? (data.reactionBinomeIds[0] ?? null)
-      : null;
+    const firstReactionId = Array.isArray(data.reactionBinomeIds) ? data.reactionBinomeIds[0] ?? null : null;
+
     let firstReactionVideoTitle = null;
     let firstCustomReactionTitle = null;
     let firstReactionDescription = null;
@@ -487,7 +474,7 @@ export async function getPlaylistBySlug(slug) {
  * Fetch a moment document by id (or stored slug field matching route param).
  */
 export async function getMomentByRouteId(routeId) {
-  const { COLLECTION_MOMENTS } = await import('$lib/constants/firebase');
+  const { COLLECTION_MOMENTS } = await import('#lib/constants/firebase.js');
   const { adminDb } = await initializeFirebaseAdmin();
   if (!adminDb) {
     console.error('[getMomentByRouteId] adminDb is null or undefined');
@@ -528,7 +515,7 @@ export async function getMomentByRouteId(routeId) {
  * Published moment reactions for feed ordering (newest first).
  */
 export async function getPublishedMomentReactionsServer(momentId) {
-  const { COLLECTION_REACTION_BINOMES } = await import('$lib/constants/firebase');
+  const { COLLECTION_REACTION_BINOMES } = await import('#lib/constants/firebase.js');
   const { adminDb } = await initializeFirebaseAdmin();
   if (!adminDb || !momentId) {
     return [];

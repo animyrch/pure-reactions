@@ -1,5 +1,5 @@
 <script>
-  import CinematicButton from '$lib/components/design-system/CinematicButton.svelte';
+  import CinematicButton from '#lib/components/design-system/CinematicButton.svelte';
 
   export let visible = false;
   export let onPlay = () => {};

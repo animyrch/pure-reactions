@@ -1,4 +1,4 @@
-import { buildYouTubeThumbnailUrl } from '$lib/helpers/originalVideo';
+import { buildYouTubeThumbnailUrl } from '#lib/helpers/originalVideo.js';
 
 /** A queue cover is one thumbnail, or the first four once they fill a 2×2. */
 export const QUEUE_COVER_SIZE = 4;

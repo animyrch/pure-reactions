@@ -308,7 +308,7 @@ Server-only fixed-window counters for expensive routes. Client Firestore rules d
 
 A public route counts the visitor address. A signed-in route counts the Firebase user id. The stored document id is the route bucket plus a hash, so the raw address is not stored. One document is reused for that caller and route. When the window changes, the count starts again.
 
-A saved YouTube or TikTok answer does not count. The route spends an allowance only when it is about to call YouTube or TikTok. Signed-in delete, enrich, and age-confirmation calls count after the login token is valid. Account deletion removes that user's signed-in counters. Visitor counters are not tied to an account and are left in place.
+A saved YouTube or TikTok answer does not count. The route spends an allowance only when it is about to call YouTube or TikTok. Signed-in delete, enrich, and age-confirmation calls count after the login token is valid. `GET /api/admin/stats` uses the `admin-stats` bucket after its credential is valid: thirty calls an hour for each allowed Firebase UID, and thirty for the shared bearer token. The route stores nothing except that counter. Account deletion removes that user's signed-in counters. Visitor counters and the shared bearer-token counter stay in place.
 
 If the counter cannot be read, the request continues. A caller over the allowance receives HTTP 429.
 
@@ -316,7 +316,7 @@ Account export is the exception to the fixed window. `POST /api/account/export` 
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `bucket` | string | Yes | Route name, such as `youtube-comments` or `account-export` |
+| `bucket` | string | Yes | Route name, such as `youtube-comments`, `account-export`, or `admin-stats` |
 | `count` | number | Yes for fixed windows | Calls already allowed in the current window |
 | `windowStart` | number | Yes for fixed windows | Epoch milliseconds when this window began |
 | `lastExportAt` | number | After a successful export | Epoch milliseconds when the export file was built. A second export waits 24 hours from this stamp |
@@ -598,7 +598,7 @@ const snapshot = await getDocs(q);
 ### Searching Reactions (Algolia)
 
 ```javascript
-import { getSearchProvider } from '$lib/services/search';
+import { getSearchProvider } from '#lib/services/search/index.js';
 
 const provider = getSearchProvider();
 const results = await provider.search('metal reaction', {
@@ -646,6 +646,12 @@ const docRef = await addDoc(collection(db, 'reactions'), {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.31 | 2026-11-12 | `GET /api/admin/stats` leaves out `emirtablet@outlook.com` |
+| 1.30 | 2026-11-12 | `GET /api/admin/stats` leaves out accounts whose email contains `purereactions` |
+| 1.29 | 2026-11-12 | `GET /api/admin/stats` includes `outside_reactions_published_ids` and `outside_reactions_unpublished_ids` only when `ids` asks for `published`, `unpublished`, or both |
+| 1.28 | 2026-11-12 | `GET /api/admin/stats` leaves out accounts and reactions named Animy… or Demo by Admin. Those are owner channels, not outside reactions |
+| 1.27 | 2026-11-12 | `GET /api/admin/stats` also returns `outside_reactions_published_ids`, the document ids of published reactions whose creator is outside |
+| 1.26 | 2026-11-12 | `GET /api/admin/stats` reads account and reaction counts. It stores nothing of its own. Its allowance is the existing `admin-stats` bucket on `rateLimits` |
 | 1.25 | 2026-11-09 | Account export holds a two-minute lease and writes `lastExportAt` only after the file is built. An expired lease can be replaced without clearing a completed export |
 | 1.24 | 2026-11-09 | Added server-only `tiktokMetadataCache`. A successful TikTok oEmbed answer is reused until `expiresAt`, one day after it was fetched |
 | 1.23 | 2026-11-09 | `sessionViewerOwners/{sessionId}/{uid}/{index}` stores one public slot id at indexes `0` through `2`. The host deletes that session's claims before deleting an expired session |

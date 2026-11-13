@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { fetchYouTubeComments, formatCommentAge, formatLikeCount } from '$lib/helpers/youtubeComments';
+  import { fetchYouTubeComments, formatCommentAge, formatLikeCount } from '#lib/helpers/youtubeComments.js';
   import { YoutubeSolid } from 'flowbite-svelte-icons';
 
   /** @type {string} YouTube video ID */

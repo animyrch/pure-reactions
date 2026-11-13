@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   buildMomentReactionEditHref,
   syncMomentReactionDial
-} from '$lib/helpers/momentReactionDial';
+} from '#lib/helpers/momentReactionDial.js';
 
 describe('moment reaction edit dial', () => {
   it('builds an edit-reaction link that keeps the moment id', () => {

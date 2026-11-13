@@ -1,9 +1,9 @@
 import { goto } from '$app/navigation';
-import { browser } from '$app/environment';
+import { browser } from '$app/env';
 import { get } from 'svelte/store';
-import { showToast } from '$lib/stores/toast';
-import { currentPath } from '$lib/stores/route';
-import { currentUser } from '$lib/stores/user';
+import { showToast } from '#lib/stores/toast.js';
+import { currentPath } from '#lib/stores/route.js';
+import { currentUser } from '#lib/stores/user.js';
 
 let logoutRedirectInProgress = false;
 

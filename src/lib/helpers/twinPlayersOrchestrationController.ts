@@ -1,19 +1,19 @@
-import { getReaction } from '$lib/helpers/firebase';
+import { getReaction } from '#lib/helpers/firebase.js';
 import {
   buildTwinPlayersInPlaceStatePatch,
   buildTwinPlayersInPlaceTransitionPlan
-} from '$lib/helpers/twinPlayersInPlaceTransition';
+} from '#lib/helpers/twinPlayersInPlaceTransition.ts';
 import {
   DEFAULT_FULLSCREEN_OVERLAY_CORNER,
   DEFAULT_FULLSCREEN_OVERLAY_WIDTH_PERCENT,
   DEFAULT_FULLSCREEN_PRIMARY_VIDEO,
   deriveTwinPlayersReactionData
-} from '$lib/helpers/twinPlayersReactionData';
-import { buildTwinPlayersSetupStatePatch } from '$lib/helpers/twinPlayersSetupState';
-import type { VerifyAndSyncTwinPlayersMetadataParams } from '$lib/helpers/twinPlayersMetadata';
-import type { TwinPlayersState } from '$lib/helpers/twinPlayersStateController';
-import { ensureEmbeddedPlayerHost, restoreEmbeddedPlayerContainer } from '$lib/helpers/twinPlayersTikTokOriginal';
-import { originalLoadStartSeconds } from '$lib/helpers/remixPlayback';
+} from '#lib/helpers/twinPlayersReactionData.ts';
+import { buildTwinPlayersSetupStatePatch } from '#lib/helpers/twinPlayersSetupState.ts';
+import type { VerifyAndSyncTwinPlayersMetadataParams } from '#lib/helpers/twinPlayersMetadata.ts';
+import type { TwinPlayersState } from '#lib/helpers/twinPlayersStateController.ts';
+import { ensureEmbeddedPlayerHost, restoreEmbeddedPlayerContainer } from '#lib/helpers/twinPlayersTikTokOriginal.ts';
+import { originalLoadStartSeconds } from '#lib/helpers/remixPlayback.ts';
 
 declare const YT: any;
 

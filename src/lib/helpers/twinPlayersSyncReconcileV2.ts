@@ -2,8 +2,8 @@ import {
   computePlaybackRate,
   computeSoftSyncDuration,
   decideSyncMode
-} from '$lib/sync/softSync/logic.js';
-import type { DesiredTwinPlayersState } from '$lib/helpers/twinPlayersSyncPlanV2';
+} from '#lib/sync/softSync/logic.js';
+import type { DesiredTwinPlayersState } from '#lib/helpers/twinPlayersSyncPlanV2.ts';
 
 export type PlayerObservation = {
   nowMs: number;

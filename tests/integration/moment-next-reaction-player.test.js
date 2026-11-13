@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('$lib/helpers/firebase', () => ({
+vi.mock('#lib/helpers/firebase.js', () => ({
   getPlaylist: vi.fn(),
   getQueueBySlug: vi.fn(),
   getReaction: vi.fn(),
@@ -11,9 +11,9 @@ vi.mock('$app/navigation', () => ({
   goto: vi.fn()
 }));
 
-import { buildTwinPlayersInPlaceTransitionPlan } from '$lib/helpers/twinPlayersInPlaceTransition';
-import { createTwinPlayersNavigationController } from '$lib/helpers/twinPlayersNavigationController';
-import { createTwinPlayersOrchestrationController } from '$lib/helpers/twinPlayersOrchestrationController';
+import { buildTwinPlayersInPlaceTransitionPlan } from '#lib/helpers/twinPlayersInPlaceTransition.ts';
+import { createTwinPlayersNavigationController } from '#lib/helpers/twinPlayersNavigationController.ts';
+import { createTwinPlayersOrchestrationController } from '#lib/helpers/twinPlayersOrchestrationController.ts';
 
 const navigationDeps = (overrides = {}) => ({
   getSnapshot: () => ({ pageSlug: 'reaction-a' }),

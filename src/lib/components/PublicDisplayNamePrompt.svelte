@@ -1,12 +1,12 @@
 <script>
-	import { auth } from '$lib/constants/firebase';
-	import CinematicButton from '$lib/components/design-system/CinematicButton.svelte';
-	import { updateDisplayNameHelper, updateReactorDisplayNameForUser } from '$lib/helpers/firebase';
-	import { displayNameMatchesEmailLocalPart } from '$lib/helpers/publicDisplayName';
+	import { auth } from '#lib/constants/firebase.js';
+	import CinematicButton from '#lib/components/design-system/CinematicButton.svelte';
+	import { updateDisplayNameHelper, updateReactorDisplayNameForUser } from '#lib/helpers/firebase.js';
+	import { displayNameMatchesEmailLocalPart } from '#lib/helpers/publicDisplayName.js';
 	import {
 		publicDisplayNameRequest,
 		settlePublicDisplayName
-	} from '$lib/stores/publicDisplayNamePrompt';
+	} from '#lib/stores/publicDisplayNamePrompt.js';
 
 	let name = '';
 	let filledFor = '';

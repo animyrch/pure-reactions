@@ -1,8 +1,8 @@
 <script>
     import { createEventDispatcher, onDestroy, onMount } from "svelte";
     import { get } from "svelte/store";
-    import { showToast, toasts } from "$lib/stores/toast";
-    import { TOASTS } from "$lib/constants/toasts";
+    import { showToast, toasts } from "#lib/stores/toast.js";
+    import { TOASTS } from "#lib/constants/toasts.js";
     import {
         PauseSolid,
         PlaySolid,
@@ -12,12 +12,12 @@
         ExpandOutline,
         ForwardStepSolid,
     } from "flowbite-svelte-icons";
-    import SkipSecondsIcon from "$lib/components/Video/SkipSecondsIcon.svelte";
+    import SkipSecondsIcon from "#lib/components/Video/SkipSecondsIcon.svelte";
     import {
         COARSE_SKIP_SECONDS,
         clampPlaybackTime,
         playbackSkipDelta,
-    } from "$lib/helpers/playbackSkip";
+    } from "#lib/helpers/playbackSkip.ts";
 
     export let bothVideosStarted;
     export let isPlaylist;
@@ -659,7 +659,7 @@
 </div>
 
 <style lang="postcss">
-    @reference "../../../app.pcss";
+    @reference "../../../app.css";
 
     .sr-only {
         position: absolute;

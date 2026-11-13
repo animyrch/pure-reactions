@@ -1,5 +1,5 @@
 <script>
-  import ReactionsList from "$lib/components/ReactionsList.svelte";
+  import ReactionsList from "#lib/components/ReactionsList.svelte";
 
   export let eyebrow;
   export let title = "";

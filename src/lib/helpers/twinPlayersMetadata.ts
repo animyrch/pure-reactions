@@ -1,37 +1,37 @@
-import { env } from '$env/dynamic/public';
-import { auth, requestReactionEnrichment, updateFirebaseDocument } from '$lib/helpers/firebase';
+import { PUBLIC_DISABLE_YOUTUBE_METADATA_SYNC } from '$app/env/public';
+import { auth, requestReactionEnrichment, updateFirebaseDocument } from '#lib/helpers/firebase.js';
 import {
   fetchOriginalVideoMetadata,
   originalVideoMetadataToFirestoreFields,
   generateOriginalVideoSlug,
-} from '$lib/helpers/originalVideo';
-import { downloadBasicVideoDetails } from '$lib/helpers/youtube';
+} from '#lib/helpers/originalVideo.js';
+import { downloadBasicVideoDetails } from '#lib/helpers/youtube.js';
 
-const DISABLE_YOUTUBE_METADATA_SYNC = env.PUBLIC_DISABLE_YOUTUBE_METADATA_SYNC === 'true';
+const DISABLE_YOUTUBE_METADATA_SYNC = PUBLIC_DISABLE_YOUTUBE_METADATA_SYNC === 'true';
 
-type ReactionMetadataField =
-  | 'originalVideoTitle'
-  | 'reactionVideoTitle'
-  | 'originalVideoAuthor'
-  | 'reactionVideoAuthor';
+type ReactionMetadataField = 
+  'originalVideoTitle' |
+  'reactionVideoTitle' |
+  'originalVideoAuthor' |
+  'reactionVideoAuthor';
 
-type OriginalMetadataField =
-  | 'originalVideoTitle'
-  | 'originalVideoAuthor'
-  | 'originalVideoAuthorHandle'
-  | 'originalVideoAuthorUrl'
-  | 'originalVideoDescription'
-  | 'originalVideoThumbnailUrl'
-  | 'originalVideoThumbnailWidth'
-  | 'originalVideoThumbnailHeight'
-  | 'originalVideoProviderName'
-  | 'originalVideoProviderUrl'
-  | 'originalVideoUrl';
+type OriginalMetadataField = 
+  'originalVideoTitle' |
+  'originalVideoAuthor' |
+  'originalVideoAuthorHandle' |
+  'originalVideoAuthorUrl' |
+  'originalVideoDescription' |
+  'originalVideoThumbnailUrl' |
+  'originalVideoThumbnailWidth' |
+  'originalVideoThumbnailHeight' |
+  'originalVideoProviderName' |
+  'originalVideoProviderUrl' |
+  'originalVideoUrl';
 
-type TwinPlayersMetadataField =
-  | OriginalMetadataField
-  | 'reactionVideoTitle'
-  | 'reactionVideoAuthor';
+type TwinPlayersMetadataField = 
+  OriginalMetadataField |
+  'reactionVideoTitle' |
+  'reactionVideoAuthor';
 
 type VerifyVideoDetailsOptions = {
   videoId?: string;

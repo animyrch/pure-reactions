@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
-import { fetchOriginalVideoMetadataForPlatform } from '$lib/server/originalVideoMetadata';
-import { RATE_LIMITS, consumeRateLimit } from '$lib/server/rateLimit';
+import { fetchOriginalVideoMetadataForPlatform } from '#lib/server/originalVideoMetadata.js';
+import { RATE_LIMITS, consumeRateLimit } from '#lib/server/rateLimit.js';
 
 export const GET = async ({ url, request }) => {
   try {

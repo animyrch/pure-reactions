@@ -9,7 +9,7 @@ import {
   isCloudflareAddress,
   rateLimitDecision,
   visitorKey,
-} from '$lib/helpers/rateLimit';
+} from '#lib/helpers/rateLimit.js';
 import {
   RATE_LIMITS,
   USER_RATE_LIMIT_BUCKETS,
@@ -21,11 +21,11 @@ import {
   enforceRateLimit,
   rateLimitDocumentId,
   releaseAccountExportLimit,
-} from '$lib/server/rateLimit';
+} from '#lib/server/rateLimit.js';
 
 const adminState = vi.hoisted(() => ({ adminDb: null }));
 
-vi.mock('$lib/server/firebaseAdmin', () => ({
+vi.mock('#lib/server/firebaseAdmin.js', () => ({
   initializeFirebaseAdmin: vi.fn(async () => ({ adminDb: adminState.adminDb })),
 }));
 

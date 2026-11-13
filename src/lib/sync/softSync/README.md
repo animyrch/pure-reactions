@@ -110,7 +110,7 @@ import {
   decideSyncMode,
   computePlaybackRate,
   computeSoftSyncDuration
-} from '$lib/sync/softSync';
+} from '#lib/sync/softSync/index.js';
 
 // Calculate drift
 const drift = calculateDrift(originalTime, reactionTime, timeOffset);

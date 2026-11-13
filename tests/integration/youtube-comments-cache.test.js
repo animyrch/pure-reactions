@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GET } from '../../src/routes/api/youtube/comments/[videoId]/+server.js';
-import { COLLECTION_REACTION_BINOMES, COLLECTION_YOUTUBE_COMMENT_CACHE } from '$lib/constants/firebase';
+import { COLLECTION_REACTION_BINOMES, COLLECTION_YOUTUBE_COMMENT_CACHE } from '#lib/constants/firebase.js';
 import {
   YOUTUBE_COMMENT_CACHE_CONTROL,
   YOUTUBE_COMMENT_CACHE_LOCK_TTL_MS,
@@ -14,21 +14,21 @@ import {
   prepareYouTubeCommentsResponse,
   reactionGrantsCommentLookup,
   resolveCachedYouTubeComments,
-} from '$lib/helpers/youtubeCommentsCache';
+} from '#lib/helpers/youtubeCommentsCache.js';
 import {
   createFirestoreYouTubeCommentCacheStore,
   fetchYouTubeCommentThread,
   reactionGrantsStoredComments,
   resolveStoredYouTubeComments,
-} from '$lib/server/youtubeCommentsCache';
+} from '#lib/server/youtubeCommentsCache.js';
 
 const adminState = vi.hoisted(() => ({ adminDb: null }));
 
-vi.mock('$env/dynamic/private', () => ({
-  env: {},
+vi.mock('$app/env/private', () => ({
+  YOUTUBE_API_KEY: '',
 }));
 
-vi.mock('$lib/server/firebaseAdmin', () => ({
+vi.mock('#lib/server/firebaseAdmin.js', () => ({
   initializeFirebaseAdmin: vi.fn(async () => ({ adminDb: adminState.adminDb })),
 }));
 

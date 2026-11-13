@@ -9,19 +9,19 @@ import {
   resolveCachedYouTubePlaylist,
   YOUTUBE_PLAYLIST_CACHE_LOCK_TTL_MS,
   YouTubePlaylistRequestError,
-} from '$lib/helpers/youtubePlaylistCache';
+} from '#lib/helpers/youtubePlaylistCache.js';
 import {
   createFirestoreYouTubePlaylistCacheStore,
   fetchYouTubePlaylistPage,
   resolveStoredYouTubePlaylist,
   YOUTUBE_PLAYLIST_FETCH_TIMEOUT_MS,
-} from '$lib/server/youtubePlaylistCache';
+} from '#lib/server/youtubePlaylistCache.js';
 
-vi.mock('$env/dynamic/private', () => ({
-  env: {},
+vi.mock('$app/env/private', () => ({
+  YOUTUBE_API_KEY: '',
 }));
 
-vi.mock('$lib/server/firebaseAdmin', () => ({
+vi.mock('#lib/server/firebaseAdmin.js', () => ({
   initializeFirebaseAdmin: async () => ({ adminDb: null }),
 }));
 

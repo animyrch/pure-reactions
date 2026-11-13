@@ -1,6 +1,6 @@
 <script>
   import YouTubeDiscussionSection from './YouTubeDiscussionSection.svelte';
-  import { resolveDiscussionSections } from '$lib/helpers/youtubeComments';
+  import { resolveDiscussionSections } from '#lib/helpers/youtubeComments.js';
 
   /** @type {string|undefined} */
   export let reactionVideoId = undefined;

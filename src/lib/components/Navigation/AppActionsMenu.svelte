@@ -1,15 +1,16 @@
 <script>
   import { onMount, tick } from "svelte";
-  import { page } from "$app/stores";
+  import { pageStore } from "#lib/helpers/pageStore.js";
+const page = pageStore();
 
-  import { copyToClipboard } from "$lib/helpers/system";
-  import { showToast } from "$lib/stores/toast";
-  import { TOASTS } from "$lib/constants/toasts";
-  import { reactionDial } from "$lib/stores/reactionDial";
+  import { copyToClipboard } from "#lib/helpers/system.js";
+  import { showToast } from "#lib/stores/toast.js";
+  import { TOASTS } from "#lib/constants/toasts.js";
+  import { reactionDial } from "#lib/stores/reactionDial.js";
   import {
     buildBaseMenuOptions,
     buildReactionMenuOptions,
-  } from "$lib/helpers/appMenuOptions";
+  } from "#lib/helpers/appMenuOptions.js";
 
   /** @type {'dropdown' | 'inline'} */
   export let variant = "dropdown";
@@ -72,7 +73,7 @@
   };
 
   const handleMenuKeydown = (event) => {
-    const items = [...(menuRef?.querySelectorAll('[role="menuitem"]') ?? [])];
+    const items = [...menuRef?.querySelectorAll('[role="menuitem"]') ?? []];
     const current = items.indexOf(document.activeElement);
 
     if (event.key === "ArrowDown") {
@@ -120,6 +121,7 @@
   });
 </script>
 
+
 {#if variant === "dropdown"}
   <div class="relative">
     <button
@@ -140,14 +142,14 @@
             stroke-linejoin="round"
             stroke-width="2"
             d="M6 18L18 6M6 6l12 12"
-          />
+          ></path>
         {:else}
           <path
             stroke-linecap="round"
             stroke-linejoin="round"
             stroke-width="2"
             d="M4 6h16M4 12h16M4 18h16"
-          />
+          ></path>
         {/if}
       </svg>
     </button>

@@ -9,7 +9,7 @@
         getSearchConfig,
         isValidQuery,
         normalizeQuery,
-    } from "$lib/services/search";
+    } from "#lib/services/search/index.js";
 
     export let ariaLabel = "Search";
     export let indices;

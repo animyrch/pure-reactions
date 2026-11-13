@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
-import { buildOtherOriginalHubs } from '$lib/helpers/originalVideo';
-import { getReactionsByCreatorServer, getReactionsByOriginalSlug } from '$lib/server/firebaseAdmin';
+import { buildOtherOriginalHubs } from '#lib/helpers/originalVideo.js';
+import { getReactionsByCreatorServer, getReactionsByOriginalSlug } from '#lib/server/firebaseAdmin.js';
 
 export async function load({ params }) {
   const { slug } = params;

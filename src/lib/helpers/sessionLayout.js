@@ -5,7 +5,7 @@ import {
     normalizeFullscreenOverlayCorner,
     normalizeFullscreenOverlayWidthPercent,
     normalizeFullscreenPrimaryVideo,
-} from '$lib/helpers/twinPlayersReactionData.ts';
+} from '#lib/helpers/twinPlayersReactionData.ts';
 
 export const SESSION_LAYOUT_STORAGE_KEY = 'pure-reactions.sessionLayout';
 

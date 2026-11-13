@@ -1,4 +1,4 @@
-import { getReactionsByReactorServer } from '$lib/server/firebaseAdmin';
+import { getReactionsByReactorServer } from '#lib/server/firebaseAdmin.js';
 
 /** @type {import('./$types').PageServerLoad} */
 export async function load({ params }) {

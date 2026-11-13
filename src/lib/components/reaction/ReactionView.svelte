@@ -1,8 +1,8 @@
 <script>
-  import SEO from '$lib/components/SEO.svelte';
-  import { reactionPageTitle } from '$lib/helpers/reactionListItem';
-  import SubtleLoader from '$lib/components/design-system/SubtleLoader.svelte';
-  import ReactionStage from '$lib/components/reaction/ReactionStage.svelte';
+  import SEO from '#lib/components/SEO.svelte';
+  import { reactionPageTitle } from '#lib/helpers/reactionListItem.js';
+  import SubtleLoader from '#lib/components/design-system/SubtleLoader.svelte';
+  import ReactionStage from '#lib/components/reaction/ReactionStage.svelte';
   export let reaction;
   export let state;
   export let actions;

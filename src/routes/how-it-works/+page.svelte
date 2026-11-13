@@ -1,8 +1,8 @@
 <script>
-  import SEO from "$lib/components/SEO.svelte";
-  import CinematicButton from "$lib/components/design-system/CinematicButton.svelte";
-  import ValuePropositionBanner from "$lib/components/design-system/ValuePropositionBanner.svelte";
-  import { goToRoute } from "$lib/helpers/routing";
+  import SEO from "#lib/components/SEO.svelte";
+  import CinematicButton from "#lib/components/design-system/CinematicButton.svelte";
+  import ValuePropositionBanner from "#lib/components/design-system/ValuePropositionBanner.svelte";
+  import { goToRoute } from "#lib/helpers/routing.js";
 </script>
 
 <SEO

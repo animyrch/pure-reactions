@@ -1,22 +1,23 @@
 <script>
-  import { page } from "$app/stores";
-  import SEO from "$lib/components/SEO.svelte";
-  import SubtleLoader from "$lib/components/design-system/SubtleLoader.svelte";
-  import QueueProgressPill from "$lib/components/reaction/QueueProgressPill.svelte";
-  import ReactionStage from "$lib/components/reaction/ReactionStage.svelte";
-  import ReactionDetailsSection from "$lib/components/reaction/ReactionDetailsSection.svelte";
+  import { pageStore } from "#lib/helpers/pageStore.js";
+const page = pageStore();
+  import SEO from "#lib/components/SEO.svelte";
+  import SubtleLoader from "#lib/components/design-system/SubtleLoader.svelte";
+  import QueueProgressPill from "#lib/components/reaction/QueueProgressPill.svelte";
+  import ReactionStage from "#lib/components/reaction/ReactionStage.svelte";
+  import ReactionDetailsSection from "#lib/components/reaction/ReactionDetailsSection.svelte";
   import {
     useTwinPlayers,
     CONTROLS_FADE_CLASS,
-  } from "$lib/composables/useTwinPlayers";
-  import { reactionDial } from "$lib/stores/reactionDial";
-  import { browser } from "$app/environment";
+  } from "#lib/composables/useTwinPlayers.ts";
+  import { reactionDial } from "#lib/stores/reactionDial.js";
+  import { browser } from '$app/env';
   import { goto } from "$app/navigation";
   import { onDestroy } from "svelte";
-  import { showToast } from "$lib/stores/toast";
-  import { TOASTS } from "$lib/constants/toasts";
-  import { adHocQueueHasNext, readAdHocQueueFromUrl } from "$lib/helpers/adHocQueue";
-  import { reactionPageTitle, resolvePlaybackFrameKind } from "$lib/helpers/reactionListItem";
+  import { showToast } from "#lib/stores/toast.js";
+  import { TOASTS } from "#lib/constants/toasts.js";
+  import { adHocQueueHasNext, readAdHocQueueFromUrl } from "#lib/helpers/adHocQueue.js";
+  import { reactionPageTitle, resolvePlaybackFrameKind } from "#lib/helpers/reactionListItem.js";
 
   export let data;
 
@@ -47,13 +48,9 @@
   let overlayRef;
 
   let isCurrentReactionCreator = false;
-  $: isCurrentReactionCreator = Boolean(
-    data?.userId && $state.reactorId && data.userId === $state.reactorId,
-  );
 
-  $: stickyControlsClass = $state.isFullscreen
-    ? CONTROLS_FADE_CLASS
-    : "opacity-100";
+  $: isCurrentReactionCreator = Boolean(data?.userId && $state.reactorId && data.userId === $state.reactorId);
+  $: stickyControlsClass = $state.isFullscreen ? CONTROLS_FADE_CLASS : "opacity-100";
   $: overlayRef && actions.registerOverlayRef(overlayRef);
   $: actions.handleSlugChange($page.params.slug);
 
@@ -82,7 +79,7 @@
 
   const handleGoToNextInQueue = async () => {
     // Allow navigation when either a persisted queue or an ad-hoc queue is active
-    if (!($state.queueSlug || ($state.adHocQueue && $state.adHocQueue.length))) return;
+    if (!($state.queueSlug || $state.adHocQueue && $state.adHocQueue.length)) return;
     try {
       const result = await actions.navigateToNextReactionInQueue();
       if (!result?.ok && result?.reason === "end-of-queue" && browser) {
@@ -114,10 +111,9 @@
     }
   }
 
-  $: inSequenceQueue = Boolean(
-    $state.queueSlug || (adHocQueue && adHocQueue.length),
-  );
-  $: showQueueNext = adHocHasNext || (Boolean($state.queueSlug) && (queueHasNext || queueHasNextLoading));
+  $: inSequenceQueue = Boolean($state.queueSlug || adHocQueue && adHocQueue.length);
+  $: showQueueNext = adHocHasNext || Boolean($state.queueSlug) && (queueHasNext || queueHasNextLoading);
+
   $: playbackFrameKind = resolvePlaybackFrameKind({
     queueSlug: $state.queueSlug,
     playlistId: $state.playlistDocumentId,
@@ -232,6 +228,7 @@
   });
 </script>
 
+
 <SEO
   title={seoTitle}
   description={seoDescription}
@@ -274,7 +271,7 @@
     playerOriginal={$state.playerOriginal}
     playerReaction={$state.playerReaction}
     originalVideoPlatform={$state.originalVideoPlatform}
-    {stickyControlsClass}
+    stickyControlsClass={stickyControlsClass}
     bothVideosStarted={$state.bothVideosStarted}
     isPlaylist={Boolean($state.playlistDocumentId)}
     isPlaylistAutoPlay={$state.isPlaylistAutoPlay}
