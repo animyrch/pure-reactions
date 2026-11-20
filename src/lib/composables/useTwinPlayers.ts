@@ -4,9 +4,7 @@ import { get } from 'svelte/store';
 import { readAdHocQueueFromUrl } from '#lib/helpers/adHocQueue.js';
 import {
   readAutoPlayCookie,
-  readCinematicBarsCookie,
-  toggleFullscreenBodyClass,
-  writeCinematicBarsCookie
+  toggleFullscreenBodyClass
 } from '#lib/helpers/reactionPlayer.ts';
 import {
   verifyAndSyncTwinPlayersMetadata,
@@ -123,7 +121,6 @@ export function useTwinPlayers({
     queueSlug: initialUrlState.queueSlug,
     queueIndex: Number.isFinite(initialUrlState.queueIndex as number) ? initialUrlState.queueIndex as number : 0,
     isQueueAutoPlay: Boolean(initialUrlState.queueAutoPlay),
-    showCinematicBars: readCinematicBarsCookie(),
     isFullscreen: initialUrlState.isFullscreen,
     momentFeedLoopEnabled,
     adHocQueue: initialUrlState.adHocQueue,
@@ -587,13 +584,6 @@ export function useTwinPlayers({
     updateState({ isFineTuneModeOn: !snapshot.isFineTuneModeOn });
   };
 
-  const toggleCinematicBars = () => {
-    const snapshot = get(state);
-    const nextValue = !snapshot.showCinematicBars;
-    updateState({ showCinematicBars: nextValue });
-    writeCinematicBarsCookie(nextValue);
-  };
-
   const setVideoScene = (value: boolean) => {
     if (typeof window === 'undefined') {
       return;
@@ -767,7 +757,6 @@ export function useTwinPlayers({
       toggleAutoPlaylist,
       setPlaylistSelectionIndex,
       loadNextReactionInPlaylist,
-      toggleCinematicBars,
       handlePlayStateChange,
       syncVideos,
       showControls,

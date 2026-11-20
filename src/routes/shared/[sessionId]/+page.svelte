@@ -50,7 +50,6 @@ const page = pageStore();
 
     let debugMode = $page.url.searchParams.get('debug') === 'true';
     let isFullscreen = false;
-    let showCinematicBars = false;
     let fullscreenPrimaryVideo = 'original';
     let fullscreenOverlayWidthPercent = 35;
     let fullscreenOverlayCorner = 'top-right';
@@ -324,7 +323,6 @@ const page = pageStore();
         fullscreenOverlayWidthPercent = savedLayout.fullscreenOverlayWidthPercent;
         fullscreenOverlayCorner = savedLayout.fullscreenOverlayCorner;
         fullscreenOverlayVisible = savedLayout.fullscreenOverlayVisible;
-        showCinematicBars = savedLayout.showCinematicBars;
         layoutReady = true;
 
         setTimeout(async () => {
@@ -370,7 +368,6 @@ const page = pageStore();
             fullscreenOverlayWidthPercent,
             fullscreenOverlayCorner,
             fullscreenOverlayVisible,
-            showCinematicBars,
         });
     };
 
@@ -391,11 +388,6 @@ const page = pageStore();
 
     const setOverlayVisible = (value) => {
         fullscreenOverlayVisible = Boolean(value);
-        rememberLayout();
-    };
-
-    const toggleCinematicBars = () => {
-        showCinematicBars = !showCinematicBars;
         rememberLayout();
     };
 
@@ -529,7 +521,6 @@ const page = pageStore();
                         <div class="min-w-0 flex-1">
                             <ReactionStage
                                 isFullscreen={isFullscreen}
-                                showCinematicBars={showCinematicBars}
                                 playerOriginal={stagePlayerSentinel}
                                 playerReaction={stagePlayerSentinel}
                                 originalVideoPlatform={originalVideoPlatform}
@@ -545,7 +536,6 @@ const page = pageStore();
                                 fullscreenOverlayVisible={fullscreenOverlayVisible}
                                 on:enterFullscreen={enterSessionFullscreen}
                                 on:exitClick={exitSessionFullscreen}
-                                on:toggleCinematicBars
                             >
                                 <svelte:fragment slot="reaction-player">
                                     {#if twitchPlayerSrc}
