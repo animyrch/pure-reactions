@@ -50,13 +50,17 @@ export function buildTwinPlayersInPlaceTransitionPlan({
     hasOriginalElement &&
     typeof snapshotBefore.playerOriginal?.loadVideoById === 'function';
 
-  const shouldResetGate = !isSameReactionVideo;
+  // A different reaction video normally closes the click gate. Continuing a
+  // session that already started (autoPlay) keeps the gate open so playback
+  // can resume without another pair of clicks.
+  const continuingPlayback = Boolean(autoPlay);
+  const shouldResetGate = !isSameReactionVideo && !continuingPlayback;
   const effectivePreviousReactionTime = isSameReactionVideo ? previousReactionTime : undefined;
   const shouldCreateReactionPlayer = Boolean(derived.reactionVideoId) && !canReuseReactionPlayer;
   const shouldCreateOriginalPlayer = Boolean(derived.originalVideoId) && !canReuseOriginalPlayer;
   const nextBothVideosStarted = shouldResetGate
     ? false
-    : (isSameReactionVideo && preserveReactionTime ? snapshotBefore.bothVideosStarted : Boolean(autoPlay));
+    : (isSameReactionVideo && preserveReactionTime ? snapshotBefore.bothVideosStarted : continuingPlayback);
 
   return {
     isSameReactionVideo,

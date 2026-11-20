@@ -25,6 +25,10 @@ const page = pageStore();
     buildMomentReactionEditHref,
     syncMomentReactionDial
   } from '#lib/helpers/momentReactionDial.js';
+  import {
+    initialMomentPlaybackSession,
+    reduceMomentPlaybackSession
+  } from '#lib/helpers/momentPlaybackSession.js';
 
   export let data;
 
@@ -35,7 +39,9 @@ const page = pageStore();
   let loading = true;
 
   let currentIndex = 0;
-  let playbackSessionStarted = false;
+  // Stays closed until both players have started once on this moment. Next and
+  // swipe pass that into loadReactionInPlace so later reactions play immediately.
+  let playbackSession = initialMomentPlaybackSession;
   // Set while next/prev loads through the existing players. The slug effect must
   // not rebuild those players for the same id.
   let inPlaceReactionId = '';
@@ -60,6 +66,11 @@ const page = pageStore();
     },
     enableAutoPlay: false,
     momentFeedLoopEnabled: true
+  });
+
+  $: playbackSession = reduceMomentPlaybackSession(playbackSession, {
+    momentSlug: slug,
+    bothVideosStarted: $state.bothVideosStarted
   });
 
   const replaceCurrentRouteReaction = (reactionId) => {
@@ -123,7 +134,7 @@ const page = pageStore();
     inPlaceReactionId = nextId;
     currentIndex = nextIndex;
     await actions.loadReactionInPlace(nextId, {
-      autoPlay: playbackSessionStarted
+      autoPlay: playbackSession.started
     });
     replaceCurrentRouteReaction(nextId);
   };
