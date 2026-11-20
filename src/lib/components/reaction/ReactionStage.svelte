@@ -7,7 +7,6 @@
     export let isFullscreen = false;
     export let isControlSurfaceVisible = false;
     export let isExitButtonExpanded = false;
-    export let showCinematicBars = false;
     export let isReactionMissing = false;
     export let remixMode = false;
     export let isUsersOwnVideo = false;
@@ -146,7 +145,6 @@
         dispatch("playStateChanged", e.detail);
     const handleSyncVideos = () => dispatch("syncVideos");
     const handleToggleAutoPlaylist = () => dispatch("toggleAutoPlaylist");
-    const handleToggleCinematicBars = () => dispatch("toggleCinematicBars");
     const handleEnterFullscreen = async () => {
         // Try to request browser fullscreen on the main wrapper if possible,
         // then notify parent so app state can update.
@@ -394,16 +392,6 @@
                     {/if}
                 </div>
             </div>
-            {#if showCinematicBars}
-                <div
-                    class={`pointer-events-none absolute inset-x-0 top-0 bg-linear-to-b from-black via-black/80 to-transparent ${isFullscreen ? "h-[12%]" : "h-[8%] from-black/80"}`}
-                    aria-hidden="true"
-                ></div>
-                <div
-                    class="pointer-events-none absolute inset-x-0 bottom-0 h-[12%] bg-linear-to-t from-black via-black/80 to-transparent"
-                    aria-hidden="true"
-                ></div>
-            {/if}
         </div>
 
         <!-- Reaction video player container. A remix never has one. -->
@@ -444,16 +432,6 @@
                             class="absolute inset-0 h-full w-full"
                         ></div>
                     {/if}
-                    {#if showCinematicBars}
-                        <div
-                            class="pointer-events-none absolute inset-x-0 top-0 h-[12%] bg-linear-to-b from-black via-black/80 to-transparent"
-                            aria-hidden="true"
-                        ></div>
-                        <div
-                            class="pointer-events-none absolute inset-x-0 bottom-0 h-[12%] bg-linear-to-t from-black via-black/80 to-transparent"
-                            aria-hidden="true"
-                        ></div>
-                    {/if}
                 </div>
             </div>
         {:else if !remixMode && (isUsersOwnVideo || alwaysShowMissingPlaceholder)}
@@ -476,14 +454,12 @@
             {isPlaylist}
             {isPlaylistAutoPlay}
             {showAutoPlayButton}
-            {showCinematicBars}
             {onNext}
             {nextDisabled}
             {nextAriaLabel}
             onPlayStateChanged={handlePlayStateChanged}
             onSyncVideos={handleSyncVideos}
             onToggleAutoPlaylist={handleToggleAutoPlaylist}
-            onToggleBars={handleToggleCinematicBars}
             onEnterFullscreen={handleEnterFullscreen}
             onExitClick={handleExitClick}
             currentTime={dockCurrentTime}

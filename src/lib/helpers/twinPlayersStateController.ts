@@ -43,7 +43,6 @@ export type TwinPlayersState = {
   isQueueAutoPlay: boolean;
   adHocQueue: string[] | null;
   adHocQueueIndex: number | null;
-  showCinematicBars: boolean;
   isFullscreen: boolean;
   isControlSurfaceVisible: boolean;
   isExitButtonExpanded: boolean;
@@ -143,7 +142,6 @@ type TwinPlayersUiState = Pick<
   | 'isFineTuneModeOn'
   | 'canShowEditModeButton'
   | 'canShowCloseEditModeButton'
-  | 'showCinematicBars'
   | 'isFullscreen'
   | 'isControlSurfaceVisible'
   | 'isExitButtonExpanded'
@@ -201,7 +199,6 @@ type CreateTwinPlayersStateControllerOptions = {
   queueSlug?: string | null;
   queueIndex: number;
   isQueueAutoPlay: boolean;
-  showCinematicBars: boolean;
   isFullscreen: boolean;
   momentFeedLoopEnabled?: boolean;
   adHocQueue?: string[] | null;
@@ -256,7 +253,6 @@ const uiKeys = [
   'isFineTuneModeOn',
   'canShowEditModeButton',
   'canShowCloseEditModeButton',
-  'showCinematicBars',
   'isFullscreen',
   'isControlSurfaceVisible',
   'isExitButtonExpanded',
@@ -348,7 +344,6 @@ export function createTwinPlayersStateController({
   queueSlug,
   queueIndex,
   isQueueAutoPlay,
-  showCinematicBars,
   isFullscreen,
   momentFeedLoopEnabled = false,
   adHocQueue = null,
@@ -402,7 +397,6 @@ export function createTwinPlayersStateController({
     isFineTuneModeOn: false,
     canShowEditModeButton: false,
     canShowCloseEditModeButton: false,
-    showCinematicBars,
     isFullscreen,
     isControlSurfaceVisible: !isFullscreen,
     isExitButtonExpanded: false,

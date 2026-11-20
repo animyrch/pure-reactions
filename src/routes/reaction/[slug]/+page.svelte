@@ -264,7 +264,6 @@ const page = pageStore();
     isFullscreen={$state.isFullscreen}
     isControlSurfaceVisible={$state.isControlSurfaceVisible}
     isExitButtonExpanded={$state.isExitButtonExpanded}
-    showCinematicBars={$state.showCinematicBars}
     isReactionMissing={$state.isReactionMissing}
     remixMode={$state.remixMode}
     isUsersOwnVideo={$state.isUsersOwnVideo}
@@ -302,7 +301,6 @@ const page = pageStore();
     on:playStateChanged={handlePlayStateChanged}
     on:syncVideos={actions.syncVideos}
     on:toggleAutoPlaylist={actions.toggleAutoPlaylist}
-    on:toggleCinematicBars={actions.toggleCinematicBars}
     on:enterFullscreen={actions.openWithFullscreen}
     on:seek={(e) => actions.seekTo(e.detail)}
   />

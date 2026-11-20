@@ -1,7 +1,6 @@
 <script>
   export let isControlSurfaceVisible = false;
   export let isExitButtonExpanded = false;
-  export let showCinematicBars = false;
   export let isReactionMissing = false;
   export let fullscreenPrimaryVideo = "original";
   export let fullscreenOverlayWidthPercent = 35;
@@ -115,16 +114,6 @@
       <div id="player-original" class="absolute inset-0 h-full w-full"></div>
     </div>
   </div>
-  {#if showCinematicBars}
-    <div
-      class="pointer-events-none absolute inset-x-0 top-0 h-[12%] bg-linear-to-b from-black via-black/80 to-transparent"
-      aria-hidden="true"
-    ></div>
-    <div
-      class="pointer-events-none absolute inset-x-0 bottom-0 h-[12%] bg-linear-to-t from-black via-black/80 to-transparent"
-      aria-hidden="true"
-    ></div>
-  {/if}
   {#if !isReactionMissing}
     <div
       data-stage="reaction"
@@ -140,16 +129,6 @@
           : "relative h-full w-full"}
       >
         <div id="player-reaction" class="absolute inset-0 h-full w-full"></div>
-        {#if showCinematicBars}
-          <div
-            class="pointer-events-none absolute inset-x-0 top-0 h-[12%] bg-linear-to-b from-black via-black/80 to-transparent"
-            aria-hidden="true"
-          ></div>
-          <div
-            class="pointer-events-none absolute inset-x-0 bottom-0 h-[12%] bg-linear-to-t from-black via-black/80 to-transparent"
-            aria-hidden="true"
-          ></div>
-        {/if}
       </div>
     </div>
   {/if}
