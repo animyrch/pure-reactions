@@ -6,7 +6,7 @@
   import SubtleLoader from '#lib/components/design-system/SubtleLoader.svelte';
   import ReactionView from '#lib/components/reaction/ReactionView.svelte';
   import ReactionDetailsSection from '#lib/components/reaction/ReactionDetailsSection.svelte';
-  import FullReactionLink from '#lib/components/moments/FullReactionLink.svelte';
+  import FullReactionLink from '#lib/components/Moments/FullReactionLink.svelte';
   import { useTwinPlayers } from '#lib/composables/useTwinPlayers.ts';
   import { reactionDial } from '#lib/stores/reactionDial.js';
   import { handlePrivateRoute } from '#lib/helpers/routing.js';
