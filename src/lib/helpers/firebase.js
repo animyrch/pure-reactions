@@ -550,6 +550,81 @@ export const createMomentReactionDocument = async ({
     }
 };
 
+const withoutUndefinedFields = (fields) => {
+    const next = {};
+    for (const [key, value] of Object.entries(fields || {})) {
+        if (value !== undefined) next[key] = value;
+    }
+    return next;
+};
+
+/**
+ * Publish a moment reaction sliced from a full reaction the caller owns.
+ * Age confirmation and a public display name use the same gate as other publishes.
+ * Returns null when that gate is declined. The full reaction is not modified.
+ */
+export const createPublishedMomentSlice = async (fields = {}) => {
+    const user = auth?.currentUser;
+    if (!user?.uid) {
+        throw new Error('Sign in to create a moment.');
+    }
+    if (user.emailVerified !== true) {
+        throw new Error('Verify your email before publishing a moment reaction.');
+    }
+    if (!fields.momentId) {
+        throw new Error('Choose a moment before publishing this reaction.');
+    }
+
+    const nameCheck = beginPublishNameCheck();
+    try {
+        const allowed = await ensureAgeConfirmed(user.uid);
+        if (!allowed) return null;
+        const nameAllowed = await ensurePublicDisplayName(user, nameCheck);
+        if (!nameAllowed) return null;
+    } finally {
+        endPublishNameCheck();
+    }
+
+    const reactionsCollection = createCollection(db, COLLECTION_REACTION_BINOMES, 'createPublishedMomentSlice');
+    const dataToAdd = withoutUndefinedFields({
+        ...fields,
+        reactorId: user.uid,
+        reactorDisplayName: user.displayName?.trim?.() || fields.reactorDisplayName || '',
+        isMomentReaction: true,
+        isPublished: true,
+        createdAt: serverTimestamp()
+    });
+    if (!dataToAdd.reactorDisplayName) {
+        delete dataToAdd.reactorDisplayName;
+    }
+
+    applyTikTokLinkSafety(dataToAdd, {
+        platform: dataToAdd.originalVideoPlatform,
+        videoId: dataToAdd.originalVideoId,
+        authorHandle: dataToAdd.originalVideoAuthorHandle,
+        authorUrl: dataToAdd.originalVideoAuthorUrl,
+        originalVideoUrl: dataToAdd.originalVideoUrl,
+    });
+
+    const documentRef = await addDoc(reactionsCollection, dataToAdd);
+    if (typeof window !== 'undefined') {
+        window.currentReactionDocumentId = documentRef.id;
+    }
+
+    try {
+        const { recountMomentReactionCount } = await import('#lib/helpers/momentsFirestore.js');
+        await recountMomentReactionCount(dataToAdd.momentId);
+    } catch (error) {
+        console.error('Failed to recount moment reactions after publishing a slice', error);
+    }
+
+    requestReactionEnrichment(documentRef.id).catch((error) => {
+        console.error('Failed to enqueue reaction enrichment', error);
+    });
+
+    return documentRef.id;
+};
+
 export const createPlaylistDocument = async ({
     reactionDocumentId,
     originalVideoId,

@@ -12,12 +12,13 @@ const page = pageStore();
   } from "#lib/composables/useTwinPlayers.ts";
   import { reactionDial } from "#lib/stores/reactionDial.js";
   import { browser } from '$app/env';
-  import { goto } from "$app/navigation";
+  import { afterNavigate, goto } from "$app/navigation";
   import { onDestroy } from "svelte";
   import { showToast } from "#lib/stores/toast.js";
   import { TOASTS } from "#lib/constants/toasts.js";
   import { adHocQueueHasNext, readAdHocQueueFromUrl } from "#lib/helpers/adHocQueue.js";
   import { reactionPageTitle, resolvePlaybackFrameKind } from "#lib/helpers/reactionListItem.js";
+  import { buildCreateMomentPath, canOfferCreateMoment } from "#lib/helpers/momentFromReaction.js";
 
   export let data;
 
@@ -180,7 +181,19 @@ const page = pageStore();
     return `/edit-reaction/${$state.pageSlug}${suffix}`;
   };
 
-  $: if (browser && !$state.isLoading) {
+  const openCreateMoment = () => {
+    if (!browser || !$state.pageSlug) return;
+    goto(buildCreateMomentPath($state.pageSlug));
+  };
+
+  $: createMomentOffered = canOfferCreateMoment({
+    isUsersOwnVideo: $state.isUsersOwnVideo,
+    isMomentReaction: $state.isMomentReaction,
+    pageSlug: $state.pageSlug,
+  });
+
+  const syncReactionMenu = () => {
+    if (!browser || $state.isLoading) return;
     reactionDial.updateContext({
       isUsersOwnVideo: $state.isUsersOwnVideo,
       canShowEditModeButton: $state.canShowEditModeButton,
@@ -189,9 +202,11 @@ const page = pageStore();
       isReactionMissing: $state.isReactionMissing,
       remixMode: $state.remixMode,
       isFullscreen: $state.isFullscreen,
+      canCreateMoment: createMomentOffered,
       canShowEditPlaylistButton:
         Boolean($state.playlistDocumentId) && isCurrentReactionCreator,
       handlers: {
+        createMoment: createMomentOffered ? openCreateMoment : null,
         enterEditMode: () => {
           if (!browser) return;
           // Hard navigate so editor always starts from a clean player state.
@@ -212,7 +227,29 @@ const page = pageStore();
         openWithHalfscreen: actions.openWithHalfscreen,
       },
     });
-  }
+  };
+
+  let menuRefresh = 0;
+
+  afterNavigate(() => {
+    menuRefresh += 1;
+  });
+
+  $: menuRefresh,
+    $state.isLoading,
+    $state.isUsersOwnVideo,
+    $state.isMomentReaction,
+    $state.pageSlug,
+    $state.canShowEditModeButton,
+    $state.canShowCloseEditModeButton,
+    $state.isPublished,
+    $state.isReactionMissing,
+    $state.remixMode,
+    $state.isFullscreen,
+    $state.playlistDocumentId,
+    isCurrentReactionCreator,
+    createMomentOffered,
+    syncReactionMenu();
 
   $: if (browser && !$state.isLoading) {
     // Include ad-hoc queue identity to re-run checks when ad-hoc params change

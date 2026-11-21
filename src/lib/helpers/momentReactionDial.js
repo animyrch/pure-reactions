@@ -31,9 +31,11 @@ export function syncMomentReactionDial(reactionDial, {
     remixMode,
     isFullscreen,
     canShowEditPlaylistButton: false,
+    canCreateMoment: false,
     handlers: {
       enterEditMode: null,
       closeEditMode: null,
+      createMoment: null,
       setIsPublished: null,
       setIsUnpublished: null,
       openWithFullscreen: null,

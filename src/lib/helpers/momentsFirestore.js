@@ -16,6 +16,7 @@ import { db, auth } from '#lib/constants/firebase.js';
 import { COLLECTION_MOMENTS, COLLECTION_REACTION_BINOMES } from '#lib/constants/firebase.js';
 import { MOMENT_SORT_OPTIONS } from '#lib/constants/moments.js';
 import { slugifyMomentTitle } from '#lib/helpers/moments.js';
+import { isOwnedSourceReaction, sortMomentsByAnchor } from '#lib/helpers/momentFromReaction.js';
 
 const createMomentsCollection = () => collection(db, COLLECTION_MOMENTS);
 const createReactionsCollection = () => collection(db, COLLECTION_REACTION_BINOMES);
@@ -101,6 +102,38 @@ export const getMomentsByPage = async ({
   }
 
   return { moments, lastVisible };
+};
+
+const createdAtMillis = (value) => {
+  if (value && typeof value.toMillis === 'function') return value.toMillis();
+  if (value && typeof value.seconds === 'number') return value.seconds * 1000;
+  return 0;
+};
+
+export const listOwnedSourceReactions = async (userId) => {
+  if (!userId || !db) return [];
+  try {
+    const snapshot = await getDocs(query(createReactionsCollection(), where('reactorId', '==', userId)));
+    return snapshot.docs
+      .map((entry) => ({ id: entry.id, data: entry.data() }))
+      .filter((reaction) => isOwnedSourceReaction(reaction, userId))
+      .sort((left, right) => createdAtMillis(right.data?.createdAt) - createdAtMillis(left.data?.createdAt));
+  } catch (error) {
+    console.error('Error loading reactions to create a moment:', error);
+    throw error;
+  }
+};
+
+export const getMomentsByOriginalVideoId = async (originalVideoId) => {
+  const videoId = typeof originalVideoId === 'string' ? originalVideoId.trim() : '';
+  if (!videoId || !db) return [];
+  try {
+    const snapshot = await getDocs(query(createMomentsCollection(), where('originalVideoId', '==', videoId)));
+    return sortMomentsByAnchor(snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() })));
+  } catch (error) {
+    console.error('Error loading moments for an original video:', error);
+    throw error;
+  }
 };
 
 export const getPublishedMomentReactions = async (momentId) => {

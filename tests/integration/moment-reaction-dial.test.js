@@ -37,7 +37,8 @@ describe('moment reaction edit dial', () => {
       isUsersOwnVideo: true,
       canShowEditModeButton: true,
       canShowEditPlaylistButton: false,
-      handlers: expect.objectContaining({ enterEditMode })
+      canCreateMoment: false,
+      handlers: expect.objectContaining({ enterEditMode, createMoment: null })
     }));
   });
 });
