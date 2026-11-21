@@ -5,6 +5,7 @@ import {
   UserCircleSolid,
   BellActiveAltSolid,
   PenSolid,
+  ClockSolid,
   CheckCircleSolid,
   ArrowUpFromBracketOutline,
   EyeSlashSolid,
@@ -26,6 +27,7 @@ export function buildReactionMenuOptions(state) {
     isReactionMissing,
     remixMode,
     canShowEditPlaylistButton,
+    canCreateMoment,
     handlers = {},
   } = state ?? {};
 
@@ -34,6 +36,14 @@ export function buildReactionMenuOptions(state) {
       name: "Edit Reaction",
       icon: PenSolid,
       onSelect: handlers.enterEditMode,
+    });
+  }
+
+  if (canCreateMoment && handlers.createMoment) {
+    itemList.push({
+      name: "Create moment",
+      icon: ClockSolid,
+      onSelect: handlers.createMoment,
     });
   }
 

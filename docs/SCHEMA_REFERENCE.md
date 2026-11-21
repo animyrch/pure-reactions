@@ -114,6 +114,7 @@ Optional enrichment payloads populated by the server-side metadata enrichment fl
 | `isMomentReaction` | boolean | No | When true, this reaction is a moment reaction (≤60s subsection) |
 | `momentId` | string | No | Firestore document ID of the parent moment anchor |
 | `momentOriginalTimeSeconds` | number | No | Original-content timestamp (seconds) the moment reaction must reach during its subsection |
+| `sourceReactionId` | string | No | Full reaction this moment reaction was sliced from. Playback of this moment reaction links to `/reaction/{sourceReactionId}` when that reaction is published |
 
 **Publishing rule:** moment reactions cannot publish unless subsection duration ≤ 60s and synchronized original playback reaches `momentOriginalTimeSeconds` at least once within `[offsetStartTime, reactionFinishTime]`. Enforced client-side via `validateMomentReaction`.
 
@@ -646,6 +647,7 @@ const docRef = await addDoc(collection(db, 'reactions'), {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.32 | 2026-11-21 | A moment reaction may store `sourceReactionId`, the full reaction it was sliced from. Moment playback links there when that reaction is published |
 | 1.31 | 2026-11-12 | `GET /api/admin/stats` leaves out `emirtablet@outlook.com` |
 | 1.30 | 2026-11-12 | `GET /api/admin/stats` leaves out accounts whose email contains `purereactions` |
 | 1.29 | 2026-11-12 | `GET /api/admin/stats` includes `outside_reactions_published_ids` and `outside_reactions_unpublished_ids` only when `ids` asks for `published`, `unpublished`, or both |
