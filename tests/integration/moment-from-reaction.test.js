@@ -128,7 +128,7 @@ describe('creating a moment from a reaction', () => {
       isMomentReaction: true,
       pageSlug: 'slice'
     })).toBe(false);
-    expect(buildCreateMomentPath('full-reaction')).toBe('/moments/new?reaction=full-reaction');
+    expect(buildCreateMomentPath('full-reaction')).toBe('/moments/from-reaction?reaction=full-reaction');
 
     const options = buildReactionMenuOptions({
       isUsersOwnVideo: true,

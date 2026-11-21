@@ -291,8 +291,8 @@ export const buildMomentSliceDocument = (source, {
 
 export const buildCreateMomentPath = (reactionId) => {
   const id = trimmed(reactionId);
-  if (!id) return '/moments/new';
-  return `/moments/new?reaction=${encodeURIComponent(id)}`;
+  if (!id) return '/moments/from-reaction';
+  return `/moments/from-reaction?reaction=${encodeURIComponent(id)}`;
 };
 
 export const canOfferCreateMoment = ({
