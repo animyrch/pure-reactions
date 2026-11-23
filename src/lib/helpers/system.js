@@ -57,6 +57,37 @@ export function isMobileDevice() {
     return false;
 }
 
+/**
+ * Phones, tablets, and very narrow windows.
+ * Width alone misses a landscape phone (often wider than 640px), so a coarse
+ * pointer with no hover counts too. A mouse on a wide screen does not.
+ * @param {{ coarsePointer?: boolean, viewportWidth?: number | null }} [signals]
+ * @returns {boolean}
+ */
+export function isHandheldDeviceFromSignals({
+    coarsePointer = false,
+    viewportWidth = null,
+} = {}) {
+    if (coarsePointer) {
+        return true;
+    }
+    return typeof viewportWidth === 'number' && viewportWidth > 0 && viewportWidth < 640;
+}
+
+export function isHandheldDevice() {
+    if (!(browser && typeof window !== 'undefined')) {
+        return false;
+    }
+
+    const coarsePointer = typeof window.matchMedia === 'function'
+        && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+
+    return isHandheldDeviceFromSignals({
+        coarsePointer,
+        viewportWidth: window.innerWidth,
+    });
+}
+
 export function copyToClipboard(text) {
     // Create a temporary input element
     const input = document.createElement('textarea');
