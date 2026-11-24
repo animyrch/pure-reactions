@@ -3,6 +3,7 @@
     import { ArrowLeftOutline } from 'flowbite-svelte-icons';
     import { fade } from 'svelte/transition';
     import { tick } from 'svelte';
+    import { afterNavigate } from '$app/navigation';
     import { createPlaylistDocument, auth } from '#lib/helpers/firebase.js';
     import { fetchOriginalVideoMetadata } from '#lib/helpers/originalVideo.js';
     import { goToRoute, handlePrivateRoute } from '#lib/helpers/routing.js';
@@ -178,7 +179,7 @@
         sourceItems = [...sourceItems, nextSourceItem];
         createReactForm.errors.originalVideoId = '';
         resetInput();
-        originalVideoInput?.focus();
+        originalVideoInput?.focus({ preventScroll: true });
         void enrichSourceItemMetadata(nextSourceItem);
         return true;
     };
@@ -258,8 +259,20 @@
 
     const focusOriginalVideoInput = async () => {
         await tick();
-        originalVideoInput?.focus();
+        // preventScroll: a mobile browser otherwise scrolls the focused field
+        // toward the keyboard and can shove this page down onto the footer.
+        originalVideoInput?.focus({ preventScroll: true });
     };
+
+    afterNavigate((navigation) => {
+        if (navigation.type === 'popstate') {
+            return;
+        }
+
+        const pinToTop = () => window.scrollTo(0, 0);
+        pinToTop();
+        requestAnimationFrame(pinToTop);
+    });
 
     $: if ($isLoggedIn) {
         void focusOriginalVideoInput();
@@ -267,10 +280,9 @@
 </script>
 
 {#if $isLoggedIn}
-<div class="min-h-screen bg-slate-950 text-slate-100" data-testid="react-page">
-    <div class="mx-auto flex min-h-screen max-w-2xl flex-col px-4 py-8 sm:py-14">
-        <div class="flex flex-1 items-center">
-            {#if activeStep}
+<div class="bg-slate-950 text-slate-100" data-testid="react-page">
+    <div class="mx-auto flex w-full max-w-2xl flex-col px-4 pb-10 pt-2 sm:py-14">
+        {#if activeStep}
                 <div
                     class="w-full rounded-3xl border border-slate-900/60 bg-slate-900/50 p-6 shadow-[0_35px_80px_-60px_rgba(15,23,42,1)] sm:p-8"
                     transition:fade={{ duration: 200 }}
@@ -434,7 +446,6 @@
                     </form>
                 </div>
             {/if}
-        </div>
     </div>
 </div>
 {:else}

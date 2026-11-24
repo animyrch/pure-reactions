@@ -67,11 +67,27 @@ const page = pageStore();
       return;
     }
 
+    // Forward navigations should open at the top. A view transition otherwise
+    // keeps the previous page's scroll offset, and a shorter page (like /react
+    // opened from a scrolled homepage) clamps that offset onto the footer.
+    const pinToTop =
+      (navigation.type === 'link' || navigation.type === 'goto' || navigation.type === 'form') &&
+      !navigation.to?.url?.hash;
+
     return new Promise((resolve) => {
-      document.startViewTransition(async () => {
+      const transition = document.startViewTransition(async () => {
         resolve();
         await navigation.complete;
+        if (pinToTop) {
+          window.scrollTo(0, 0);
+        }
       });
+
+      if (pinToTop) {
+        transition.finished.then(() => {
+          window.scrollTo(0, 0);
+        });
+      }
     });
   });
 </script>
