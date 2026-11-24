@@ -3,7 +3,7 @@
 const page = pageStore();
   import { goto } from "$app/navigation";
   import { browser } from '$app/env';
-  import { onDestroy } from "svelte";
+  import { onDestroy, onMount } from "svelte";
   import CreatorDetails from "#lib/components/Video/CreatorDetails.svelte";
   import PlaylistQueue from "#lib/components/Video/PlaylistQueue.svelte";
   import SubtleLoader from "#lib/components/design-system/SubtleLoader.svelte";
@@ -19,6 +19,7 @@ const page = pageStore();
   import { showToast } from "#lib/stores/toast.js";
   import { TOASTS } from "#lib/constants/toasts.js";
   import { resolvePlaybackFrameKind } from "#lib/helpers/reactionListItem.js";
+  import { isHandheldDevice } from "#lib/helpers/system.js";
 
   export let data;
   const { state, actions } = useTwinPlayers({ data, enableAutoPlay: false });
@@ -159,6 +160,26 @@ const page = pageStore();
   };
 
   let hasCheckedOwnership = false;
+  let fineTuneBlocked = false;
+
+  onMount(() => {
+    const syncFineTuneAvailability = () => {
+      fineTuneBlocked = isHandheldDevice();
+    };
+    syncFineTuneAvailability();
+    const coarsePointerQuery = window.matchMedia(
+      "(hover: none) and (pointer: coarse)",
+    );
+    coarsePointerQuery.addEventListener("change", syncFineTuneAvailability);
+    window.addEventListener("resize", syncFineTuneAvailability);
+    return () => {
+      coarsePointerQuery.removeEventListener(
+        "change",
+        syncFineTuneAvailability,
+      );
+      window.removeEventListener("resize", syncFineTuneAvailability);
+    };
+  });
 
   // Redirect viewers without edit permissions back to the playback route.
   $: if (!hasCheckedOwnership && browser && !$state.isLoading) {
@@ -179,6 +200,10 @@ const page = pageStore();
     !$state.isEditModeOn
   ) {
     actions.enterEditMode();
+  }
+
+  $: if (fineTuneBlocked && $state.isFineTuneModeOn) {
+    actions.toggleFineTuneMode();
   }
 
   // General settings take two fifths beside the stage, which takes three.
@@ -284,27 +309,35 @@ const page = pageStore();
       >
         <h1 class="text-xl font-semibold text-text-primary">Edit Reaction</h1>
         <div class="flex items-center gap-2">
-          <HelpfulTip
-            variant="tooltip"
-            placement="bottom"
-            label="About fine-tune mode"
-          >
-            {$state.remixMode
-              ? "Remix mode times every cue to the original video. Click a track to add or fix pauses, volume, or speed. The original stays fullscreen, so there is no overlay track. To zoom into a section, press and drag across any track, then release."
-              : "Cues from your recording are already on the timeline. Click a track to add or fix pauses, volume, speed, or overlay. To zoom into a section, press and drag across any track, then release."}
-          </HelpfulTip>
-          <CinematicButton
-            type="button"
-            size="sm"
-            variant={$state.isFineTuneModeOn ? "muted" : "secondary"}
-            on:click={actions.toggleFineTuneMode}
-        >
-          <span
-            >{$state.isFineTuneModeOn
-              ? "Disable fine-tune mode"
-              : "Enable fine-tune mode"}</span
-          >
-        </CinematicButton>
+          <div class="fine-tune-desktop-only">
+            <HelpfulTip
+              variant="tooltip"
+              placement="bottom"
+              label="About fine-tune mode"
+            >
+              {$state.remixMode
+                ? "Remix mode times every cue to the original video. Click a track to add or fix pauses, volume, or speed. The original stays fullscreen, so there is no overlay track. To zoom into a section, press and drag across any track, then release."
+                : "Cues from your recording are already on the timeline. Click a track to add or fix pauses, volume, speed, or overlay. To zoom into a section, press and drag across any track, then release."}
+            </HelpfulTip>
+          </div>
+          <div class="fine-tune-desktop-only">
+            <CinematicButton
+              type="button"
+              size="sm"
+              variant={$state.isFineTuneModeOn ? "muted" : "secondary"}
+              on:click={actions.toggleFineTuneMode}
+            >
+              <span
+                >{$state.isFineTuneModeOn
+                  ? "Disable fine-tune mode"
+                  : "Enable fine-tune mode"}</span
+              >
+            </CinematicButton>
+          </div>
+          <p class="fine-tune-handheld-note text-xs text-text-muted">
+            Fine-tune editing needs a computer. The other settings on this page
+            still work.
+          </p>
           <CinematicButton
             variant="secondary"
             size="sm"
@@ -455,6 +488,24 @@ const page = pageStore();
     height: 50vh;
     height: 50dvh;
     min-height: 0;
+  }
+
+  .fine-tune-handheld-note {
+    display: none;
+    max-width: 16rem;
+    text-align: right;
+  }
+
+  /* Phones and tablets, plus the old narrow-window gate. Landscape phones
+     are often wider than 640px, so the coarse-pointer query covers those. */
+  @media (hover: none) and (pointer: coarse), (max-width: 639px) {
+    .fine-tune-desktop-only {
+      display: none;
+    }
+
+    .fine-tune-handheld-note {
+      display: block;
+    }
   }
 
   /* The stage's own page gutters and 80% cap are for the full-width player.

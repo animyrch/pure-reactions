@@ -64,10 +64,25 @@ test.describe('Remix fine-tune editing', () => {
     await ensureRemixOwner();
   });
 
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page }, testInfo) => {
     await installMockYouTubeApi(page, { durations: DURATIONS, autoAdvance: true });
     await page.route('**/www.youtube.com/iframe_api*', (route) => route.abort());
     await page.route('**/www.youtube.com/s/player/**', (route) => route.abort());
+    testInfo.skip(
+      testInfo.project.name === 'mobile' && !testInfo.title.includes('blocks fine-tune'),
+      'Fine-tune editing is desktop-only',
+    );
+  });
+
+  test('keeps general editing and blocks fine-tune on a phone', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'mobile', 'mobile-only');
+    await loginAsRemixOwner(page);
+    await page.goto('/edit-reaction/remixEditorOn000001');
+    await expect(page.getByRole('heading', { name: 'Edit Reaction' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Enable fine-tune mode' })).toHaveCount(0);
+    await expect(page.getByText('Fine-tune editing needs a computer.')).toBeVisible();
+    await expect(page.getByLabel('Reaction video URL or ID')).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'View Live Page' })).toBeVisible();
   });
 
   test('places saved cues by original time across the original length', async ({ page }) => {

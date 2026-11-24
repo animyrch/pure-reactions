@@ -26,6 +26,9 @@ import {
 import { createTwinPlayersInstanceController } from '#lib/helpers/twinPlayersInstanceController.ts';
 import { createTwinPlayersControlSurfaceController } from '#lib/helpers/twinPlayersControlSurface.ts';
 import { createTwinPlayersEditorController } from '#lib/helpers/twinPlayersEditorController.ts';
+import { isHandheldDevice } from '#lib/helpers/system.js';
+import { showToast } from '#lib/stores/toast.js';
+import { TOASTS } from '#lib/constants/toasts.js';
 import { createTwinPlayersNavigationController } from '#lib/helpers/twinPlayersNavigationController.ts';
 import {
   createTwinPlayersPlaybackSyncController,
@@ -581,6 +584,13 @@ export function useTwinPlayers({
 
   const toggleFineTuneMode = () => {
     const snapshot = get(state);
+    if (!snapshot.isFineTuneModeOn && isHandheldDevice()) {
+      showToast(
+        'Fine-tune editing needs a computer. The other editor settings still work on this device.',
+        TOASTS.INFO,
+      );
+      return;
+    }
     updateState({ isFineTuneModeOn: !snapshot.isFineTuneModeOn });
   };
 

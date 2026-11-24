@@ -14,7 +14,7 @@
         updateTwitchChannelForUser,
     } from "#lib/helpers/firebase.js";
     import { handlePrivateRoute, goToRoute } from "#lib/helpers/routing.js";
-    import { isMobileDevice } from "#lib/helpers/system.js";
+    import { isHandheldDevice } from "#lib/helpers/system.js";
     import { getCompensatedReactionTime } from "#lib/helpers/reaction.js";
     import { getTikTokEmbedUrl, resolveTikTokWatchUrl } from "#lib/helpers/platform.js";
     import { fetchOriginalVideoMetadata } from "#lib/helpers/originalVideo.js";
@@ -88,6 +88,9 @@ const page = pageStore();
         modestbranding: 1,
         enablejsapi: 1,
         rel: 0,
+        // Stay in the page on iOS. Without this, Start Video opens the native
+        // player and pause / seek cues no longer line up with the recording.
+        playsinline: 1,
     };
     const BUTTON_GROUP_STATES = {
         INITIAL: "initial",
@@ -1000,6 +1003,11 @@ const page = pageStore();
             return false;
         }
         shouldStartWhenReady = false;
+        if (typeof playerOriginal.unMute === "function") {
+            // Inline mobile players start muted. This call is inside the
+            // Start Video tap, which is the user gesture iOS requires.
+            playerOriginal.unMute();
+        }
         playerOriginal.playVideo();
         isPlayerOriginalReady = true;
         isPlaying = true;
@@ -1795,19 +1803,33 @@ const page = pageStore();
         }
 
         try {
-            if (
-                typeof playerFullscreenHostNode.requestFullscreen ===
-                "function"
-            ) {
-                await playerFullscreenHostNode.requestFullscreen();
-            } else if (
-                typeof playerFullscreenHostNode.webkitRequestFullscreen ===
-                "function"
-            ) {
-                playerFullscreenHostNode.webkitRequestFullscreen();
+            const requestFullscreen =
+                typeof playerFullscreenHostNode.requestFullscreen === "function"
+                    ? playerFullscreenHostNode.requestFullscreen.bind(
+                          playerFullscreenHostNode,
+                      )
+                    : typeof playerFullscreenHostNode.webkitRequestFullscreen ===
+                        "function"
+                      ? playerFullscreenHostNode.webkitRequestFullscreen.bind(
+                            playerFullscreenHostNode,
+                        )
+                      : null;
+
+            if (!requestFullscreen) {
+                showToast(
+                    "Fullscreen isn't available on this device. The controls under the player still work.",
+                    TOASTS.INFO,
+                );
+                return;
             }
+
+            await requestFullscreen();
         } catch (error) {
             console.error("Failed to enter fullscreen mode:", error);
+            showToast(
+                "Fullscreen isn't available on this device. The controls under the player still work.",
+                TOASTS.INFO,
+            );
         }
     };
 
@@ -1962,11 +1984,10 @@ const page = pageStore();
         },
     ];
 
-    onMount(() => {
-        if (isMobileDevice()) {
-            handlePrivateRoute();
-        }
+    let isHandheldRecording = false;
 
+    onMount(() => {
+        isHandheldRecording = isHandheldDevice();
         if (typeof document !== "undefined") {
             document.addEventListener(
                 "fullscreenchange",
@@ -2331,7 +2352,21 @@ const page = pageStore();
                         </div>
                     {/if}
 
-                    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                    {#if isHandheldRecording}
+                        <p
+                            class="rounded-3xl border border-slate-800 bg-slate-900/60 px-5 py-4 text-sm text-slate-300"
+                            role="note"
+                        >
+                            Recording on a phone works. Pause the video when you
+                            want to talk — volume changes are saved, but this
+                            device may keep the original at full volume while
+                            you record. Fine-tune editing stays on a computer.
+                            Everything else in the editor is available after
+                            you finish.
+                        </p>
+                    {/if}
+
+                    <div class="grid grid-cols-1 gap-3 min-[340px]:grid-cols-2 xl:grid-cols-3">
                         {#each stageActions as action}
                             <div class="relative h-full">
                                 {#if action.id === "start-reaction" && !action.disabled}
@@ -2376,7 +2411,7 @@ const page = pageStore();
                                             }`}
                                         />
                                     </div>
-                                    <div class="flex w-full flex-col">
+                                    <div class="flex w-full min-w-0 flex-col">
                                         <div class="flex items-center justify-between gap-2">
                                             <span
                                                 class="text-sm font-semibold leading-tight text-inherit"
@@ -2461,7 +2496,7 @@ const page = pageStore();
                                         playbackRateIndex,
                                         { userInitiated: true },
                                     )}
-                                    class="h-1 flex-1 appearance-none rounded-full bg-slate-800 accent-blue-500"
+                                    class="backend-touch-range w-full min-w-0 flex-1 cursor-pointer appearance-none rounded-full bg-slate-800 accent-blue-500"
                                     disabled={availablePlaybackRates.length <= 1}
                                 />
                             </div>
@@ -2504,7 +2539,7 @@ const page = pageStore();
                                     step="1"
                                     bind:value={soundLevel}
                                     on:change={() => logVolumeChange(soundLevel)}
-                                    class="h-1 flex-1 appearance-none rounded-full bg-slate-800 accent-blue-500"
+                                    class="backend-touch-range w-full min-w-0 flex-1 cursor-pointer appearance-none rounded-full bg-slate-800 accent-blue-500"
                                     aria-label="Volume"
                                 />
                             </div>
@@ -2689,5 +2724,12 @@ const page = pageStore();
 {:else}
     {handlePrivateRoute()}
 {/if}
+
+<style>
+    .backend-touch-range {
+        height: 2.25rem;
+        touch-action: manipulation;
+    }
+</style>
 
 

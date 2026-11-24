@@ -193,6 +193,11 @@ test.describe('Remix mode', () => {
 
     await expect(page.getByLabel('Reaction video URL or ID')).toBeDisabled();
     await expect(page.getByText('4. Player layout')).toHaveCount(0);
+    if (testInfo.project.name === 'mobile') {
+      await expect(page.getByRole('button', { name: 'Enable fine-tune mode' })).toHaveCount(0);
+      await expect(page.getByText('Fine-tune editing needs a computer.')).toBeVisible();
+      return;
+    }
     await page.getByRole('button', { name: 'Enable fine-tune mode' }).click();
     await expect(page.getByText('Original video timeline')).toBeVisible();
     await expect(page.locator('[data-track-id="reactionVolume"]')).toHaveCount(0);
