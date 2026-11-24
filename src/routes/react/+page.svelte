@@ -268,43 +268,43 @@
 
 {#if $isLoggedIn}
 <div class="min-h-screen bg-slate-950 text-slate-100" data-testid="react-page">
-    <div class="mx-auto flex min-h-screen max-w-2xl flex-col px-4 py-14 sm:py-20">
-        <div class="flex items-center justify-between gap-6">
-            <button
-                type="button"
-                class="group inline-flex items-center gap-2 text-sm font-medium text-slate-400 transition hover:text-white focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-                on:click={handleBackNavigation}
-            >
-                <ArrowLeftOutline class="h-4 w-4 transition group-hover:text-white" />
-                <span>Back</span>
-            </button>
-
-            <div class="flex items-center gap-2" role="status" aria-label="Setup progress">
-                {#each steps as step, index (step.id)}
-                    <span
-                        class={`h-2.5 rounded-full transition-all duration-300 ${
-                            index + 1 === createReactForm.currentStep
-                                ? 'w-8 bg-blue-400'
-                                : index + 1 < createReactForm.currentStep
-                                ? 'w-5 bg-emerald-400'
-                                : 'w-2 bg-slate-700'
-                        }`}
-                        aria-hidden="true"
-                    />
-                {/each}
-                <span class="sr-only">
-                    Step {createReactForm.currentStep} of {steps.length}
-                </span>
-            </div>
-        </div>
-
-        <div class="mt-12 flex flex-1 items-center">
+    <div class="mx-auto flex min-h-screen max-w-2xl flex-col px-4 py-8 sm:py-14">
+        <div class="flex flex-1 items-center">
             {#if activeStep}
                 <div
-                    class="w-full rounded-3xl border border-slate-900/60 bg-slate-900/50 p-8 shadow-[0_35px_80px_-60px_rgba(15,23,42,1)]"
+                    class="w-full rounded-3xl border border-slate-900/60 bg-slate-900/50 p-6 shadow-[0_35px_80px_-60px_rgba(15,23,42,1)] sm:p-8"
                     transition:fade={{ duration: 200 }}
                 >
                     <form class="space-y-8" on:submit|preventDefault={onConfirmStep1} aria-describedby={`${activeStep.id}-helper`} aria-busy={isSubmitting}>
+                        <div class="flex items-center justify-between gap-4">
+                            <button
+                                type="button"
+                                class="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-950/70 px-4 py-2 text-sm font-medium text-slate-100 transition hover:border-slate-500 hover:bg-slate-900 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                                on:click={handleBackNavigation}
+                            >
+                                <ArrowLeftOutline class="h-4 w-4" />
+                                <span>Back</span>
+                            </button>
+
+                            <div class="flex items-center gap-2" role="status" aria-label="Setup progress">
+                                {#each steps as step, index (step.id)}
+                                    <span
+                                        class={`h-2.5 rounded-full transition-all duration-300 ${
+                                            index + 1 === createReactForm.currentStep
+                                                ? 'w-8 bg-blue-400'
+                                                : index + 1 < createReactForm.currentStep
+                                                ? 'w-5 bg-emerald-400'
+                                                : 'w-2 bg-slate-700'
+                                        }`}
+                                        aria-hidden="true"
+                                    />
+                                {/each}
+                                <span class="sr-only">
+                                    Step {createReactForm.currentStep} of {steps.length}
+                                </span>
+                            </div>
+                        </div>
+
                         <div class="space-y-3">
                             <p class="text-xs uppercase tracking-[0.35em] text-slate-500">{activeStep.title}</p>
                             <h1 class="text-3xl font-semibold text-white">{activeStep.prompt}</h1>
@@ -411,36 +411,25 @@
                             </div>
                         {/if}
 
-                        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div class="flex flex-col items-center gap-3">
                             <button
                                 type="button"
-                                class="inline-flex items-center gap-2 text-sm font-medium text-slate-400 transition hover:text-white focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
-                                on:click={handleBackNavigation}
+                                class="inline-flex items-center justify-center rounded-full px-3 py-1.5 text-sm font-medium text-slate-400 transition hover:text-white focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                                on:click={() => {
+                                    isSequenceModeVisible = !isSequenceModeVisible;
+                                }}
                             >
-                                <ArrowLeftOutline class="h-4 w-4" />
-                                <span>Back</span>
+                                {isSequenceModeVisible ? 'Hide sequence tools' : 'Show sequence tools'}
                             </button>
 
-                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-                                <button
-                                    type="button"
-                                    class="inline-flex items-center justify-center rounded-full px-3 py-1.5 text-sm font-medium text-slate-400 transition hover:text-white focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
-                                    on:click={() => {
-                                        isSequenceModeVisible = !isSequenceModeVisible;
-                                    }}
-                                >
-                                    {isSequenceModeVisible ? 'Hide sequence tools' : 'Show sequence tools'}
-                                </button>
-
-                                <GradientButton
-                                    type="submit"
-                                    color="pinkToOrange"
-                                    class={`w-full sm:w-auto sm:px-8 sm:py-3 ${isSubmitting ? 'pointer-events-none opacity-80' : ''}`}
-                                    disabled={isSubmitting}
-                                >
-                                    {isSubmitting ? 'Loading…' : 'Continue'}
-                                </GradientButton>
-                            </div>
+                            <GradientButton
+                                type="submit"
+                                color="pinkToOrange"
+                                class={`w-full ${isSubmitting ? 'pointer-events-none opacity-80' : ''}`}
+                                disabled={isSubmitting}
+                            >
+                                {isSubmitting ? 'Loading…' : 'Continue'}
+                            </GradientButton>
                         </div>
                     </form>
                 </div>
